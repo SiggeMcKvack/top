@@ -77,6 +77,9 @@ typedef struct session {
 int oracles_session_write_file(const char *path, const uint8_t *data, size_t size);
 int oracles_session_read_file(const char *path, uint8_t **data, size_t *size);
 void oracles_session_stop_recording(session *s, const char *why);
+/* session_route.c: --play's route read and its options taken on, --record's opened; 1, or 0 with the reason in `error`. */
+int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
+int oracles_session_record_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
 /* F5 and F7: 1 when done; otherwise 0, and *message says why, shortly (the pause menu shows it). */
 int oracles_session_save_state(session *s, char *message, size_t capacity);
 int oracles_session_load_state(session *s, char *message, size_t capacity);

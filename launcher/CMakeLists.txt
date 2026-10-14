@@ -50,7 +50,7 @@ if(ORACLES_BUILD_LAUNCHER)
     target_link_libraries(oracles_ui_sdl PUBLIC oracles_ui ${ORACLES_SDL_TARGET})
     target_compile_definitions(oracles_ui_sdl PUBLIC "ORACLES_VERSION=\"${ORACLES_VERSION}\"" "ORACLES_BUILD=\"${ORACLES_BUILD}\"")
     oracles_set_warnings(oracles_ui_sdl)
-    set(ORACLES_LAUNCHER_SOURCES main.c session.c session_options.c home.c home_input.c pause.c home_games.c home_screenshot.c file_dialog.c sdl_backend.c ${ORACLES_HOST_DIR}/null_backend.c ${ORACLES_SESSION_DIR}/route.c diagnostics.c settings.c ${ORACLES_SESSION_DIR}/hotkey_lines.c hotkeys_session.c ${ORACLES_SESSION_DIR}/route_effects.c ${ORACLES_SESSION_DIR}/hotbar_model.c ${ORACLES_SESSION_DIR}/state_refusal.c session_state.c ${ORACLES_SESSION_DIR}/mod_session.c ${ORACLES_SESSION_DIR}/mod_folder.c ${ORACLES_SESSION_DIR}/language_session.c touch_controls.c touch_sdl.c)
+    set(ORACLES_LAUNCHER_SOURCES main.c session.c session_options.c session_route.c home.c home_input.c pause.c home_games.c home_choices.c home_screenshot.c file_dialog.c sdl_backend.c ${ORACLES_HOST_DIR}/null_backend.c ${ORACLES_SESSION_DIR}/route.c diagnostics.c settings.c ${ORACLES_SESSION_DIR}/hotkey_lines.c hotkeys_session.c ${ORACLES_SESSION_DIR}/route_effects.c ${ORACLES_SESSION_DIR}/hotbar_model.c ${ORACLES_SESSION_DIR}/state_refusal.c session_state.c ${ORACLES_SESSION_DIR}/mod_session.c ${ORACLES_SESSION_DIR}/mod_folder.c ${ORACLES_SESSION_DIR}/language_session.c touch_controls.c touch_sdl.c)
     if(ANDROID)
         # Android runs no executable: SDL's activity (android) loads libmain.so and calls its main, SDL_main.
         add_library(oracles SHARED ${ORACLES_LAUNCHER_SOURCES})
