@@ -67,8 +67,49 @@ static OraclesSettingsGame rom_setting(int game)
     return (fan ? fan->base : game) == ORACLES_HOME_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
 }
 
+/* The file at `path` now (*there 0 when it is not), and whether `found` holds it as it is. */
+static int still_found(const OraclesHomeFound *found, const char *path, struct stat *file, int *there)
+{
+    *there = stat(path, file) == 0;
+    return *there && !strcmp(found->path, path) && found->size == (long long)file->st_size && found->modified == (long long)file->st_mtime;
+}
+
+/* What the file at `path` was found to be, kept in `found` while it is there, until it changes. */
+static void keep_found(OraclesHomeFound *found, const char *path, const struct stat *file, int there, OraclesRomState state, const char *reason)
+{
+    found->path[0] = 0;
+    if (!there) return;
+    snprintf(found->path, sizeof found->path, "%s", path);
+    found->size = (long long)file->st_size;
+    found->modified = (long long)file->st_mtime;
+    found->state = state;
+    snprintf(found->reason, sizeof found->reason, "%s", reason);
+}
+
+/* A game's ROM: ORIGINAL, UNRECOGNISED for another ROM of the game, REFUSED with the reason (the loader's, or that it
+ * is the other game's); kept in games->rom_found[g] while the file is the same. */
+static OraclesRomState rom_found(OraclesHomeGames *games, OraclesSettingsGame g, const char *path, char *reason, size_t capacity)
+{
+    struct stat file;
+    int there;
+    OraclesHomeFound *found = &games->rom_found[g];
+    if (!still_found(found, path, &file, &there)) {
+        OraclesRomInfo info;
+        OraclesRomState state = ORACLES_ROM_REFUSED;
+        if (identify(path, &info, reason, capacity)) {
+            if (info.game == game_of(g)) state = oracles_rom_is_original(&info) ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
+            /* A ROM of the other game, chosen under this one (or written so in settings.txt). */
+            else snprintf(reason, capacity, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
+        }
+        keep_found(found, path, &file, there, state, state == ORACLES_ROM_REFUSED ? reason : "");
+        if (!there) return state;
+    }
+    snprintf(reason, capacity, "%s", found->reason);
+    return found->state;
+}
+
 /* A game as the launcher finds it: its ROM identified, its save, its item hotkeys' mode. */
-static void inspect(const OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeGame *state)
+static void inspect(OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeGame *state)
 {
     const oracles_settings *settings = games->settings;
     memset(state, 0, sizeof *state);
@@ -84,16 +125,8 @@ static void inspect(const OraclesHomeGames *games, OraclesSettingsGame g, Oracle
     if (!path[0]) return;
     state->hotkeys_failed = !strcmp(games->hotkeys_failed[g], path);
     split_path(path, state->rom_file, sizeof state->rom_file, state->rom_folder, sizeof state->rom_folder);
-    OraclesRomInfo info;
-    if (!identify(path, &info, state->rom_reason, sizeof state->rom_reason)) state->rom = ORACLES_ROM_REFUSED;
-    else if (info.game != game_of(g)) {
-        /* A ROM of the other game, chosen under this one (or written so in settings.txt). */
-        snprintf(state->rom_reason, sizeof state->rom_reason, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
-        state->rom = ORACLES_ROM_REFUSED;
-    } else {
-        state->rom = oracles_rom_is_original(&info) ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
-        state->usable = 1;
-    }
+    state->rom = rom_found(games, g, path, state->rom_reason, sizeof state->rom_reason);
+    state->usable = state->rom != ORACLES_ROM_REFUSED;
     find_save(path, state);
 }
 
@@ -115,21 +148,14 @@ static OraclesRomState eu_state(const char *path, OraclesGame game, char *reason
 static OraclesRomState eu_found(OraclesHomeGames *games, OraclesSettingsGame g, const char *path, char *reason, size_t capacity)
 {
     struct stat file;
-    const int there = stat(path, &file) == 0;
+    int there;
     OraclesHomeFound *found = &games->eu_found[g];
-    if (there && !strcmp(found->path, path) && found->size == (long long)file.st_size && found->modified == (long long)file.st_mtime) {
+    if (still_found(found, path, &file, &there)) {
         snprintf(reason, capacity, "%s", found->reason);
         return found->state;
     }
     const OraclesRomState state = eu_state(path, game_of(g), reason, capacity);
-    found->path[0] = 0;
-    if (there) {
-        snprintf(found->path, sizeof found->path, "%s", path);
-        found->size = (long long)file.st_size;
-        found->modified = (long long)file.st_mtime;
-        found->state = state;
-        snprintf(found->reason, sizeof found->reason, "%s", reason);
-    }
+    keep_found(found, path, &file, there, state, reason);
     return state;
 }
 
@@ -183,19 +209,36 @@ static void inspect_fan(OraclesHomeGames *games, const OraclesHomeFanGame *fan, 
         state->patch = ORACLES_ROM_REFUSED;
         return;
     }
-    if (oracles_bps_check_file(patch, state->patch_reason, sizeof state->patch_reason) != 0) { state->patch = ORACLES_ROM_REFUSED; return; }
-    state->patch = ORACLES_ROM_ORIGINAL;
+    /* The patch, and the image it makes of the base, each read again once its files changed. */
+    struct stat file;
+    int there;
+    OraclesHomeFound *found = &games->patch_found[f];
+    if (!still_found(found, patch, &file, &there)) {
+        state->patch = oracles_bps_check_file(patch, state->patch_reason, sizeof state->patch_reason) == 0 ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_REFUSED;
+        keep_found(found, patch, &file, there, state->patch, state->patch == ORACLES_ROM_REFUSED ? state->patch_reason : "");
+        games->image_found[f].path[0] = 0;
+    } else {
+        state->patch = found->state;
+        snprintf(state->patch_reason, sizeof state->patch_reason, "%s", found->reason);
+    }
+    if (state->patch == ORACLES_ROM_REFUSED) return;
     find_save(patch, state);
     if (!base_usable) return;
-    size_t size = 0;
-    uint8_t *image = oracles_bps_apply_files(settings->rom[base], patch, &size, state->image_reason, sizeof state->image_reason);
-    OraclesRomInfo info;
-    if (!image || oracles_rom_identify(image, size, &info, state->image_reason, sizeof state->image_reason) != 0) state->image = ORACLES_ROM_REFUSED;
-    else {
-        state->image = info.revision == fan_revisions[f] ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
-        state->usable = 1;
+    found = &games->image_found[f];
+    if (!still_found(found, settings->rom[base], &file, &there)) {
+        size_t size = 0;
+        uint8_t *image = oracles_bps_apply_files(settings->rom[base], patch, &size, state->image_reason, sizeof state->image_reason);
+        OraclesRomInfo info;
+        state->image = ORACLES_ROM_REFUSED;
+        if (image && oracles_rom_identify(image, size, &info, state->image_reason, sizeof state->image_reason) == 0)
+            state->image = info.revision == fan_revisions[f] ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
+        free(image);
+        keep_found(found, settings->rom[base], &file, there, state->image, state->image == ORACLES_ROM_REFUSED ? state->image_reason : "");
+    } else {
+        state->image = found->state;
+        snprintf(state->image_reason, sizeof state->image_reason, "%s", found->reason);
     }
-    free(image);
+    state->usable = state->image != ORACLES_ROM_REFUSED;
 }
 
 /* The save a game's file has beside it, and its dates. */

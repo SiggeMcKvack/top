@@ -49,9 +49,11 @@ typedef struct OraclesHomeGames {
         char path[ORACLES_SETTINGS_PATH_LENGTH];
         char reason[ORACLES_HOME_TEXT_LENGTH];
     } refused_patch[ORACLES_HOME_FAN_GAMES];
-    /* What each Oracle's European ROM was found to be, kept while the file is the same: a refresh, at each return to
-     * the home screen and each pause, does not read and hash it again. */
-    OraclesHomeFound eu_found[ORACLES_SETTINGS_GAMES];
+    /* What each file was found to be, kept while it is the same: a refresh, at each return to the home screen and each
+     * pause, reads none again.  Each Oracle's ROM and European ROM; each fan game's patch, and the image it makes of its
+     * Oracle's ROM (kept with that ROM, and forgotten with the patch). */
+    OraclesHomeFound rom_found[ORACLES_SETTINGS_GAMES], eu_found[ORACLES_SETTINGS_GAMES];
+    OraclesHomeFound patch_found[ORACLES_HOME_FAN_GAMES], image_found[ORACLES_HOME_FAN_GAMES];
 } OraclesHomeGames;
 
 /* The host of the home screen for these games. */
