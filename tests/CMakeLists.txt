@@ -187,6 +187,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-launcher-controls)
     add_test(NAME oracles-launcher-controls COMMAND oracles-test-launcher-controls ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-devices test_launcher_devices.c layout_reference.c)
+    target_link_libraries(oracles-test-launcher-devices PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-devices)
+    add_test(NAME oracles-launcher-devices COMMAND oracles-test-launcher-devices ${ORACLES_LAYOUT_REFERENCE})
+
     add_executable(oracles-test-launcher-nav test_launcher_nav.c)
     target_link_libraries(oracles-test-launcher-nav PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-nav)
@@ -215,10 +220,10 @@ if(BUILD_TESTING)
         add_test(NAME oracles-launcher-sdl-backend COMMAND oracles-test-launcher-sdl-backend ${CMAKE_CURRENT_BINARY_DIR}/launcher-dialog)
 
         # The controller's Escape: the menu's button, its trigger and Guide in play, on the home screen and in the pause,
-        # and the device an event comes from.
-        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        # the device an event comes from, kept from the home screen to the pause, and the first game's toast.
+        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/pause.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-menu PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR})
-        target_link_libraries(oracles-test-launcher-menu PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
+        target_link_libraries(oracles-test-launcher-menu PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui_sdl ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-menu)
         add_test(NAME oracles-launcher-menu COMMAND oracles-test-launcher-menu)
 

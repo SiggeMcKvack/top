@@ -200,8 +200,11 @@ static void pause_menu(void)
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     static const char *const labels[6] = { "Resume", "Save state", "Load state", "Controls", "Display", "Quit to launcher" };
     CHECK(oracles_home_items(&nav, items) == 6);
-    for (int i = 0; i < 6; i++) CHECK(!strcmp(items[i].label, labels[i]) && !items[i].disabled);
-    CHECK(!strcmp(items[1].note, "F5") && !strcmp(items[2].note, "F7"));
+    /* No key's note; Load state greyed while there is no savestate, its time once there is one. */
+    for (int i = 0; i < 6; i++) CHECK(!strcmp(items[i].label, labels[i]) && items[i].disabled == (i == 2));
+    CHECK(!items[1].note && !items[2].note && !strcmp(items[2].reason, "No savestate yet") && oracles_home_click(&nav, 2) == ORACLES_HOME_STAY);
+    oracles_home_hover(&nav, 0); snprintf(nav.load_note, sizeof nav.load_note, "from 22:14");
+    CHECK(oracles_home_items(&nav, items) == 6 && !items[2].disabled && !strcmp(items[2].note, "from 22:14"));
     char state[ORACLES_HOME_STATE_LENGTH];
     oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
     CHECK(!strcmp(state, "Paused \xc2\xb7 Profile: Enhanced"));

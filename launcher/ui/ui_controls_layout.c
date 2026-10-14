@@ -401,36 +401,62 @@ static void menu_cell(const OraclesHomeNav *nav, OraclesUiControlsLayout *out, c
     out->menu_pad_text = centred(waits ? waiting_style : style, text, out->menu_pad);
 }
 
-/* The fixed shortcuts under the right panel: "In game", then Menu (Esc framed, Menu's controller cell, its meaning),
- * then each other key framed and its meaning, wrapped in the panel's width as a flex row does, each line centred on its
- * tallest piece. */
+/* A fixed key's frame and its text at (0, 0), in 16:9's style, or `none` (zero) when the screen does not recall it. */
+static void key_frame(const char *key, int shown, OraclesUiBox *frame, OraclesUiLine *text)
+{
+    if (!shown) { memset(frame, 0, sizeof *frame); memset(text, 0, sizeof *text); return; }
+    *text = line_at(&oracles_ui_controls_shortcut_key, key, 0.0f, 0.0f, 0.0f);
+    *frame = box(0.0f, 0.0f, text->w + 2.0f * (KEY_PAD_X + BORDER), text->h + 2.0f * (KEY_PAD_Y + BORDER));
+}
+
+/* A fixed key's frame and its text moved to (x, y). */
+static void place_key(OraclesUiBox *frame, OraclesUiLine *text, float x, float y)
+{
+    frame->x = x;
+    frame->y = y;
+    move_line(text, x + BORDER + KEY_PAD_X, y + BORDER + KEY_PAD_Y);
+}
+
+/* The fixed shortcuts under the right panel: "In game", then Menu (Esc framed, Menu's controller cell, on Android Back
+ * framed, its meaning), then each other key framed and its meaning, wrapped in the panel's width as a flex row does,
+ * each line centred on its tallest piece; the keys the screen does not recall (oracles_controls_shortcut_shown) take no
+ * room, Menu's row then on one line. */
 static void layout_shortcuts(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     enum { PIECES = 7, ESC = 5 };   /* the label, Menu, the five other keys with their meanings */
     out->shortcuts_text = "In game";
     out->shortcuts_label = line_at(&oracles_ui_controls_heading, out->shortcuts_text, 0.0f, 0.0f, 0.0f);
     for (int i = 0; i < 6; i++) {
-        out->shortcut_key_texts[i] = line_at(&oracles_ui_controls_shortcut_key, oracles_controls_shortcuts[i][0], 0.0f, 0.0f, 0.0f);
-        out->shortcut_labels[i] = line_at(&oracles_ui_controls_shortcut_label, oracles_controls_shortcuts[i][1], 0.0f, 0.0f, 0.0f);
-        const OraclesUiLine *key = &out->shortcut_key_texts[i];
-        out->shortcut_keys[i] = box(0.0f, 0.0f, key->w + 2.0f * (KEY_PAD_X + BORDER), key->h + 2.0f * (KEY_PAD_Y + BORDER));
+        const int shown = oracles_controls_shortcut_shown(nav, i);
+        key_frame(oracles_controls_shortcuts[i][0], shown, &out->shortcut_keys[i], &out->shortcut_key_texts[i]);
+        if (shown || i == ESC) out->shortcut_labels[i] = line_at(&oracles_ui_controls_shortcut_label, oracles_controls_shortcuts[i][1], 0.0f, 0.0f, 0.0f);
     }
+    key_frame("Back", nav->android, &out->menu_back, &out->menu_back_text);
     menu_cell(nav, out, &oracles_ui_controls_menu_cell, &oracles_ui_controls_menu_cell_waiting, MENU_CELL_MIN_W, MENU_CELL_H, 0.0f, 0.0f);
-    /* The pieces in their order: what each is (-1 the label, ESC Menu, else a key), its width and its height. */
-    const int which[PIECES] = { -1, ESC, 0, 1, 2, 3, 4 };
+    /* The pieces in their order (-1 the label, ESC Menu, else a key; those not recalled left out), their widths and
+     * heights. */
+    int which[PIECES], pieces = 0;
     float w[PIECES], h[PIECES];
-    for (int p = 0; p < PIECES; p++) {
+    which[pieces++] = -1;
+    which[pieces++] = ESC;
+    for (int i = 0; i < ESC; i++) if (out->shortcut_keys[i].w > 0.0f) which[pieces++] = i;
+    for (int p = 0; p < pieces; p++) {
         const int i = which[p];
         if (i < 0) { w[p] = out->shortcuts_label.w; h[p] = out->shortcuts_label.h; continue; }
         const OraclesUiLine *label = &out->shortcut_labels[i];
-        w[p] = out->shortcut_keys[i].w + SHORTCUT_GAP + label->w + (i == ESC ? out->menu_pad.w + SHORTCUT_GAP : 0.0f);
-        h[p] = max_f(max_f(out->shortcut_keys[i].h, label->h), i == ESC ? out->menu_pad.h : 0.0f);
+        const float key_w = out->shortcut_keys[i].w;
+        w[p] = (key_w > 0.0f ? key_w + SHORTCUT_GAP : 0.0f) + label->w;
+        h[p] = max_f(out->shortcut_keys[i].h, label->h);
+        if (i == ESC) {
+            w[p] += out->menu_pad.w + SHORTCUT_GAP + (out->menu_back.w > 0.0f ? out->menu_back.w + SHORTCUT_GAP : 0.0f);
+            h[p] = max_f(max_f(h[p], out->menu_pad.h), out->menu_back.h);
+        }
     }
     float y = SHORTCUTS_Y;
-    for (int first = 0; first < PIECES;) {
+    for (int first = 0; first < pieces;) {
         int last = first;
         float line_w = w[first], line_h = h[first];
-        while (last + 1 < PIECES && line_w + SHORTCUTS_GAP + w[last + 1] <= SHORTCUTS_W) {
+        while (last + 1 < pieces && line_w + SHORTCUTS_GAP + w[last + 1] <= SHORTCUTS_W) {
             line_w += SHORTCUTS_GAP + w[++last];
             line_h = max_f(line_h, h[last]);
         }
@@ -440,15 +466,20 @@ static void layout_shortcuts(const OraclesHomeNav *nav, OraclesUiControlsLayout 
             const int i = which[p];
             if (i < 0) { move_line(&out->shortcuts_label, x, middle - out->shortcuts_label.h * 0.5f); continue; }
             OraclesUiBox *k = &out->shortcut_keys[i];
-            OraclesUiLine *key = &out->shortcut_key_texts[i], *label = &out->shortcut_labels[i];
-            k->x = x;
-            k->y = middle - k->h * 0.5f;
-            move_line(key, x + BORDER + KEY_PAD_X, k->y + BORDER + KEY_PAD_Y);
-            float label_x = x + k->w + SHORTCUT_GAP;
+            OraclesUiLine *label = &out->shortcut_labels[i];
+            float label_x = x;
+            if (k->w > 0.0f) {
+                place_key(k, &out->shortcut_key_texts[i], x, middle - k->h * 0.5f);
+                label_x += k->w + SHORTCUT_GAP;
+            }
             if (i == ESC) {
                 menu_cell(nav, out, &oracles_ui_controls_menu_cell, &oracles_ui_controls_menu_cell_waiting, MENU_CELL_MIN_W, MENU_CELL_H, label_x,
                           middle - MENU_CELL_H * 0.5f);
                 label_x += out->menu_pad.w + SHORTCUT_GAP;
+                if (out->menu_back.w > 0.0f) {
+                    place_key(&out->menu_back, &out->menu_back_text, label_x, middle - out->menu_back.h * 0.5f);
+                    label_x += out->menu_back.w + SHORTCUT_GAP;
+                }
             }
             move_line(label, label_x, middle - label->h * 0.5f);
         }
@@ -565,7 +596,9 @@ static void hotkeys_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 
 /* In game: "Fixed keys in game", then Menu's row of 90, Esc framed, Menu's controller cell and its meaning, then a
  * row of 72 for each other key, framed, and its meaning, all centred in their rows; then Swimming, its title and Tap and
- * Hold on a line 90 tall, its explanation and its lines under them. */
+ * Hold on a line 90 tall, its explanation and its lines under them.  Every row has the keys' column, the
+ * controller's (Menu's cell) and the meaning's, so that every meaning starts at the same place; the keys the screen
+ * does not recall (oracles_controls_shortcut_shown) take no row, Esc's leaving its column empty. */
 static void shortcuts_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     const float left = LEFT_4_3 + GRID_PAD_X_4_3;
@@ -574,21 +607,42 @@ static void shortcuts_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *ou
     float y = out->shortcuts_label.y + out->shortcuts_label.h + SHORTCUTS_TITLE_PAD_4_3 + SHORTCUTS_GAP_4_3;
     static const int order[6] = { 5, 0, 1, 2, 3, 4 };   /* Esc first */
     for (int n = 0; n < 6; n++) {
-        const int i = order[n], menu = i == 5;
+        const int i = order[n], menu = i == 5, shown = oracles_controls_shortcut_shown(nav, i);
+        if (!shown && !menu) continue;
         OraclesUiLine *key = &out->shortcut_key_texts[i], *label = &out->shortcut_labels[i];
-        *key = line_at(&oracles_ui_controls_shortcut_key_4_3, oracles_controls_shortcuts[i][0], 0.0f, 0.0f, 0.0f);
-        *label = line_at(&oracles_ui_help_4_3, oracles_controls_shortcuts[i][1], 0.0f, 0.0f, 0.0f);
-        const float key_w = key->w + 2.0f * (KEY_PAD_X_4_3 + BORDER), key_h = key->h + 2.0f * (KEY_PAD_Y_4_3 + BORDER);
-        const float height = max_f(menu ? MENU_ROW_H_4_3 : SHORTCUT_H_4_3, max_f(key_h, label->h));
-        out->shortcut_keys[i] = box(left, y + (height - key_h) * 0.5f, key_w, key_h);
-        move_line(key, left + BORDER + KEY_PAD_X_4_3, out->shortcut_keys[i].y + BORDER + KEY_PAD_Y_4_3);
-        float label_x = left + SHORTCUT_KEY_W_4_3 + SHORTCUT_GAP_4_3;
-        if (menu) {
-            menu_cell(nav, out, &oracles_ui_controls_menu_cell_4_3, &oracles_ui_controls_menu_cell_waiting_4_3, MENU_CELL_W_4_3, MENU_ROW_H_4_3, label_x,
-                      y + (height - MENU_ROW_H_4_3) * 0.5f);
-            label_x += MENU_CELL_W_4_3 + SHORTCUT_GAP_4_3;
+        float key_w = 0.0f, key_h = 0.0f;
+        if (shown) {
+            *key = line_at(&oracles_ui_controls_shortcut_key_4_3, oracles_controls_shortcuts[i][0], 0.0f, 0.0f, 0.0f);
+            key_w = key->w + 2.0f * (KEY_PAD_X_4_3 + BORDER);
+            key_h = key->h + 2.0f * (KEY_PAD_Y_4_3 + BORDER);
         }
-        move_line(label, label_x, y + (height - label->h) * 0.5f);
+        /* Three columns in every row, empty where a row has nothing for them: the keys', the controller's (Menu's
+         * cell), the meaning's. */
+        const float cell_x = left + SHORTCUT_KEY_W_4_3 + SHORTCUT_GAP_4_3;
+        const float column = cell_x + MENU_CELL_W_4_3 + SHORTCUT_GAP_4_3;
+        const float label_w = LEFT_4_3 + WIDTH_4_3 - GRID_PAD_X_4_3 - column;
+        float label_h;
+        if (menu) {
+            oracles_ui_wrap(&oracles_ui_help_4_3, oracles_controls_menu_label(nav), label_w, column, 0.0f, &out->menu_label);
+            label_h = out->menu_label.h;
+        } else {
+            *label = line_at(&oracles_ui_help_4_3, oracles_controls_shortcuts[i][1], column, 0.0f, 0.0f);
+            label_h = label->h;
+        }
+        const float height = max_f(menu ? MENU_ROW_H_4_3 : SHORTCUT_H_4_3, max_f(key_h, label_h));
+        if (shown) {
+            out->shortcut_keys[i] = box(left, y + (height - key_h) * 0.5f, key_w, key_h);
+            move_line(key, left + BORDER + KEY_PAD_X_4_3, out->shortcut_keys[i].y + BORDER + KEY_PAD_Y_4_3);
+        }
+        if (menu) {
+            menu_cell(nav, out, &oracles_ui_controls_menu_cell_4_3, &oracles_ui_controls_menu_cell_waiting_4_3, MENU_CELL_W_4_3, MENU_ROW_H_4_3, cell_x,
+                      y + (height - MENU_ROW_H_4_3) * 0.5f);
+            const float top = y + (height - label_h) * 0.5f;
+            for (unsigned l = 0; l < out->menu_label.count; l++) move_line(&out->menu_label.lines[l], column, out->menu_label.lines[l].y + top);
+            *label = out->menu_label.lines[0];
+        } else {
+            move_line(label, column, y + (height - label->h) * 0.5f);
+        }
         y += height + SHORTCUTS_GAP_4_3;
     }
     out->swim = box(LEFT_4_3, y + SWIM_MARGIN_4_3, WIDTH_4_3, MODE_H_4_3);

@@ -43,6 +43,9 @@ struct OraclesPause {
     unsigned late_glyphs;
     char toast[64];             /* over the game's first frames (oracles_pause_toast); empty: none */
     double toast_since_ms;      /* its first frame's time, 0 before it */
+    int toast_drawn;            /* it was drawn over a frame */
+    OraclesInputDevice device;  /* used last, from the home screen to the session's last pause; a key pressed there */
+    int keyboard_used;
 };
 
 /* Every glyph a screen of the pause may draw: the printable ASCII and the launcher's signs, and each character after an
@@ -65,7 +68,8 @@ static void glyph_text(char *out, size_t capacity)
  * about 640x480 only (oracles_ui_layout_pause), fits. */
 static float min_scale(int narrow) { return narrow ? NARROW_MIN_SCALE : 0.0f; }
 
-OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin)
+OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin,
+                                   const OraclesHomeNav *input)
 {
     OraclesPause *pause = calloc(1, sizeof *pause);
     if (!pause) return NULL;
@@ -75,7 +79,15 @@ OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *h
     pause->playing = playing;
     pause->aspect = aspect;
     pause->edges.margin = margin;
+    pause->device = input->device;
+    pause->keyboard_used = input->keyboard_used;
     return pause;
+}
+
+void oracles_pause_input(const OraclesPause *pause, OraclesHomeNav *nav)
+{
+    nav->device = pause->device;
+    nav->keyboard_used = pause->keyboard_used;
 }
 
 void oracles_pause_destroy(OraclesPause *pause) { free(pause); }
@@ -84,7 +96,10 @@ void oracles_pause_toast(OraclesPause *pause, const char *text)
 {
     oracles_ui_copy_whole(pause->toast, sizeof pause->toast, text);
     pause->toast_since_ms = 0.0;
+    pause->toast_drawn = 0;
 }
+
+int oracles_pause_toast_drawn(const OraclesPause *pause) { return pause && pause->toast_drawn; }
 
 unsigned oracles_pause_late_glyphs(const OraclesPause *pause) { return pause ? pause->late_glyphs : 0; }
 
@@ -206,6 +221,7 @@ int oracles_pause_overlay(void *opaque, SDL_Renderer *renderer)
         oracles_ui_draw_anchor(pause->draw, 0.5f, 0.0f);
         oracles_ui_home_pad_toast(pause->draw, layout, pause->toast, opacity);
         oracles_ui_draw_end(pause->draw);
+        pause->toast_drawn = 1;
     }
     SDL_SetRenderClipRect(renderer, NULL);
     SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
@@ -238,8 +254,8 @@ static void load_note(pause_loop *p)
 {
     char time[16] = "";
     if (p->session && p->session->state_time) p->session->state_time(p->session->opaque, time, sizeof time);
-    if (time[0]) snprintf(p->nav.load_note, sizeof p->nav.load_note, "F7 \xc2\xb7 from %s", time);
-    else snprintf(p->nav.load_note, sizeof p->nav.load_note, "F7");
+    if (time[0]) snprintf(p->nav.load_note, sizeof p->nav.load_note, "from %s", time);
+    else p->nav.load_note[0] = 0;
 }
 
 /* Display changed the screen margin: the menu takes its band at once, its glyphs rasterised for it (none counted late). */
@@ -333,6 +349,8 @@ static void handle(pause_loop *p, const SDL_Event *e)
 {
     OraclesHomeAction action;
     OraclesHomeCommand captured;
+    OraclesInputDevice device;
+    if (oracles_home_input_device(e, &device) && oracles_home_input(&p->nav, device)) p->dirty = 1;
     if (oracles_home_capture(&p->nav, e, &captured)) {
         /* A trigger taken for the menu is held still: it counts once let go. */
         if (captured == ORACLES_HOME_STORE) p->trigger_held = oracles_home_trigger_held(&p->nav);
@@ -387,6 +405,9 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     oracles_home_pause(&p.nav, pause->game, pause->playing, oracles_ui_layout_narrow(p.nav.layout, out_w));
     p.nav.display.core = session->core;
     p.nav.display.workers = session->ghosts;
+    /* The hints follow the device that opened the pause, else the one used last before. */
+    oracles_pause_input(pause, &p.nav);
+    if (session->device >= 0) oracles_home_input(&p.nav, (OraclesInputDevice)session->device);
     load_note(&p);
     p.trigger_held = oracles_home_trigger_held(&p.nav);
     oracles_ui_home_start(&p.view, &p.nav);
@@ -418,6 +439,8 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
         }
     }
     pause->late_glyphs += oracles_ui_draw_glyphs_rasterised(pause->draw) - p.glyphs_before;
+    pause->device = p.nav.device;
+    pause->keyboard_used = p.nav.keyboard_used;
     /* Back to the game's own drawing; what the menu left in the queue is not the game's. */
     SDL_SetRenderClipRect(renderer, NULL);
     SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);

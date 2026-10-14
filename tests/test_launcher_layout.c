@@ -5,7 +5,9 @@
  * greyed), and a toast; in the 4:3 layout, 10a (Ages), 10b (Fan games), 10c
  * (Seasons, no ROM), a toast, and the pause menu, 10n, and 10t in a 640x480
  * window; the toast after a game that ran slowly, 11c, 11f and 11h; the language beside Cartridge, 14f, 15d and
- * 16f; the toast over the first game started with a controller, 18d and 18e: a text is
+ * 16f; the toast over the first game started with a controller, 18d and 18e; the help bar after a key or a
+ * controller's button, at home (21a to 21d), in the pause menu (21e, 21f, its entries naming no key: 21y) and on
+ * Display (21g, 21h): a text is
  * compared by its left edge, its width, the top and height of its line box,
  * and its baseline; an element by its box.  And the choice of the layout by the
  * window's shape. */
@@ -461,6 +463,61 @@ static void pause_4_3(const char *frame, int width, int height)
     layout_line(frame, "version", &version);
 }
 
+/* The device used last (turn 21): the hints name the keyboard's keys alone after a key, the controller's alone after a
+ * button or a stick, both after a click or a touch, each key's frame as wide as its widest label; on the home screen
+ * (21a to 21d), in the pause menu (21e, 21f) and on a page (Display, 21g, 21h). */
+static void devices(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    /* Before any input, both devices' keys, each frame holding the controller's: "D-pad ←→" is 8 characters. */
+    CHECK(nav.device == ORACLES_INPUT_POINTER && !nav.keyboard_used);
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].key, "Enter / A") && hints[0].chars == 8 && hints[2].chars == 9);
+    CHECK(oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD) && nav.keyboard_used && !oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD));
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[0].key, "\xe2\x86\x90\xe2\x86\x92") && !strcmp(hints[2].key, "Enter") && hints[0].chars == 8);
+    hints_of("21a", &nav, ORACLES_UI_LAYOUT_16_9, 3);
+    hints_of("21c", &nav, ORACLES_UI_LAYOUT_4_3, 3);
+    /* A controller's input: its keys alone; the key pressed before still counts. */
+    CHECK(oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD) && nav.keyboard_used);
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[0].key, "D-pad \xe2\x86\x90\xe2\x86\x92") && !strcmp(hints[2].key, "A"));
+    hints_of("21b", &nav, ORACLES_UI_LAYOUT_16_9, 3);
+    oracles_home_select(&nav, ORACLES_HOME_FAN);
+    nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    hints_of("21d", &nav, ORACLES_UI_LAYOUT_4_3, 4);
+    /* A click brings both back. */
+    CHECK(oracles_home_input(&nav, ORACLES_INPUT_POINTER) && oracles_home_hints(&nav, hints) == 4 && !strcmp(hints[3].key, "Esc / B"));
+
+    /* The pause menu, from a controller (21e) and from a key (21f). */
+    oracles_home_init(&nav);
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
+    oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+    hints_of("21e", &nav, ORACLES_UI_LAYOUT_16_9, 3);
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    hints_of("21f", &nav, ORACLES_UI_LAYOUT_4_3, 3);
+    /* Its entries name no key: Save state without a note, Load state with its time alone (21y). */
+    snprintf(nav.load_note, sizeof nav.load_note, "from 22:14");
+    OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
+    nav.layout = ORACLES_UI_LAYOUT_16_9;
+    if (menu(&nav, items) == 6) {
+        for (int i = 0; i < 6; i++) {
+            char name[32];
+            snprintf(name, sizeof name, "item %d", i); layout_box("21y", name, &items[i].box);
+            snprintf(name, sizeof name, "item %d label", i); layout_line("21y", name, &items[i].label);
+        }
+        CHECK(items[1].note.w == 0.0f);
+        layout_line("21y", "load note", &items[2].note);
+    } else CHECK(0);
+
+    /* Display, its first row: four hints, the D-pad's two. */
+    oracles_home_init(&nav);
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+    hints_of("21g", &nav, ORACLES_UI_LAYOUT_16_9, 4);
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    hints_of("21h", &nav, ORACLES_UI_LAYOUT_4_3, 4);
+}
+
 /* The layout of a window's shape: the nearer of 4:3 and 16:9 by their ratio, unless aspect= names one; the narrow
  * pause menu in 16:9 only, and the pause in 4:3 from 640x480 only. */
 static void layout_choice(void)
@@ -515,6 +572,7 @@ int main(int argc, char **argv)
     pause_4_3("10t", 640, 480);
     slow_toast("11f", 1440, 1080, 2);
     slow_toast("11h", 640, 480, 2);
+    devices();
     layout_choice();
     if (layout_failures()) { fprintf(stderr, "%d failure(s)\n", layout_failures()); return 1; }
     printf("launcher layout: the home screen matches the layout reference within %.1f px\n", (double)LAYOUT_TOLERANCE);

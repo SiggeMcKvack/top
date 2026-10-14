@@ -231,6 +231,9 @@ const char *oracles_display_section(const OraclesHomeNav *nav);
 int oracles_display_row_fixed(const OraclesHomeNav *nav, unsigned row);
 /* A row's explanation beside its choices (16:9; 4:3 says shorter ones under the rows); Advanced's says what it opens. */
 const char *oracles_display_explanation(unsigned row);
+/* Color correction's, 16:9's or 4:3's shorter one, which names F2 only where a keyboard is at hand
+ * (oracles_home_keys_shown). */
+const char *oracles_display_colour_explanation(const OraclesHomeNav *nav, int four_three);
 
 OraclesHomeCommand oracles_display_act(OraclesHomeNav *nav, OraclesHomeAction action);
 /* A click on a row, or on one of its options (a profile, a quality, a window, Off/On, Auto/On/Off): `option` -1 for the

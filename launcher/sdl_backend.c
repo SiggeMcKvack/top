@@ -85,6 +85,7 @@ typedef struct sdl_backend {
     char renderer_name[32];   /* the SDL renderer the session presents with, and whether it said it had vsync */
     int renderer_vsync;
     unsigned axis_buttons;  /* ORACLES_KEY_* currently held through the left stick */
+    oracles_sdl_menu_source menu_source;   /* what asked for the pause menu last */
     oracles_host_event pending[PENDING_EVENTS];
     unsigned pending_count;
 } sdl_backend;
@@ -591,6 +592,7 @@ static void push_menu(sdl_backend *backend, SDL_JoystickID id, const char *input
     const char *name = SDL_GetGamepadNameForID(id);
     fprintf(stderr, "oracles: controller input %s of %s (%s) opens the pause menu\n", input, name ? name : "an unnamed controller",
             SDL_GetGamepadStringForType(SDL_GetGamepadTypeForID(id)));
+    backend->menu_source = ORACLES_SDL_MENU_FROM_PAD;
     push_event(backend, ORACLES_HOST_EVENT_PAUSE);
 }
 
@@ -640,7 +642,7 @@ static int touch_event(sdl_backend *backend, const SDL_Event *e)
     for (unsigned bit = 1; bit <= ORACLES_KEY_START; bit <<= 1)
         if ((now ^ backend->touch_buttons) & bit) push_button(backend, bit, (now & bit) != 0);
     backend->touch_buttons = now;
-    if (pause && backend->pause_menu) push_event(backend, ORACLES_HOST_EVENT_PAUSE);
+    if (pause && backend->pause_menu) { backend->menu_source = ORACLES_SDL_MENU_FROM_TOUCH; push_event(backend, ORACLES_HOST_EVENT_PAUSE); }
     return finger;
 }
 
@@ -658,8 +660,9 @@ static void handle_event(sdl_backend *backend, const SDL_Event *e)
         case SDL_EVENT_QUIT: backend->window_closed = 1; push_quit(backend); break;
         case SDL_EVENT_KEY_DOWN:
             if (e->key.repeat) break;
-            if (ANDROID_BACK(e->key.key)) { push_android_back(backend); break; }
+            if (ANDROID_BACK(e->key.key)) { backend->menu_source = ORACLES_SDL_MENU_FROM_NONE; push_android_back(backend); break; }
             if (e->key.key == SDLK_ESCAPE) {
+                backend->menu_source = ORACLES_SDL_MENU_FROM_KEY;
                 push_event(backend, backend->pause_menu ? ORACLES_HOST_EVENT_PAUSE : ORACLES_HOST_EVENT_QUIT);
                 break;
             }
@@ -704,7 +707,8 @@ static int sdl_poll_event(void *opaque, oracles_host_event *event, int *has_even
     sdl_backend *backend = opaque;
     SDL_Event e;
     *has_event = 0;
-    if (backend->suspended) { backend->suspended = 0; push_event(backend, ORACLES_HOST_EVENT_SUSPEND); }
+    /* The pause a suspension brings was asked by no device: its hints keep the one used last. */
+    if (backend->suspended) { backend->suspended = 0; backend->menu_source = ORACLES_SDL_MENU_FROM_NONE; push_event(backend, ORACLES_HOST_EVENT_SUSPEND); }
     while (backend->pending_count == 0 && SDL_PollEvent(&e)) handle_event(backend, &e);
     if (backend->pending_count == 0) return 1;
     *event = backend->pending[0];
@@ -998,6 +1002,12 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
     *frame = state->texture;
     *width = state->frame_width;
     *height = state->frame_height;
+}
+
+oracles_sdl_menu_source oracles_sdl_backend_menu_source(const oracles_host_backend *backend)
+{
+    const sdl_backend *state = backend->opaque;
+    return state->menu_source;
 }
 
 void oracles_sdl_backend_suspend_audio(const oracles_host_backend *backend)

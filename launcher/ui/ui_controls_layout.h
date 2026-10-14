@@ -6,7 +6,8 @@
  * capture), over the shown tab alone: the game buttons' grid and Reset, the
  * Item hotkeys line and its grid, or the fixed shortcuts as a list and
  * Swimming; no panels, no slots' note.  The fixed shortcuts begin with Menu:
- * Esc, then the cell of the controller's button that opens it too. */
+ * Esc, then the cell of the controller's button that opens it too; the keys
+ * show once a key was pressed, or on a desktop until a controller's input. */
 #ifndef ORACLES_UI_CONTROLS_LAYOUT_H
 #define ORACLES_UI_CONTROLS_LAYOUT_H
 
@@ -38,11 +39,17 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiLine shortcuts_label;
     const char *shortcuts_text;                 /* the label's: "In game", 4:3's "Fixed keys in game" */
     /* The fixed keys, framed, and their meanings, F2 to F11 then Esc, whose Menu comes first, after Esc's frame and
-     * the cell of Menu's controller button (its box, the pointer's target, and its text). */
+     * the cell of Menu's controller button (its box, the pointer's target, and its text); zero for a key the screen
+     * does not recall (oracles_controls_shortcut_shown), Menu's meaning and cell kept.  On Android, in 16:9, Back
+     * framed after the cell (zero elsewhere); in 4:3, Menu's meaning broken into lines in its column (shortcut_labels[5]
+     * its first), zero in 16:9. */
     OraclesUiBox shortcut_keys[6];
     OraclesUiLine shortcut_key_texts[6], shortcut_labels[6];
     OraclesUiBox menu_pad;
     OraclesUiLine menu_pad_text;
+    OraclesUiBox menu_back;
+    OraclesUiLine menu_back_text;
+    OraclesUiWrapped menu_label;
     /* 4:3: each tab's box (the pointer's target), its label, and the line along its bottom, zero during a capture;
      * zero in 16:9, and the pieces of the tabs not shown.  Under the Item hotkeys' text, a fan game's line that its
      * hotkeys stay off. */

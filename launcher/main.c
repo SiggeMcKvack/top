@@ -125,11 +125,12 @@ static int usage(void)
                     "       --patch: a fan game, the BPS patch applied to --rom in memory at each start; its save beside the patch\n"
                     "       without --rom, the home screen opens; the game options apply to the games it starts, --record to the first,\n"
                     "       --language-pack to none: each game keeps its pack beside settings.txt\n"
-                    "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow]\n"
+                    "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow,key,pad,android]\n"
                     "                           [--launcher-frame GAME.ppm]\n"
                     "                           (the home screen drawn offscreen, 1920x1080 by default, and written as a PPM; with a game's image\n"
                     "                           from --screenshot, the pause menu over it, as the game's window shows it; slow: the return from a\n"
-                    "                           game that ran slowly, its toast suggesting something lighter)\n");
+                    "                           game that ran slowly, its toast suggesting something lighter; key, pad: the device used last,\n"
+                    "                           which the key hints follow; android: the screens as Android has them)\n");
     return 2;
 }
 

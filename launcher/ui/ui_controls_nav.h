@@ -61,6 +61,12 @@ extern const char *const oracles_controls_default_hotkey_pads[ORACLES_HOME_SLOTS
 extern const char *const oracles_controls_default_menu_pad;   /* the left stick's click, which the game does not use */
 /* The fixed shortcuts in game, key and meaning, as the screen recalls them. */
 extern const char *const oracles_controls_shortcuts[6][2];
+/* Whether the screen recalls fixed shortcut `i` (Esc's is 5): the keys once one was pressed, or on a desktop until a
+ * controller's input; on Android none until a key is pressed, and never F11 (always fullscreen there).  Menu's
+ * controller cell always shows. */
+int oracles_controls_shortcut_shown(const OraclesHomeNav *nav, int i);
+/* Menu's meaning in 4:3's In game tab: "Menu", on Android "Menu · also Back". */
+const char *oracles_controls_menu_label(const OraclesHomeNav *nav);
 
 /* The defaults' names, no item in any slot, Swimming on Tap, the first cell highlighted. */
 void oracles_controls_defaults(OraclesHomeControls *controls);
@@ -81,7 +87,11 @@ const char *oracles_controls_button_label(const char *name);
 /* The toast of the first game started with a controller: "Press L3 for the menu.", `menu_pad` (settings.txt's menu_pad=)
  * by its short name; empty when no button opens the menu. */
 void oracles_controls_menu_toast(const char *menu_pad, char *out, size_t capacity);
-/* The line over the panels while a cell waits: "Press a key · Esc cancels", empty otherwise. */
+/* That toast is due over a game started with the controller used last (`device`, an OraclesInputDevice), not `shown`
+ * yet (settings.txt's menu_toast=) and with a button opening the menu: 1 with its text in `out`, else 0. */
+int oracles_controls_menu_toast_due(int device, int shown, const char *menu_pad, char *out, size_t capacity);
+/* The line over the panels while a cell waits: "Press a key · Esc cancels", a controller's cell after a controller's
+ * input naming the button that gives up ("Press a gamepad button · L3 cancels"); empty otherwise. */
 const char *oracles_controls_prompt(const OraclesHomeNav *nav);
 /* The game shown's hotkeys: on (use, or equip from the file), and whether its grid is dimmed. */
 int oracles_controls_hotkeys_on(const OraclesHomeNav *nav);

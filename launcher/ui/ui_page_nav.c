@@ -609,12 +609,21 @@ const char *oracles_display_profile_note(const OraclesHomeNav *nav)
     return profile_notes[nav->display.profile == ORACLES_PROFILE_ENHANCED];
 }
 
+const char *oracles_display_colour_explanation(const OraclesHomeNav *nav, int four_three)
+{
+    static const char *const texts[2][2] = {
+        { "On: colors as the Game Boy Color screen showed them. Off: the raw palette.",
+          "On: colors as the Game Boy Color screen showed them. Off: the raw palette. Also F2 in game." },
+        { "On: as the Game Boy Color showed it.", "On: as the Game Boy Color showed it. Also F2." },
+    };
+    return texts[four_three != 0][oracles_home_keys_shown(nav)];
+}
+
 const char *oracles_display_explanation(unsigned row)
 {
     switch (row) {
         case ORACLES_DISPLAY_VIEW: return "How much of the world the Enhanced view shows; farther asks more of the device.";
         case ORACLES_DISPLAY_HUD: return "Full width paints the status bar's color across the screen; Original keeps it as the game draws it.";
-        case ORACLES_DISPLAY_COLOUR: return "On: colors as the Game Boy Color screen showed them. Off: the raw palette. Also F2 in game.";
         case ORACLES_DISPLAY_TRANSITIONS: return "Rooms scroll into one another instead of stopping at each edge, Link swimming too.";
 #ifdef __ANDROID__
         case ORACLES_DISPLAY_VSYNC: return "Auto: off on Android, which composes the frames itself.";
@@ -628,7 +637,7 @@ const char *oracles_display_explanation(unsigned row)
         case ORACLES_DISPLAY_MARGIN:
             return "Keeps the picture clear of screen edges a device hides. Auto follows what the system reports; Small and Large keep a fixed margin at "
                    "the top and bottom.";
-        case ORACLES_DISPLAY_ADVANCED: return "Core, Vsync and neighbor workers.";
+        case ORACLES_DISPLAY_ADVANCED: return "Core, transitions, Vsync, workers, scaling, margin.";
         default: return "";   /* Quality's says what is in effect: oracles_display_quality_text */
     }
 }
@@ -663,12 +672,17 @@ static int display_value(const OraclesHomeNav *nav, unsigned row)
     return row < ORACLES_DISPLAY_ROWS ? values[row] : 0;
 }
 
-/* Advanced opens on its first row, or from a game on Vsync, the first of its rows that change there; closed, Display
- * shows Advanced highlighted. */
+/* Advanced opens on the first of its rows that changes: Core on the home screen; from a game, whose core is fixed,
+ * Continuous transitions in Enhanced chosen, else Vsync.  Closed, Display shows Advanced highlighted. */
 static void display_advanced(OraclesHomeNav *nav, int open)
 {
     nav->advanced = open;
-    nav->row = !open ? ORACLES_DISPLAY_ADVANCED : nav->in_game ? ORACLES_DISPLAY_VSYNC : ORACLES_DISPLAY_CORE;
+    nav->row = ORACLES_DISPLAY_ADVANCED;
+    for (unsigned r = ORACLES_DISPLAY_CORE; open && r < ORACLES_DISPLAY_ROWS; r++) {
+        if (oracles_display_row_fixed(nav, r) || (r == ORACLES_DISPLAY_TRANSITIONS && !oracles_display_transitions_apply(nav))) continue;
+        nav->row = r;
+        break;
+    }
 }
 
 OraclesHomeCommand oracles_display_act(OraclesHomeNav *nav, OraclesHomeAction action)

@@ -14,13 +14,22 @@
  * (oracles_sdl_trigger_moved). */
 int oracles_home_key_action(SDL_Keycode key, OraclesHomeAction *action);
 int oracles_home_button_action(const OraclesHomeNav *nav, const SDL_Event *event, int *trigger_held, OraclesHomeAction *action);
+/* The device that asked for the pause menu (an oracles_sdl_menu_source) as the key hints name it, an
+ * OraclesInputDevice; -1 when none did (Android's Back, a suspension): the hints keep the device used last. */
+int oracles_home_menu_device(int source);
 /* Where *trigger_held starts on a screen that opens, a game's pause or the home screen back from a game: the menu's
  * trigger held now (a press that opened the pause is not one that closes it). */
 int oracles_home_trigger_held(const OraclesHomeNav *nav);
 
 /* An event while a cell of Controls waits: 1 when it was the capture's (a key down, a button down), with what it
- * did in *command (STORE when the cell took it); 0 when the event is not for the capture. */
+ * did in *command (STORE when the cell took it); 0 when the event is not for the capture.  The controller's Escape,
+ * Guide or the menu's button, gives up waiting as Escape does, which the key hint says. */
 int oracles_home_capture(OraclesHomeNav *nav, const SDL_Event *event, OraclesHomeCommand *command);
+
+/* The device an event comes from, for the key hints (oracles_home_input): a key down, a controller's button down or
+ * its stick or trigger past half its travel, a click or a touch.  0 for another event, and on Android for its Back,
+ * which a finger or a controller gives as well as a keyboard. */
+int oracles_home_input_device(const SDL_Event *event, OraclesInputDevice *device);
 
 
 #endif

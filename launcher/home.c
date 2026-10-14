@@ -49,7 +49,6 @@ typedef struct home_app {
     int quit_after_dialog;   /* the window was closed meanwhile: zenity's dialog is not modal */
     int inputs_reported;     /* after a game, the inputs said on the standard error so far (the first few) */
     int trigger_held;        /* the menu's trigger, when menu_pad= names one (oracles_home_button_action) */
-    int pad_input;           /* the last input came from a controller, not a key, the mouse or a finger */
     /* After a game, a line a second on the standard error until watch_until_ms: what the loop did, so that a report
      * that stops shows when the loop stopped, and one that goes on shows a loop alive behind a frozen screen. */
     double watch_since_ms, watch_until_ms, watch_next_ms, watch_present_max_ms;
@@ -133,7 +132,7 @@ static void start(home_app *app, OraclesHomeCommand game)
     if (!app->host || !app->host->start) return;
     char message[256] = "";
     int slow = 0;
-    const int closed = app->host->start(app->host->opaque, game, app->pad_input, app->window, app->renderer, app->draw, message, sizeof message, &slow);
+    const int closed = app->host->start(app->host->opaque, game, &app->nav, app->window, app->renderer, app->draw, message, sizeof message, &slow);
     oracles_ui_draw_freeze(app->draw, 0);   /* the pause held the rasters at the game's scale; the home screen redoes its own */
     if (closed) { app->running = 0; return; }
     restore_window(app);
@@ -307,6 +306,8 @@ static void handle(home_app *app, const SDL_Event *e)
     }
     if (app->dialog_open && e->type == SDL_EVENT_QUIT) { app->quit_after_dialog = 1; return; }   /* after its answer */
     if (app->dialog_open && input(e)) return;
+    OraclesInputDevice device;
+    if (oracles_home_input_device(e, &device) && oracles_home_input(&app->nav, device)) app->dirty = 1;
     /* A cell of Controls that waits takes the next key or button, Escape included (it cancels). */
     if (oracles_home_capture(&app->nav, e, &captured)) {
         /* A trigger taken for the menu is held still: it counts once let go. */
@@ -344,14 +345,13 @@ static void handle(home_app *app, const SDL_Event *e)
     switch (e->type) {
         case SDL_EVENT_QUIT: app->running = 0; break;
         case SDL_EVENT_KEY_DOWN:
-            app->pad_input = 0;
             if (e->key.key == SDLK_F11 && !e->key.repeat) { toggle_fullscreen(app); break; }
             /* A held arrow repeats; a held Enter or Escape does not. */
             if (oracles_home_key_action(e->key.key, &action) && (!e->key.repeat || action <= ORACLES_HOME_RIGHT)) act(app, action);
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            if (oracles_home_button_action(&app->nav, e, &app->trigger_held, &action)) { app->pad_input = 1; act(app, action); }
+            if (oracles_home_button_action(&app->nav, e, &app->trigger_held, &action)) act(app, action);
             break;
         case SDL_EVENT_GAMEPAD_ADDED:
         case SDL_EVENT_GAMEPAD_REMOVED:
@@ -359,7 +359,6 @@ static void handle(home_app *app, const SDL_Event *e)
             break;
         case SDL_EVENT_MOUSE_MOTION: pointer(app, e->motion.x, e->motion.y, 0); break;
         case SDL_EVENT_MOUSE_BUTTON_UP:
-            app->pad_input = 0;
             if (e->button.button == SDL_BUTTON_LEFT) pointer(app, e->button.x, e->button.y, 1);
             break;
         case SDL_EVENT_DROP_FILE: drop(app, e->drop.data); break;   /* SDL frees its copy */

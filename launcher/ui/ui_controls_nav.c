@@ -20,6 +20,13 @@ const char *const oracles_controls_shortcuts[6][2] = {
     { "F2", "Color" }, { "F3", "Wide world or frame" }, { "F5", "Save state" }, { "F7", "Load state" }, { "F11", "Fullscreen" }, { "Esc", "Menu" },
 };
 
+int oracles_controls_shortcut_shown(const OraclesHomeNav *nav, int i)
+{
+    return oracles_home_keys_shown(nav) && !(nav->android && !strcmp(oracles_controls_shortcuts[i][0], "F11"));
+}
+
+const char *oracles_controls_menu_label(const OraclesHomeNav *nav) { return nav->android ? "Menu \xc2\xb7 also Back" : "Menu"; }
+
 /* Keys the game never gets: the fixed shortcuts, and Escape, which cancels a capture, as Android's Back ("AC Back") does there. */
 static const char *const fixed_keys[] = { "F2", "F3", "F5", "F7", "F11" };
 /* Buttons that always move. */
@@ -128,12 +135,23 @@ void oracles_controls_menu_toast(const char *menu_pad, char *out, size_t capacit
     oracles_ui_copy_whole(out, capacity, text);
 }
 
+int oracles_controls_menu_toast_due(int device, int shown, const char *menu_pad, char *out, size_t capacity)
+{
+    oracles_controls_menu_toast(menu_pad, out, capacity);
+    return device == ORACLES_INPUT_GAMEPAD && !shown && capacity && out[0];
+}
+
 const char *oracles_controls_prompt(const OraclesHomeNav *nav)
 {
     const OraclesHomeControls *c = &nav->controls;
     if (!c->capturing) return "";
     const int keyboard = (c->column == 0 || c->column == 2) && c->row != ORACLES_CONTROLS_ROW_MENU;
-    return keyboard ? "Press a key \xc2\xb7 Esc cancels" : "Press a gamepad button \xc2\xb7 Esc cancels";
+    if (keyboard) return "Press a key \xc2\xb7 Esc cancels";
+    if (nav->device != ORACLES_INPUT_GAMEPAD) return "Press a gamepad button \xc2\xb7 Esc cancels";
+    /* After a controller's input, the button that gives up (oracles_home_capture): the menu's, else Guide. */
+    static char prompt[64];
+    snprintf(prompt, sizeof prompt, "Press a gamepad button \xc2\xb7 %s cancels", c->menu_pad[0] ? oracles_controls_button_label(c->menu_pad) : "Guide");
+    return prompt;
 }
 
 static int hotkey_game(const OraclesHomeNav *nav);

@@ -176,9 +176,19 @@ static void shortcuts(OraclesUiDraw *draw, const OraclesHomeNav *nav, const Orac
     text(draw, st->heading, &l->shortcuts_label, l->shortcuts_text, oracles_ui_rgb(HEADING));
     for (int i = 0; i < 6; i++) {
         const OraclesUiBox *k = &l->shortcut_keys[i];
-        oracles_ui_stroke_round_rect(draw, k->x, k->y, k->w, k->h, lk->key_radius, 1.0f, oracles_ui_rgb(KEY_BORDER));
-        text(draw, st->shortcut_key, &l->shortcut_key_texts[i], oracles_controls_shortcuts[i][0], oracles_ui_rgb(KEY_TEXT));
-        text(draw, st->shortcut_label, &l->shortcut_labels[i], oracles_controls_shortcuts[i][1], oracles_ui_rgb(SHORTCUT));
+        if (k->w > 0.0f) {
+            oracles_ui_stroke_round_rect(draw, k->x, k->y, k->w, k->h, lk->key_radius, 1.0f, oracles_ui_rgb(KEY_BORDER));
+            text(draw, st->shortcut_key, &l->shortcut_key_texts[i], oracles_controls_shortcuts[i][0], oracles_ui_rgb(KEY_TEXT));
+        }
+        if (i == 5 && l->menu_label.count) {
+            for (unsigned n = 0; n < l->menu_label.count; n++) text(draw, st->shortcut_label, &l->menu_label.lines[n], l->menu_label.text[n], oracles_ui_rgb(SHORTCUT));
+        } else if (l->shortcut_labels[i].h > 0.0f) {
+            text(draw, st->shortcut_label, &l->shortcut_labels[i], oracles_controls_shortcuts[i][1], oracles_ui_rgb(SHORTCUT));
+        }
+    }
+    if (l->menu_back.w > 0.0f) {
+        oracles_ui_stroke_round_rect(draw, l->menu_back.x, l->menu_back.y, l->menu_back.w, l->menu_back.h, lk->key_radius, 1.0f, oracles_ui_rgb(KEY_BORDER));
+        text(draw, st->shortcut_key, &l->menu_back_text, "Back", oracles_ui_rgb(KEY_TEXT));
     }
     const OraclesUiBox *b = &l->menu_pad;
     const int focused = nav->controls.row == ORACLES_CONTROLS_ROW_MENU, waiting = focused && nav->controls.capturing;

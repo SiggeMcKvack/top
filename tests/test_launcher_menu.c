@@ -1,8 +1,12 @@
 /* The controller's Escape, without a ROM or a display (SDL's dummy video, a software renderer, SDL's virtual
  * controllers): the left stick's click, Guide, or the button or trigger menu_pad= names ask for the pause menu, never
- * the game, and are Back on the home screen and in the pause. */
+ * the game, and are Back on the home screen and in the pause, where they give up a capture; the device an event comes
+ * from, which the key hints follow, kept from the home screen to the pause and back; the toast over the first game
+ * started with a controller, shown once it was drawn. */
 #include "backends.h"
 #include "home_input.h"
+#include "pause.h"
+#include "ui_draw.h"
 #include "ui_page_layout.h"
 #include "ui_controls_nav.h"
 
@@ -115,7 +119,10 @@ static void menu_inputs(SDL_Window *window, SDL_Renderer *renderer)
     oracles_host_backend backend;
     CHECK(pad != 0);
     if (menu_session(&backend, window, renderer, 1, NULL, NULL)) {
+        /* What asked for the pause, which its key hints follow. */
+        CHECK(oracles_sdl_backend_menu_source(&backend) == ORACLES_SDL_MENU_FROM_NONE);
         CHECK(one_pause(press(&backend, pad, SDL_GAMEPAD_BUTTON_LEFT_STICK)));
+        CHECK(oracles_sdl_backend_menu_source(&backend) == ORACLES_SDL_MENU_FROM_PAD);
         CHECK(one_pause(press(&backend, pad, SDL_GAMEPAD_BUTTON_GUIDE)));
         CHECK(nothing(press(&backend, pad, SDL_GAMEPAD_BUTTON_RIGHT_STICK)));
         CHECK(nothing(pull(&backend, pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 100)));
@@ -204,6 +211,38 @@ static void menu_inputs(SDL_Window *window, SDL_Renderer *renderer)
         CHECK(nothing(pull(&backend, pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 0)));
         CHECK(nothing(press(&backend, pad, SDL_GAMEPAD_BUTTON_LEFT_STICK)));
         CHECK(one_pause(press(&backend, pad, SDL_GAMEPAD_BUTTON_GUIDE)));
+        menu_end(&backend);
+    } else CHECK(0);
+    SDL_DetachVirtualJoystick(pad);
+}
+
+static void suspended(void *opaque) { (*(int *)opaque)++; }
+
+/* What asked for the pause is the device its hints start from: Escape the keyboard, the controller's Escape the
+ * controller, the touch controls' pause a pointer; Android's Back and a suspension (the background) none, the hints
+ * keeping the device used last, even after the controller asked for the pause before. */
+static void menu_device(SDL_Window *window, SDL_Renderer *renderer)
+{
+    CHECK(oracles_home_menu_device(ORACLES_SDL_MENU_FROM_KEY) == ORACLES_INPUT_KEYBOARD);
+    CHECK(oracles_home_menu_device(ORACLES_SDL_MENU_FROM_PAD) == ORACLES_INPUT_GAMEPAD);
+    CHECK(oracles_home_menu_device(ORACLES_SDL_MENU_FROM_TOUCH) == ORACLES_INPUT_POINTER);
+    CHECK(oracles_home_menu_device(ORACLES_SDL_MENU_FROM_NONE) == -1);
+    const SDL_JoystickID pad = attach_gamepad();
+    oracles_host_backend backend;
+    if (pad && menu_session(&backend, window, renderer, 1, NULL, NULL)) {
+        int stores = 0;
+        backend.watch_suspend(backend.opaque, suspended, &stores);
+        CHECK(one_pause(press(&backend, pad, SDL_GAMEPAD_BUTTON_LEFT_STICK)) && oracles_sdl_backend_menu_source(&backend) == ORACLES_SDL_MENU_FROM_PAD);
+        SDL_Event e;
+        SDL_zero(e);
+        e.type = SDL_EVENT_WILL_ENTER_BACKGROUND;
+        SDL_PushEvent(&e);
+        oracles_host_event event;
+        int has_event = 0;
+        CHECK(backend.poll_event(backend.opaque, &event, &has_event) && has_event && event.type == ORACLES_HOST_EVENT_SUSPEND && stores == 1);
+        CHECK(oracles_sdl_backend_menu_source(&backend) == ORACLES_SDL_MENU_FROM_NONE);
+        polled(&backend);
+        backend.watch_suspend(backend.opaque, NULL, NULL);
         menu_end(&backend);
     } else CHECK(0);
     SDL_DetachVirtualJoystick(pad);
@@ -317,12 +356,84 @@ static void menu_in_launcher(void)
     oracles_controls_click(&nav, 2, ORACLES_CONTROLS_ROW_MENU, -1);
     e = pad_event(SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_GAMEPAD_BUTTON_RIGHT_STICK, 0);
     CHECK(oracles_home_capture(&nav, &e, &command) && command == ORACLES_HOME_STORE && !strcmp(nav.controls.menu_pad, "rightstick"));
+
+    /* A slot's button waiting: the controller's Escape, the menu's button or Guide, gives up as the hint says ("R3
+     * Cancel"), the slot's button kept; another button binds. */
+    oracles_controls_click(&nav, 3, 0, -1);
+    e = pad_event(SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_GAMEPAD_BUTTON_RIGHT_STICK, 0);
+    CHECK(oracles_home_capture(&nav, &e, &command) && command == ORACLES_HOME_STAY && !nav.controls.capturing);
+    CHECK(!strcmp(nav.controls.hotkey_pads[0], "x") && !strcmp(nav.controls.menu_pad, "rightstick"));
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    oracles_controls_click(&nav, 3, 0, -1);
+    oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+    CHECK(oracles_home_hints(&nav, hints) == 1 && !strcmp(hints[0].key, "R3") && !strcmp(hints[0].label, "Cancel"));
+    e = pad_event(SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_GAMEPAD_BUTTON_GUIDE, 0);
+    CHECK(oracles_home_capture(&nav, &e, &command) && command == ORACLES_HOME_STAY && !nav.controls.capturing);
+    oracles_controls_click(&nav, 3, 0, -1);
+    e = pad_event(SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_GAMEPAD_BUTTON_LEFT_STICK, 0);
+    CHECK(oracles_home_capture(&nav, &e, &command) && command == ORACLES_HOME_STORE && !strcmp(nav.controls.hotkey_pads[0], "leftstick"));
 }
 
-/* The toast's text cut to its field. */
-static void toast_cut(void)
+/* The device an event comes from, which the key hints follow: a key, a controller's button, its stick or trigger past
+ * half its travel, a click or a touch; not a release, a slight move, the pointer's motion. */
+static void input_devices(void)
+{
+    OraclesInputDevice device = ORACLES_INPUT_POINTER;
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = SDL_EVENT_KEY_DOWN;
+    e.key.key = SDLK_F5;
+    CHECK(oracles_home_input_device(&e, &device) && device == ORACLES_INPUT_KEYBOARD);
+    e.type = SDL_EVENT_KEY_UP;
+    CHECK(!oracles_home_input_device(&e, &device));
+    e = pad_event(SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_GAMEPAD_BUTTON_NORTH, 0);
+    CHECK(oracles_home_input_device(&e, &device) && device == ORACLES_INPUT_GAMEPAD);
+    device = ORACLES_INPUT_POINTER;
+    e = pad_event(SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_GAMEPAD_AXIS_LEFTX, 8000);
+    CHECK(!oracles_home_input_device(&e, &device));
+    e = pad_event(SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_GAMEPAD_AXIS_LEFTY, -30000);
+    CHECK(oracles_home_input_device(&e, &device) && device == ORACLES_INPUT_GAMEPAD);
+    SDL_zero(e);
+    e.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    CHECK(oracles_home_input_device(&e, &device) && device == ORACLES_INPUT_POINTER);
+    e.type = SDL_EVENT_MOUSE_MOTION;
+    CHECK(!oracles_home_input_device(&e, &device));
+    e.type = SDL_EVENT_FINGER_DOWN;
+    device = ORACLES_INPUT_KEYBOARD;
+    CHECK(oracles_home_input_device(&e, &device) && device == ORACLES_INPUT_POINTER);
+}
+
+/* The device used last on the home screen is the pause's until one is used there, and the home screen's again after
+ * the game; a key pressed is remembered with it. */
+static void device_kept(SDL_Renderer *renderer)
+{
+    OraclesUiDraw *draw = oracles_ui_draw_create(renderer);
+    OraclesHomeNav home, back;
+    oracles_home_init(&home);
+    oracles_home_init(&back);
+    oracles_home_input(&home, ORACLES_INPUT_KEYBOARD);
+    oracles_home_input(&home, ORACLES_INPUT_GAMEPAD);
+    CHECK(home.device == ORACLES_INPUT_GAMEPAD && home.keyboard_used && back.device != ORACLES_INPUT_GAMEPAD && !back.keyboard_used);
+    OraclesPause *pause = draw ? oracles_pause_create(draw, NULL, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0, 0, &home) : NULL;
+    CHECK(pause != NULL);
+    if (pause) {
+        oracles_pause_input(pause, &back);
+        CHECK(back.device == ORACLES_INPUT_GAMEPAD && back.keyboard_used);
+    }
+    oracles_pause_destroy(pause);
+    oracles_ui_draw_destroy(draw);
+}
+
+/* The first game started with a controller names the menu's button over its first frames, once: due with the
+ * controller used last, a button opening the menu and the toast not shown yet; marked shown once drawn. */
+static void first_toast(SDL_Renderer *renderer)
 {
     char text[64];
+    CHECK(oracles_controls_menu_toast_due(ORACLES_INPUT_GAMEPAD, 0, "leftstick", text, sizeof text) && !strcmp(text, "Press L3 for the menu."));
+    CHECK(!oracles_controls_menu_toast_due(ORACLES_INPUT_KEYBOARD, 0, "leftstick", text, sizeof text));
+    CHECK(!oracles_controls_menu_toast_due(ORACLES_INPUT_POINTER, 0, "leftstick", text, sizeof text));
+    CHECK(!oracles_controls_menu_toast_due(ORACLES_INPUT_GAMEPAD, 1, "leftstick", text, sizeof text));
+    CHECK(!oracles_controls_menu_toast_due(ORACLES_INPUT_GAMEPAD, 0, "", text, sizeof text));
     /* A text longer than its field loses its end on a character's boundary, never half a character. */
     oracles_ui_copy_whole(text, 8, "Menu \xc2\xb7 L3");
     CHECK(!strcmp(text, "Menu \xc2\xb7"));
@@ -330,6 +441,19 @@ static void toast_cut(void)
     CHECK(!strcmp(text, "Menu "));
     oracles_controls_menu_toast("\xc3\xa9\xc3\xa9", text, 10);
     CHECK(!strcmp(text, "Press \xc3\xa9"));
+    OraclesUiDraw *draw = oracles_ui_draw_create(renderer);
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    OraclesPause *pause = draw ? oracles_pause_create(draw, NULL, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0, 0, &nav) : NULL;
+    CHECK(pause != NULL);
+    if (pause) {
+        CHECK(!oracles_pause_overlay(pause, renderer) && !oracles_pause_toast_drawn(pause));
+        oracles_pause_toast(pause, "Press L3 for the menu.");
+        CHECK(!oracles_pause_toast_drawn(pause));
+        CHECK(oracles_pause_overlay(pause, renderer) && oracles_pause_toast_drawn(pause));
+    }
+    oracles_pause_destroy(pause);
+    oracles_ui_draw_destroy(draw);
 }
 
 int main(void)
@@ -342,8 +466,11 @@ int main(void)
     if (!renderer) { fprintf(stderr, "window: %s\n", SDL_GetError()); return 1; }
     menu_inputs(window, renderer);
     two_triggers(window, renderer);
+    menu_device(window, renderer);
     menu_in_launcher();
-    toast_cut();
+    input_devices();
+    device_kept(renderer);
+    first_toast(renderer);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

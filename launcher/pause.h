@@ -31,6 +31,7 @@ typedef struct OraclesPauseSession {
     int (*settings_changed)(void *opaque);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */
+    int device; /* the device that opened the pause (an OraclesInputDevice), which its key hints follow; -1 when not known */
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {
@@ -43,8 +44,12 @@ typedef struct OraclesPause OraclesPause;
 
 /* A pause for `game`'s session (ORACLES_HOME_GAME_*) running in `playing`, drawn with the home screen's `draw`, its settings read and written
  * through `host` (refresh, store); `aspect`, the settings' aspect=, which the layout follows; `margin`, the session's
- * screen margin (an OraclesScreenMargin), whose band the menu keeps to, which Display changes at once. */
-OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin);
+ * screen margin (an OraclesScreenMargin), whose band the menu keeps to, which Display changes at once; `input`, the
+ * home screen's device used last and whether a key was pressed there, which the pauses follow and keep. */
+OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin,
+                                   const OraclesHomeNav *input);
+/* The device used last in the pauses (the home screen's when none opened) and whether a key was pressed, into `nav`. */
+void oracles_pause_input(const OraclesPause *pause, OraclesHomeNav *nav);
 void oracles_pause_destroy(OraclesPause *pause);
 
 /* Before the session's first frame: the glyphs for the renderer's output, and the rasters frozen.  Says on stderr
@@ -57,6 +62,8 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
  * for about 4 s, whatever the player presses, then faded out over 0.6 s; it never takes an input.  Its glyphs are the
  * pause's, prepared beforehand. */
 void oracles_pause_toast(OraclesPause *pause, const char *text);
+/* That toast was drawn over a frame of the game: settings.txt then keeps that it was shown. */
+int oracles_pause_toast_drawn(const OraclesPause *pause);
 /* Draws that toast over the frame about to be presented (the SDL backend's overlay, `opaque` the pause): 1 while it
  * shows, 0 once it is gone. */
 int oracles_pause_overlay(void *opaque, SDL_Renderer *renderer);

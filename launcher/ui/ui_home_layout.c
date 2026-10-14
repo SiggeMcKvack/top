@@ -246,7 +246,10 @@ void oracles_ui_layout_hints(OraclesUiLayout layout, const OraclesHomeHint *hint
         OraclesUiHintLayout *h = &out[i];
         h->key = line_at(st->hint_key, hints[i].key, 0.0f, 0.0f, 0.0f);
         h->label = line_at(st->hint_label, hints[i].label, 0.0f, 0.0f, 0.0f);
-        h->key_box.w = h->key.w + 2.0f * (m->key_pad_x + KEY_BORDER);
+        /* The key's frame as wide as `chars` characters of the font at least (a ch each), its text centred in it. */
+        const float least = (float)hints[i].chars * oracles_ui_text_width(st->hint_key, "0");
+        const float inner_w = h->key.w > least ? h->key.w : least;
+        h->key_box.w = inner_w + 2.0f * (m->key_pad_x + KEY_BORDER);
         h->key_box.h = h->key.h + 2.0f * (m->key_pad_y + KEY_BORDER);
         const float inner = h->key_box.h > h->label.h ? h->key_box.h : h->label.h;
         h->box.w = m->hint_pad_x + h->key_box.w + m->hint_gap + h->label.w + m->hint_pad_x;
@@ -263,7 +266,7 @@ void oracles_ui_layout_hints(OraclesUiLayout layout, const OraclesHomeHint *hint
         h->key_box.x = x + m->hint_pad_x;
         h->key_box.y = middle - h->key_box.h * 0.5f;
         const float key_baseline = h->key.baseline, label_baseline = h->label.baseline;
-        h->key.x = h->key_box.x + KEY_BORDER + m->key_pad_x;
+        h->key.x = h->key_box.x + KEY_BORDER + m->key_pad_x + (h->key_box.w - 2.0f * (KEY_BORDER + m->key_pad_x) - h->key.w) * 0.5f;
         h->key.y = h->key_box.y + KEY_BORDER + m->key_pad_y;
         h->key.baseline = h->key.y + key_baseline;
         h->label.x = h->key_box.x + h->key_box.w + m->hint_gap;

@@ -252,6 +252,15 @@ typedef struct OraclesHomeMods {
     OraclesHomeMod mods[ORACLES_HOME_MODS];
 } OraclesHomeMods;
 
+/* The device the player used last, which the help bar's keys follow (oracles_home_hints): before any input and after a
+ * click or a touch, both devices' keys ("Enter / A"); after a key, the keyboard's alone; after a controller's button or
+ * stick, the controller's alone. */
+typedef enum OraclesInputDevice {
+    ORACLES_INPUT_POINTER,
+    ORACLES_INPUT_KEYBOARD,
+    ORACLES_INPUT_GAMEPAD
+} OraclesInputDevice;
+
 typedef struct OraclesHomeNav {
     OraclesScreen screen;
     OraclesUiLayout layout;            /* the window's (oracles_ui_layout_choose), which its owner sets before each frame */
@@ -271,13 +280,19 @@ typedef struct OraclesHomeNav {
     char mods_folder[ORACLES_HOME_TEXT_LENGTH * 4];
     /* In a game (the pause menu, and Controls and Display opened from it): the running game's profile, the pause
      * menu reduced in a 16:9 window under 960 pixels wide (oracles_ui_layout_narrow), and Load state's note
-     * ("F7 · from 22:14"). */
+     * ("from 22:14"), empty while there is no savestate: Load state is then greyed, "No savestate yet". */
     int in_game, narrow;
     OraclesProfile playing;
     char load_note[ORACLES_HOME_NAME_LENGTH];
     /* After a game that ran slowly, the home screen's toast that suggests something lighter (oracles_home_slow_text),
      * until the first input. */
     int slow;
+    /* The device used last (oracles_home_input), and whether a key was ever pressed, which shows Controls' keys in game
+     * (oracles_controls_keys_shown); `android`, the platform's: always fullscreen, no F11, and its Back opens the menu
+     * too. */
+    OraclesInputDevice device;
+    int keyboard_used;
+    int android;
 } OraclesHomeNav;
 
 typedef struct OraclesHomeItem {
@@ -292,6 +307,7 @@ typedef struct OraclesHomeItem {
 typedef struct OraclesHomeHint {
     const char *key, *label;
     int back;               /* a click on it goes back */
+    int chars;              /* its key's frame holds this many characters at least: its widest key over the devices */
 } OraclesHomeHint;
 
 /* Ages chosen, the first item highlighted, no ROM known. */
@@ -311,7 +327,16 @@ OraclesHomeHero oracles_home_entry_hero(OraclesHomeEntry entry);
 const char *oracles_home_over(OraclesHomeHero hero);
 const char *oracles_home_title(OraclesHomeHero hero);
 void oracles_home_state(const OraclesHomeNav *nav, OraclesHomeHero hero, char out[ORACLES_HOME_STATE_LENGTH]);
+/* The help bar's hints, their keys the device's used last (nav->device): a controller's D-pad, A and B, and the menu's
+ * button for Escape alone (Guide without one); the keyboard's Enter and Esc; both devices' after a click or a touch.
+ * Each key's frame holds its widest label, so that the hints stay in place when the device changes. */
 unsigned oracles_home_hints(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS]);
+/* An input from `device`: the hints follow it, and a key shows Controls' keys in game from then on.  1 when what the
+ * screen shows may change. */
+int oracles_home_input(OraclesHomeNav *nav, OraclesInputDevice device);
+/* Whether the screens name keyboard keys (Controls' keys in game, F2 under Display's colour correction): once a key was
+ * pressed, or on a desktop until a controller's input; on Android only once a key was pressed. */
+int oracles_home_keys_shown(const OraclesHomeNav *nav);
 
 OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction action);
 /* The game of what the right half shows (ORACLES_HOME_GAME_*), or -1 for the list of fan games. */

@@ -76,12 +76,19 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
                            oracles_ui_layout_narrow(nav.layout, width));
     }
     /* The inputs move the navigation only: a game is not started, the launcher does not exit.  `slow` is the return
-     * from a game that ran slowly, its toast shown until the next input. */
+     * from a game that ran slowly, its toast shown until the next input; `key` and `pad`, a key or a controller's
+     * button as the device used last, which the hints follow; `android`, the screens as Android has them. */
     for (const char *p = inputs; p && *p;) {
         const size_t length = strcspn(p, ",");
         OraclesHomeAction action;
         if (length == 4 && !strncmp(p, "slow", 4)) nav.slow = 1;
-        else if (!parse_action(p, length, &action)) { snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow)", (int)length, p); return 1; }
+        else if (length == 3 && !strncmp(p, "key", 3)) oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+        else if (length == 3 && !strncmp(p, "pad", 3)) oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+        else if (length == 7 && !strncmp(p, "android", 7)) nav.android = 1;
+        else if (!parse_action(p, length, &action)) {
+            snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android)", (int)length, p);
+            return 1;
+        }
         else oracles_home_act(&nav, action);
         p += length + (p[length] == ',');
     }

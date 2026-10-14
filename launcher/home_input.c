@@ -45,6 +45,16 @@ int oracles_home_button_action(const OraclesHomeNav *nav, const SDL_Event *event
     }
 }
 
+int oracles_home_menu_device(int source)
+{
+    switch (source) {
+        case ORACLES_SDL_MENU_FROM_KEY: return ORACLES_INPUT_KEYBOARD;
+        case ORACLES_SDL_MENU_FROM_PAD: return ORACLES_INPUT_GAMEPAD;
+        case ORACLES_SDL_MENU_FROM_TOUCH: return ORACLES_INPUT_POINTER;
+        default: return -1;
+    }
+}
+
 int oracles_home_trigger_held(const OraclesHomeNav *nav)
 {
     int menu_button, menu_trigger;
@@ -63,6 +73,9 @@ int oracles_home_capture(OraclesHomeNav *nav, const SDL_Event *event, OraclesHom
     const int menu = nav->controls.row == ORACLES_CONTROLS_ROW_MENU;
     if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
         const SDL_GamepadButton button = (SDL_GamepadButton)oracles_sdl_pad_button(event);
+        int menu_button, menu_trigger;
+        oracles_sdl_menu_input(nav->controls.menu_pad, &menu_button, &menu_trigger);
+        if (button == SDL_GAMEPAD_BUTTON_GUIDE || (int)button == menu_button) { oracles_controls_cancel(nav); return 1; }
         const int keyboard_cell = !menu && (nav->controls.column == 0 || nav->controls.column == 2);
         /* A keyboard cell waits for a key; a controller's B gives up waiting, as Escape does, and so in Menu's cell
          * while the game has B. */
@@ -81,4 +94,25 @@ int oracles_home_capture(OraclesHomeNav *nav, const SDL_Event *event, OraclesHom
     }
     /* What the capture does not take while it waits: the other keys' releases, the arrows' repeats. */
     return event->type == SDL_EVENT_KEY_UP || event->type == SDL_EVENT_GAMEPAD_BUTTON_UP;
+}
+
+int oracles_home_input_device(const SDL_Event *event, OraclesInputDevice *device)
+{
+    const int half = SDL_JOYSTICK_AXIS_MAX / 2;
+    switch (event->type) {
+        case SDL_EVENT_KEY_DOWN:
+#ifdef __ANDROID__
+            if (event->key.key == SDLK_AC_BACK) return 0;
+#endif
+            *device = ORACLES_INPUT_KEYBOARD;
+            return 1;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN: *device = ORACLES_INPUT_GAMEPAD; return 1;
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            if (event->gaxis.value <= half && event->gaxis.value >= -half) return 0;
+            *device = ORACLES_INPUT_GAMEPAD;
+            return 1;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_FINGER_DOWN: *device = ORACLES_INPUT_POINTER; return 1;
+        default: return 0;
+    }
 }

@@ -1451,7 +1451,8 @@ static void display_navigation(void)
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_VSYNC, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     CHECK(!nav.advanced && nav.row == ORACLES_DISPLAY_ADVANCED);
-    /* From a game Advanced opens on Vsync, the one of its rows that changes there, by a key as by a click. */
+    /* From a game in Faithful chosen, Advanced opens on Vsync, the first of its rows that changes there, by a key as by
+     * a click. */
     nav.in_game = 1;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
@@ -1749,7 +1750,7 @@ static void display_4_3(void)
     nav.display.window = 2;
     nav.row = ORACLES_DISPLAY_ADVANCED;
     oracles_ui_display_texts(&nav, &t);
-    CHECK(!strcmp(t.help, "Core, Vsync and neighbor workers.") && !t.help_note);
+    CHECK(!strcmp(t.help, "Core, transitions, Vsync, workers, scaling, margin.") && !t.help_note);
     nav.row = ORACLES_DISPLAY_TRANSITIONS;
     oracles_ui_display_texts(&nav, &t);
     CHECK(!strcmp(t.help, "Rooms scroll into one another, swimming too.") && !strcmp(t.help_note, "Savestates with it on need it on."));

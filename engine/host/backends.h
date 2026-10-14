@@ -155,6 +155,16 @@ void oracles_sdl_backend_release(oracles_host_backend *backend);
  * game with its size. */
 void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct SDL_Window **window, struct SDL_Renderer **renderer,
                                     struct SDL_Texture **frame, int *width, int *height);
+/* What asked for the pause menu last: a key (Escape), a controller (Guide, the menu's button or trigger) or a finger
+ * (the touch controls' pause); NONE before any, for Android's Back, which a finger or a controller gives too, and for
+ * a suspension (Android's background), which no device asked. */
+typedef enum oracles_sdl_menu_source {
+    ORACLES_SDL_MENU_FROM_NONE,
+    ORACLES_SDL_MENU_FROM_KEY,
+    ORACLES_SDL_MENU_FROM_PAD,
+    ORACLES_SDL_MENU_FROM_TOUCH
+} oracles_sdl_menu_source;
+oracles_sdl_menu_source oracles_sdl_backend_menu_source(const oracles_host_backend *backend);
 /* The sound stops and its queue empties; it starts again with the next frames, from its prebuffer. */
 void oracles_sdl_backend_suspend_audio(const oracles_host_backend *backend);
 /* The pause menu holds the session from a call with 1 to a call with 0, at its resume: that time is no

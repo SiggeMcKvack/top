@@ -567,7 +567,7 @@ static int drop(void *opaque, const char *path, int page_game, char *message, si
     return g == ORACLES_SETTINGS_AGES ? ORACLES_HOME_AGES : ORACLES_HOME_SEASONS;
 }
 
-static int start(void *opaque, OraclesHomeCommand game, int from_pad, struct SDL_Window *window, struct SDL_Renderer *renderer,
+static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, struct SDL_Window *window, struct SDL_Renderer *renderer,
                  OraclesUiDraw *draw, char *message, size_t capacity, int *slow)
 {
     OraclesHomeGames *games = opaque;
@@ -679,18 +679,20 @@ static int start(void *opaque, OraclesHomeCommand game, int from_pad, struct SDL
     oracles_home_games_host(games, &pause_host);
     const int home_game = fan ? fan->game : g == ORACLES_SETTINGS_AGES ? ORACLES_HOME_GAME_AGES : ORACLES_HOME_GAME_SEASONS;
     OraclesPause *pause = draw ? oracles_pause_create(draw, &pause_host, home_game, profile, games->settings->aspect,
-                                                                oracles_session_screen_margin(o.screen_margin, games->settings)) : NULL;
+                                                                oracles_session_screen_margin(o.screen_margin, games->settings), nav) : NULL;
     o.pause = pause;
-    /* The first game started with a controller says, once, which of its buttons opens the menu. */
+    /* The first game started with a controller says, once, which of its buttons opens the menu: shown once it was
+     * drawn over the game, not when a session that failed to start never showed it. */
     char toast[64];
-    oracles_controls_menu_toast(games->settings->menu_pad, toast, sizeof toast);
-    if (pause && from_pad && toast[0] && !games->settings->menu_toast_shown) {
-        oracles_pause_toast(pause, toast);
+    const int toast_due = pause && oracles_controls_menu_toast_due(nav->device, games->settings->menu_toast_shown, games->settings->menu_pad, toast, sizeof toast);
+    if (toast_due) oracles_pause_toast(pause, toast);
+    OraclesSessionResult result;
+    oracles_session_run(&o, games->settings, &result);
+    if (toast_due && oracles_pause_toast_drawn(pause)) {
         games->settings->menu_toast_shown = 1;
         oracles_settings_store(games->settings);
     }
-    OraclesSessionResult result;
-    oracles_session_run(&o, games->settings, &result);
+    if (pause) oracles_pause_input(pause, nav);
     oracles_pause_destroy(pause);
     if (result.route_written) games->route_recorded = 1;
     /* Item hotkeys that could not attach to this ROM: Cartridge says so under its status, while it is the game's ROM. */

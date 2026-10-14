@@ -1425,7 +1425,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
     oracles_display_quality_text(nav, 0, t->quality_text, sizeof t->quality_text);
     t->quality_note = oracles_display_quality_note(nav, 0);
     t->later = nav->in_game;
-    t->explanations[0] = oracles_display_explanation(ORACLES_DISPLAY_COLOUR);
+    t->explanations[0] = oracles_display_colour_explanation(nav, 0);
     t->explanations[1] = oracles_display_explanation(ORACLES_DISPLAY_TRANSITIONS);
     t->explanations[2] = oracles_display_explanation(ORACLES_DISPLAY_VSYNC);
     t->explanations[3] = oracles_display_explanation(ORACLES_DISPLAY_CORE);
@@ -1446,12 +1446,12 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
      * game plays in Faithful), Window's with the line on its size or the diagram's, the quality in effect. */
     static const char *const help_4_3[ORACLES_DISPLAY_ROWS] = {
         NULL, NULL, "Whole multiples of the picture: pixels stay sharp.", "How much of the world shows; farther asks more.",
-        "Full width: the status bar's color edge to edge.", "On: as the Game Boy Color showed it. Also F2.", "Core, Vsync and neighbor workers.",
+        "Full width: the status bar's color edge to edge.", NULL, "Core, transitions, Vsync, workers, scaling, margin.",
         "Accurate: the reference. Fast: lighter.", "Rooms scroll into one another, swimming too.", VSYNC_SHORT, "Two fill the view faster, on one more core.",
         "Sharp: exact pixels. Fill: the whole screen.", "Keeps the picture clear of hidden screen edges.",
     };
     const unsigned row = nav->row < ORACLES_DISPLAY_ROWS ? nav->row : ORACLES_DISPLAY_PROFILE;
-    t->help = help_4_3[row];
+    t->help = row == ORACLES_DISPLAY_COLOUR ? oracles_display_colour_explanation(nav, 1) : help_4_3[row];
     switch (row) {
         case ORACLES_DISPLAY_PROFILE:
             t->help = oracles_display_played_profile(nav) != nav->display.profile ? t->profile_note

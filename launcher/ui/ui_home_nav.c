@@ -47,7 +47,9 @@ void oracles_home_init(OraclesHomeNav *nav)
     nav->display.room_w = 1920;
     nav->display.room_h = 1080 - 64;
     oracles_controls_defaults(&nav->controls);
-    snprintf(nav->load_note, sizeof nav->load_note, "F7");
+#ifdef __ANDROID__
+    nav->android = 1;
+#endif
 }
 
 void oracles_home_pause(OraclesHomeNav *nav, int game, OraclesProfile playing, int narrow)
@@ -117,8 +119,9 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
          * the launcher.  The 4:3 layout keeps them all at every size. */
         unsigned n = 0;
         items[n++] = item(ORACLES_HOME_ITEM_RESUME, "Resume", NULL, 0, NULL);
-        items[n++] = item(ORACLES_HOME_ITEM_SAVE_STATE, "Save state", "F5", 0, NULL);
-        items[n++] = item(ORACLES_HOME_ITEM_LOAD_STATE, "Load state", nav->load_note, 0, NULL);
+        items[n++] = item(ORACLES_HOME_ITEM_SAVE_STATE, "Save state", NULL, 0, NULL);
+        items[n++] = nav->load_note[0] ? item(ORACLES_HOME_ITEM_LOAD_STATE, "Load state", nav->load_note, 0, NULL)
+                                       : item(ORACLES_HOME_ITEM_LOAD_STATE, "Load state", NULL, 1, "No savestate yet");
         if (!nav->narrow) {
             items[n++] = item(ORACLES_HOME_ITEM_CONTROLS, "Controls", NULL, 0, NULL);
             items[n++] = item(ORACLES_HOME_ITEM_DISPLAY, "Display", NULL, 0, NULL);
@@ -176,23 +179,27 @@ void oracles_home_others(const OraclesHomeNav *nav, OraclesHomeEntry others[2])
         if ((OraclesHomeEntry)e != nav->entry) others[n++] = (OraclesHomeEntry)e;
 }
 
-unsigned oracles_home_hints(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS])
+#define UP_DOWN "\xe2\x86\x91\xe2\x86\x93"              /* ↑↓ */
+#define LEFT_RIGHT "\xe2\x86\x90\xe2\x86\x92"           /* ←→ */
+
+/* The hints of the screen, their keys both devices'. */
+static unsigned hints_of(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS])
 {
     if (nav->screen == ORACLES_SCREEN_PAUSE) {
         static const OraclesHomeHint pause[3] = {
-            { "\xe2\x86\x91\xe2\x86\x93", "Menu", 0 },    /* ↑↓ */
-            { "Enter / A", "Select", 0 },
-            { "Esc / B", "Resume", 1 },
+            { UP_DOWN, "Menu", 0, 0 },
+            { "Enter / A", "Select", 0, 0 },
+            { "Esc / B", "Resume", 1, 0 },
         };
         memcpy(hints, pause, sizeof pause);
         return 3;
     }
     if (nav->screen == ORACLES_SCREEN_CONTROLS) {
-        static const OraclesHomeHint capture[1] = { { "Esc", "Cancel", 1 } };
+        static const OraclesHomeHint capture[1] = { { "Esc", "Cancel", 1, 0 } };
         static const OraclesHomeHint controls[3] = {
-            { "\xe2\x86\x91\xe2\x86\x93\xe2\x86\x90\xe2\x86\x92", "Move", 0 },    /* ↑↓←→ */
-            { "Enter / A", "Rebind", 0 },
-            { "Esc / B", "Back", 1 },
+            { UP_DOWN LEFT_RIGHT, "Move", 0, 0 },
+            { "Enter / A", "Rebind", 0, 0 },
+            { "Esc / B", "Back", 1, 0 },
         };
         if (nav->controls.capturing) { memcpy(hints, capture, sizeof capture); return 1; }
         memcpy(hints, controls, sizeof controls);
@@ -201,34 +208,79 @@ unsigned oracles_home_hints(const OraclesHomeNav *nav, OraclesHomeHint hints[ORA
     /* Display's Advanced highlighted opens its rows: nothing there changes with left and right. */
     if (nav->screen == ORACLES_SCREEN_DISPLAY && !nav->advanced && nav->row == ORACLES_DISPLAY_ADVANCED) {
         static const OraclesHomeHint advanced[3] = {
-            { "\xe2\x86\x91\xe2\x86\x93", "Move", 0 },    /* ↑↓ */
-            { "Enter / A", "Open", 0 },
-            { "Esc / B", "Back", 1 },
+            { UP_DOWN, "Move", 0, 0 },
+            { "Enter / A", "Open", 0, 0 },
+            { "Esc / B", "Back", 1, 0 },
         };
         memcpy(hints, advanced, sizeof advanced);
         return 3;
     }
     if (nav->screen != ORACLES_SCREEN_HOME) {
         static const OraclesHomeHint page[4] = {
-            { "\xe2\x86\x91\xe2\x86\x93", "Move", 0 },    /* ↑↓ */
-            { "\xe2\x86\x90\xe2\x86\x92", "Change", 0 },  /* ←→ */
-            { "Enter / A", "Select", 0 },
-            { "Esc / B", "Back", 1 },
+            { UP_DOWN, "Move", 0, 0 },
+            { LEFT_RIGHT, "Change", 0, 0 },
+            { "Enter / A", "Select", 0, 0 },
+            { "Esc / B", "Back", 1, 0 },
         };
         memcpy(hints, page, sizeof page);
         return 4;
     }
-    static const OraclesHomeHint base[3] = {
-        { "\xe2\x86\x90\xe2\x86\x92", "Game", 0 },      /* ←→ */
-        { "\xe2\x86\x91\xe2\x86\x93", "Menu", 0 },      /* ↑↓ */
-        { "Enter / A", "Select", 0 },
+    static const OraclesHomeHint base[4] = {
+        { LEFT_RIGHT, "Game", 0, 0 },
+        { UP_DOWN, "Menu", 0, 0 },
+        { "Enter / A", "Select", 0, 0 },
+        { "Esc / B", "Fan games", 1, 0 },
     };
     memcpy(hints, base, sizeof base);
-    if (nav->entry != ORACLES_HOME_FAN || nav->fan_pick == ORACLES_HOME_HERO_FAN) return 3;
-    hints[3].key = "Esc / B";
-    hints[3].label = "Fan games";
-    hints[3].back = 1;
-    return 4;
+    return nav->entry != ORACLES_HOME_FAN || nav->fan_pick == ORACLES_HOME_HERO_FAN ? 3 : 4;
+}
+
+/* A key of the hints as `device` names it: a controller's D-pad, A and B, and for Escape alone the menu's button (Guide
+ * without one); the keyboard's Enter and Esc; both devices' as written for a pointer. */
+static const char *device_key(const OraclesHomeNav *nav, const char *key, OraclesInputDevice device)
+{
+    static const char *const both[5] = { UP_DOWN, LEFT_RIGHT, UP_DOWN LEFT_RIGHT, "Enter / A", "Esc / B" };
+    static const char *const gamepad[5] = { "D-pad " UP_DOWN, "D-pad " LEFT_RIGHT, "D-pad", "A", "B" };
+    static const char *const keyboard[5] = { UP_DOWN, LEFT_RIGHT, UP_DOWN LEFT_RIGHT, "Enter", "Esc" };
+    if (device == ORACLES_INPUT_POINTER) return key;
+    if (!strcmp(key, "Esc"))
+        return device == ORACLES_INPUT_KEYBOARD ? key : nav->controls.menu_pad[0] ? oracles_controls_button_label(nav->controls.menu_pad) : "Guide";
+    for (int i = 0; i < 5; i++) if (!strcmp(key, both[i])) return device == ORACLES_INPUT_GAMEPAD ? gamepad[i] : keyboard[i];
+    return key;
+}
+
+/* A UTF-8 text's characters. */
+static int characters(const char *s)
+{
+    int n = 0;
+    for (; *s; s++) n += ((unsigned char)*s & 0xc0u) != 0x80u;
+    return n;
+}
+
+unsigned oracles_home_hints(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS])
+{
+    const unsigned count = hints_of(nav, hints);
+    for (unsigned i = 0; i < count; i++) {
+        /* The keyboard's keys are never wider than both devices': the frame holds the controller's too. */
+        const int both = characters(hints[i].key), gamepad = characters(device_key(nav, hints[i].key, ORACLES_INPUT_GAMEPAD));
+        hints[i].chars = both > gamepad ? both : gamepad;
+        hints[i].key = device_key(nav, hints[i].key, nav->device);
+    }
+    return count;
+}
+
+int oracles_home_keys_shown(const OraclesHomeNav *nav)
+{
+    return nav->keyboard_used || (!nav->android && nav->device != ORACLES_INPUT_GAMEPAD);
+}
+
+int oracles_home_input(OraclesHomeNav *nav, OraclesInputDevice device)
+{
+    const int keyboard = device == ORACLES_INPUT_KEYBOARD;
+    if (nav->device == device && (!keyboard || nav->keyboard_used)) return 0;
+    nav->device = device;
+    if (keyboard) nav->keyboard_used = 1;
+    return 1;
 }
 
 int oracles_home_slow_text(const OraclesHomeNav *nav, char *text, size_t capacity, const char **path)

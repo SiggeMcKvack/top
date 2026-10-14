@@ -28,6 +28,7 @@
 #include "session_internal.h"
 
 #include "guest_fingerprint.h"
+#include "home_input.h"
 #include "hotkeys_session.h"
 #include "view.h"
 #include "guest.h"
@@ -207,8 +208,9 @@ static oracles_host_pause_result session_pause(void *opaque)
     oracles_sdl_backend_pause_view(&s->backend, &window, &renderer, &frame, &width, &height);
     oracles_sdl_backend_suspend_audio(&s->backend);
     oracles_sdl_backend_hold(&s->backend, 1);
+    const int device = oracles_home_menu_device((int)oracles_sdl_backend_menu_source(&s->backend));
     const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, (int)oracles_core_kind(s->core),
-                                           s->ghosts };
+                                           s->ghosts, device };
     const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
     if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
     if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);

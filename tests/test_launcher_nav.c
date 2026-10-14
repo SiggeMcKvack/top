@@ -410,9 +410,16 @@ static void display_in_game(void)
     nav.row = ORACLES_DISPLAY_HUD;
     CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 0);
     CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
-    nav.in_game = 0;
+    /* Advanced opens on its first row that changes: Continuous transitions from a game with Enhanced chosen (the core
+     * is the game's), Vsync with Faithful chosen, Core on the home screen. */
     nav.row = ORACLES_DISPLAY_ADVANCED;
-    oracles_display_act(&nav, ORACLES_HOME_OK);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_TRANSITIONS);
+    oracles_display_act(&nav, ORACLES_HOME_BACK);
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
+    oracles_display_act(&nav, ORACLES_HOME_BACK);
+    nav.in_game = 0;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
     /* The margin --screen-margin gives for the run is shown and does not change, on the home screen as from a game. */
     nav.display.margin = 2;
     nav.display.margin_fixed = 1;
