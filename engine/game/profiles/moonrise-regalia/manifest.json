@@ -1075,7 +1075,10 @@
     "selected_harp_song": null,
     "shadow_animation": "sites.shadow_animation",
     "shooter_selected_seeds": null,
-    "status_bar_attribute_map": null,
+    "status_bar_attribute_map": {
+      "bank": 4,
+      "address": "0xd640"
+    },
     "status_bar_needs_refresh": null,
     "terrain_effects_used": {
       "bank": 0,
@@ -1218,7 +1221,6 @@
     "satchel_selected_seeds": "item hotkeys not qualified for this revision",
     "selected_harp_song": "item hotkeys not qualified for this revision",
     "shooter_selected_seeds": "item hotkeys not qualified for this revision",
-    "status_bar_attribute_map": "item hotkeys not qualified for this revision",
     "status_bar_needs_refresh": "item hotkeys not qualified for this revision",
     "use_simulated_input": "item hotkeys not qualified for this revision",
     "tile_types_table": "continuous swim not qualified for this revision",

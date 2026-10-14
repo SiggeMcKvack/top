@@ -719,7 +719,10 @@
       "bank": 4,
       "address": "0xd240"
     },
-    "status_bar_attribute_map": null,
+    "status_bar_attribute_map": {
+      "bank": 4,
+      "address": "0xd640"
+    },
     "textbox_map": {
       "bank": 7,
       "address": "0xd000"
@@ -897,7 +900,6 @@
     "active_file_slot": "mods not qualified for this revision: they play on the original ROMs only",
     "jabu_water_level": "an Ages symbol: Seasons' engine has none",
     "link_raised_floor_offset": "an Ages symbol: Seasons' engine has none",
-    "status_bar_attribute_map": "item hotkeys not qualified for this revision",
     "inventory_b": "item hotkeys not qualified for this revision",
     "inventory_a": "item hotkeys not qualified for this revision",
     "inventory_storage": "item hotkeys not qualified for this revision",

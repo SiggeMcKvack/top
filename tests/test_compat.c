@@ -117,6 +117,16 @@ int main(void)
     CHECK(kinomi && oracles_compat_room_flag_page(kinomi, 2) == 0 && oracles_compat_group_map_width(kinomi, 1) == 8 && oracles_compat_group_map_height(kinomi, 0) == 8);
     CHECK(kinomi && oracles_compat_continuous_transitions(kinomi) && oracles_compat_zoom_out(kinomi) && !oracles_compat_item_hotkeys(kinomi));
     CHECK(oracles_compat_find(&kinomi_wrong_family) == NULL);
+    /* The status bar's maps, which the bar drawn full width decodes, bound in all five where the originals keep them. */
+    const OraclesCompatProfile *const all[] = { ages, seasons, moonrise, temple, kinomi };
+    const OraclesGuestTables *bar = &oracles_guest_tables_ages;
+    for (size_t i = 0; i < sizeof all / sizeof all[0]; i++) {
+        const OraclesGuestTables *t = oracles_compat_guest_tables(all[i]);
+        CHECK(t && t->status_bar_tile_map.bank == bar->status_bar_tile_map.bank && t->status_bar_tile_map.addr == bar->status_bar_tile_map.addr
+              && t->status_bar_attribute_map.bank == bar->status_bar_attribute_map.bank
+              && t->status_bar_attribute_map.addr == bar->status_bar_attribute_map.addr);
+    }
+    CHECK(bar->status_bar_attribute_map.bank != ORACLES_GUEST_ABSENT);
     CHECK(oracles_compat_find(NULL) == NULL);
     if (failures) return 1;
     puts("test_compat: ok");
