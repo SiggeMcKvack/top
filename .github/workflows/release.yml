@@ -9,7 +9,7 @@ name: Release
 #   the-oracles-project-X.Y.Z-android.apk          the Android application, signed by the project's release key
 #   SHA256SUMS.txt                                 their checksums
 #
-# and the notes of .github/release-notes.md.  Run by hand (workflow_dispatch), it builds the same files from the
+# and the notes of .github/release-notes.md, followed by the version's section of CHANGELOG.md.  Run by hand (workflow_dispatch), it builds the same files from the
 # chosen branch and keeps them as artifacts for seven days, without any Release: a rehearsal.  The tests are the CI's,
 # which ran on the same commit: here the products are built, in Release with warnings as errors.
 #
@@ -222,7 +222,19 @@ jobs:
           sha256sum the-oracles-project-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Write the notes
-        run: sed -e "s/X\.Y\.Z/${VERSION}/g" .github/release-notes.md > "$RUNNER_TEMP/notes.md"
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          sed -e "s/X\.Y\.Z/${VERSION}/g" .github/release-notes.md > "$RUNNER_TEMP/notes.md"
+          # Under them, the version's section of CHANGELOG.md, from its "## X.Y.Z (date)" heading to the next version's.
+          awk -v v="$VERSION" '/^## / { if (on) exit; if (index($0, "## " v " ") == 1) { on = 1; print "## What'"'"'s new in " v; next } } on' \
+            CHANGELOG.md > "$RUNNER_TEMP/changes.md"
+          grep -q . "$RUNNER_TEMP/changes.md" || { echo "CHANGELOG.md has no section for ${VERSION}" >&2; exit 1; }
+          if [ "$EVENT" = push ] && grep -q "^## ${VERSION} (unreleased)" CHANGELOG.md; then
+            echo "CHANGELOG.md still calls ${VERSION} unreleased: give it its date" >&2; exit 1
+          fi
+          { echo; cat "$RUNNER_TEMP/changes.md"; } >> "$RUNNER_TEMP/notes.md"
+          cp "$RUNNER_TEMP/notes.md" dist/release-notes.md
       - name: Keep a rehearsal's assets as one artifact
         if: github.event_name != 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -235,5 +247,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          gh release create "$GITHUB_REF_NAME" dist/*
+          gh release create "$GITHUB_REF_NAME" dist/the-oracles-project-* dist/SHA256SUMS.txt
           --repo "$GITHUB_REPOSITORY" --title "The Oracles Project ${VERSION}" --notes-file "$RUNNER_TEMP/notes.md"

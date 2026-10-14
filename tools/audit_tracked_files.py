@@ -31,7 +31,7 @@ from pathlib import Path, PurePosixPath
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_public_text import published_files  # noqa: E402
 
-ALLOWED_TOP = {".github", ".gitattributes", ".gitignore", "README.md", "CONTRIBUTING.md", "LICENSE",
+ALLOWED_TOP = {".github", ".gitattributes", ".gitignore", "README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE",
                "CMakeLists.txt",
                "android", "config", "docs", "engine", "harness", "launcher", "mods", "routes",
                "tests", "third_party", "tools"}
