@@ -139,7 +139,11 @@ static int framed_area(OraclesEnhancedView *v)
  * rule waits for play.  A game area scrolled line by line (a ripple) is
  * shown in the band with its waves: only the off-camera rule gives way to
  * it, never the menus and cutscenes, which scroll their own screens by line
- * too. */
+ * too.  A room's load framed (the game loading it, its blank and its reveal,
+ * Link walking in through the door until the camera takes him) is the
+ * world's, shown at the view's scale before and after: the large menus do
+ * not enlarge it (v->framed_load), or the room would jump to their scale and
+ * back. */
 OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
@@ -149,9 +153,12 @@ OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
     const int loading = (room_load
         && !(lcd_on && ev_on_grid(v) && v->observer.ref_group == ob->group && v->observer.ref_room == ob->room))
         || ob->cell_pending;   /* a dungeon room not yet placed on its floor's map */
-    v->have_wave = ob->playing && !loading && !framed_frame_menus(v) && line_scroll_shifts(v, v->line_shift, v->line_shift_y);
+    const int menus = framed_frame_menus(v);
+    v->have_wave = ob->playing && !loading && !menus && line_scroll_shifts(v, v->line_shift, v->line_shift_y);
     v->shake_history = (v->shake_history << 1) | (unsigned)shaking(v);
     const int off_camera = !room_load && !v->have_wave && framed_area(v);
-    if (v->framed_only || !ob->playing || loading || framed_frame_menus(v) || off_camera || !tracking) return ORACLES_ENHANCED_FRAMED;
+    v->framed_load = !v->framed_only && !menus && !off_camera && (ob->loading_room || (ob->playing && (loading || room_load || ob->link_warping)));
+    if (v->framed_only || !ob->playing || loading || menus || off_camera || !tracking) return ORACLES_ENHANCED_FRAMED;
+    v->framed_load = 0;
     return ORACLES_ENHANCED_WORLD;
 }

@@ -135,6 +135,12 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
     int blank = surface != NULL;   /* one colour: the screen faded out, where a camera that moves shows nothing moving */
     for (size_t i = 1, n = (size_t)c->width * oracles_enhanced_view_height(c->view); blank && i < n; i++) blank = surface[i] == surface[0];
     ec_measure_camera(c, ob, mode, camera_x, camera_y, blank);
+    {   /* each run is a jump to the large menus' scale and back */
+        uint32_t crop[4];
+        const int enlarged = oracles_enhanced_view_framed_crop(c->view, crop);
+        if (enlarged) { c->enlarged_frames++; if (!c->last_enlarged) c->enlarged_runs++; }
+        c->last_enlarged = enlarged;
+    }
 
     int shown[4];
     uint8_t room[4];

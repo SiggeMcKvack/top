@@ -75,6 +75,8 @@ struct OraclesEnhancedCheck {
     char uncovered_list[256];
     unsigned world_runs;              /* runs of consecutive world frames */
     unsigned fallback_runs;           /* runs of consecutive framed frames */
+    unsigned enlarged_frames, enlarged_runs;   /* framed frames the large menus show at their own scale (the view's crop), and their runs */
+    int last_enlarged;
     OraclesEnhancedMode last_mode;
     int have_mode;
     int have_last_observation;

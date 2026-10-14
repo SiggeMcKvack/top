@@ -527,7 +527,7 @@ const uint32_t *oracles_enhanced_view_frame_source(void *opaque)
 int oracles_enhanced_view_framed_crop(void *opaque, uint32_t rect[4])
 {
     const OraclesEnhancedView *v = opaque;
-    if (v->have_view) return 0;
+    if (v->have_view || v->framed_load) return 0;
     rect[0] = oracles_enhanced_hud_x(v->size);   /* as the compositor frames it */
     rect[1] = (v->size.height - ORACLES_PPU_HEIGHT) / 2u;
     rect[2] = ORACLES_ENHANCED_CORE_WIDTH;

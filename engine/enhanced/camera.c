@@ -14,6 +14,7 @@
 #define GAME_WINDOW_W 160  /* the core's game area's width, its window on the room */
 #define NORMAL_SCROLL_MODE 0x01u
 #define TRANSITION_IDLE 0x02u
+#define GAME_STATE_LOADING_ROOM 0x01u
 #define GAME_STATE_PLAYING 0x02u
 #define LINK_STATE_WARPING 0x0au   /* constants/common/linkStates.s */
 #define LINK_PARKED_COORDINATE 0xf8u   /* the placeholder the game parks Link at while a save loads or a cutscene takes him over (both coordinates) */
@@ -274,6 +275,7 @@ void oracles_enhanced_observe(OraclesGuest *guest, OraclesEnhancedObserver *o, O
     const uint8_t scroll_mode = oracles_guest_read8(guest, t->scroll_mode) & 0x7fu;
     const uint8_t transition_state = oracles_guest_read8(guest, t->screen_transition_state);
     out->playing = oracles_guest_read8(guest, t->game_state) == GAME_STATE_PLAYING;
+    out->loading_room = oracles_guest_read8(guest, t->game_state) == GAME_STATE_LOADING_ROOM;
     out->cutscene = oracles_guest_read8(guest, t->cutscene_index) > 1u;
     out->in_transition = !(scroll_mode == NORMAL_SCROLL_MODE && transition_state == TRANSITION_IDLE);
     out->in_scroll = (transition_state >= 3u && transition_state <= 5u) || scroll_mode == ORACLES_SCROLL_MODE_DECIDED || scroll_mode == ORACLES_SCROLL_MODE_TRANSITION;
@@ -297,7 +299,8 @@ void oracles_enhanced_observe(OraclesGuest *guest, OraclesEnhancedObserver *o, O
      * says.  Out of play (a file loading) the object is the game's to set. */
     const int parked = link && link[ORACLES_OBJ_XH] == LINK_PARKED_COORDINATE && link[ORACLES_OBJ_YH] == LINK_PARKED_COORDINATE;
     const int absent = out->playing && link && link[ORACLES_OBJ_ENABLED] == 0;
-    const int warping = (link && link[ORACLES_OBJ_STATE] == LINK_STATE_WARPING) || parked || absent;
+    out->link_warping = link && link[ORACLES_OBJ_STATE] == LINK_STATE_WARPING;
+    const int warping = out->link_warping || parked || absent;
     if (o->have_reference && (!out->in_transition || (!out->in_scroll && !warping))) update_reference(guest, t, o, out, is_large);
     /* Link's coordinates, signed by the scroll in progress (a large room's
      * rightward scroll runs its x past 240 without wrapping). */

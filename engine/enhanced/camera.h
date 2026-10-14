@@ -162,6 +162,8 @@ typedef struct OraclesEnhancedObservation {
     int large;                               /* wRoomIsLarge: a 15x11 room (dungeons, wide interiors) */
     int large_grid;                          /* a large room of groups 2 to 5: on the 16-wide grid of 240x176 cells, its neighbours through its doors */
     int playing;                             /* game state 2: the title, the file select and the game over are not */
+    int loading_room;                        /* game state 1: a room loaded from scratch, as after a warp (loadingRoom) */
+    int link_warping;                        /* Link in his warp state: through a door out of the room, or in by the one he arrives by */
     int cutscene;                            /* cutscene index above 1: the game may move Link itself */
     int parked_unknown;                      /* Link parked at the game's placeholder, or absent, in a room he has had no real position in yet: the reducers wait for him */
     int cell_pending;                        /* a dungeon room whose map position the game has not set yet: its place on the grid is not known (the view frames) */

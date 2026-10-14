@@ -385,6 +385,7 @@ struct OraclesEnhancedView {
     int ref_maku;
     uint8_t ref_maku_group, ref_maku_room;
     int have_view;
+    int framed_load;                 /* the last composition framed a room's load: not enlarged with the large menus */
     int have_last_ref, have_came_from;
     uint8_t last_ref_group, last_ref_room, came_from_room;
     uint64_t last_ref_epoch;

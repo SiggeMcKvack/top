@@ -34,6 +34,7 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     oracles_enhanced_view_ghost_failures(c->view, reasons);
     fprintf(out, "enhanced.run_hash=%016" PRIx64 "\nenhanced.frames=%u\nenhanced.world_frames=%u\nenhanced.framed_frames=%u\n", c->run_hash, c->frames, c->world_frames, c->framed_frames);
+    fprintf(out, "enhanced.enlarged_frames=%u\nenhanced.enlarged_runs=%u\n", c->enlarged_frames, c->enlarged_runs);
     fprintf(out, "enhanced.compose_us_mean=%.0f\nenhanced.compose_us_max=%.0f\n", c->frames ? c->compose_us_total / c->frames : 0.0, c->compose_us_max);
     {
         unsigned fade_frames = 0, faded = 0;
@@ -126,8 +127,8 @@ void oracles_enhanced_check_summary(OraclesEnhancedCheck *c, FILE *out)
 static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
 {
     fprintf(out, "enhanced: %u frames composed, run hash %016" PRIx64 "\n", c->frames, c->run_hash);
-    fprintf(out, "  world %u frames in %u runs, framed fallback %u frames in %u runs\n",
-            c->world_frames, c->world_runs, c->framed_frames, c->fallback_runs);
+    fprintf(out, "  world %u frames in %u runs, framed fallback %u frames in %u runs, of which the large menus enlarge %u frames in %u runs\n",
+            c->world_frames, c->world_runs, c->framed_frames, c->fallback_runs, c->enlarged_frames, c->enlarged_runs);
     fprintf(out, "  camera jumps over %d px between consecutive world frames: %u (largest %" PRId32 " px); vertical: %u (largest %" PRId32 " px)\n",
             MAX_CAMERA_STEP, c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);
     fprintf(out, "  camera profile %u, motion over world frames outside cutscenes: steps of 0 px %u, 1 px %u, 2 px %u, 3 px %u, 4 px and more %u; still while Link moves (not at the row's edge) %u frames; step changes %u; Link's offset from the centre %.1f px on average, %" PRId32 " px at most\n",
