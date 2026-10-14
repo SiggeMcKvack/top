@@ -115,9 +115,10 @@ static void SDLCALL answered(void *userdata, const char *const *files, int filte
 static const struct {
     const char *title;
     SDL_DialogFileFilter filters[2];
-} kinds[2] = {
+} kinds[3] = {
     { "Choose ROM", { { "Game Boy Color ROM", "gbc;gb" }, { "All files", "*" } } },
     { "Choose patch", { { "BPS patch", "bps" }, { "All files", "*" } } },
+    { "Choose European ROM", { { "Game Boy Color ROM", "gbc;gb" }, { "All files", "*" } } },
 };
 
 void oracles_choose_file(struct SDL_Window *window, OraclesDialogKind kind, const char *folder, int game)

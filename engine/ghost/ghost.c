@@ -129,6 +129,8 @@ OraclesGhost *oracles_ghost_create(const uint8_t *rom, size_t rom_size, const Or
     if (oracles_compat_seasons_rules(oracles_guest_profile(g->guest)))
         hooks_full |= oracles_guest_add_hook(g->guest, t->check_room_pack, ORACLES_EVENT_CHECK_ROOM_PACK, 0) != 0;
     hooks_full |= oracles_guest_add_hook(g->guest, t->load_object_gfx_header_to_slot4, ORACLES_EVENT_OBJECT_GFX_LOAD, ORACLES_EVENT_OBJECT_GFX_LOAD_DONE) != 0;
+    /* A language composed into the image is the game the ghost runs too: its texts served as the live instance's. */
+    hooks_full |= oracles_guest_arm_language(g->guest) != 0;
     g->objects = oracles_objects_create(g->guest);
     g->sprites = oracles_sprites_create(g->guest);
     if (hooks_full || !g->objects || !g->sprites) {

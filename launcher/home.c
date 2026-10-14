@@ -99,6 +99,7 @@ static void changed(home_app *app)
 static void refresh(home_app *app)
 {
     if (app->host && app->host->refresh) app->host->refresh(app->host->opaque, &app->nav, app->window);
+    oracles_page_keep_row(&app->nav);
 }
 
 /* A size of the launcher, in points (settings.txt's), in the window's coordinates: pixels on Windows. */
@@ -184,11 +185,13 @@ static void page_command(home_app *app, OraclesHomeCommand c)
     char message[256] = "";
     if (!host || game < 0) return;
     if (c == ORACLES_HOME_STORE && host->store) { host->store(host->opaque, &app->nav); return; }
-    if (host->file_chosen && ((c == ORACLES_HOME_CHOOSE_ROM && host->choose_rom) || (c == ORACLES_HOME_CHOOSE_PATCH && host->choose_patch))) {
+    if (host->file_chosen && ((c == ORACLES_HOME_CHOOSE_ROM && host->choose_rom) || (c == ORACLES_HOME_CHOOSE_PATCH && host->choose_patch)
+                              || (c == ORACLES_HOME_CHOOSE_EU_ROM && host->choose_eu_rom))) {
         /* The dialog answers later (dialog_answered); until then the home screen draws but takes no input. */
         app->dialog_open = 1;
         if (c == ORACLES_HOME_CHOOSE_ROM) host->choose_rom(host->opaque, game, app->window);
-        else host->choose_patch(host->opaque, game, app->window);
+        else if (c == ORACLES_HOME_CHOOSE_PATCH) host->choose_patch(host->opaque, game, app->window);
+        else host->choose_eu_rom(host->opaque, game, app->window);
         return;
     }
     if (c == ORACLES_HOME_MODS_LIMIT) { oracles_ui_home_toast(&app->view, oracles_mods_limit, now_ms()); return; }
@@ -262,7 +265,7 @@ static void pointer(home_app *app, float x, float y, int click)
     }
     if (hit.kind == ORACLES_UI_HIT_ROW) {
         if (!click) { if (hit.index != app->nav.row) { app->nav.row = hit.index; changed(app); } return; }
-        const OraclesHomeCommand c = app->nav.screen == ORACLES_SCREEN_GAME ? oracles_page_click(&app->nav, hit.index)
+        const OraclesHomeCommand c = app->nav.screen == ORACLES_SCREEN_GAME ? oracles_page_click(&app->nav, hit.index, hit.option)
                                      : app->nav.screen == ORACLES_SCREEN_MODS ? oracles_mods_click(&app->nav, hit.index)
                                                                               : oracles_display_click(&app->nav, hit.index, hit.option);
         changed(app);

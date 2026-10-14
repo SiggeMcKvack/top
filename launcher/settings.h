@@ -1,7 +1,7 @@
 /* What the launcher remembers from one run to the next, in settings.txt under
  * the per-user settings directory: the display choices, the keys and the
  * controller buttons, the item hotkeys, and for the home screen
- * each game's ROM, item hotkeys' mode and active mods, Display's profile,
+ * each game's ROM, European ROM and language, item hotkeys' mode and active mods, Display's profile,
  * transitions and window, and the launcher window's size. */
 #ifndef ORACLES_LAUNCHER_SETTINGS_H
 #define ORACLES_LAUNCHER_SETTINGS_H
@@ -50,6 +50,10 @@ typedef enum OraclesQuality {
 #define ORACLES_QUALITIES 4   /* the profiles, Custom left out */
 /* Their names in settings.txt: "low", "medium", "high", "max", "custom". */
 extern const char *const oracles_settings_quality_names[5];
+/* The languages' codes in settings.txt (language.h's), in the order of Cartridge's Language row: "en", "en-eu", "fr",
+ * "de", "it", "es". */
+#define ORACLES_SETTINGS_LANGUAGES 6
+extern const char *const oracles_settings_language_names[ORACLES_SETTINGS_LANGUAGES];
 
 
 
@@ -74,6 +78,16 @@ typedef struct oracles_settings {
      * (Gifts of Kinomi and Moonrise Regalia from rom_ages, Temple of Seasons from rom_seasons): an Oracle's ROM is chosen
      * once, for the Oracle and for every game made on it; empty: none. */
     char patch[ORACLES_HOME_FAN_GAMES][ORACLES_SETTINGS_PATH_LENGTH];   /* by ORACLES_HOME_FAN_*, the key oracles_home_fan_games' */
+    /* eu_rom_ages=, eu_rom_seasons=: the European ROM of each Oracle (Cartridge's European ROM), whose English and
+     * official translations the game plays in; empty: none.  language_ages=, language_seasons=: the language each
+     * Oracle plays in, an index of oracles_settings_language_names (en by default), which needs that ROM recognized. */
+    char eu_rom[ORACLES_SETTINGS_GAMES][ORACLES_SETTINGS_PATH_LENGTH];
+    int language[ORACLES_SETTINGS_GAMES];
+    /* language_kinomi=, language_moonrise=, language_temple=: the language each fan game plays in, its texts that are its
+     * Oracle's in a language of its Oracle's European ROM (eu_rom_ages or eu_rom_seasons), its own in its
+     * English; en by default.  Read and written back as they are, and applied only with the home screen's fan game
+     * languages on (OraclesHomeGames), which the launcher leaves off: from the home screen, a fan game starts in English. */
+    int fan_language[ORACLES_HOME_FAN_GAMES];
     /* Display's profile and transitions, for every game the home screen starts: profile=faithful|
      * enhanced (enhanced by default: the view drawn back), transitions=off|on (on by default: they come with Enhanced). */
     OraclesProfile profile;
@@ -148,5 +162,12 @@ int oracles_settings_mod_active(const char *list, const char *name);
 int oracles_settings_mod_set(char list[ORACLES_SETTINGS_MODS_LENGTH], const char *name, int on);
 /* The mods folder: mods beside settings.txt, one folder per mod; empty when there is no settings directory. */
 void oracles_settings_mods_folder(const oracles_settings *settings, char *out, size_t capacity);
+/* The language pack of game `g`, extracted from its European ROM at its first game in a language and read after:
+ * language-ages.pack or language-seasons.pack beside settings.txt; empty when there is no settings directory. */
+void oracles_settings_language_pack(const oracles_settings *settings, OraclesSettingsGame g, char *out, size_t capacity);
+/* The language pack of fan game `f` (ORACLES_HOME_FAN_*), made at its first game in a language from its Oracle's:
+ * language-kinomi.pack, language-moonrise.pack or language-temple.pack beside settings.txt; empty when there is no
+ * settings directory. */
+void oracles_settings_fan_language_pack(const oracles_settings *settings, unsigned f, char *out, size_t capacity);
 
 #endif

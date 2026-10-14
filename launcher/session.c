@@ -261,11 +261,19 @@ static int load_game(session *s, const OraclesSessionOptions *o, OraclesSessionR
     s->profile = oracles_compat_find(&s->info);
     fprintf(stderr, "oracles: %s, %s ROM (%s)\n", oracles_game_name(s->info.game),
             s->profile ? oracles_compat_name(s->profile) : s->info.known ? "authenticated image" : "unknown, header accepted", s->info.sha1);
+    /* A language's pack comes from the US ROM as read; the language is composed after the mods' houses. */
+    if (o->language && oracles_language_session_start(&s->language, o->language, o->eu_rom_path, o->language_pack, o->patch_path ? o->rom_path : NULL, &s->info, s->rom, s->rom_size, error, sizeof error) != 0)
+        return failed(result, "%s", error);
+    if (oracles_language_session_note(s->language)[0]) {
+        fprintf(stderr, "oracles: %s\n", oracles_language_session_note(s->language));
+        snprintf(result->language_note, sizeof result->language_note, "%s", oracles_language_session_note(s->language));
+    }
     /* A mod's houses are in the image before the core exists: every reader of the ROM sees them. */
     if (o->mods_count) {
         s->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, s->info.game, s->rom, s->rom_size, error, sizeof error);
         if (!s->mod || oracles_mod_session_compose(s->mod, oracles_rom_is_original(&s->info), &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     }
+    if (s->language && oracles_language_session_compose(s->language, &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     /* The command line's --core, else the core a replayed route was recorded on, else the settings' core= (Display's Core). */
     OraclesCoreKind kind = o->core ? (OraclesCoreKind)(o->core - 1) : (OraclesCoreKind)oracles_settings_core(s->settings);
     if (o->play_path && !o->core) {
@@ -359,6 +367,11 @@ static int replay_route(session *s, const OraclesSessionOptions *o, OraclesSessi
         return failed(result, "the route was recorded with --continuous-swim, which %s does not support", oracles_compat_name(s->profile));
     if (route_swim && !s->continuous_swim) { s->continuous_swim = s->continuous_transitions = 1; s->enhanced = 1; fprintf(stderr, "oracles: the route was recorded with --continuous-swim: the option is on for the replay\n"); }
     else if (!route_swim && s->continuous_swim) fprintf(stderr, "oracles: the route was recorded without --continuous-swim: the replay diverges after its first transition swum\n");
+    char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
+    if (oracles_route_language(&s->play.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&s->play.header, o->language))
+        return failed(result, "the route was played in a language (%s): replay it with --language %s and its European ROM", recorded, recorded);
+    if (!recorded[0] && o->language && strcmp(o->language, "en") != 0)
+        fprintf(stderr, "oracles: the route names no language: a route played in English may diverge in another, its texts' lengths pacing the dialogues\n");
     return 1;
 }
 
@@ -393,6 +406,10 @@ static int record_route(session *s, const OraclesSessionOptions *o, OraclesSessi
     snprintf(header.sram_sha1, sizeof header.sram_sha1, "%s", s->save.sha1);
     snprintf(header.options, sizeof header.options, "%s", s->continuous_swim ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS "," ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM
                                                           : s->continuous_transitions ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS : "");
+    if (s->language) {   /* the texts' lengths pace the dialogues: a replay plays in the same language */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_LANGUAGE "%s", used ? "," : "", o->language);
+    }
     snprintf(header.mods, sizeof header.mods, "%s", oracles_mod_session_identity(s->mod));
     header.store_sha1[0] = 0;
     if (s->mod) {   /* the mods' storage the route starts from, as ROUTE.sram, named in the header */
@@ -489,9 +506,9 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     /* The item hotkeys attach it in Faithful too: the image stays the core's; a replayed route that carries exchanges needs it as well. */
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
-    if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod) {
+    if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language) {
         s->guest = oracles_guest_attach(s->core, s->profile);
-        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod;
+        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -503,13 +520,13 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     /* The gameplay options that change the guest state are part of a savestate's identity, like the mods; the swim
      * is not: a state saved with it is a state of the game without it too (the policy gives a doubled step back to the
      * game when it may not go on), and the states taken with the transitions before it load as they did. */
-    snprintf(s->state_mods, sizeof s->state_mods, "%s%s%s", s->continuous_transitions ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS : "",
-             s->continuous_transitions && s->mod ? "," : "", oracles_mod_session_identity(s->mod));
+    snprintf(s->state_mods, sizeof s->state_mods, "%s%s%s%s%s", s->continuous_transitions ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS : "",
+             s->continuous_transitions && s->mod ? "," : "", oracles_mod_session_identity(s->mod),
+             s->language && (s->continuous_transitions || s->mod) ? "," : "", oracles_language_session_identity(s->language));
     s->state_info.mods = s->state_mods;
-    if (s->mod) {
-        char error[256];
-        if (oracles_mod_session_attach(s->mod, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
-    }
+    char error[256];
+    if (s->mod && oracles_mod_session_attach(s->mod, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
+    if (s->language && oracles_language_session_attach(s->language, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
         if (!s->view) return failed(result, "cannot start the Enhanced view");
@@ -677,6 +694,8 @@ static void finish(session *s, const OraclesSessionOptions *o)
     }
     if (s->diag) oracles_diagnostics_stop(s->diag);
     oracles_mod_session_stop(s->mod, NULL);
+    if (s->ran) oracles_language_session_report(s->language, s->guest, "oracles: ", stderr);
+    oracles_language_session_stop(s->language);
     if (s->guest) oracles_guest_detach(s->guest);
     if (s->ran && !o->no_window) {
         unsigned underruns = 0, drops = 0, peak_ms = 0, average_ms = 0;

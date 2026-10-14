@@ -1,4 +1,4 @@
-/* The home screen's keys of settings.txt: each game's ROM, profile and
+/* The home screen's keys of settings.txt: each game's ROM, European ROM, language, profile and
  * gameplay options and the launcher window's size are written and read back,
  * a file without them keeps the defaults, a value the launcher does not know
  * leaves its key alone, and names that were never the launcher's (zoom-out as
@@ -57,6 +57,18 @@ int main(int argc, char **argv)
     snprintf(written.patch[ORACLES_HOME_FAN_MOONRISE], sizeof written.patch[0], "C:\\Users\\sam\\Games\\Moonrise Regalia 1.0.6.bps");
     snprintf(written.patch[ORACLES_HOME_FAN_TEMPLE], sizeof written.patch[0], "/home/sam/roms/Temple_of_Seasons_1.073.bps");
     snprintf(written.patch[ORACLES_HOME_FAN_KINOMI], sizeof written.patch[0], "/home/sam/roms/Gifts_of_Kinomi_1.1.2.bps");
+    /* Each Oracle's European ROM and language: English, the US ROM's own, until one is chosen. */
+    CHECK(written.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && written.eu_rom[ORACLES_SETTINGS_SEASONS][0] == 0);
+    CHECK(written.language[ORACLES_SETTINGS_AGES] == 0 && written.language[ORACLES_SETTINGS_SEASONS] == 0);
+    snprintf(written.eu_rom[ORACLES_SETTINGS_AGES], sizeof written.eu_rom[0], "C:\\Users\\sam\\Games\\Oracle of Ages (Europe) (En,Fr,De,Es,It).gbc");
+    written.language[ORACLES_SETTINGS_AGES] = 2;   /* French */
+    snprintf(written.eu_rom[ORACLES_SETTINGS_SEASONS], sizeof written.eu_rom[0], "/home/sam/roms/a=b Seasons (Europe).gbc");
+    written.language[ORACLES_SETTINGS_SEASONS] = 5;   /* Spanish */
+    /* Each fan game's language, its Oracle's European ROM being the one used: English until one is set. */
+    CHECK(written.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && written.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0 && written.fan_language[ORACLES_HOME_FAN_KINOMI] == 0);
+    written.fan_language[ORACLES_HOME_FAN_MOONRISE] = 3;   /* German */
+    written.fan_language[ORACLES_HOME_FAN_TEMPLE] = 2;     /* French */
+    written.fan_language[ORACLES_HOME_FAN_KINOMI] = 1;     /* English (EU) */
     written.profile = ORACLES_PROFILE_ENHANCED;
     written.launcher_width = 1600;
     written.launcher_height = 900;
@@ -89,6 +101,10 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.patch[ORACLES_HOME_FAN_MOONRISE], written.patch[ORACLES_HOME_FAN_MOONRISE]));
     CHECK(!strcmp(read_back.patch[ORACLES_HOME_FAN_TEMPLE], written.patch[ORACLES_HOME_FAN_TEMPLE]));
     CHECK(!strcmp(read_back.patch[ORACLES_HOME_FAN_KINOMI], written.patch[ORACLES_HOME_FAN_KINOMI]));
+    CHECK(!strcmp(read_back.eu_rom[ORACLES_SETTINGS_AGES], written.eu_rom[ORACLES_SETTINGS_AGES]));
+    CHECK(!strcmp(read_back.eu_rom[ORACLES_SETTINGS_SEASONS], written.eu_rom[ORACLES_SETTINGS_SEASONS]));
+    CHECK(read_back.language[ORACLES_SETTINGS_AGES] == 2 && read_back.language[ORACLES_SETTINGS_SEASONS] == 5);
+    CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 3 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 2 && read_back.fan_language[ORACLES_HOME_FAN_KINOMI] == 1);
     CHECK(read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.launcher_width == 1600 && read_back.launcher_height == 900);
     CHECK(read_back.camera == 1);   /* the keys around them still read */
@@ -130,9 +146,15 @@ int main(int argc, char **argv)
         if (!strcmp(line, "patch_moonrise=C:\\Users\\sam\\Games\\Moonrise Regalia 1.0.6.bps\n")) seen |= 256;
         if (!strcmp(line, "patch_temple=/home/sam/roms/Temple_of_Seasons_1.073.bps\n")) seen |= 512;
         if (!strcmp(line, "patch_kinomi=/home/sam/roms/Gifts_of_Kinomi_1.1.2.bps\n")) seen |= 1024;
+        if (!strcmp(line, "eu_rom_seasons=/home/sam/roms/a=b Seasons (Europe).gbc\n")) seen |= 2048;
+        if (!strcmp(line, "language_ages=fr\n")) seen |= 4096;
+        if (!strcmp(line, "language_seasons=es\n")) seen |= 8192;
+        if (!strcmp(line, "language_moonrise=de\n")) seen |= 16384;
+        if (!strcmp(line, "language_temple=fr\n")) seen |= 32768;
+        if (!strcmp(line, "language_kinomi=en-eu\n")) seen |= 65536;
     }
     if (f) fclose(f);
-    CHECK(seen == (127 | 256 | 512 | 1024));   /* and not 128: no per-game profile or transitions */
+    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536));   /* and not 128: no per-game profile or transitions */
 
     /* A file of an earlier version, without the keys: the defaults; the keys it has hold, colour correction off. */
     write_text(path, "colour_correction=0\nvsync=off\n");
@@ -140,6 +162,8 @@ int main(int argc, char **argv)
     oracles_settings_load(&read_back);
     CHECK(read_back.colour_correction == 0 && !strcmp(read_back.vsync, "off") && read_back.rom[0][0] == 0 && read_back.patch[ORACLES_HOME_FAN_MOONRISE][0] == 0
           && read_back.patch[ORACLES_HOME_FAN_TEMPLE][0] == 0 && read_back.patch[ORACLES_HOME_FAN_KINOMI][0] == 0 && read_back.profile == ORACLES_PROFILE_ENHANCED);
+    CHECK(read_back.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && read_back.language[ORACLES_SETTINGS_AGES] == 0 && read_back.language[ORACLES_SETTINGS_SEASONS] == 0);
+    CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0);
     CHECK(read_back.transitions == 1 && read_back.window_scale == 0);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
 
@@ -153,8 +177,14 @@ int main(int argc, char **argv)
     snprintf(mods_at.path, sizeof mods_at.path, "C:\\Users\\sam\\AppData\\Roaming\\the-oracles-project\\settings.txt");
     oracles_settings_mods_folder(&mods_at, folder, sizeof folder);
     CHECK(!strcmp(folder, "C:\\Users\\sam\\AppData\\Roaming\\the-oracles-project\\mods"));
+    oracles_settings_language_pack(&mods_at, ORACLES_SETTINGS_SEASONS, folder, sizeof folder);
+    CHECK(!strcmp(folder, "C:\\Users\\sam\\AppData\\Roaming\\the-oracles-project\\language-seasons.pack"));
+    oracles_settings_fan_language_pack(&mods_at, ORACLES_HOME_FAN_KINOMI, folder, sizeof folder);
+    CHECK(!strcmp(folder, "C:\\Users\\sam\\AppData\\Roaming\\the-oracles-project\\language-kinomi.pack"));
     mods_at.path[0] = 0;
     oracles_settings_mods_folder(&mods_at, folder, sizeof folder);
+    CHECK(folder[0] == 0);
+    oracles_settings_language_pack(&mods_at, ORACLES_SETTINGS_AGES, folder, sizeof folder);
     CHECK(folder[0] == 0);
 
     /* Mods' Play gives a session the mods --mods would, in the same order, and the same save of its own; a mod no
@@ -206,10 +236,14 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.mods[ORACLES_SETTINGS_AGES], "alpha,beta,zeta") && read_back.mods[ORACLES_SETTINGS_SEASONS][0] == 0);
 
     /* Values it does not know leave the default; an empty ROM clears it. */
-    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nitem_hotkeys_seasons=always\nwindow_scale=5\n");
+    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
+                     "eu_rom_ages=\nlanguage_ages=ja\nlanguage_seasons=de\nlanguage_temple=xx\nlanguage_kinomi=it\nlanguage_moonrise=en-us\n");
     oracles_settings_defaults(&read_back);
     snprintf(read_back.rom[1], sizeof read_back.rom[1], "old.gbc");
+    snprintf(read_back.eu_rom[0], sizeof read_back.eu_rom[0], "old.gbc");
     oracles_settings_load(&read_back);
+    CHECK(read_back.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && read_back.language[ORACLES_SETTINGS_AGES] == 0 && read_back.language[ORACLES_SETTINGS_SEASONS] == 3);
+    CHECK(read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_KINOMI] == 4 && read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0);
     CHECK(read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
     CHECK(read_back.rom[ORACLES_SETTINGS_SEASONS][0] == 0);

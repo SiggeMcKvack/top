@@ -124,13 +124,21 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
             }
             if (strcmp(key, "oracles-route") == 0) {
                 route->format = (unsigned)strtoul(value, NULL, 10);
-                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_MODS) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
+                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_LANGUAGE) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
                 format_seen = 1;
             } else if (strcmp(key, "game") == 0) copy_field(route->header.game, sizeof route->header.game, value);
             else if (strcmp(key, "rom_sha1") == 0) copy_field(route->header.rom_sha1, sizeof route->header.rom_sha1, value);
             else if (strcmp(key, "sram_sha1") == 0) copy_field(route->header.sram_sha1, sizeof route->header.sram_sha1, value);
             else if (strcmp(key, "store_sha1") == 0) copy_field(route->header.store_sha1, sizeof route->header.store_sha1, value);
-            else if (strcmp(key, "options") == 0) copy_field(route->header.options, sizeof route->header.options, value);
+            else if (strcmp(key, "options") == 0) {
+                copy_field(route->header.options, sizeof route->header.options, value);
+                /* A route of format 3 or less cannot name a language: its readers replay it in English. */
+                char language[16];
+                if (oracles_route_language(&route->header, language, sizeof language)[0] && route->format < ORACLES_ROUTE_FORMAT_LANGUAGE) {
+                    set_error(error, error_capacity, "a language option needs format 4", number);
+                    goto fail;
+                }
+            }
             else if (strcmp(key, "mods") == 0) {
                 /* A route of format 2 or less cannot name mods: its readers replay it without them. */
                 if (route->format < ORACLES_ROUTE_FORMAT_MODS) { set_error(error, error_capacity, "a mods line needs format 3", number); goto fail; }
@@ -222,6 +230,31 @@ static int listed(const char *list, const char *name)
 }
 
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name) { return listed(header->options, name); }
+
+const char *oracles_route_language(const OraclesRouteHeader *header, char *out, size_t capacity)
+{
+    const size_t prefix = strlen(ORACLES_ROUTE_OPTION_LANGUAGE);
+    if (capacity) out[0] = 0;
+    for (const char *p = header->options; *p;) {
+        const char *end = strchr(p, ',');
+        const size_t length = end ? (size_t)(end - p) : strlen(p);
+        if (length > prefix && strncmp(p, ORACLES_ROUTE_OPTION_LANGUAGE, prefix) == 0 && length - prefix < capacity) {
+            memcpy(out, p + prefix, length - prefix);
+            out[length - prefix] = 0;
+            break;
+        }
+        p += length + (end != NULL);
+    }
+    return out;
+}
+
+int oracles_route_language_matches(const OraclesRouteHeader *header, const char *language)
+{
+    char recorded[8];
+    if (!oracles_route_language(header, recorded, sizeof recorded)[0]) return 1;
+    const char *session = language && strcmp(language, "en") != 0 ? language : "";
+    return strcmp(recorded, session) == 0;
+}
 int oracles_route_joypad_bouncing(const OraclesRouteHeader *header) { return !listed(header->core, ORACLES_ROUTE_CORE_JOYPAD_BOUNCING_OFF); }
 int oracles_route_core_mgba(const OraclesRouteHeader *header) { return listed(header->core, ORACLES_ROUTE_CORE_MGBA); }
 
@@ -265,7 +298,10 @@ int oracles_route_writer_open(OraclesRouteWriter *writer, const char *path, cons
     memset(writer, 0, sizeof *writer);
     writer->file = fopen(path, "wb"); /* LF on every platform */
     if (!writer->file) return -1;
-    fprintf(writer->file, "oracles-route %d\ngame %s\nrom_sha1 %s\nsram_sha1 %s\n", header->mods[0] ? ORACLES_ROUTE_FORMAT_MODS : ORACLES_ROUTE_FORMAT,
+    char language[16];
+    const int format = oracles_route_language(header, language, sizeof language)[0] ? ORACLES_ROUTE_FORMAT_LANGUAGE
+                     : header->mods[0] ? ORACLES_ROUTE_FORMAT_MODS : ORACLES_ROUTE_FORMAT;
+    fprintf(writer->file, "oracles-route %d\ngame %s\nrom_sha1 %s\nsram_sha1 %s\n", format,
             header->game, header->rom_sha1, header->sram_sha1);
     if (header->options[0]) fprintf(writer->file, "options %s\n", header->options);   /* a replay runs with them: without, it diverges */
     if (header->core[0]) fprintf(writer->file, "core %s\n", header->core);

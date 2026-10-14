@@ -109,6 +109,7 @@ static void emit(OraclesGuest *guest, OraclesGuestEventType type, uint16_t pc, u
     /* checkReloadStatusBarGraphics is also reached by tail jumps whose return lies elsewhere: only its call from mainThreadStart is the write point. */
     if (type == ORACLES_EVENT_STATUS_BAR_CHECKED) { if (pc != guest->inventory_write_pc) return; oracles_guest_apply_inventory_policy(guest); }
     if (type == ORACLES_EVENT_STATUS_BAR_CHECK) oracles_guest_call_point(guest, oracles_core_registers(guest->core).sp);
+    if (type == ORACLES_EVENT_TEXT_ADDRESS) oracles_guest_serve_text(guest);
     if (!guest->sink && !guest->listener_count) return;
     const OraclesCoreRegisters r = oracles_core_registers(guest->core);
     OraclesGuestEvent event;

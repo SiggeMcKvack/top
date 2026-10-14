@@ -9,8 +9,9 @@
  * list of fan games.  A disabled item is highlighted like the others and
  * shows its reason.  Fan games opens the list of fan games in the menu;
  * a fan game picked there (oracles_home_fan_games) has the menu of a game.  Cartridge opens
- * the game's page (its ROM, or a fan game's base ROM and patch; its save;
- * Play), Display the profile and the window's choices, the same for every
+ * the game's page (its ROM, or a fan game's base ROM and patch; its save; an
+ * Oracle's European ROM and language; Play), with the language beside it when
+ * it is not English, Display the profile and the window's choices, the same for every
  * game, Controls the keys and buttons, Mods the mods of an Oracle (ui_page_nav.h),
  * greyed for a fan game. */
 #ifndef ORACLES_UI_HOME_NAV_H
@@ -74,6 +75,7 @@ typedef enum OraclesHomeCommand {
     ORACLES_HOME_EXIT,
     ORACLES_HOME_CHOOSE_ROM,     /* the game's page: the system's file dialog for the page's game (a fan game's base ROM) */
     ORACLES_HOME_CHOOSE_PATCH,   /* a fan game's page: the system's file dialog for its patch */
+    ORACLES_HOME_CHOOSE_EU_ROM,  /* an Oracle's page: the system's file dialog for its European ROM */
     ORACLES_HOME_OPEN_FOLDER,    /* the game's page: the folder of its save in the system's file manager */
     ORACLES_HOME_OPEN_MODS,      /* Mods: the mods folder in the system's file manager, made if it is not there */
     ORACLES_HOME_START_AGES_MODS,      /* Mods' Play: the game with the mods active on its page, on its own save */
@@ -179,6 +181,15 @@ typedef struct OraclesHomeGame {
     char save_written[32];                       /* "21 Sep 2026, 22:14" */
     int hotkeys;                                 /* item hotkeys: 0 off, 1 use, 2 equip, as the policy numbers them */
     int hotkeys_failed;                          /* they could not attach to this ROM in a session: it plays without them */
+    /* An Oracle's European ROM, which its English and official translations come from: NONE, ORIGINAL when it is this
+     * game's (recognized), UNRECOGNISED for another file, REFUSED with the loader's reason when it cannot be read; a fan
+     * game's, its Oracle's (the state alone), NONE while the fan games' languages are off.  The language the game plays in, an index of oracles_page_language_names,
+     * English (US) (0) unless the ROM is recognized. */
+    OraclesRomState eu;
+    char eu_file[ORACLES_HOME_TEXT_LENGTH];
+    char eu_folder[ORACLES_HOME_TEXT_LENGTH * 4];
+    char eu_reason[ORACLES_HOME_TEXT_LENGTH];
+    int language;
 } OraclesHomeGame;
 
 /* The choices of Display, the same for every game. */
@@ -241,7 +252,11 @@ typedef struct OraclesHomeNav {
     OraclesHomeHero fan_pick;          /* ORACLES_HOME_HERO_FAN while the list shows */
     unsigned focus;
     unsigned row;                      /* the highlighted row of the game's page, or of Display */
+    int eu_action;                     /* Cartridge's European ROM row with a file: 0 Change, 1 Remove, as left and right set it */
     int advanced;                      /* Display shows its Advanced rows in place of its own */
+    /* The fan games' Language row, their language beside Cartridge and their games started in it: 0 in the product,
+     * whose host leaves them off (OraclesHomeGames); 1 lays them out as the mockup's fanLang does. */
+    int fan_languages;
     OraclesHomeGame games[ORACLES_HOME_GAMES];   /* Ages, Seasons, the fan games */
     OraclesHomeDisplay display;
     OraclesHomeControls controls;

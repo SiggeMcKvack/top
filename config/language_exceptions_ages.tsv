@@ -1,0 +1,27 @@
+# The texts of Ages whose translation is not the European text of the same identifier (engine/language/language.h).
+# Every other US text takes the European text of its identifier, when its commands are the US text's.
+# The first row pins the European ROM the table was measured on, by its SHA-1. A row then: the texts (TX_GGII, four
+# hexadecimal digits each, or a range first-last, space-separated), the languages (en-eu, fr, de, it, es,
+# comma-separated, or all: the five of the European ROM), the source of their translation, and why. A source is one of:
+#   eu:TX_GGII   the European text of that identifier: the European ROM moved the text there
+#   rule:NAME    the European text of the same identifier, adapted to the US code by a rule (language_rules.c)
+#   own:KEY      the port's own translation, unofficial (config/language_own.tsv)
+#   english      the US English, kept
+# texts	languages	source	why
+rom	9f2dff3c46406839f839a8d535353dfc1e3e8670
+0a53	all	eu:TX_0a51	the European ROM gives the identifier to a secret's text and keeps this one at TX_0a51 and others
+302e	all	eu:TX_302f	the European ROM gives the identifier to another text in four languages; TX_302f holds this one in all five
+0034	en-eu,de,it,es	rule:number-as-more	the Ring Box: the European text shows a count of rings (\num1) the US code does not set
+0023 0048 2106 2205 2f01 2f10-2f12 4509 450a	de	rule:lead	the box placed (\pos) or a sound played (\sfx) at the start otherwise
+2106 2205 24d2	es	rule:lead	the box placed (\pos) or a sound played (\sfx) at the start otherwise
+0116 3150 3152	de	rule:us-call	another text called (\call) than the US one
+0e02-0e04 0e1b-0e1d 0e22-0e25 0e29 0e2a	de	rule:shop-price	the German shops print their prices and their choice themselves
+2815	de	rule:end-at-pos	the next text's words follow a \pos, where the European code ends a text
+2f0c	it,es	rule:end-at-pos	the next text's words follow a \pos, where the European code ends a text
+2803 2f10-2f12	es	rule:end-at-pos	the next text's words follow a \pos, where the European code ends a text
+2493	it	rule:join-next	the text ends where the US one runs on into the next
+2413 2433	fr	own:rounds-cleared	the European text says every round was passed and leaves the count (\num1) out: a player who cleared fewer would read he cleared them all
+4d28	fr	own:biggoron-forge	the European text says an old Goron can forge Biggoron's Swords, where the US says any old Goron cannot
+5516	fr	own:fairy-note	the European title makes the note Tingle's to the Great Fairy, where it is the Great Fairy's to Tingle
+4b02	all	rule:option-numbers	the last choice is another sum than the US code's
+570f	es	rule:symbols	one more note (\sym) in the song

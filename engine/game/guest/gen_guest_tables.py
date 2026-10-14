@@ -70,6 +70,9 @@ FUNCTIONS = [
     ("set_global_flag", "setGlobalFlag"), ("unset_global_flag", "unsetGlobalFlag"),
     # A mod's storage follows the game's files: the one entry of their four operations (c: create, save, load, erase).
     ("file_management_function", "fileManagementFunction"),
+    # A language: the routine that turns wTextIndexH:wTextIndexL into the text's address (hl) and bank (w7ActiveBank),
+    # the one place every text, its dictionary fragments, calls and jumps are read from (textbox.s).
+    ("get_text_address", "getTextAddress"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -121,6 +124,12 @@ VARIABLES = [
     # Ghost: the counters the Lost Woods routes its transitions by (screenTransitionLostWoods, Seasons), the routing key of its answers.
     ("lost_woods_transition_counter1", "wLostWoodsTransitionCounter1"), ("lost_woods_transition_counter2", "wLostWoodsTransitionCounter2"),
     ("active_file_slot", "hActiveFileSlot"),   # the file an operation of fileManagementFunction concerns (a mod's storage)
+    # A language: the text getTextAddress looks up and the bank it answers, and the tables it reads (a language table
+    # per language, then two bases of offsets: docs/ROM_DATA_FORMATS.md, section 8.1).
+    ("text_index_h", "wTextIndexH"), ("text_index_l", "wTextIndexL"), ("active_text_bank", "w7ActiveBank"),
+    ("text_table_table", "textTableTable"), ("text_offset1_table", "textOffset1Table"), ("text_offset2_table", "textOffset2Table"),
+    # and the graphics headers loadGfxHeader reads, whose entries a language repoints (docs/ROM_DATA_FORMATS.md, section 4.1).
+    ("gfx_header_table", "gfxHeaderTable"),
     ("is_linked_game", "wIsLinkedGame"), ("switch_state", "wSwitchState"), ("rom_bank", "hRomBank"),
     # Ghost: Jabu-Jabu's water level decides its tiles (Ages); the hardware type opens the GBA shops (read by the substitutions, constant).
     ("jabu_water_level", "wJabuWaterLevel"), ("gameboy_type", "hGameboyType"),
@@ -298,6 +307,8 @@ DISASM_CONSTANTS = [
     ("treasure_ring", "common/treasure.s", "TREASURE_RING"), ("treasure_ring_box", "common/treasure.s", "TREASURE_RING_BOX"),
     ("treasure_gasha_seed", "common/treasure.s", "TREASURE_GASHA_SEED"), ("treasure_seed_satchel", "common/treasure.s", "TREASURE_SEED_SATCHEL"),
     ("num_rings", "common/rings.s", "NUM_RINGS"),
+    # A language: the first internal text group read from the second base (compiled into getTextAddress's `cp`).
+    ("text_offset_split_index", "../precompressed/text/{game}/textDefines.s", "TEXT_OFFSET_SPLIT_INDEX"),
 ]
 # The global flags the load around the substitutions reads (the coarse list, ghost_key.c), each for the one game
 # whose load reads it: 0xff in the other game, as for a flag the game does not have.

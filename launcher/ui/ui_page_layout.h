@@ -4,7 +4,7 @@
  * Display's diagram, small, at the top right, its Advanced button beside it)
  * over a single column of rows, Display saying the highlighted row's
  * explanation once, under its rows, on one line with a note line under it.
- * Display's rows keep their heights whatever the choices and the highlight;
+ * Display's rows, and Cartridge's European ROM and Language, keep their heights whatever the choices and the highlight;
  * 16:9's Advanced rows keep two lines for their explanations. */
 #ifndef ORACLES_UI_PAGE_LAYOUT_H
 #define ORACLES_UI_PAGE_LAYOUT_H
@@ -47,15 +47,38 @@ typedef struct OraclesUiGameTexts {
     char image_status[ORACLES_HOME_TEXT_LENGTH];
     char save_file[ORACLES_HOME_TEXT_LENGTH], save_line[ORACLES_HOME_TEXT_LENGTH];
     const char *rom_note, *rom_hotkeys_note, *play_note;
+    /* An Oracle with its original ROM (`european`): its European ROM's file, folder (empty without a file) and status,
+     * its buttons (Choose…, or Change… and Remove).  Its Language row, or a fan game's (`languages`): its explanation,
+     * and its note, empty in English (US). */
+    int european, languages;
+    char eu_file[ORACLES_HOME_TEXT_LENGTH], eu_folder[ORACLES_HOME_TEXT_LENGTH * 4], eu_status[ORACLES_HOME_TEXT_LENGTH];
+    unsigned eu_buttons;
+    const char *eu_button_labels[2];
+    const char *language_explanation;
+    char language_note[ORACLES_HOME_TEXT_LENGTH];
 } OraclesUiGameTexts;
 
 typedef struct OraclesUiGameLayout {
     OraclesUiPageHead head;
     OraclesUiBox panel;
     OraclesUiLine label_rom, label_patch, label_save;   /* "ROM", or "Base ROM" and "Patch" */
-    OraclesUiBox rows[ORACLES_GAME_ROWS];            /* each row's highlight, the pointer's target; no Patch row but a fan game's */
-    OraclesUiLine rom_file, rom_folder, rom_status, rom_note, rom_hotkeys_note, rom_button, rom_button_dot;
+    OraclesUiLine label_eu, label_language;            /* "European ROM", "Language" */
+    /* Each row's highlight, the pointer's target; no Patch row but a fan game's, no European ROM row but an Oracle's
+     * with its original ROM, no Language row but that Oracle's and a fan game's.  They keep their heights whatever the
+     * choices and the highlight. */
+    OraclesUiBox rows[ORACLES_GAME_ROWS];
+    OraclesUiLine rom_file, rom_folder, rom_button, rom_button_dot;
+    OraclesUiWrapped rom_status, rom_note, rom_hotkeys_note;   /* broken into lines in the file's column */
     OraclesUiBox rom_dot;
+    /* European ROM: its file, folder (its line kept without a file), status, and its buttons with their dots, each
+     * button's box the pointer's target; Language: the six languages framed, each as wide, laid out whether they show
+     * or not, in 16:9 on two lines of three, its explanation and its note (its line kept in English (US)); in 4:3 its
+     * label over them, on one line, and one line under them, the note while there is one (the explanation's line then
+     * zero), else the explanation (the note's zero). */
+    OraclesUiLine eu_file, eu_folder, eu_status, eu_buttons[2], eu_button_dots[2];
+    OraclesUiBox eu_dot, eu_button_boxes[2];
+    OraclesUiOptionLayout languages[ORACLES_PAGE_LANGUAGES];
+    OraclesUiLine language_explanation, language_note;
     OraclesUiLine patch_file, patch_status, patch_button, patch_button_dot, patch_folder, image_status;
     OraclesUiBox patch_dot, image_dot;
     OraclesUiLine save_file, save_line, save_button, save_button_dot;
@@ -71,6 +94,7 @@ extern const OraclesUiTextStyle oracles_ui_page_section_4_3, oracles_ui_page_tit
 extern const OraclesUiTextStyle oracles_ui_row_label_4_3, oracles_ui_row_title_4_3, oracles_ui_row_path_4_3, oracles_ui_row_text_4_3;
 extern const OraclesUiTextStyle oracles_ui_row_note_4_3, oracles_ui_row_button_4_3, oracles_ui_play_4_3, oracles_ui_option_size_4_3;
 extern const OraclesUiTextStyle oracles_ui_diagram_label_4_3, oracles_ui_help_4_3, oracles_ui_mod_games_4_3, oracles_ui_quality_sets_4_3;
+extern const OraclesUiTextStyle oracles_ui_language_4_3;
 
 /* The styles a layout draws the pages in.  16:9's row_text is also its explanations', row_note its notes'; 4:3 says
  * the highlighted row's explanation in `help`, with its note in `help_note`, and has no `over` (the title's line holds
@@ -80,6 +104,7 @@ typedef struct OraclesUiPageStyles {
     const OraclesUiTextStyle *row_label, *row_title, *row_path, *row_status, *row_text, *row_note, *row_button, *play;
     const OraclesUiTextStyle *option_name, *option_size, *choice, *diagram_label, *help, *help_note;
     const OraclesUiTextStyle *mod_games, *mods_empty, *mods_note, *quality_sets;
+    const OraclesUiTextStyle *language;   /* Cartridge's languages, in their frames */
 } OraclesUiPageStyles;
 const OraclesUiPageStyles *oracles_ui_page_styles(OraclesUiLayout layout);
 
@@ -214,5 +239,8 @@ void oracles_ui_wrap(const OraclesUiTextStyle *style, const char *text, float wi
 void oracles_ui_fit(const OraclesUiTextStyle *style, const char *text, float width, char *out, size_t capacity);
 /* `length` bytes of `text` into `out`, shortened in their middle with an ellipsis when they do not hold in it. */
 void oracles_ui_copy_middle(char *out, size_t capacity, const char *text, size_t length);
+/* `text` after the text `out` holds, a space between them when it holds one, shortened in its middle with an ellipsis
+ * when it does not hold in the rest of `out`: whole characters, its end kept. */
+void oracles_ui_append_middle(char *out, size_t capacity, const char *text);
 
 #endif

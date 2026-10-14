@@ -10,8 +10,8 @@
 /* The page over the motifs, in the colours of its game's `accent`. */
 void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent);
 
-/* What lies under a point of the page: a row, or -1. */
-int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y);
+/* What lies under a point of the page: a row, or -1, and an option of it (oracles_page_click's), or -1. */
+int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y, int *option);
 
 /* Display, and what lies under a point of it. */
 void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent);

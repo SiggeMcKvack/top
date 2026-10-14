@@ -21,7 +21,8 @@ work_dir="$here/build-windows"
 copied=0
 case "$here" in
     //*)
-        # CMakeLists.txt reads config/ (sameboy.json, sdl3.json, version.json), and the tests the example mods of mods/:
+        # CMakeLists.txt reads config/ (sameboy.json, sdl3.json, version.json, the languages' tables), and the tests the
+        # example mods of mods/:
         # copy them under one local root.
         stage="/tmp/oracles-src"
         source_dir="$stage"
@@ -32,7 +33,7 @@ case "$here" in
         echo "copying the sources to $source_dir (a network path is slow: about a minute)"
         tar -C "$here" --exclude=engine/game/data/build -cf - CMakeLists.txt third_party engine harness launcher mods tests | tar -C "$source_dir" -xf -
         echo "copied"
-        cp "$here"/config/*.json "$stage/config/"
+        find "$here/config" -maxdepth 1 -type f -exec cp {} "$stage/config/" \;
         copied=1
         ;;
 esac

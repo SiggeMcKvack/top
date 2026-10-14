@@ -55,7 +55,8 @@ The tree:
 | `engine/enhanced` | the camera, the compositor and the Enhanced view |
 | `engine/gameplay` | the continuous transitions and the item hotkeys, the only code that asks the bus to write |
 | `engine/mods` | the Lua runtime, the houses' composition, the mods' storage |
-| `engine/session`, `engine/host` | what a session shares between the launcher and the harness (routes, route effects, the hotbar's model, mods of a session); the host facade and its backend without a window |
+| `engine/language` | the official translations: a European ROM's pack, extracted (the tables of exceptions, the rules that adapt a European text to the US code, the port's own texts) and read, and a language composed into the image |
+| `engine/session`, `engine/host` | what a session shares between the launcher and the harness (routes, route effects, the hotbar's model, mods and language of a session); the host facade and its backend without a window |
 | `launcher`, `android` | the SDL 3 launcher and its drawn interface; the Android application |
 | `harness`, `tests`, `tools` | the differential harness; the tests without a ROM; the route suite and the checks |
 
@@ -64,7 +65,7 @@ The tree:
 - **The core is the only authority.** The game runs in SameBoy, or in mGBA when the player chooses it; the host reads the game's state and never reimplements its logic. What needs a computation of the game (a neighbour's terrain with its substitutions) is asked of the game itself, in a ghost instance.
 - **Faithful depends on the core alone.** The renderer, the hooks and the mods are layers above; the Faithful profile shows the core's framebuffer and stays playable if everything else is absent or off.
 - **Reads by physical address, never through the guest CPU's bus.** The host reads the core's memory by bank and offset, through direct access; the CPU bus returns `$ff` on VRAM and OAM while the PPU draws and drops writes.
-- **The presentation never writes into the game.** Enhanced never changes the live instance, and the route suite compares the live-state fingerprints with and without the view on every route. The only guest writes are the three closed transactions of the bus, at the safe points of [`GAME_HOOKS.md`](GAME_HOOKS.md), section 6: the continuous transitions (with `--continuous-swim`, through a swim too), the item hotkeys, and the mods' calls to the game's own routines.
+- **The presentation never writes into the game.** Enhanced never changes the live instance, and the route suite compares the live-state fingerprints with and without the view on every route. The only guest writes are the four closed transactions of the bus, at the safe points of [`GAME_HOOKS.md`](GAME_HOOKS.md), section 6: the continuous transitions (with `--continuous-swim`, through a swim too), the item hotkeys, the mods' calls to the game's own routines, and a language's texts served where the game looks a text up.
 - **One fact in one place.** An address or a format lives in the reference documents or in code generated from the pinned disassembly (`config/disasm.json`), resolved per game: Ages and Seasons do not share addresses.
 - **Every comparison is intra-core.** Same core, same inputs, with and without hooks, with and without Enhanced; the fingerprints exclude the dead stack bytes below each thread's SP and nothing else.
 - **Portability by construction.** No SDL, POSIX or system call outside the host facade and the launcher; no Python at run time.

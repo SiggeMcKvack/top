@@ -142,7 +142,9 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
     const OraclesHomeGame *game = &nav->games[g];
     const int fan = oracles_home_fan_game(g) != NULL;
     items[0] = item(ORACLES_HOME_ITEM_START, "Start game", NULL, !game->usable, fan ? "Choose both files in Cartridge first" : "Choose a ROM in Cartridge first");
-    items[1] = item(ORACLES_HOME_ITEM_GAME, "Cartridge", NULL, 0, NULL);
+    /* Beside Cartridge, the language the game plays in when it is not English. */
+    const int language = oracles_page_language(nav, game);
+    items[1] = item(ORACLES_HOME_ITEM_GAME, "Cartridge", language ? oracles_page_language_names[language] : NULL, 0, NULL);
     /* Controls and Display hold for every game: open from every entry, a fan game's included. */
     items[2] = item(ORACLES_HOME_ITEM_CONTROLS, "Controls", NULL, 0, NULL);
     /* Beside Display, the profile the game plays in: Display's, or Faithful for a ROM that allows nothing else. */
@@ -274,7 +276,7 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *i
     switch (it->id) {
         case ORACLES_HOME_ITEM_START: return oracles_home_start_command(oracles_home_game(nav));
         case ORACLES_HOME_ITEM_EXIT: return ORACLES_HOME_EXIT;
-        case ORACLES_HOME_ITEM_GAME: nav->screen = ORACLES_SCREEN_GAME; nav->row = 0; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_ITEM_GAME: nav->screen = ORACLES_SCREEN_GAME; nav->row = 0; nav->eu_action = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_DISPLAY: nav->screen = ORACLES_SCREEN_DISPLAY; nav->row = 0; nav->advanced = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CONTROLS: oracles_controls_open(nav); return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_MODS: nav->screen = ORACLES_SCREEN_MODS; nav->row = 0; return ORACLES_HOME_STAY;

@@ -11,6 +11,7 @@
 
 #define ORACLES_ROUTE_FORMAT 2          /* written without mods; format 1 (the `keys` verb alone) is read too */
 #define ORACLES_ROUTE_FORMAT_MODS 3     /* written with a `mods` line: a reader of format 2 would ignore the line and replay without the mods */
+#define ORACLES_ROUTE_FORMAT_LANGUAGE 4 /* written with a language among the options: a reader before it would replay in English */
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
@@ -25,8 +26,14 @@ typedef struct OraclesRouteHeader {
 
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS "continuous-transitions"
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM "continuous-swim"   /* with the transitions: Link swimming at the surface too */
+#define ORACLES_ROUTE_OPTION_LANGUAGE "language-"   /* and the language's code ("language-fr"): the texts the route was played in */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);
+/* The language the route was played in ("fr"), "" for the game's own English. */
+const char *oracles_route_language(const OraclesRouteHeader *header, char *out, size_t capacity);
+/* Whether a session in `language` (NULL or "en" for the game's English) replays the route: a text's length paces its
+ * dialogue.  A route that names no language replays in any: its rows choose the language (--language). */
+int oracles_route_language_matches(const OraclesRouteHeader *header, const char *language);
 /* A route recorded before the core's joypad bouncing was cut ran with it, and only replays with it; one recorded since
  * says `core joypad-bouncing-off`. */
 #define ORACLES_ROUTE_CORE_JOYPAD_BOUNCING_OFF "joypad-bouncing-off"

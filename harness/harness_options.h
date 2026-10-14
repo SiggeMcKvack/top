@@ -18,6 +18,7 @@ typedef struct harness_options {
     const char *keys_read_path;               /* --keys-read: the keys the game read in every frame */
     const char *mods_dirs[8], *mod_trace_path;   /* the mods replayed with the route (--mods, repeated), and their state frame by frame */
     unsigned mods_count;
+    const char *language, *eu_rom_path, *language_pack;   /* --language, its European ROM (a file or a directory) and its pack */
     uint32_t dump_at[HARNESS_MAX_DUMPS];
     const char *dump_path[HARNESS_MAX_DUMPS];
     unsigned dumps;

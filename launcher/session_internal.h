@@ -18,6 +18,7 @@
 #include "route.h"
 #include "state.h"
 #include "mod_session.h"
+#include "language_session.h"
 
 #include <stdio.h>
 
@@ -61,6 +62,7 @@ typedef struct session {
     OraclesEnhancedView *view;
     OraclesHotkeysSession *hotkeys;
     OraclesModSession *mod;  /* --mods */
+    OraclesLanguageSession *language;   /* --language */
     char state_mods[1100];   /* the savestate's identity of options and mods */
     FILE *fingerprints;      /* while recording with a guest: the session's live state frame by frame, to compare with the replay of its route */
     uint8_t host_state[1024];

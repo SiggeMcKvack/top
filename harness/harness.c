@@ -29,6 +29,7 @@
 #include "guest_fingerprint.h"
 #include "guest_struct_offsets.h"
 #include "mod_session.h"
+#include "language_session.h"
 #include "bps.h"
 #include "rom.h"
 #include "route.h"
@@ -61,6 +62,7 @@ typedef struct run {
     uint32_t dump_at[HARNESS_MAX_DUMPS];
     const char *dump_path[HARNESS_MAX_DUMPS];
     OraclesModSession *mod;   /* --mods */
+    OraclesLanguageSession *language;   /* --language */
     OraclesGame game;
     OraclesRoute route;
     FILE *out;
@@ -298,6 +300,8 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
     r->guest = oracles_guest_attach(r->core, r->profile);
     if (!r->guest) { fprintf(stderr, "harness: cannot attach the guest\n"); return 1; }
     oracles_guest_set_event_sink(r->guest, on_event, r);
+    char error[256];
+    if (r->language && oracles_language_session_attach(r->language, r->guest, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); return 1; }
     r->coverage = oracles_coverage_create(r->guest);   /* what the route covers, written to the summary */
     if (o->objects_dir) {
         r->neighbours = oracles_neighbour_check_start(rom, rom_size, r->profile, r->core, r->guest, o->objects_dir, o->objects_lead, o->objects_capture);
@@ -463,6 +467,18 @@ static int load_starting_sram(run *r, const char *route_path)
     return 0;
 }
 
+/* The language, the texts the game looked up in it and the graphics composed in it, to stderr and the summary. */
+static void report_language(run *r, FILE *summary)
+{
+    if (!r->language) return;
+    oracles_language_session_report(r->language, r->guest, "harness: ", stderr);
+    unsigned served = 0, english = 0, missing = 0;
+    oracles_guest_language_counts(r->guest, &served, &english, &missing);
+    if (summary) fprintf(summary, "language.code=%s\nlanguage.texts_served=%u\nlanguage.texts_english=%u\nlanguage.texts_missing=%u\nlanguage.graphics=%u\n",
+                         oracles_guest_language(r->guest), served, english, missing, oracles_language_session_graphics(r->language));
+    oracles_language_session_stop(r->language);
+}
+
 /* The ROM, the core and the route: what the replay needs before its checks.
  * Returns 0, or 1 with the reason on stderr. */
 static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *rom_size_out)
@@ -475,6 +491,14 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
     OraclesRomInfo info;
     if (oracles_rom_identify(rom, rom_size, &info, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     memset(r, 0, sizeof *r);
+    /* A language's pack comes from the US ROM as read; the language is composed after the mods' houses. */
+    if (o->language && oracles_language_session_start(&r->language, o->language, o->eu_rom_path, o->language_pack, o->patch_path ? o->rom_path : NULL, &info, rom, rom_size, error, sizeof error) != 0) {
+        fprintf(stderr, "harness: %s\n", error);
+        free(rom);
+        return 1;
+    }
+    if (oracles_language_session_note(r->language)[0]) fprintf(stderr, "harness: %s\n", oracles_language_session_note(r->language));
+    if (r->language && !o->hooks) { fprintf(stderr, "harness: --language needs the hooks on\n"); free(rom); return 1; }
     /* A mod's houses are in the image before the core exists. */
     if (o->mods_count) {
         r->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, info.game, rom, rom_size, error, sizeof error);
@@ -485,6 +509,7 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
             if (oracles_mod_session_storage_open(r->mod, store, 0, error, sizeof error) != 0) { fprintf(stderr, "harness: %s: %s\n", store, error); free(rom); return 1; }
         }
     }
+    if (r->language && oracles_language_session_compose(r->language, &rom, &rom_size, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     if (oracles_route_read(o->route_path, &r->route, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     /* The core: --core's, else the one the route was recorded on. */
     const OraclesCoreKind kind = o->core_given ? (OraclesCoreKind)o->core_kind : oracles_route_core_mgba(&r->route.header) ? ORACLES_CORE_MGBA : ORACLES_CORE_SAMEBOY;
@@ -523,6 +548,11 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
     if (route_swim && !o->continuous_swim) {
         o->continuous_transitions = o->continuous_swim = 1;
         fprintf(stderr, "harness: the route was recorded with --continuous-swim: the option is on\n");
+    }
+    char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
+    if (oracles_route_language(&r->route.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&r->route.header, o->language)) {
+        fprintf(stderr, "harness: the route was played in a language (%s): replay it with --language %s and its European ROM\n", recorded, recorded);
+        return 1;
     }
     /* A view that draws back (medium or far) asks what --zoom-out asked of the game's profile. */
     if (r->profile && oracles_enhanced_view_size((OraclesEnhancedLevel)o->enhanced_level, (OraclesEnhancedAspect)o->enhanced_aspect).width > ORACLES_ENHANCED_NARROW_WIDTH
@@ -647,6 +677,7 @@ int main(int argc, char **argv)
     const int renderer_failed = report_renderer(&r, &o, summary);
     const int verdict_failed = report_hotkeys(&r, summary) || renderer_failed;
     report_checks(&r, &o, summary, rom);
+    report_language(&r, summary);
     oracles_mod_session_stop(r.mod, summary);
     if (summary) fclose(summary);
     if (r.guest) oracles_guest_detach(r.guest);

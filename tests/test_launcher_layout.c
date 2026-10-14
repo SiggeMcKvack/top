@@ -4,7 +4,8 @@
  * picked in the list), 1f (Seasons, no ROM) and 8e (Moonrise Regalia's Mods,
  * greyed), and a toast; in the 4:3 layout, 10a (Ages), 10b (Fan games), 10c
  * (Seasons, no ROM), a toast, and the pause menu, 10n, and 10t in a 640x480
- * window; the toast after a game that ran slowly, 11c, 11f and 11h: a text is
+ * window; the toast after a game that ran slowly, 11c, 11f and 11h; the language beside Cartridge, 14f, 15d and
+ * 16f: a text is
  * compared by its left edge, its width, the top and height of its line box,
  * and its baseline; an element by its box.  And the choice of the layout by the
  * window's shape. */
@@ -84,6 +85,51 @@ static void frame_1a(void)
     OraclesUiLine version;
     oracles_ui_layout_version(ORACLES_UI_LAYOUT_16_9, "v1.0.0", &version);
     layout_line("1a", "version", &version);
+}
+
+/* The language beside Cartridge, as the profile beside Display: Ages playing in French, its European ROM recognized (14f),
+ * in English (EU) (15d); Moonrise Regalia in French, the European ROM of Ages recognized, with the fan games' languages
+ * on (16f).  English (US), or a European ROM not recognized, names none. */
+static void frame_language(const char *frame, int game, int language, const char *name)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.fan_languages = 1;   /* the mockup's fanLang, for 16f */
+    OraclesHomeGame *g = &nav.games[game];
+    g->usable = 1;
+    g->rom = g->eu = ORACLES_ROM_ORIGINAL;
+    g->language = language;
+    if (game != ORACLES_HOME_GAME_AGES) {
+        g->fan = oracles_home_fan_game(game);
+        g->patch = g->image = ORACLES_ROM_ORIGINAL;
+        nav.entry = ORACLES_HOME_FAN;
+        nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    }
+    nav.focus = 1;
+    OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
+    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL %s: six items expected\n", frame); layout_fail(); return; }
+    for (int i = 0; i < 6; i++) {
+        char probe[32];
+        snprintf(probe, sizeof probe, "item %d", i);
+        layout_box(frame, probe, &items[i].box);
+    }
+    layout_line(frame, "item 1 label", &items[1].label);
+    layout_line(frame, "item 1 note", &items[1].note);
+    layout_line(frame, "item 3 note", &items[3].note);
+    OraclesHomeItem it[ORACLES_HOME_MAX_ITEMS];
+    oracles_home_items(&nav, it);
+    CHECK(it[1].note && !strcmp(it[1].note, name));
+    g->eu = ORACLES_ROM_UNRECOGNISED;
+    oracles_home_items(&nav, it);
+    CHECK(it[1].note == NULL);
+    g->eu = ORACLES_ROM_ORIGINAL;
+    /* The fan games' languages off, as in the product: a fan game names none; an Oracle still does. */
+    nav.fan_languages = 0;
+    oracles_home_items(&nav, it);
+    CHECK(g->fan ? it[1].note == NULL : it[1].note != NULL);
+    g->language = 0;
+    oracles_home_items(&nav, it);
+    CHECK(it[1].note == NULL);
 }
 
 static void frame_1c(void)
@@ -444,6 +490,9 @@ int main(int argc, char **argv)
     if (argc < 2 || !layout_reference_load(argv[1])) { fprintf(stderr, "usage: oracles-test-launcher-layout launcher_layout_reference.json\n"); return 2; }
     if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
     frame_1a();
+    frame_language("14f", ORACLES_HOME_GAME_AGES, 2, "Fran\xc3\xa7" "ais");
+    frame_language("15d", ORACLES_HOME_GAME_AGES, 1, "English (EU)");
+    frame_language("16f", ORACLES_HOME_GAME_MOONRISE, 2, "Fran\xc3\xa7" "ais");
     frame_1c();
     frame_1d();
     frame_fan_pick("1m", ORACLES_HOME_GAME_TEMPLE, ORACLES_HOME_HERO_TEMPLE, "27 Sep 2026");

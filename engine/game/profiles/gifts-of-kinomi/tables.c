@@ -255,6 +255,14 @@ const OraclesGuestTables oracles_guest_tables_kinomi = {
     .treasure_object_data = { ORACLES_GUEST_ABSENT, 0 },
     .treasure_object_lists_end = { ORACLES_GUEST_ABSENT, 0 },
     .rupee_values = { ORACLES_GUEST_ABSENT, 0 },
+    .get_text_address = { 0x3f, 0x4f7b },
+    .text_index_h = { 0x00, 0xcba3 },
+    .text_index_l = { 0x00, 0xcba2 },
+    .active_text_bank = { 0x07, 0xd0d4 },
+    .text_table_table = { 0x3f, 0x5005 },
+    .text_offset1_table = { 0x3f, 0x4fd5 },
+    .text_offset2_table = { 0x3f, 0x4fed },
+    .gfx_header_table = { ORACLES_GUEST_ABSENT, 0 },
     .global_flags_size = 16,
     .room_flags_size = 1024,
     .obtained_treasure_flags_size = 16,
@@ -309,6 +317,7 @@ const OraclesGuestTables oracles_guest_tables_kinomi = {
     .coarse_flag_intro_done_room = 0xff,
     .treasure_collection_behaviour_count = 0x00,
     .treasure_object_count = 0x00,
+    .text_offset_split_index = 0x28,
 };
 
 const OraclesTables oracles_tables_kinomi = {

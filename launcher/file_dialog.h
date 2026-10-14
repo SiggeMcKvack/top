@@ -18,10 +18,11 @@ typedef enum OraclesDialogResult {
     ORACLES_DIALOG_FAILED          /* a file chosen that could not be copied into the application's folder (Android) */
 } OraclesDialogResult;
 
-/* What a dialog chooses: a ROM, or a fan game's BPS patch. */
+/* What a dialog chooses: a ROM, a fan game's BPS patch, or an Oracle's European ROM. */
 typedef enum OraclesDialogKind {
     ORACLES_DIALOG_ROM,
-    ORACLES_DIALOG_PATCH
+    ORACLES_DIALOG_PATCH,
+    ORACLES_DIALOG_EU_ROM
 } OraclesDialogKind;
 
 /* Opens the system's dialog for a file of `kind` for game `game`, starting in `folder` (may be empty), over `window`,

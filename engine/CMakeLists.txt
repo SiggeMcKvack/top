@@ -19,7 +19,7 @@ target_link_libraries(oracles_host PUBLIC oracles_core)
 oracles_set_warnings(oracles_host)
 
 # Guest bus, hooks and register journal; the tables are generated per game.
-add_library(oracles_guest STATIC game/guest/guest.c game/guest/guest_transaction.c game/guest/guest_call.c game/guest/guest_inventory.c game/guest/guest_item_buttons.c game/guest/guest_fingerprint.c game/guest/guest_tables_ages.c game/guest/guest_tables_seasons.c game/profiles/profile.c game/profiles/moonrise-regalia/tables.c game/profiles/temple-of-seasons/tables.c game/profiles/gifts-of-kinomi/tables.c)
+add_library(oracles_guest STATIC game/guest/guest.c game/guest/guest_transaction.c game/guest/guest_call.c game/guest/guest_inventory.c game/guest/guest_item_buttons.c game/guest/guest_text.c game/guest/guest_fingerprint.c game/guest/guest_tables_ages.c game/guest/guest_tables_seasons.c game/profiles/profile.c game/profiles/moonrise-regalia/tables.c game/profiles/temple-of-seasons/tables.c game/profiles/gifts-of-kinomi/tables.c)
 target_include_directories(oracles_guest PUBLIC game/guest game/profiles game/data)
 target_link_libraries(oracles_guest PUBLIC oracles_core)
 oracles_set_warnings(oracles_guest)
@@ -34,7 +34,7 @@ oracles_set_warnings(oracles_render)
 # neighbouring room; runs synchronously or in a worker thread.
 find_package(Threads REQUIRED)
 # Native readers of the ROM's data (engine/game/data): the ghost scans the overworld's layouts.
-add_library(oracles_data STATIC game/data/oracles_rom.c game/data/layout.c game/data/tileset.c game/data/oracles_tables_ages.c game/data/oracles_tables_seasons.c)
+add_library(oracles_data STATIC game/data/oracles_rom.c game/data/text.c game/data/layout.c game/data/tileset.c game/data/oracles_tables_ages.c game/data/oracles_tables_seasons.c)
 target_include_directories(oracles_data PUBLIC game/data)
 oracles_set_warnings(oracles_data)
 target_link_libraries(oracles_guest PUBLIC oracles_data)
@@ -93,6 +93,26 @@ add_library(oracles_mods STATIC mods/mod.c mods/mod_lua.c mods/mod_game.c mods/m
 target_include_directories(oracles_mods PUBLIC mods)
 target_link_libraries(oracles_mods PUBLIC oracles_guest oracles_data oracles_lua)
 oracles_set_warnings(oracles_mods)
+
+# The official translations, from the user's European ROM, composed into the US image.  The tables of exceptions and
+# the port's own texts are config/language_exceptions_*.tsv and config/language_own.tsv, and the corrections of the
+# official translations config/language_corrections.tsv, embedded as C strings.
+set(ORACLES_LANGUAGE_CONFIG_C "/* Generated from config/language_*.tsv at configure; do not edit. */\n")
+foreach(ORACLES_LANGUAGE_CONFIG exceptions_ages exceptions_seasons own_texts corrections)
+    string(REPLACE "own_texts" "own" ORACLES_LANGUAGE_CONFIG_FILE ${ORACLES_LANGUAGE_CONFIG})
+    set(ORACLES_LANGUAGE_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../config/language_${ORACLES_LANGUAGE_CONFIG_FILE}.tsv)
+    file(READ ${ORACLES_LANGUAGE_CONFIG_PATH} ORACLES_LANGUAGE_CONFIG_HEX HEX)
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," ORACLES_LANGUAGE_CONFIG_BYTES "${ORACLES_LANGUAGE_CONFIG_HEX}")
+    string(APPEND ORACLES_LANGUAGE_CONFIG_C "const unsigned char oracles_language_${ORACLES_LANGUAGE_CONFIG}[] = {${ORACLES_LANGUAGE_CONFIG_BYTES}0};\n")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ORACLES_LANGUAGE_CONFIG_PATH})
+endforeach()
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/language_config.c "${ORACLES_LANGUAGE_CONFIG_C}")
+add_library(oracles_language STATIC language/language_rom.c language/language_pack.c language/language_table.c language/language_rules.c
+            language/language_own.c language/language_corrections.c language/language_extract.c language/language_fan.c language/language_compose.c language/language_gfx.c
+            ${CMAKE_CURRENT_BINARY_DIR}/language_config.c)
+target_include_directories(oracles_language PUBLIC language)
+target_link_libraries(oracles_language PUBLIC oracles_guest oracles_data oracles_core)
+oracles_set_warnings(oracles_language)
 
 add_library(oracles_gameplay STATIC gameplay/room_transition.c gameplay/item_hotkeys.c gameplay/item_hotkeys_policy.c)
 target_include_directories(oracles_gameplay PUBLIC gameplay)

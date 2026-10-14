@@ -6,7 +6,17 @@
  * its status), Save (Open folder), Play.  A fan game made as a patch
  * (Gifts of Kinomi, Moonrise Regalia, Temple of Seasons) has a Base ROM row in place of ROM,
  * its Oracle's ROM that the Oracle's page shows too, then a Patch row (Choose
- * patch), its folder and the image the two make.  Up and down move through the rows and wrap; OK
+ * patch), its folder and the image the two make.  An Oracle whose ROM is the
+ * original has two more rows after Save: European ROM (Choose…, or Change…
+ * and Remove, which left and right move between; a file that is not the
+ * game's European ROM says so) and Language: English (US), the US ROM's own,
+ * and the five languages of the European ROM written in their own, greyed
+ * with English (US) alone shown until the European ROM is recognized; left,
+ * right and OK change it.  Removing the European ROM, or choosing another
+ * file, sets the language back to English (US).  With nav->fan_languages on, a
+ * fan game has the Language row after Save, its languages those of the
+ * European ROM of its Oracle's page, with its Oracle's original ROM.
+ * Up and down move through the rows and wrap; OK
  * activates the row; Back returns to the home screen, on Cartridge.  The
  * item hotkeys' mode is set in Controls and kept in settings.txt.
  *
@@ -34,11 +44,14 @@
 
 #include "ui_home_nav.h"
 
-/* The rows in the page's order; a game that is not a patch has no Patch row. */
+/* The rows in the page's order; a game that is not a patch has no Patch row, and only an Oracle whose ROM is the
+ * original has the European ROM and Language rows. */
 typedef enum OraclesGameRow {
     ORACLES_ROW_ROM,             /* a fan game's: its base ROM */
     ORACLES_ROW_PATCH,
     ORACLES_ROW_SAVE,
+    ORACLES_ROW_EU_ROM,
+    ORACLES_ROW_LANGUAGE,
     ORACLES_ROW_PLAY,
     ORACLES_GAME_ROWS
 } OraclesGameRow;
@@ -76,14 +89,41 @@ const char *oracles_page_rom_hotkeys_note(const OraclesHomeNav *nav);
 const char *oracles_page_save_file(const OraclesHomeGame *game);        /* "No save yet" without one */
 void oracles_page_save_line(const OraclesHomeGame *game, char *out, size_t capacity);
 const char *oracles_page_play_note(const OraclesHomeNav *nav);          /* shown beside Play; empty mostly */
+
+/* The European ROM row: an Oracle's (not a fan game's), with its original US ROM.  The Language row: that Oracle's, or a
+ * fan game's while nav->fan_languages is on. */
+int oracles_page_eu_shown(const OraclesHomeGame *game);
+int oracles_page_language_shown(const OraclesHomeNav *nav, const OraclesHomeGame *game);
+/* The languages, each named in its own language, by index (oracles_settings_language_names' order): English (US), the
+ * US ROM's, then English (EU), French, German, Italian and Spanish, the European ROM's.  English (US) is always there;
+ * the others with the European ROM recognized (a fan game's: its Oracle's, with its Oracle's original ROM). */
+#define ORACLES_PAGE_LANGUAGES 6
+extern const char *const oracles_page_language_names[ORACLES_PAGE_LANGUAGES];
+int oracles_page_language_available(const OraclesHomeGame *game, int language);
+/* The language the game plays in: its choice where the rows show and the European ROM is recognized, else 0. */
+int oracles_page_language(const OraclesHomeNav *nav, const OraclesHomeGame *game);
+/* The European ROM's file ("None" without one) and status: optional, recognized with its languages, not the game's
+ * ("Not the European ROM of Oracle of Ages"), or refused with the loader's reason. */
+const char *oracles_page_eu_file(const OraclesHomeGame *game);
+void oracles_page_eu_status(const OraclesHomeNav *nav, char *out, size_t capacity, OraclesTone *tone);
+/* Its buttons: "Choose…" without a file, else "Change…" and "Remove". Returns their number. */
+unsigned oracles_page_eu_buttons(const OraclesHomeGame *game, const char *labels[2]);
+/* Language's explanation, and its note, empty in English (US): an Oracle's corrections, the share of a fan game's texts
+ * the language translates. */
+const char *oracles_page_language_explanation(const OraclesHomeGame *game);
+void oracles_page_language_note(const OraclesHomeGame *game, char *out, size_t capacity);
 extern const char *const oracles_profile_names[ORACLES_PROFILES];
 /* The size written under a profile: Faithful's, or Enhanced's at the view chosen in the screen's shape. */
 void oracles_profile_size(const OraclesHomeNav *nav, int profile, char *out, size_t capacity);
 
 OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction action);
 void oracles_page_hover(OraclesHomeNav *nav, unsigned row);
-/* A click on a row. */
-OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row);
+/* On a game's page whose rows changed (a ROM found otherwise at a refresh, one dropped or chosen), the highlight moved
+ * from a row the page no longer has to the nearest one it has, the one above first. */
+void oracles_page_keep_row(OraclesHomeNav *nav);
+/* A click on a row, or on one of its options: European ROM's buttons (0 Choose… or Change…, 1 Remove), a language
+ * (its index); `option` -1 for the row itself. */
+OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row, int option);
 
 /* Display's rows in the order of the keys: its own, Advanced last; then the Advanced rows, which show in their place. */
 typedef enum OraclesDisplayRow {

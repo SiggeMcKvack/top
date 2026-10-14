@@ -18,6 +18,7 @@ static const char *const profile_names[ORACLES_PROFILES] = { "faithful", "enhanc
 static const char *const view_names[3] = { "near", "medium", "far" };   /* OraclesEnhancedLevel's order */
 const char *const oracles_settings_core_names[2] = { "sameboy", "mgba" };   /* OraclesCoreKind's order */
 const char *const oracles_settings_quality_names[5] = { "low", "medium", "high", "max", "custom" };   /* OraclesQuality's order */
+const char *const oracles_settings_language_names[ORACLES_SETTINGS_LANGUAGES] = { "en", "en-eu", "fr", "de", "it", "es" };
 
 /* Each profile's view's level (an OraclesEnhancedLevel), core (an OraclesCoreKind) and neighbour workers (0 auto). */
 static const struct { int view, core, ghosts; } qualities[ORACLES_QUALITIES] = {
@@ -186,12 +187,29 @@ int oracles_settings_mod_set(char list[ORACLES_SETTINGS_MODS_LENGTH], const char
     return 1;
 }
 
-void oracles_settings_mods_folder(const oracles_settings *s, char *out, size_t capacity)
+/* `name` beside settings.txt; empty when there is no settings directory. */
+static void beside(const oracles_settings *s, const char *name, char *out, size_t capacity)
 {
     const char *slash = strrchr(s->path, '/'), *backslash = strrchr(s->path, '\\');
     if (backslash && (!slash || backslash > slash)) slash = backslash;
     if (!s->path[0] || !slash) { if (capacity) out[0] = 0; return; }
-    snprintf(out, capacity, "%.*smods", (int)(slash - s->path + 1), s->path);
+    snprintf(out, capacity, "%.*s%s", (int)(slash - s->path + 1), s->path, name);
+}
+
+void oracles_settings_mods_folder(const oracles_settings *s, char *out, size_t capacity) { beside(s, "mods", out, capacity); }
+
+void oracles_settings_language_pack(const oracles_settings *s, OraclesSettingsGame g, char *out, size_t capacity)
+{
+    char name[32];
+    snprintf(name, sizeof name, "language-%s.pack", game_names[g]);
+    beside(s, name, out, capacity);
+}
+
+void oracles_settings_fan_language_pack(const oracles_settings *s, unsigned f, char *out, size_t capacity)
+{
+    char name[32];
+    snprintf(name, sizeof name, "language-%s.pack", oracles_home_fan_games[f].key);
+    beside(s, name, out, capacity);
 }
 
 const char *oracles_settings_profile_name(OraclesProfile profile) { return profile_names[profile]; }
@@ -213,6 +231,9 @@ void oracles_settings_defaults(oracles_settings *s)
     memset(s->hotkeys, 0, sizeof s->hotkeys);
     memset(s->rom, 0, sizeof s->rom);
     memset(s->patch, 0, sizeof s->patch);
+    memset(s->eu_rom, 0, sizeof s->eu_rom);
+    memset(s->language, 0, sizeof s->language);   /* English, the US ROM's own */
+    memset(s->fan_language, 0, sizeof s->fan_language);
     memset(s->mods, 0, sizeof s->mods);
     /* A first opening plays Enhanced, the view drawn back with the continuous transitions it carries, fullscreen. */
     s->profile = ORACLES_PROFILE_ENHANCED;
@@ -237,7 +258,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `profile=`, `transitions=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `quality_hint=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `quality_hint=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -273,6 +294,13 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         char expected[32];
         snprintf(expected, sizeof expected, "rom_%s", game_names[g]);
         if (!strcmp(name, expected)) { snprintf(s->rom[g], sizeof s->rom[g], "%s", value); return 1; }
+        snprintf(expected, sizeof expected, "eu_rom_%s", game_names[g]);
+        if (!strcmp(name, expected)) { snprintf(s->eu_rom[g], sizeof s->eu_rom[g], "%s", value); return 1; }
+        snprintf(expected, sizeof expected, "language_%s", game_names[g]);
+        if (!strcmp(name, expected)) {
+            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(value, oracles_settings_language_names[l])) s->language[g] = l;
+            return 1;
+        }
         snprintf(expected, sizeof expected, "mods_%s", game_names[g]);
         if (!strcmp(name, expected)) {
             char names[ORACLES_SETTINGS_MODS_MAX][ORACLES_SETTINGS_MOD_NAME];
@@ -289,6 +317,11 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         char expected[32];
         snprintf(expected, sizeof expected, "patch_%s", oracles_home_fan_games[f].key);
         if (!strcmp(name, expected)) { snprintf(s->patch[f], sizeof s->patch[f], "%s", value); return 1; }
+        snprintf(expected, sizeof expected, "language_%s", oracles_home_fan_games[f].key);
+        if (!strcmp(name, expected)) {
+            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(value, oracles_settings_language_names[l])) s->fan_language[f] = l;
+            return 1;
+        }
     }
     if (!strcmp(name, "window_scale")) {
         if (!strcmp(value, "full")) s->window_scale = 0;
@@ -380,6 +413,18 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# Each fan game's BPS patch (Cartridge's Choose patch), applied to its Oracle's ROM: Gifts of Kinomi's to\n"
                "# rom_ages, Moonrise Regalia's to rom_ages, Temple of Seasons' to rom_seasons.\n");
     for (unsigned g = 0; g < ORACLES_HOME_FAN_GAMES; g++) fprintf(f, "patch_%s=%s\n", oracles_home_fan_games[g].key, s->patch[g]);
+    fprintf(f, "# Each Oracle's European ROM (Cartridge's European ROM), whose English and official translations it plays in, and\n"
+               "# its language: en (English (US), the US ROM's own), en-eu (English (EU), the European ROM's), fr, de, it or es,\n"
+               "# which need that ROM.\n");
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "eu_rom_%s=%s\n", game_names[g], s->eu_rom[g]);
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++)
+        fprintf(f, "language_%s=%s\n", game_names[g],
+                oracles_settings_language_names[s->language[g] > 0 && s->language[g] < ORACLES_SETTINGS_LANGUAGES ? s->language[g] : 0]);
+    fprintf(f, "# Each fan game's language: its texts that are its Oracle's in the translation of its Oracle's European ROM, its\n"
+               "# own in English; en, en-eu, fr, de, it or es.\n");
+    for (unsigned g = 0; g < ORACLES_HOME_FAN_GAMES; g++)
+        fprintf(f, "language_%s=%s\n", oracles_home_fan_games[g].key,
+                oracles_settings_language_names[s->fan_language[g] > 0 && s->fan_language[g] < ORACLES_SETTINGS_LANGUAGES ? s->fan_language[g] : 0]);
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "item_hotkeys_%s=%s\n", game_names[g], hotkey_names[s->item_hotkeys[g]]);
     fprintf(f, "# Each game's active mods (its Mods page), the names of their folders in the mods folder beside this file.\n");
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "mods_%s=%s\n", game_names[g], s->mods[g]);

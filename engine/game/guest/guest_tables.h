@@ -92,6 +92,11 @@ typedef struct OraclesGuestTables {
     /* A mod's storage: the entry of the game's four file operations (c: 0 create, 1 save, 2 load, 3 erase) and the slot
      * of the file concerned. */
     OraclesGuestSym file_management_function, active_file_slot;
+    /* A language: the routine whose return is redirected to the language's text, the text it looks up, the bank it
+     * answers (WRAM bank 7), and the US text's tables in the ROM (docs/ROM_DATA_FORMATS.md, section 8.1); the table of
+     * the graphics headers, whose entries for the graphics that carry text it repoints (section 4.1). */
+    OraclesGuestSym get_text_address, text_index_h, text_index_l, active_text_bank,
+        text_table_table, text_offset1_table, text_offset2_table, gfx_header_table;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */
@@ -116,7 +121,8 @@ typedef struct OraclesGuestTables {
         first_dynamic_interaction_index, roomflag_visited,
         /* the call transaction: the treasures the high-level prizes give, and the number of rings */
         treasure_rupees, treasure_heart_refill, treasure_ring, treasure_ring_box, treasure_gasha_seed, treasure_seed_satchel,
-        num_rings;
+        num_rings,
+        text_offset_split_index;   /* a language: the first internal text group of the second base */
     /* The global flags the load around the substitutions reads, 0xff for the game whose load does not (ghost_key.c, the coarse list). */
     uint8_t coarse_flag_finished_game, coarse_flag_temple_lava, coarse_flag_moblins_keep, coarse_flag_pirate_ship, coarse_flag_intro_done;
     /* The one overworld room (group 0) whose terrain GLOBALFLAG_INTRO_DONE changes, 0xff for none: Seasons' after-load

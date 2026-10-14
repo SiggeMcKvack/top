@@ -388,7 +388,7 @@ OraclesUiHomeHit oracles_ui_home_hit(const OraclesHomeNav *nav, float x, float y
         return hit;
     }
     if (nav->screen != ORACLES_SCREEN_HOME && nav->screen != ORACLES_SCREEN_PAUSE) {
-        const int row = nav->screen == ORACLES_SCREEN_GAME ? oracles_ui_page_hit(nav, x, y)
+        const int row = nav->screen == ORACLES_SCREEN_GAME ? oracles_ui_page_hit(nav, x, y, &hit.option)
                         : nav->screen == ORACLES_SCREEN_MODS ? oracles_ui_mods_hit(nav, x, y) : oracles_ui_display_hit(nav, x, y, &hit.option);
         if (row >= 0) { hit.kind = ORACLES_UI_HIT_ROW; hit.index = (unsigned)row; }
         return hit;

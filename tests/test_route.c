@@ -38,6 +38,30 @@ int main(int argc, char **argv)
     CHECK(oracles_route_has_option(&route.header, ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS));
     CHECK(!oracles_route_joypad_bouncing(&route.header));   /* written with its `core` line, read back */
     CHECK(!oracles_route_has_option(&route.header, "continuous"));
+    /* The language a route was played in: none here, so it replays in any; one named replays only in it. */
+    char language[8];
+    CHECK(oracles_route_language(&route.header, language, sizeof language)[0] == 0);
+    CHECK(oracles_route_language_matches(&route.header, NULL) && oracles_route_language_matches(&route.header, "en"));
+    CHECK(oracles_route_language_matches(&route.header, "fr") && oracles_route_language_matches(&route.header, "en-eu"));
+    {
+        OraclesRouteHeader played = route.header;
+        snprintf(played.options, sizeof played.options, "continuous-transitions," ORACLES_ROUTE_OPTION_LANGUAGE "fr");
+        CHECK(strcmp(oracles_route_language(&played, language, sizeof language), "fr") == 0);
+        CHECK(oracles_route_language_matches(&played, "fr") && !oracles_route_language_matches(&played, "de") && !oracles_route_language_matches(&played, NULL));
+        CHECK(oracles_route_has_option(&played, ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS));
+        /* Written in format 4, which a reader of format 3 refuses rather than replay it in English; read back. */
+        OraclesRouteWriter in_language;
+        CHECK(oracles_route_writer_open(&in_language, path, &played) == 0);
+        oracles_route_writer_record(&in_language, 0, 0x00);
+        CHECK(oracles_route_writer_close(&in_language) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_LANGUAGE);
+        CHECK(strcmp(oracles_route_language(&back.header, language, sizeof language), "fr") == 0 && strcmp(back.header.mods, played.mods) == 0);
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 3\ngame ages\noptions language-fr\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 4"));
+    }
 
     unsigned mask = 99;
     CHECK(oracles_route_mask_at(&route, 0, &mask) == 1 && mask == 0x00);
@@ -56,7 +80,7 @@ int main(int argc, char **argv)
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     CHECK(strstr(error, "line 5") != NULL);
     f = fopen(path, "w");
-    fprintf(f, "oracles-route 4\ninputs\n");
+    fprintf(f, "oracles-route 5\ninputs\n");
     fclose(f);
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     /* Format 2: the verbs that change the game's state, written and read back.  Two verbs may share a
@@ -100,7 +124,7 @@ int main(int argc, char **argv)
         "oracles-route 2\ninputs\n10 equip\n",
         "oracles-route 2\ninputs\n10 use s3 0a\n",                               /* a use is carried by a button */
         "oracles-route 2\nmods claw-game@2fd4e1c67a2d28fced849ee1bb76e7391b93eb12\ninputs\n0 keys 00\n",   /* mods need format 3 */
-        "oracles-route 4\ninputs\n0 keys 00\n",                                /* a format to come */
+        "oracles-route 5\ninputs\n0 keys 00\n",                                /* a format to come */
     };
     for (unsigned i = 0; i < sizeof refused / sizeof refused[0]; i++) {
         f = fopen(path, "w"); fputs(refused[i], f); fclose(f);

@@ -10,9 +10,10 @@
  *   - the live-WRAM fingerprint of the harness, which excludes only the dead
  *     stack bytes below each thread's stack pointer.
  *
- * Observation hooks never write to the guest.  The write paths are three closed
+ * Observation hooks never write to the guest.  The write paths are four closed
  * transactions: the call's (a mod's host scene, further below), the
- * inventory's (the item hotkeys, further below) and the transition's: at the return of
+ * inventory's (the item hotkeys, further below), the language's (further below)
+ * and the transition's: at the return of
  * drawAllSprites, a policy may ask for a bounded change of the scroll
  * machine's step and of Link's position and walking animation, applied here
  * after its own checks; it never receives a writable view of the RAM.
@@ -73,7 +74,8 @@ typedef enum OraclesGuestEventType {
     ORACLES_EVENT_USE_ITEMS,               /* entry of checkUseItems: the game reads the two item buttons of this turn (the item hotkeys' `use` mode) */
     ORACLES_EVENT_ITEM_STARTED,            /* entry of initializeParentItem: an item starts; e = its identifier, d = the button that fired it */
     ORACLES_EVENT_STATUS_BAR_CHECK,        /* entry of checkReloadStatusBarGraphics; from mainThreadStart, the call transaction arms its return there */
-    ORACLES_EVENT_FILE_OPERATION           /* entry of fileManagementFunction, hooked by the mods: c = 0 create, 1 save, 2 load, 3 erase the file of hActiveFileSlot */
+    ORACLES_EVENT_FILE_OPERATION,          /* entry of fileManagementFunction, hooked by the mods: c = 0 create, 1 save, 2 load, 3 erase the file of hActiveFileSlot */
+    ORACLES_EVENT_TEXT_ADDRESS             /* return of getTextAddress, with a language composed: the language transaction runs here */
 } OraclesGuestEventType;
 
 typedef struct OraclesGuestEvent {
@@ -317,6 +319,27 @@ int oracles_guest_queue_call(OraclesGuest *guest, const OraclesGuestCall *call, 
 /* Calls queued and not yet run; calls run since the attach. */
 unsigned oracles_guest_calls_pending(const OraclesGuest *guest);
 unsigned oracles_guest_calls_done(const OraclesGuest *guest);
+
+/* ---- the language transaction ------------------------------------------------------------
+ *
+ * A language composed into the image (engine/language: its texts and its
+ * index in the banks of oracles_rom.h's ORACLES_IMAGE_LANGUAGE_BANK) is served
+ * at the return of getTextAddress, which every text, fragment, call and jump
+ * of the text engine goes through: the routine has put the US text's address
+ * in hl and its bank in w7ActiveBank (and a); when the index has the
+ * language's text for wTextIndexH:wTextIndexL, the transaction writes its
+ * address and bank there instead, and the engine reads it as it would have
+ * the US one.  A dictionary fragment, and a text the language keeps in
+ * English or lacks, are left as the routine found them.  Nothing else is
+ * written. */
+
+/* Arms the transaction when the image the core runs holds a language's index; 0 also when it holds none (nothing is
+ * armed: the game reads its own texts), -1 when the profile has no getTextAddress or the hook table is full. */
+int oracles_guest_arm_language(OraclesGuest *guest);
+/* The language served ("fr"), "" when none is armed. */
+const char *oracles_guest_language(const OraclesGuest *guest);
+/* The texts the game looked up since the attach: served in the language, kept in English by it, absent from it. */
+void oracles_guest_language_counts(const OraclesGuest *guest, unsigned *served, unsigned *english, unsigned *missing);
 
 typedef struct OraclesGuestRegWrite {
     uint8_t ly;

@@ -14,7 +14,9 @@
  * in 4:3 (11d, 11e) and on a 640x480 screen (11g).  Advanced's Scaling, on
  * Sharp in 16:9 (13a), on Fill in 4:3 on a 640x480 screen (13b) and from the
  * pause menu (13d), and on Fill in Faithful fullscreen, the diagram filling
- * the screen (13e); Window's one size on a 640x480 screen (13c).  A text is
+ * the screen (13e); Window's one size on a 640x480 screen (13c).  Cartridge's European ROM and Language rows
+ * without a European ROM (14a, 14h), recognized with French chosen (14b, and in 4:3, 14d and 14e), with another file
+ * (14c), and hidden with an unrecognised ROM (14i).  A text is
  * compared by its left, its width and its baseline (in 4:3 its line box too). */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
@@ -26,6 +28,18 @@
 #include <time.h>
 
 #define CHECK(condition) do { if (!(condition)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition); layout_fail(); } } while (0)
+
+/* A status the mockup's row cannot hold on its one line, which it lets run past the panel (1l, 1o, 1r): the layout
+ * shortens it to its room, the row keeping the panel's width; their left edges, baselines and the row's height hold. */
+static void overflowing(const char *frame, const char *status, const OraclesUiLine *line, const char *row, const OraclesUiBox *box)
+{
+    layout_near(frame, status, "x", line->x);
+    layout_near(frame, status, "baseline", line->baseline);
+    layout_near(frame, row, "x", box->x);
+    layout_near(frame, row, "y", box->y);
+    layout_near(frame, row, "h", box->h);
+    if (line->x + line->w > box->x + box->w) { fprintf(stderr, "FAIL %s: %s past its row\n", frame, status); layout_fail(); }
+}
 
 static void game_1h(OraclesHomeGame *g)
 {
@@ -64,6 +78,18 @@ static void texts_of(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *sta
     t->rom_note = oracles_page_rom_note(nav);
     t->rom_hotkeys_note = oracles_page_rom_hotkeys_note(nav);
     t->play_note = oracles_page_play_note(nav);
+    t->european = oracles_page_eu_shown(g);
+    if (t->european) {
+        snprintf(t->eu_file, sizeof t->eu_file, "%s", oracles_page_eu_file(g));
+        snprintf(t->eu_folder, sizeof t->eu_folder, "%s", g->eu != ORACLES_ROM_NONE ? g->eu_folder : "");
+        oracles_page_eu_status(nav, t->eu_status, sizeof t->eu_status, &tone);
+        t->eu_buttons = oracles_page_eu_buttons(g, t->eu_button_labels);
+    }
+    t->languages = oracles_page_language_shown(nav, g);
+    if (t->languages) {
+        t->language_explanation = oracles_page_language_explanation(g);
+        oracles_page_language_note(g, t->language_note, sizeof t->language_note);
+    }
 }
 
 static void layout_1h(void)
@@ -88,8 +114,8 @@ static void layout_1h(void)
     /* ROM and Save; an original ROM has no line under its status. */
     layout_text("1h", "ROM file", &l.rom_file);
     layout_text("1h", "ROM folder", &l.rom_folder);
-    layout_text("1h", "ROM status", &l.rom_status);
-    CHECK(t.rom_note[0] == 0 && l.rom_note.h == 0.0f && t.rom_hotkeys_note[0] == 0 && l.rom_hotkeys_note.h == 0.0f);
+    layout_text("1h", "ROM status", &l.rom_status.lines[0]);
+    CHECK(t.rom_note[0] == 0 && l.rom_note.count == 0 && t.rom_hotkeys_note[0] == 0 && l.rom_hotkeys_note.count == 0);
     layout_box("1h", "ROM dot", &l.rom_dot);
     layout_text("1h", "Choose ROM", &l.rom_button);
     layout_text("1h", "Choose ROM dot", &l.rom_button_dot);
@@ -122,13 +148,13 @@ static void layout_1i_1j(void)
     texts_of(&nav, &t, state);
     oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
     layout_text("1i", "file", &l.rom_file);
-    layout_text("1i", "status", &l.rom_status);
+    layout_text("1i", "status", &l.rom_status.lines[0]);
     /* Enhanced chosen in Display, and the item hotkeys on in Controls but unable to attach: a line each under the
      * status says the ROM plays in Faithful, without them, and the rows go down. */
     CHECK(!strcmp(t.rom_note, "Enhanced needs an original ROM: this one plays in Faithful"));
     CHECK(!strcmp(t.rom_hotkeys_note, "Item hotkeys need an original ROM: this one plays without them"));
-    layout_text("1i", "note", &l.rom_note);
-    layout_text("1i", "hotkeys note", &l.rom_hotkeys_note);
+    layout_text("1i", "note", &l.rom_note.lines[0]);
+    layout_text("1i", "hotkeys note", &l.rom_hotkeys_note.lines[0]);
     layout_text("1i", "Choose ROM", &l.rom_button);
     layout_box("1i", "ROM row", &l.rows[ORACLES_ROW_ROM]);
     layout_text("1i", "Save", &l.label_save);
@@ -155,7 +181,7 @@ static void layout_1i_1j(void)
     texts_of(&nav, &t, state);
     oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
     layout_text("1j", "file", &l.rom_file);
-    layout_text("1j", "status", &l.rom_status);
+    layout_text("1j", "status", &l.rom_status.lines[0]);
     layout_text("1j", "save", &l.save_file);
     layout_text("1j", "save line", &l.save_line);
     CHECK(t.rom_note[0] == 0);   /* a refused ROM has its reason in its status */
@@ -217,7 +243,7 @@ static void layout_1k_1l(void)
     layout_text("1k", "Save", &l.label_save);
     CHECK(l.rom_folder.h == 0.0f && !strcmp(t.rom_status, "Original ROM, Oracle of Ages (USA)"));
     layout_text("1k", "base file", &l.rom_file);
-    layout_text("1k", "base status", &l.rom_status);
+    layout_text("1k", "base status", &l.rom_status.lines[0]);
     layout_box("1k", "base dot", &l.rom_dot);
     layout_text("1k", "Choose ROM", &l.rom_button);
     layout_text("1k", "Choose ROM dot", &l.rom_button_dot);
@@ -249,8 +275,7 @@ static void layout_1k_1l(void)
     oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
     layout_text("1l", "state", &l.head.state);
     layout_text("1l", "patch file", &l.patch_file);
-    layout_text("1l", "patch status", &l.patch_status);
-    layout_box("1l", "patch row", &l.rows[ORACLES_ROW_PATCH]);
+    overflowing("1l", "patch status", &l.patch_status, "patch row", &l.rows[ORACLES_ROW_PATCH]);
     layout_text("1l", "image status", &l.image_status);
     layout_text("1l", "save file", &l.save_file);
     layout_text("1l", "save line", &l.save_line);
@@ -258,11 +283,12 @@ static void layout_1k_1l(void)
     layout_text("1l", "Play", &l.play);
     layout_box("1l", "panel", &l.panel);
     /* Before a patch is chosen, the page names the one the game expects. */
-    CHECK(!strcmp(t.patch_status, "No patch: the BPS patch of Moonrise Regalia 1.0.6 is expected"));
-
-    /* The other states, which no frame of the reference holds. */
     char text[ORACLES_HOME_TEXT_LENGTH];
     OraclesTone tone;
+    oracles_page_patch_status(g, text, sizeof text, &tone);
+    CHECK(!strcmp(text, "No patch: the BPS patch of Moonrise Regalia 1.0.6 is expected"));
+
+    /* The other states, which no frame of the reference holds. */
     g->patch = ORACLES_ROM_REFUSED;
     snprintf(g->patch_reason, sizeof g->patch_reason, "the patch is not a BPS patch");
     oracles_page_patch_status(g, text, sizeof text, &tone);
@@ -314,6 +340,11 @@ static void navigation(void)
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_OPEN_FOLDER);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY);
+    /* An original ROM: European ROM, then Language, after Save. */
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_EU_ROM && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_CHOOSE_EU_ROM);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_LANGUAGE);
     /* Play starts the game; down from Play wraps to ROM. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_ROW_PLAY && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_START_AGES);
@@ -328,7 +359,7 @@ static void navigation(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY);
     nav.row = ORACLES_ROW_SAVE;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY);
-    CHECK(oracles_page_click(&nav, ORACLES_ROW_ROM) == ORACLES_HOME_CHOOSE_ROM && nav.row == ORACLES_ROW_ROM);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_ROM, -1) == ORACLES_HOME_CHOOSE_ROM && nav.row == ORACLES_ROW_ROM);
     /* An unrecognised ROM plays in Faithful whatever Display's profile; the home screen says so beside Display. */
     nav.games[0].usable = 1;
     nav.games[0].rom = ORACLES_ROM_UNRECOGNISED;
@@ -340,7 +371,8 @@ static void navigation(void)
     CHECK(!strcmp(items[3].note, "Profile: Enhanced"));
     /* Back to the home screen, on Cartridge. */
     CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 1);
-    /* Moonrise Regalia's Cartridge: Base ROM, Patch, Save, Play, in that order; its Base ROM is the Ages ROM's dialog. */
+    /* Moonrise Regalia's Cartridge: Base ROM, Patch, Save, Language, Play, in that order; its Base ROM is the Ages ROM's
+     * dialog. */
     game_1k(&nav);
     nav.screen = ORACLES_SCREEN_HOME;
     nav.focus = 0;
@@ -357,7 +389,7 @@ static void navigation(void)
     CHECK(nav.row == ORACLES_ROW_PLAY && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_START_MOONRISE);
     oracles_home_act(&nav, ORACLES_HOME_UP);
     oracles_home_act(&nav, ORACLES_HOME_UP);
-    CHECK(nav.row == ORACLES_ROW_PATCH && oracles_page_click(&nav, ORACLES_ROW_PATCH) == ORACLES_HOME_CHOOSE_PATCH);
+    CHECK(nav.row == ORACLES_ROW_PATCH && oracles_page_click(&nav, ORACLES_ROW_PATCH, -1) == ORACLES_HOME_CHOOSE_PATCH);
     /* Its image, not the Ages ROM, gives its profile. */
     nav.games[ORACLES_HOME_GAME_MOONRISE].image = ORACLES_ROM_UNRECOGNISED;
     CHECK(oracles_display_played_profile(&nav) == ORACLES_PROFILE_FAITHFUL);
@@ -374,7 +406,7 @@ static void navigation(void)
     oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(nav.row == ORACLES_ROW_ROM);
     oracles_page_hover(&nav, ORACLES_ROW_PATCH);
-    CHECK(nav.row == ORACLES_ROW_ROM && oracles_page_click(&nav, ORACLES_ROW_PATCH) == ORACLES_HOME_STAY);
+    CHECK(nav.row == ORACLES_ROW_ROM && oracles_page_click(&nav, ORACLES_ROW_PATCH, -1) == ORACLES_HOME_STAY);
     nav.screen = ORACLES_SCREEN_HOME;
     oracles_home_select(&nav, ORACLES_HOME_FAN);
     oracles_home_act(&nav, ORACLES_HOME_OK);
@@ -388,6 +420,455 @@ static void navigation(void)
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     nav.focus = 3;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY);
+}
+
+/* A fan game's frames after Moonrise's: its page (Cartridge) with its base ROM, its patch and the image recognised, the
+ * page without the patch, and Display (layout_fan_page). */
+typedef struct fan_frames {
+    const char *page, *bare, *display; int game; OraclesHomeHero hero;
+    const char *base_file, *base_name, *file_stem, *written, *title[2];
+} fan_frames;
+static const fan_frames temple_frames = { "1n", "1o", "2n", ORACLES_HOME_GAME_TEMPLE, ORACLES_HOME_HERO_TEMPLE,
+    "Oracle of Seasons (USA).gbc", "Oracle of Seasons (USA)", "Temple of Seasons 1.073",
+    "27 Sep 2026, 10:12", { "Temple of", "Seasons" } };
+static const fan_frames kinomi_frames = { "1q", "1r", "2o", ORACLES_HOME_GAME_KINOMI, ORACLES_HOME_HERO_KINOMI,
+    "Oracle of Ages (USA).gbc", "Oracle of Ages (USA)", "Gifts of Kinomi 1.1.2",
+    "27 Sep 2026, 18:30", { "Gifts of", "Kinomi" } };
+
+/* The fan game as the reference's frame holds it: its Oracle's ROM for its base, its patch, the image recognised. */
+static void game_fan(OraclesHomeNav *nav, const fan_frames *f)
+{
+    OraclesHomeGame *g = &nav->games[f->game];
+    game_1h(g);
+    g->fan = oracles_home_fan_game(f->game);
+    g->hotkeys = 0;
+    g->rom_folder[0] = 0;
+    snprintf(g->rom_file, sizeof g->rom_file, "%s", f->base_file);
+    g->patch = g->image = ORACLES_ROM_ORIGINAL;
+    snprintf(g->patch_file, sizeof g->patch_file, "%s.bps", f->file_stem);
+    snprintf(g->patch_folder, sizeof g->patch_folder, "C:\\Users\\sam\\Games\\Oracles");
+    snprintf(g->save_file, sizeof g->save_file, "%s.sav", f->file_stem);
+    snprintf(g->save_written, sizeof g->save_written, "%s", f->written);
+    snprintf(g->last_session, sizeof g->last_session, "27 Sep 2026");
+    nav->entry = ORACLES_HOME_FAN;
+    nav->fan_pick = f->hero;
+    nav->screen = ORACLES_SCREEN_GAME;
+}
+
+/* ---- European ROM and Language (turns 14, 15 and 16) --------------------------------------------------------------- */
+
+/* The European ROM of frames 14b, 14d, 14e and 15a to 15c: recognized, `language` chosen. */
+static void eu_recognized(OraclesHomeGame *g, int language)
+{
+    g->eu = ORACLES_ROM_ORIGINAL;
+    snprintf(g->eu_file, sizeof g->eu_file, "Oracle of Ages (Europe).gbc");
+    snprintf(g->eu_folder, sizeof g->eu_folder, "C:\\Users\\sam\\Games\\Oracles");
+    g->language = language;
+}
+
+/* The Language row of a frame, in either layout (4:3 comparing the texts' line boxes too): its label, its row, each
+ * language's frame and name, and its lines, in 16:9 the explanation and the note's line, in 4:3 the one line, the note
+ * while there is one, the other line not laid out; then Play. */
+static void language_row(const char *frame, const OraclesUiGameTexts *t, const OraclesUiGameLayout *l, int four_three)
+{
+    static const char *const ids[ORACLES_PAGE_LANGUAGES] = { "en", "en-eu", "fr", "de", "it", "es" };
+    void (*line)(const char *, const char *, const OraclesUiLine *) = four_three ? layout_line : layout_text;
+    line(frame, "Language label", &l->label_language);
+    layout_box(frame, "language row", &l->rows[ORACLES_ROW_LANGUAGE]);
+    for (int i = 0; i < ORACLES_PAGE_LANGUAGES; i++) {
+        char name[32];
+        snprintf(name, sizeof name, "language %s", ids[i]); layout_box(frame, name, &l->languages[i].box);
+        snprintf(name, sizeof name, "language %s name", ids[i]); line(frame, name, &l->languages[i].name);
+    }
+    if (!four_three) {
+        line(frame, "language expl", &l->language_explanation);
+        layout_near(frame, "language note box", "y", l->language_note.y);
+        layout_near(frame, "language note box", "h", l->language_note.h);
+        if (t->language_note[0]) line(frame, "language note", &l->language_note);
+    } else if (t->language_note[0]) {
+        CHECK(l->language_explanation.h == 0.0f && !t->language_explanation[0]);
+        line(frame, "language note", &l->language_note);
+        layout_near(frame, "language note box", "y", l->language_note.y);
+        layout_near(frame, "language note box", "h", l->language_note.h);
+    } else {
+        CHECK(l->language_note.h == 0.0f);
+        line(frame, "language expl", &l->language_explanation);
+        layout_near(frame, "language expl box", "y", l->language_explanation.y);
+        layout_near(frame, "language expl box", "h", l->language_explanation.h);
+    }
+    layout_box(frame, "Play row", &l->rows[ORACLES_ROW_PLAY]);
+    line(frame, "Play", &l->play);
+}
+
+/* The two rows of an Oracle's frame of turns 14 and 15, in either layout. */
+static void eu_rows(const char *frame, const OraclesUiGameTexts *t, const OraclesUiGameLayout *l, int four_three)
+{
+    void (*line)(const char *, const char *, const OraclesUiLine *) = four_three ? layout_line : layout_text;
+    line(frame, "EU label", &l->label_eu);
+    layout_box(frame, "EU row", &l->rows[ORACLES_ROW_EU_ROM]);
+    line(frame, "EU file", &l->eu_file);
+    layout_near(frame, "EU folder box", "y", l->eu_folder.y);
+    layout_near(frame, "EU folder box", "h", l->eu_folder.h);
+    line(frame, "EU status", &l->eu_status);
+    layout_box(frame, "EU dot", &l->eu_dot);
+    if (t->eu_buttons == 1) {
+        line(frame, "EU choose", &l->eu_buttons[0]);
+        line(frame, "EU choose dot", &l->eu_button_dots[0]);
+        layout_box(frame, "EU choose box", &l->eu_button_boxes[0]);
+    } else {
+        layout_near(frame, "EU folder", "x", l->eu_folder.x);
+        layout_near(frame, "EU folder", "w", l->eu_folder.w);
+        layout_near(frame, "EU folder", "baseline", l->eu_folder.baseline);
+        line(frame, "EU change", &l->eu_buttons[0]);
+        line(frame, "EU change dot", &l->eu_button_dots[0]);
+        layout_box(frame, "EU change box", &l->eu_button_boxes[0]);
+        line(frame, "EU remove", &l->eu_buttons[1]);
+        line(frame, "EU remove dot", &l->eu_button_dots[1]);
+        layout_box(frame, "EU remove box", &l->eu_button_boxes[1]);
+    }
+    language_row(frame, t, l, four_three);
+    line(frame, "Play dot", &l->play_dot);
+}
+
+/* The rows' boxes are the same in both layouts: `a`'s and `b`'s. */
+static int same_rows(const OraclesUiGameLayout *a, const OraclesUiGameLayout *b)
+{
+    for (int r = 0; r < ORACLES_GAME_ROWS; r++)
+        if (memcmp(&a->rows[r], &b->rows[r], sizeof a->rows[r])) return 0;
+    return memcmp(a->languages, b->languages, sizeof a->languages) == 0 && a->language_note.y == b->language_note.y;
+}
+
+#define EUROPEAN_LANGUAGES "English (EU), Fran\xc3\xa7" "ais, Deutsch, Italiano, Espa\xc3\xb1" "ol"
+
+static void layout_turn_14(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    nav.screen = ORACLES_SCREEN_GAME;
+    char state[ORACLES_HOME_STATE_LENGTH];
+    OraclesUiGameTexts t;
+    OraclesUiGameLayout l, other;
+    /* 14a: no European ROM, Language greyed with English (US) alone; ROM highlighted. */
+    texts_of(&nav, &t, state);
+    CHECK(t.european && t.languages && t.eu_buttons == 1 && !strcmp(t.eu_file, "None") && t.language_note[0] == 0);
+    CHECK(!strcmp(t.eu_status, "Optional: " EUROPEAN_LANGUAGES));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    eu_rows("14a", &t, &l, 0);
+    layout_box("14a", "Save row", &l.rows[ORACLES_ROW_SAVE]);
+    layout_box("14a", "panel", &l.panel);
+    CHECK(oracles_page_language_available(&nav.games[0], 0) && !oracles_page_language_available(&nav.games[0], 1));
+    /* 14h: European ROM highlighted, the rows where they were. */
+    nav.row = ORACLES_ROW_EU_ROM;
+    texts_of(&nav, &t, state);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &other);
+    eu_rows("14h", &t, &other, 0);
+    CHECK(same_rows(&l, &other));
+    /* 14b: recognized, French chosen, Language highlighted: the rows where they were, the note in its kept line. */
+    eu_recognized(&nav.games[0], 2);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    texts_of(&nav, &t, state);
+    CHECK(t.eu_buttons == 2 && !strcmp(t.eu_button_labels[0], "Change\xe2\x80\xa6") && !strcmp(t.eu_button_labels[1], "Remove"));
+    CHECK(!strcmp(t.eu_status, "Recognized: " EUROPEAN_LANGUAGES));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &other);
+    eu_rows("14b", &t, &other, 0);
+    layout_box("14b", "panel", &other.panel);
+    CHECK(same_rows(&l, &other));
+    /* 14d and 14e: the same in 4:3, whatever the screen: the note alone under the languages. */
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    eu_rows("14d", &t, &l, 1);
+    layout_box("14d", "Save row", &l.rows[ORACLES_ROW_SAVE]);
+    texts_of(&nav, &t, state);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    eu_rows("14e", &t, &l, 1);
+    /* 14c: a file that is not the game's European ROM; Language back in English (US). */
+    OraclesHomeGame *g = &nav.games[0];
+    g->eu = ORACLES_ROM_UNRECOGNISED;
+    snprintf(g->eu_file, sizeof g->eu_file, "Oracle of Seasons (Europe).gbc");
+    g->language = 0;
+    nav.row = ORACLES_ROW_EU_ROM;
+    texts_of(&nav, &t, state);
+    OraclesTone tone;
+    oracles_page_eu_status(&nav, t.eu_status, sizeof t.eu_status, &tone);
+    CHECK(!strcmp(t.eu_status, "Not the European ROM of Oracle of Ages") && tone == ORACLES_TONE_ERROR);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    eu_rows("14c", &t, &l, 0);
+    /* 14i: an unrecognised US ROM, the two rows hidden, the page as it was before them. */
+    eu_recognized(g, 2);
+    g->rom = ORACLES_ROM_UNRECOGNISED;
+    g->hotkeys_failed = 1;
+    g->save_file[0] = 0;
+    snprintf(g->rom_file, sizeof g->rom_file, "Ages randomizer seed 4F1C.gbc");
+    nav.row = ORACLES_ROW_ROM;
+    texts_of(&nav, &t, state);
+    CHECK(!t.european && !t.languages && oracles_page_language(&nav, g) == 0);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    layout_box("14i", "ROM row", &l.rows[ORACLES_ROW_ROM]);
+    layout_line("14i", "status", &l.rom_status.lines[0]);
+    layout_line("14i", "note", &l.rom_note.lines[0]);
+    layout_line("14i", "hotkeys note", &l.rom_hotkeys_note.lines[0]);
+    layout_line("14i", "Save", &l.label_save);
+    layout_box("14i", "Save row", &l.rows[ORACLES_ROW_SAVE]);
+    layout_box("14i", "Play row", &l.rows[ORACLES_ROW_PLAY]);
+    layout_line("14i", "Play", &l.play);
+    CHECK(l.rows[ORACLES_ROW_EU_ROM].w == 0.0f && l.rows[ORACLES_ROW_LANGUAGE].w == 0.0f && l.label_eu.w == 0.0f);
+}
+
+/* Turn 15: English (EU) chosen, Language highlighted, in 16:9 (15a), in 4:3 (15b) and at 640x480 (15c). */
+static void layout_turn_15(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    nav.screen = ORACLES_SCREEN_GAME;
+    eu_recognized(&nav.games[0], 1);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    char state[ORACLES_HOME_STATE_LENGTH];
+    OraclesUiGameTexts t;
+    OraclesUiGameLayout l;
+    texts_of(&nav, &t, state);
+    CHECK(oracles_page_language(&nav, &nav.games[0]) == 1 && !strcmp(oracles_page_language_names[1], "English (EU)"));
+    CHECK(!strcmp(t.language_explanation, "The European edition's text, from your European ROM."));
+    CHECK(!strcmp(t.language_note, "Where the official translation was wrong, the port corrects it."));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    eu_rows("15a", &t, &l, 0);
+    layout_box("15a", "panel", &l.panel);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    eu_rows("15b", &t, &l, 1);
+    texts_of(&nav, &t, state);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    eu_rows("15c", &t, &l, 1);
+}
+
+/* A fan game's rows of a frame of turn 16, its Language row after Save. */
+static void fan_language_rows(const char *frame, const OraclesUiGameTexts *t, const OraclesUiGameLayout *l, int four_three)
+{
+    void (*line)(const char *, const char *, const OraclesUiLine *) = four_three ? layout_line : layout_text;
+    line(frame, "Base ROM", &l->label_rom);
+    line(frame, "Patch", &l->label_patch);
+    line(frame, "Save", &l->label_save);
+    layout_box(frame, "base row", &l->rows[ORACLES_ROW_ROM]);
+    layout_box(frame, "patch row", &l->rows[ORACLES_ROW_PATCH]);
+    layout_box(frame, "Save row", &l->rows[ORACLES_ROW_SAVE]);
+    language_row(frame, t, l, four_three);
+    line(frame, "Play dot", &l->play_dot);
+    if (!four_three) layout_box(frame, "panel", &l->panel);
+}
+
+/* Turn 16, with the fan games' languages on (the mockup's fanLang): a fan game's Language row, the European ROM its
+ * Oracle's page names.  Moonrise Regalia in French (16a), in 4:3 (16b) and at 640x480 (16c); Gifts of Kinomi without the
+ * European ROM of Ages, greyed with English (US) alone (16d); Temple of Seasons in English (EU) (16e). */
+static void layout_turn_16(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.fan_languages = 1;
+    game_1k(&nav);
+    OraclesHomeGame *g = &nav.games[ORACLES_HOME_GAME_MOONRISE];
+    eu_recognized(g, 2);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    char state[ORACLES_HOME_STATE_LENGTH];
+    OraclesUiGameTexts t;
+    OraclesUiGameLayout l;
+    texts_of(&nav, &t, state);
+    CHECK(!t.european && t.languages && oracles_page_language(&nav, g) == 2);
+    CHECK(!strcmp(t.language_explanation, "Texts the fan game shares with Oracle of Ages, from its European edition."));
+    CHECK(!strcmp(t.language_note, "Only the texts it shares with Oracle of Ages are translated; its own dialogues stay in English."));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    fan_language_rows("16a", &t, &l, 0);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    fan_language_rows("16b", &t, &l, 1);
+    texts_of(&nav, &t, state);
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    fan_language_rows("16c", &t, &l, 1);
+    /* English (US) on Moonrise: its own text, no note. */
+    g->language = 0;
+    texts_of(&nav, &t, state);
+    CHECK(!strcmp(t.language_explanation, "The original text of your fan game.") && !t.language_note[0]);
+
+    oracles_home_init(&nav);
+    nav.fan_languages = 1;
+    game_fan(&nav, &kinomi_frames);
+    g = &nav.games[ORACLES_HOME_GAME_KINOMI];
+    g->language = 2;   /* settings.txt's, kept while the European ROM of Ages is missing */
+    nav.row = ORACLES_ROW_LANGUAGE;
+    texts_of(&nav, &t, state);
+    CHECK(!oracles_page_language_available(g, 1) && oracles_page_language(&nav, g) == 0 && !t.language_note[0]);
+    CHECK(!strcmp(t.language_explanation, "Choose the European ROM of Oracle of Ages in its Cartridge to play it in another language."));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    fan_language_rows("16d", &t, &l, 0);
+    /* Recognized, but its Oracle's ROM not the original: still English (US) alone. */
+    g->eu = ORACLES_ROM_ORIGINAL;
+    CHECK(oracles_page_language(&nav, g) == 2);
+    g->rom = ORACLES_ROM_UNRECOGNISED;
+    CHECK(!oracles_page_language_available(g, 1) && oracles_page_language(&nav, g) == 0);
+
+    oracles_home_init(&nav);
+    nav.fan_languages = 1;
+    game_fan(&nav, &temple_frames);
+    g = &nav.games[ORACLES_HOME_GAME_TEMPLE];
+    eu_recognized(g, 1);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    texts_of(&nav, &t, state);
+    CHECK(!strcmp(t.language_explanation, "Texts the fan game shares with Oracle of Seasons, from its European edition."));
+    CHECK(!strcmp(t.language_note, "Only the texts it shares with Oracle of Seasons are translated; its own dialogues stay in English."));
+    oracles_ui_layout_game(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    fan_language_rows("16e", &t, &l, 0);
+}
+
+/* European ROM's buttons and the languages, by the keys and the pointer. */
+static void languages_navigation(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    OraclesHomeGame *g = &nav.games[0];
+    nav.focus = 1;
+    oracles_home_act(&nav, ORACLES_HOME_OK);
+    CHECK(nav.screen == ORACLES_SCREEN_GAME && nav.row == ORACLES_ROW_ROM && nav.eu_action == 0);
+    char note[ORACLES_HOME_TEXT_LENGTH];
+    /* No European ROM: Choose… alone, left and right change nothing; Language greyed: nothing changes it. */
+    nav.row = ORACLES_ROW_EU_ROM;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.eu_action == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_CHOOSE_EU_ROM);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_EU_ROM, 0) == ORACLES_HOME_CHOOSE_EU_ROM);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && g->language == 0);
+    oracles_page_language_note(g, note, sizeof note);
+    CHECK(!strcmp(oracles_page_language_explanation(g), "The original text of your US ROM.") && !note[0]);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 1) == ORACLES_HOME_STAY && g->language == 0);
+    /* Recognized: the six languages go round, each choice kept (ORACLES_HOME_STORE); the home screen names it beside
+     * Cartridge. */
+    eu_recognized(g, 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && g->language == 1);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && g->language == 2);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && g->language == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && g->language == 5);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 2) == ORACLES_HOME_STORE && g->language == 2);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 2) == ORACLES_HOME_STAY && oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, -1) == ORACLES_HOME_STAY);
+    CHECK(!strcmp(oracles_page_language_explanation(g), "The European edition's text, from your European ROM."));
+    oracles_page_language_note(g, note, sizeof note);
+    CHECK(!strcmp(note, "Where the official translation was wrong, the port corrects it."));
+    OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+    oracles_home_items(&nav, items);
+    CHECK(items[1].note && !strcmp(items[1].note, "Fran\xc3\xa7" "ais") && !strcmp(items[3].note, "Profile: Enhanced"));
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 1) == ORACLES_HOME_STORE && g->language == 1);
+    oracles_home_items(&nav, items);
+    CHECK(items[1].note && !strcmp(items[1].note, "English (EU)"));
+    /* European ROM: right moves to Remove, left back to Change…; Remove forgets the file and the language. */
+    nav.row = ORACLES_ROW_EU_ROM;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.eu_action == 1);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && nav.eu_action == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_CHOOSE_EU_ROM && g->eu == ORACLES_ROM_ORIGINAL);
+    oracles_home_act(&nav, ORACLES_HOME_RIGHT);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && g->eu == ORACLES_ROM_NONE && g->language == 0 && nav.eu_action == 0);
+    oracles_home_items(&nav, items);
+    CHECK(items[1].note == NULL);
+    /* By the pointer: Remove removes, the rest of the row opens the dialog. */
+    eu_recognized(g, 3);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_EU_ROM, -1) == ORACLES_HOME_CHOOSE_EU_ROM && nav.eu_action == 0);
+    CHECK(oracles_page_click(&nav, ORACLES_ROW_EU_ROM, 1) == ORACLES_HOME_STORE && g->eu == ORACLES_ROM_NONE && g->language == 0);
+    /* A file that is not the game's European ROM, or one gone: English (US) alone, Change… and Remove. */
+    eu_recognized(g, 2);
+    g->eu = ORACLES_ROM_REFUSED;
+    snprintf(g->eu_reason, sizeof g->eu_reason, "cannot open the file");
+    char status[ORACLES_HOME_TEXT_LENGTH];
+    OraclesTone tone;
+    oracles_page_eu_status(&nav, status, sizeof status, &tone);
+    CHECK(!strcmp(status, "Refused: cannot open the file.") && tone == ORACLES_TONE_ERROR && oracles_page_language(&nav, g) == 0);
+    const char *labels[2];
+    CHECK(oracles_page_eu_buttons(g, labels) == 2);
+    /* An unrecognised US ROM: no European ROM or Language row; down from Save goes to Play. */
+    g->rom = ORACLES_ROM_UNRECOGNISED;
+    nav.row = ORACLES_ROW_SAVE;
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_PLAY);
+    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE);
+    CHECK(nav.row == ORACLES_ROW_PLAY && oracles_page_click(&nav, ORACLES_ROW_EU_ROM, 0) == ORACLES_HOME_STAY);
+    /* A fan game, its languages off as in the product: no European ROM or Language row, down from Save to Play, no
+     * language beside Cartridge whatever settings.txt chose and its Oracle's European ROM recognized. */
+    oracles_home_init(&nav);
+    game_1h(&nav.games[ORACLES_HOME_GAME_AGES]);
+    game_1k(&nav);
+    OraclesHomeGame *fan = &nav.games[ORACLES_HOME_GAME_MOONRISE];
+    fan->eu = ORACLES_ROM_ORIGINAL;
+    fan->language = 2;
+    CHECK(!oracles_page_eu_shown(fan) && !oracles_page_language_shown(&nav, fan) && oracles_page_language(&nav, fan) == 0);
+    nav.row = ORACLES_ROW_SAVE;
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_PLAY);
+    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE);
+    CHECK(nav.row == ORACLES_ROW_PLAY && oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 2) == ORACLES_HOME_STAY);
+    nav.screen = ORACLES_SCREEN_HOME;
+    oracles_home_items(&nav, items);
+    CHECK(items[1].note == NULL);
+    /* On (the mockup's fanLang): the Language row and no European ROM row, down from Save to Language, then Play; its
+     * languages its Oracle's European ROM's, beside Cartridge too, and gone with it. */
+    oracles_home_init(&nav);
+    nav.fan_languages = 1;
+    game_1h(&nav.games[ORACLES_HOME_GAME_AGES]);
+    game_1k(&nav);
+    CHECK(!oracles_page_eu_shown(fan) && oracles_page_language_shown(&nav, fan) && oracles_page_language(&nav, fan) == 0);
+    nav.row = ORACLES_ROW_SAVE;
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_LANGUAGE);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && fan->language == 0);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_PLAY);
+    eu_recognized(&nav.games[ORACLES_HOME_GAME_AGES], 0);
+    fan->eu = ORACLES_ROM_ORIGINAL;
+    nav.row = ORACLES_ROW_LANGUAGE;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && fan->language == 5);
+    nav.screen = ORACLES_SCREEN_HOME;
+    oracles_home_items(&nav, items);
+    CHECK(items[1].note && !strcmp(items[1].note, "Espa\xc3\xb1" "ol"));
+    /* The European ROM of Ages removed on its page: Moonrise back to English (US), its choice kept for later. */
+    nav.entry = ORACLES_HOME_AGES;
+    nav.screen = ORACLES_SCREEN_GAME;
+    nav.row = ORACLES_ROW_EU_ROM;
+    nav.eu_action = 1;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.games[ORACLES_HOME_GAME_AGES].eu == ORACLES_ROM_NONE);
+    CHECK(fan->eu == ORACLES_ROM_NONE && fan->language == 5 && oracles_page_language(&nav, fan) == 0);
+}
+
+/* A refresh or a drop that hides the highlighted row: the highlight goes to the nearest row the page has, so that it
+ * shows, and Down and OK act from there. */
+static void kept_row(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    nav.screen = ORACLES_SCREEN_GAME;
+    OraclesHomeGame *g = &nav.games[0];
+    nav.row = ORACLES_ROW_LANGUAGE;
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_ROW_LANGUAGE);
+    g->rom = ORACLES_ROM_UNRECOGNISED;   /* another ROM dropped on the page */
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_ROW_PLAY && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_START_AGES);
+    nav.row = ORACLES_ROW_EU_ROM;
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_ROW_SAVE);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_ROW_PLAY);
+    g->rom = ORACLES_ROM_REFUSED;
+    g->usable = 0;
+    g->save_file[0] = 0;
+    nav.row = ORACLES_ROW_EU_ROM;
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_ROW_SAVE && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY);
+    /* A fan game, its languages off: no Language row to keep. */
+    oracles_home_init(&nav);
+    game_1k(&nav);
+    nav.row = ORACLES_ROW_LANGUAGE;
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_ROW_PLAY);
+    /* Elsewhere than a game's page, the row is Display's: left as it is. */
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_VIEW;
+    oracles_page_keep_row(&nav);
+    CHECK(nav.row == ORACLES_DISPLAY_VIEW);
 }
 
 /* Frame 2q: an unrecognised ROM with Enhanced chosen plays in Faithful, and Display counts its sizes and draws its
@@ -444,39 +925,6 @@ static void display_2m(void)
     layout_text("2m", "diagram label", &l.diagram_label);
 }
 
-/* A fan game's frames after Moonrise's: its page (Cartridge) with its base ROM, its patch and the image recognised, the
- * page without the patch, and Display (layout_fan_page). */
-typedef struct fan_frames {
-    const char *page, *bare, *display; int game; OraclesHomeHero hero;
-    const char *base_file, *base_name, *file_stem, *written, *title[2];
-} fan_frames;
-static const fan_frames temple_frames = { "1n", "1o", "2n", ORACLES_HOME_GAME_TEMPLE, ORACLES_HOME_HERO_TEMPLE,
-    "Oracle of Seasons (USA).gbc", "Oracle of Seasons (USA)", "Temple of Seasons 1.073",
-    "27 Sep 2026, 10:12", { "Temple of", "Seasons" } };
-static const fan_frames kinomi_frames = { "1q", "1r", "2o", ORACLES_HOME_GAME_KINOMI, ORACLES_HOME_HERO_KINOMI,
-    "Oracle of Ages (USA).gbc", "Oracle of Ages (USA)", "Gifts of Kinomi 1.1.2",
-    "27 Sep 2026, 18:30", { "Gifts of", "Kinomi" } };
-
-/* The fan game as the reference's frame holds it: its Oracle's ROM for its base, its patch, the image recognised. */
-static void game_fan(OraclesHomeNav *nav, const fan_frames *f)
-{
-    OraclesHomeGame *g = &nav->games[f->game];
-    game_1h(g);
-    g->fan = oracles_home_fan_game(f->game);
-    g->hotkeys = 0;
-    g->rom_folder[0] = 0;
-    snprintf(g->rom_file, sizeof g->rom_file, "%s", f->base_file);
-    g->patch = g->image = ORACLES_ROM_ORIGINAL;
-    snprintf(g->patch_file, sizeof g->patch_file, "%s.bps", f->file_stem);
-    snprintf(g->patch_folder, sizeof g->patch_folder, "C:\\Users\\sam\\Games\\Oracles");
-    snprintf(g->save_file, sizeof g->save_file, "%s.sav", f->file_stem);
-    snprintf(g->save_written, sizeof g->save_written, "%s", f->written);
-    snprintf(g->last_session, sizeof g->last_session, "27 Sep 2026");
-    nav->entry = ORACLES_HOME_FAN;
-    nav->fan_pick = f->hero;
-    nav->screen = ORACLES_SCREEN_GAME;
-}
-
 static void layout_fan_page(const fan_frames *f)
 {
     OraclesHomeNav nav;
@@ -496,7 +944,7 @@ static void layout_fan_page(const fan_frames *f)
     snprintf(expected, sizeof expected, "Original ROM, %s", f->base_name);
     CHECK(!strcmp(t.rom_status, expected));
     layout_text(p, "base file", &l.rom_file);
-    layout_text(p, "base status", &l.rom_status);
+    layout_text(p, "base status", &l.rom_status.lines[0]);
     layout_box(p, "base row", &l.rows[ORACLES_ROW_ROM]);
     layout_text(p, "patch file", &l.patch_file);
     layout_text(p, "patch status", &l.patch_status);
@@ -521,8 +969,7 @@ static void layout_fan_page(const fan_frames *f)
     p = f->bare;
     layout_text(p, "state", &l.head.state);
     layout_text(p, "patch file", &l.patch_file);
-    layout_text(p, "patch status", &l.patch_status);
-    layout_box(p, "patch row", &l.rows[ORACLES_ROW_PATCH]);
+    overflowing(p, "patch status", &l.patch_status, "patch row", &l.rows[ORACLES_ROW_PATCH]);
     layout_text(p, "image status", &l.image_status);
     layout_text(p, "save file", &l.save_file);
     layout_text(p, "save line", &l.save_line);
@@ -1011,6 +1458,16 @@ static void long_paths(void)
     CHECK(!strncmp(field, "C:\\Users\\sam\\Games", 18) && strstr(field, "\\Oracles, the real end") == field + strlen(field) - 22);
     oracles_ui_copy_middle(fitted, sizeof fitted, "short", 5);
     CHECK(!strcmp(fitted, "short"));
+    /* A toast's note after its message, a file's name in it: cut in its middle on whole characters, its end kept. */
+    char toast[256] = "Route written to C:\\routes\\ages.route";
+    char note[400];
+    snprintf(note, sizeof note, "%.300s is not the European ROM of Oracle of Ages: the game played in English.", strchr(path + 2850, '\\'));
+    oracles_ui_append_middle(toast, sizeof toast, note);
+    CHECK(strlen(toast) < sizeof toast && valid_utf8(toast) && ellipses(toast) == 1 && !strncmp(toast, "Route written to C:\\routes\\ages.route ", 38));
+    CHECK(strstr(toast, "the game played in English.") == toast + strlen(toast) - 27);
+    snprintf(toast, sizeof toast, "%s", "");
+    oracles_ui_append_middle(toast, sizeof toast, "short");
+    CHECK(!strcmp(toast, "short"));
 
     const float room = 700.0f;
     clock_t start = clock();
@@ -1058,7 +1515,7 @@ static void layout_10d(void)
     layout_line("10d", "Save", &l.label_save);
     layout_line("10d", "ROM file", &l.rom_file);
     layout_line("10d", "ROM folder", &l.rom_folder);
-    layout_line("10d", "ROM status", &l.rom_status);
+    layout_line("10d", "ROM status", &l.rom_status.lines[0]);
     layout_box("10d", "ROM dot", &l.rom_dot);
     layout_line("10d", "Choose ROM", &l.rom_button);
     layout_line("10d", "Choose ROM dot", &l.rom_button_dot);
@@ -1100,7 +1557,7 @@ static void layout_10e(void)
     layout_line("10e", "Patch", &l.label_patch);
     layout_line("10e", "Save", &l.label_save);
     layout_line("10e", "base file", &l.rom_file);
-    layout_line("10e", "base status", &l.rom_status);
+    layout_line("10e", "base status", &l.rom_status.lines[0]);
     layout_box("10e", "base dot", &l.rom_dot);
     layout_line("10e", "Choose ROM", &l.rom_button);
     layout_box("10e", "base row", &l.rows[ORACLES_ROW_ROM]);
@@ -1710,6 +2167,11 @@ int main(int argc, char **argv)
     layout_fan_page(&temple_frames);
     layout_fan_page(&kinomi_frames);
     navigation();
+    layout_turn_14();
+    layout_turn_15();
+    layout_turn_16();
+    languages_navigation();
+    kept_row();
     display_2a_2b();
     display_9a_9b_9c();
     display_2q();

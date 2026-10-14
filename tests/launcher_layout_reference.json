@@ -1127,7 +1127,7 @@
     "lines": 1
    },
    "ROM file": {
-    "x": 879,
+    "x": 969,
     "w": 269.813,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -1138,7 +1138,7 @@
     "lines": 1
    },
    "ROM folder": {
-    "x": 879,
+    "x": 969,
     "w": 327.609,
     "glyph_top": 131,
     "glyph_h": 27,
@@ -1149,7 +1149,7 @@
     "lines": 1
    },
    "ROM status": {
-    "x": 903,
+    "x": 993,
     "w": 243.203,
     "glyph_top": 166,
     "glyph_h": 25,
@@ -1160,7 +1160,7 @@
     "lines": 1
    },
    "ROM dot": {
-    "x": 879,
+    "x": 969,
     "y": 173,
     "w": 12,
     "h": 12
@@ -1188,13 +1188,13 @@
     "lines": 1
    },
    "ROM row": {
-    "x": 859,
+    "x": 949,
     "y": 81,
-    "w": 972,
+    "w": 882,
     "h": 125
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 266.281,
     "glyph_top": 231,
     "glyph_h": 28,
@@ -1205,7 +1205,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 568.156,
     "glyph_top": 268,
     "glyph_h": 24,
@@ -1227,30 +1227,30 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 216,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 321,
+    "glyph_top": 657,
     "glyph_h": 68,
-    "top": 321,
+    "top": 657,
     "h": 68,
-    "baseline": 374,
+    "baseline": 710,
     "width": 95.672,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 321,
+    "glyph_top": 657,
     "glyph_h": 68,
-    "top": 321,
+    "top": 657,
     "h": 68,
-    "baseline": 374,
+    "baseline": 710,
     "width": 11.078,
     "lines": 1
    },
@@ -1258,12 +1258,12 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 362
+    "h": 698
    }
   },
   "1i": {
    "file": {
-    "x": 879,
+    "x": 969,
     "w": 342.219,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -1274,7 +1274,7 @@
     "lines": 1
    },
    "status": {
-    "x": 903,
+    "x": 993,
     "w": 318.859,
     "glyph_top": 166,
     "glyph_h": 25,
@@ -1285,7 +1285,7 @@
     "lines": 1
    },
    "note": {
-    "x": 879,
+    "x": 969,
     "w": 539.625,
     "glyph_top": 200,
     "glyph_h": 24,
@@ -1296,52 +1296,52 @@
     "lines": 1
    },
    "hotkeys note": {
-    "x": 879,
-    "w": 593.047,
+    "x": 969,
+    "w": 538.688,
     "glyph_top": 233,
     "glyph_h": 24,
     "top": 231,
     "h": 29,
     "baseline": 252,
-    "width": 593.047,
-    "lines": 1
+    "width": 538.688,
+    "lines": 2
    },
    "Choose ROM": {
     "x": 1576.906,
     "w": 213.531,
-    "glyph_top": 156.5,
+    "glyph_top": 171,
     "glyph_h": 40,
-    "top": 156.5,
+    "top": 171,
     "h": 40,
-    "baseline": 187.5,
+    "baseline": 202,
     "width": 213.531,
     "lines": 1
    },
    "ROM row": {
-    "x": 859,
+    "x": 949,
     "y": 81,
-    "w": 972,
-    "h": 191
+    "w": 882,
+    "h": 220
    },
    "Save": {
     "x": 689,
     "w": 64.953,
-    "glyph_top": 300,
+    "glyph_top": 329,
     "glyph_h": 27,
-    "top": 300,
+    "top": 329,
     "h": 27,
-    "baseline": 321,
+    "baseline": 350,
     "width": 64.953,
     "lines": 1
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 387,
+    "glyph_top": 416,
     "glyph_h": 68,
-    "top": 387,
+    "top": 416,
     "h": 68,
-    "baseline": 440,
+    "baseline": 469,
     "width": 95.672,
     "lines": 1
    },
@@ -1349,7 +1349,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 428
+    "h": 457
    }
   },
   "1k": {
@@ -1437,7 +1437,7 @@
     "lines": 1
    },
    "base file": {
-    "x": 879,
+    "x": 969,
     "w": 269.813,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -1448,7 +1448,7 @@
     "lines": 1
    },
    "base status": {
-    "x": 903,
+    "x": 993,
     "w": 340.484,
     "glyph_top": 133,
     "glyph_h": 25,
@@ -1459,7 +1459,7 @@
     "lines": 1
    },
    "base dot": {
-    "x": 879,
+    "x": 969,
     "y": 140,
     "w": 12,
     "h": 12
@@ -1487,13 +1487,13 @@
     "lines": 1
    },
    "base row": {
-    "x": 859,
+    "x": 949,
     "y": 81,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 289.328,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -1504,7 +1504,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 138.031,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -1515,7 +1515,7 @@
     "lines": 1
    },
    "patch dot": {
-    "x": 879,
+    "x": 969,
     "y": 242,
     "w": 12,
     "h": 12
@@ -1543,13 +1543,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch folder": {
-    "x": 879,
+    "x": 969,
     "w": 327.609,
     "glyph_top": 283,
     "glyph_h": 27,
@@ -1560,7 +1560,7 @@
     "lines": 1
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 480.813,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -1571,13 +1571,13 @@
     "lines": 1
    },
    "image dot": {
-    "x": 879,
+    "x": 969,
     "y": 327,
     "w": 12,
     "h": 12
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 286.391,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -1588,7 +1588,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 570.359,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -1610,9 +1610,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "Play": {
@@ -1663,7 +1663,7 @@
     "lines": 1
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 59.875,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -1674,7 +1674,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 586.141,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -1685,13 +1685,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 912.797,
     "h": 92
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 258.109,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -1702,7 +1702,7 @@
     "lines": 1
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 123.625,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -1713,7 +1713,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 201.422,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -1724,9 +1724,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "Play": {
@@ -1788,7 +1788,7 @@
     "lines": 1
    },
    "base file": {
-    "x": 879,
+    "x": 969,
     "w": 304.516,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -1799,7 +1799,7 @@
     "lines": 1
    },
    "base status": {
-    "x": 903,
+    "x": 993,
     "w": 370.891,
     "glyph_top": 133,
     "glyph_h": 25,
@@ -1810,13 +1810,13 @@
     "lines": 1
    },
    "base row": {
-    "x": 859,
+    "x": 949,
     "y": 81,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 305.344,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -1827,7 +1827,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 138.031,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -1838,13 +1838,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch folder": {
-    "x": 879,
+    "x": 969,
     "w": 327.609,
     "glyph_top": 283,
     "glyph_h": 27,
@@ -1855,7 +1855,7 @@
     "lines": 1
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 495.391,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -1866,7 +1866,7 @@
     "lines": 1
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 302.406,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -1877,7 +1877,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 568.375,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -1888,9 +1888,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "Play row": {
@@ -1919,7 +1919,7 @@
     "lines": 1
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 59.875,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -1930,7 +1930,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 600.703,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -1941,13 +1941,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 927.359,
     "h": 92
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 258.109,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -1958,7 +1958,7 @@
     "lines": 1
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 123.625,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -1969,7 +1969,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 201.422,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -1980,9 +1980,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "panel": {
@@ -2033,7 +2033,7 @@
     "lines": 1
    },
    "base file": {
-    "x": 879,
+    "x": 969,
     "w": 269.813,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -2044,7 +2044,7 @@
     "lines": 1
    },
    "base status": {
-    "x": 903,
+    "x": 993,
     "w": 340.484,
     "glyph_top": 133,
     "glyph_h": 25,
@@ -2055,13 +2055,13 @@
     "lines": 1
    },
    "base row": {
-    "x": 859,
+    "x": 949,
     "y": 81,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 258.5,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -2072,7 +2072,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 138.031,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -2083,13 +2083,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 882,
     "h": 92
    },
    "patch folder": {
-    "x": 879,
+    "x": 969,
     "w": 327.609,
     "glyph_top": 283,
     "glyph_h": 27,
@@ -2100,7 +2100,7 @@
     "lines": 1
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 453.563,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -2111,7 +2111,7 @@
     "lines": 1
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 255.563,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -2122,7 +2122,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 570.469,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -2133,9 +2133,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "Play row": {
@@ -2164,7 +2164,7 @@
     "lines": 1
    },
    "patch file": {
-    "x": 879,
+    "x": 969,
     "w": 59.875,
     "glyph_top": 198,
     "glyph_h": 28,
@@ -2175,7 +2175,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 903,
+    "x": 993,
     "w": 558.891,
     "glyph_top": 235,
     "glyph_h": 25,
@@ -2186,13 +2186,13 @@
     "lines": 1
    },
    "patch row": {
-    "x": 859,
+    "x": 949,
     "y": 183,
-    "w": 972,
+    "w": 885.547,
     "h": 92
    },
    "image status": {
-    "x": 903,
+    "x": 993,
     "w": 258.109,
     "glyph_top": 320,
     "glyph_h": 25,
@@ -2203,7 +2203,7 @@
     "lines": 1
    },
    "save file": {
-    "x": 879,
+    "x": 969,
     "w": 123.625,
     "glyph_top": 377,
     "glyph_h": 28,
@@ -2214,7 +2214,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 201.422,
     "glyph_top": 414,
     "glyph_h": 24,
@@ -2225,9 +2225,9 @@
     "lines": 1
    },
    "Save row": {
-    "x": 859,
+    "x": 949,
     "y": 362,
-    "w": 972,
+    "w": 882,
     "h": 91
    },
    "panel": {
@@ -2239,7 +2239,7 @@
   },
   "1j": {
    "file": {
-    "x": 879,
+    "x": 969,
     "w": 304.516,
     "glyph_top": 96,
     "glyph_h": 28,
@@ -2250,46 +2250,46 @@
     "lines": 1
    },
    "status": {
-    "x": 903,
-    "w": 599.828,
+    "x": 993,
+    "w": 542.984,
     "glyph_top": 166,
     "glyph_h": 25,
     "top": 164,
     "h": 30,
     "baseline": 186,
-    "width": 599.828,
-    "lines": 1
+    "width": 542.984,
+    "lines": 2
    },
    "save": {
-    "x": 879,
+    "x": 969,
     "w": 123.625,
-    "glyph_top": 231,
+    "glyph_top": 261,
     "glyph_h": 28,
-    "top": 228,
+    "top": 258,
     "h": 34,
-    "baseline": 253,
+    "baseline": 283,
     "width": 123.625,
     "lines": 1
    },
    "save line": {
-    "x": 879,
+    "x": 969,
     "w": 176.313,
-    "glyph_top": 268,
+    "glyph_top": 298,
     "glyph_h": 24,
-    "top": 266,
+    "top": 296,
     "h": 29,
-    "baseline": 287,
+    "baseline": 317,
     "width": 176.313,
     "lines": 1
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 321,
+    "glyph_top": 351,
     "glyph_h": 68,
-    "top": 321,
+    "top": 351,
     "h": 68,
-    "baseline": 374,
+    "baseline": 404,
     "width": 95.672,
     "lines": 1
    }
@@ -6749,7 +6749,7 @@
     "lines": 1
    },
    "ROM file": {
-    "x": 308,
+    "x": 418,
     "w": 346.906,
     "glyph_top": 228,
     "glyph_h": 36,
@@ -6760,7 +6760,7 @@
     "lines": 1
    },
    "ROM folder": {
-    "x": 308,
+    "x": 418,
     "w": 421.203,
     "glyph_top": 270,
     "glyph_h": 36,
@@ -6771,7 +6771,7 @@
     "lines": 1
    },
    "ROM status": {
-    "x": 334,
+    "x": 444,
     "w": 291.844,
     "glyph_top": 311,
     "glyph_h": 30,
@@ -6782,7 +6782,7 @@
     "lines": 1
    },
    "ROM dot": {
-    "x": 308,
+    "x": 418,
     "y": 319,
     "w": 14,
     "h": 14
@@ -6816,7 +6816,7 @@
     "h": 150
    },
    "save file": {
-    "x": 308,
+    "x": 418,
     "w": 342.375,
     "glyph_top": 386,
     "glyph_h": 36,
@@ -6827,7 +6827,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 308,
+    "x": 418,
     "w": 710.203,
     "glyph_top": 431,
     "glyph_h": 30,
@@ -6868,28 +6868,28 @@
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 498.5,
+    "glyph_top": 862.5,
     "glyph_h": 75,
-    "top": 498.5,
+    "top": 862.5,
     "h": 75,
-    "baseline": 556.5,
+    "baseline": 920.5,
     "width": 106.297,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 498.5,
+    "glyph_top": 862.5,
     "glyph_h": 75,
-    "top": 498.5,
+    "top": 862.5,
     "h": 75,
-    "baseline": 556.5,
+    "baseline": 920.5,
     "width": 12.313,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 486,
+    "y": 850,
     "w": 1312,
     "h": 100
    }
@@ -6962,7 +6962,7 @@
     "lines": 1
    },
    "base file": {
-    "x": 308,
+    "x": 418,
     "w": 346.906,
     "glyph_top": 228,
     "glyph_h": 36,
@@ -6973,7 +6973,7 @@
     "lines": 1
    },
    "base status": {
-    "x": 334,
+    "x": 444,
     "w": 408.578,
     "glyph_top": 273,
     "glyph_h": 30,
@@ -6984,7 +6984,7 @@
     "lines": 1
    },
    "base dot": {
-    "x": 308,
+    "x": 418,
     "y": 281,
     "w": 14,
     "h": 14
@@ -7007,7 +7007,7 @@
     "h": 112
    },
    "patch file": {
-    "x": 308,
+    "x": 418,
     "w": 372,
     "glyph_top": 348,
     "glyph_h": 36,
@@ -7018,7 +7018,7 @@
     "lines": 1
    },
    "patch status": {
-    "x": 334,
+    "x": 444,
     "w": 165.641,
     "glyph_top": 393,
     "glyph_h": 30,
@@ -7029,7 +7029,7 @@
     "lines": 1
    },
    "patch dot": {
-    "x": 308,
+    "x": 418,
     "y": 401,
     "w": 14,
     "h": 14
@@ -7063,7 +7063,7 @@
     "h": 112
    },
    "patch folder": {
-    "x": 308,
+    "x": 418,
     "w": 421.203,
     "glyph_top": 448,
     "glyph_h": 36,
@@ -7074,7 +7074,7 @@
     "lines": 1
    },
    "image status": {
-    "x": 334,
+    "x": 444,
     "w": 576.969,
     "glyph_top": 491,
     "glyph_h": 30,
@@ -7085,13 +7085,13 @@
     "lines": 1
    },
    "image dot": {
-    "x": 308,
+    "x": 418,
     "y": 499,
     "w": 14,
     "h": 14
    },
    "save file": {
-    "x": 308,
+    "x": 418,
     "w": 368.219,
     "glyph_top": 552,
     "glyph_h": 36,
@@ -7102,7 +7102,7 @@
     "lines": 1
    },
    "save line": {
-    "x": 308,
+    "x": 418,
     "w": 712.953,
     "glyph_top": 597,
     "glyph_h": 30,
@@ -13186,6 +13186,3949 @@
     "h": 32.391,
     "baseline": 606.5,
     "width": 145.813,
+    "lines": 1
+   }
+  },
+  "14a": {
+   "EU label": {
+    "x": 689,
+    "w": 217.625,
+    "glyph_top": 335,
+    "glyph_h": 27,
+    "top": 335,
+    "h": 27,
+    "baseline": 356,
+    "width": 217.625,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 949,
+    "y": 317,
+    "w": 882,
+    "h": 128
+   },
+   "EU folder box": {
+    "x": 969,
+    "y": 373,
+    "w": 842,
+    "h": 26
+   },
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 473,
+    "glyph_h": 27,
+    "top": 473,
+    "h": 27,
+    "baseline": 494,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 455,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 653,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 95.672,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 969,
+    "w": 59.875,
+    "glyph_top": 335,
+    "glyph_h": 28,
+    "top": 332,
+    "h": 34,
+    "baseline": 357,
+    "width": 59.875,
+    "lines": 1
+   },
+   "EU choose": {
+    "x": 1663.781,
+    "w": 126.656,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 126.656,
+    "lines": 1
+   },
+   "EU choose dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU choose box": {
+    "x": 1663.781,
+    "y": 329,
+    "w": 147.219,
+    "h": 40
+   },
+   "EU status": {
+    "x": 993,
+    "w": 560.781,
+    "glyph_top": 405,
+    "glyph_h": 25,
+    "top": 403,
+    "h": 30,
+    "baseline": 425,
+    "width": 560.781,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 306.438,
+    "glyph_top": 567,
+    "glyph_h": 24,
+    "top": 565,
+    "h": 29,
+    "baseline": 586,
+    "width": 306.438,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 602,
+    "w": 842,
+    "h": 29
+   },
+   "EU dot": {
+    "x": 969,
+    "y": 412,
+    "w": 12,
+    "h": 12
+   },
+   "Save row": {
+    "x": 949,
+    "y": 216,
+    "w": 882,
+    "h": 91
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 698
+   }
+  },
+  "14h": {
+   "EU label": {
+    "x": 689,
+    "w": 217.625,
+    "glyph_top": 335,
+    "glyph_h": 27,
+    "top": 335,
+    "h": 27,
+    "baseline": 356,
+    "width": 217.625,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 949,
+    "y": 317,
+    "w": 882,
+    "h": 128
+   },
+   "EU folder box": {
+    "x": 969,
+    "y": 373,
+    "w": 842,
+    "h": 26
+   },
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 473,
+    "glyph_h": 27,
+    "top": 473,
+    "h": 27,
+    "baseline": 494,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 455,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 653,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 95.672,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 969,
+    "w": 59.875,
+    "glyph_top": 335,
+    "glyph_h": 28,
+    "top": 332,
+    "h": 34,
+    "baseline": 357,
+    "width": 59.875,
+    "lines": 1
+   },
+   "EU choose": {
+    "x": 1663.781,
+    "w": 126.656,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 126.656,
+    "lines": 1
+   },
+   "EU choose dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU choose box": {
+    "x": 1663.781,
+    "y": 329,
+    "w": 147.219,
+    "h": 40
+   },
+   "EU status": {
+    "x": 993,
+    "w": 560.781,
+    "glyph_top": 405,
+    "glyph_h": 25,
+    "top": 403,
+    "h": 30,
+    "baseline": 425,
+    "width": 560.781,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 306.438,
+    "glyph_top": 567,
+    "glyph_h": 24,
+    "top": 565,
+    "h": 29,
+    "baseline": 586,
+    "width": 306.438,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 602,
+    "w": 842,
+    "h": 29
+   },
+   "EU dot": {
+    "x": 969,
+    "y": 412,
+    "w": 12,
+    "h": 12
+   }
+  },
+  "14b": {
+   "EU label": {
+    "x": 689,
+    "w": 217.625,
+    "glyph_top": 335,
+    "glyph_h": 27,
+    "top": 335,
+    "h": 27,
+    "baseline": 356,
+    "width": 217.625,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 949,
+    "y": 317,
+    "w": 882,
+    "h": 128
+   },
+   "EU folder box": {
+    "x": 969,
+    "y": 373,
+    "w": 842,
+    "h": 26
+   },
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 473,
+    "glyph_h": 27,
+    "top": 473,
+    "h": 27,
+    "baseline": 494,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 455,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 653,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 95.672,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1503.266,
+    "w": 130.266,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 130.266,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1647.531,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1503.266,
+    "y": 329,
+    "w": 150.828,
+    "h": 40
+   },
+   "EU remove": {
+    "x": 1674.094,
+    "w": 116.344,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 116.344,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1674.094,
+    "y": 329,
+    "w": 136.906,
+    "h": 40
+   },
+   "EU folder": {
+    "x": 969,
+    "w": 327.609,
+    "glyph_top": 372,
+    "glyph_h": 27,
+    "top": 373,
+    "h": 26,
+    "baseline": 393,
+    "width": 327.609,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 11.078,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 969,
+    "w": 300.203,
+    "glyph_top": 335,
+    "glyph_h": 28,
+    "top": 332,
+    "h": 34,
+    "baseline": 357,
+    "width": 300.203,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 993,
+    "w": 587.453,
+    "glyph_top": 405,
+    "glyph_h": 25,
+    "top": 403,
+    "h": 30,
+    "baseline": 425,
+    "width": 587.453,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 500.219,
+    "glyph_top": 567,
+    "glyph_h": 24,
+    "top": 565,
+    "h": 29,
+    "baseline": 586,
+    "width": 500.219,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 602,
+    "w": 842,
+    "h": 29
+   },
+   "language note": {
+    "x": 969,
+    "w": 471.297,
+    "glyph_top": 605,
+    "glyph_h": 22,
+    "top": 602,
+    "h": 29,
+    "baseline": 623,
+    "width": 471.297,
+    "lines": 1
+   },
+   "EU dot": {
+    "x": 969,
+    "y": 412,
+    "w": 12,
+    "h": 12
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 698
+   }
+  },
+  "14c": {
+   "EU label": {
+    "x": 689,
+    "w": 217.625,
+    "glyph_top": 335,
+    "glyph_h": 27,
+    "top": 335,
+    "h": 27,
+    "baseline": 356,
+    "width": 217.625,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 949,
+    "y": 317,
+    "w": 882,
+    "h": 128
+   },
+   "EU folder box": {
+    "x": 969,
+    "y": 373,
+    "w": 842,
+    "h": 26
+   },
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 473,
+    "glyph_h": 27,
+    "top": 473,
+    "h": 27,
+    "baseline": 494,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 455,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 653,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 95.672,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1503.266,
+    "w": 130.266,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 130.266,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1647.531,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1503.266,
+    "y": 329,
+    "w": 150.828,
+    "h": 40
+   },
+   "EU remove": {
+    "x": 1674.094,
+    "w": 116.344,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 116.344,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1674.094,
+    "y": 329,
+    "w": 136.906,
+    "h": 40
+   },
+   "EU folder": {
+    "x": 969,
+    "w": 327.609,
+    "glyph_top": 372,
+    "glyph_h": 27,
+    "top": 373,
+    "h": 26,
+    "baseline": 393,
+    "width": 327.609,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 306.438,
+    "glyph_top": 567,
+    "glyph_h": 24,
+    "top": 565,
+    "h": 29,
+    "baseline": 586,
+    "width": 306.438,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 602,
+    "w": 842,
+    "h": 29
+   },
+   "EU file": {
+    "x": 969,
+    "w": 334.891,
+    "glyph_top": 335,
+    "glyph_h": 28,
+    "top": 332,
+    "h": 34,
+    "baseline": 357,
+    "width": 334.891,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 993,
+    "w": 388.906,
+    "glyph_top": 405,
+    "glyph_h": 25,
+    "top": 403,
+    "h": 30,
+    "baseline": 425,
+    "width": 388.906,
+    "lines": 1
+   },
+   "EU dot": {
+    "x": 969,
+    "y": 412,
+    "w": 12,
+    "h": 12
+   }
+  },
+  "14d": {
+   "EU label": {
+    "x": 84,
+    "w": 282.344,
+    "glyph_top": 506,
+    "glyph_h": 37,
+    "top": 506,
+    "h": 37,
+    "baseline": 535,
+    "width": 282.344,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 64,
+    "y": 486,
+    "w": 1312,
+    "h": 148
+   },
+   "EU folder box": {
+    "x": 418,
+    "y": 548,
+    "w": 938,
+    "h": 34
+   },
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 650,
+    "glyph_h": 37,
+    "top": 650,
+    "h": 38,
+    "baseline": 679,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 642,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 850,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1019.766,
+    "w": 146.563,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 146.563,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1178.328,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1019.766,
+    "y": 500,
+    "w": 165.953,
+    "h": 45
+   },
+   "EU remove": {
+    "x": 1205.719,
+    "w": 130.891,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 130.891,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1205.719,
+    "y": 500,
+    "w": 150.281,
+    "h": 45
+   },
+   "EU folder": {
+    "x": 418,
+    "w": 421.203,
+    "glyph_top": 547,
+    "glyph_h": 36,
+    "top": 548,
+    "h": 34,
+    "baseline": 575,
+    "width": 421.203,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 418,
+    "w": 385.969,
+    "glyph_top": 506,
+    "glyph_h": 36,
+    "top": 503,
+    "h": 43,
+    "baseline": 535,
+    "width": 385.969,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 444,
+    "w": 704.953,
+    "glyph_top": 587,
+    "glyph_h": 30,
+    "top": 584,
+    "h": 36,
+    "baseline": 611,
+    "width": 704.953,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 642.672,
+    "glyph_top": 798,
+    "glyph_h": 30,
+    "top": 794,
+    "h": 38,
+    "baseline": 822,
+    "width": 642.672,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 794,
+    "w": 1272,
+    "h": 38
+   },
+   "EU dot": {
+    "x": 418,
+    "y": 595,
+    "w": 14,
+    "h": 14
+   },
+   "Save row": {
+    "x": 64,
+    "y": 366,
+    "w": 1312,
+    "h": 112
+   }
+  },
+  "14e": {
+   "EU label": {
+    "x": 84,
+    "w": 282.344,
+    "glyph_top": 506,
+    "glyph_h": 37,
+    "top": 506,
+    "h": 37,
+    "baseline": 535,
+    "width": 282.344,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 64,
+    "y": 486,
+    "w": 1312,
+    "h": 148
+   },
+   "EU folder box": {
+    "x": 418,
+    "y": 548,
+    "w": 938,
+    "h": 34
+   },
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 650,
+    "glyph_h": 37,
+    "top": 650,
+    "h": 38,
+    "baseline": 679,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 642,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 850,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1019.766,
+    "w": 146.563,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 146.563,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1178.328,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1019.766,
+    "y": 500,
+    "w": 165.953,
+    "h": 45
+   },
+   "EU remove": {
+    "x": 1205.719,
+    "w": 130.891,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 130.891,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1205.719,
+    "y": 500,
+    "w": 150.281,
+    "h": 45
+   },
+   "EU folder": {
+    "x": 418,
+    "w": 421.203,
+    "glyph_top": 547,
+    "glyph_h": 36,
+    "top": 548,
+    "h": 34,
+    "baseline": 575,
+    "width": 421.203,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 418,
+    "w": 385.969,
+    "glyph_top": 506,
+    "glyph_h": 36,
+    "top": 503,
+    "h": 43,
+    "baseline": 535,
+    "width": 385.969,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 444,
+    "w": 704.953,
+    "glyph_top": 587,
+    "glyph_h": 30,
+    "top": 584,
+    "h": 36,
+    "baseline": 611,
+    "width": 704.953,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 642.672,
+    "glyph_top": 798,
+    "glyph_h": 30,
+    "top": 794,
+    "h": 38,
+    "baseline": 822,
+    "width": 642.672,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 794,
+    "w": 1272,
+    "h": 38
+   },
+   "EU dot": {
+    "x": 418,
+    "y": 595,
+    "w": 14,
+    "h": 14
+   }
+  },
+  "14i": {
+   "ROM row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 226
+   },
+   "status": {
+    "x": 444,
+    "w": 382.625,
+    "glyph_top": 311,
+    "glyph_h": 30,
+    "top": 308,
+    "h": 36,
+    "baseline": 335,
+    "width": 382.625,
+    "lines": 1
+   },
+   "note": {
+    "x": 418,
+    "w": 674.531,
+    "glyph_top": 349,
+    "glyph_h": 30,
+    "top": 346,
+    "h": 36,
+    "baseline": 373,
+    "width": 674.531,
+    "lines": 1
+   },
+   "hotkeys note": {
+    "x": 418,
+    "w": 741.313,
+    "glyph_top": 387,
+    "glyph_h": 30,
+    "top": 384,
+    "h": 36,
+    "baseline": 411,
+    "width": 741.313,
+    "lines": 1
+   },
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 462,
+    "glyph_h": 37,
+    "top": 462,
+    "h": 37,
+    "baseline": 491,
+    "width": 83.766,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 64,
+    "y": 442,
+    "w": 1312,
+    "h": 112
+   },
+   "Play row": {
+    "x": 64,
+    "y": 562,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 574.5,
+    "glyph_h": 75,
+    "top": 574.5,
+    "h": 75,
+    "baseline": 632.5,
+    "width": 106.297,
+    "lines": 1
+   }
+  },
+  "14f": {
+   "item 0": {
+    "x": 1168,
+    "y": 504,
+    "w": 720,
+    "h": 80
+   },
+   "item 1": {
+    "x": 1168,
+    "y": 588,
+    "w": 720,
+    "h": 80
+   },
+   "item 2": {
+    "x": 1168,
+    "y": 672,
+    "w": 720,
+    "h": 80
+   },
+   "item 3": {
+    "x": 1168,
+    "y": 756,
+    "w": 720,
+    "h": 80
+   },
+   "item 4": {
+    "x": 1168,
+    "y": 840,
+    "w": 720,
+    "h": 80
+   },
+   "item 5": {
+    "x": 1168,
+    "y": 924,
+    "w": 720,
+    "h": 80
+   },
+   "item 1 label": {
+    "x": 1578.938,
+    "w": 233.984,
+    "glyph_top": 594,
+    "glyph_h": 68,
+    "top": 594,
+    "h": 68,
+    "baseline": 647,
+    "width": 233.984,
+    "lines": 1
+   },
+   "item 1 note": {
+    "x": 1475.875,
+    "w": 75.063,
+    "glyph_top": 615.5,
+    "glyph_h": 24,
+    "top": 613.5,
+    "h": 29,
+    "baseline": 634.5,
+    "width": 75.063,
+    "lines": 1
+   },
+   "item 3 note": {
+    "x": 1451.578,
+    "w": 163.109,
+    "glyph_top": 783.5,
+    "glyph_h": 24,
+    "top": 781.5,
+    "h": 29,
+    "baseline": 802.5,
+    "width": 163.109,
+    "lines": 1
+   }
+  },
+  "15a": {
+   "EU label": {
+    "x": 689,
+    "w": 217.625,
+    "glyph_top": 335,
+    "glyph_h": 27,
+    "top": 335,
+    "h": 27,
+    "baseline": 356,
+    "width": 217.625,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 949,
+    "y": 317,
+    "w": 882,
+    "h": 128
+   },
+   "EU folder box": {
+    "x": 969,
+    "y": 373,
+    "w": 842,
+    "h": 26
+   },
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 473,
+    "glyph_h": 27,
+    "top": 473,
+    "h": 27,
+    "baseline": 494,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 455,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 467,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 516,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 472,
+    "glyph_h": 31,
+    "top": 472,
+    "h": 31,
+    "baseline": 496,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 521,
+    "glyph_h": 31,
+    "top": 521,
+    "h": 31,
+    "baseline": 545,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 653,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 95.672,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1503.266,
+    "w": 130.266,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 130.266,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1647.531,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1503.266,
+    "y": 329,
+    "w": 150.828,
+    "h": 40
+   },
+   "EU remove": {
+    "x": 1674.094,
+    "w": 116.344,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 116.344,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 329,
+    "glyph_h": 40,
+    "top": 329,
+    "h": 40,
+    "baseline": 360,
+    "width": 6.563,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1674.094,
+    "y": 329,
+    "w": 136.906,
+    "h": 40
+   },
+   "EU folder": {
+    "x": 969,
+    "w": 327.609,
+    "glyph_top": 372,
+    "glyph_h": 27,
+    "top": 373,
+    "h": 26,
+    "baseline": 393,
+    "width": 327.609,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 657,
+    "glyph_h": 68,
+    "top": 657,
+    "h": 68,
+    "baseline": 710,
+    "width": 11.078,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 969,
+    "w": 300.203,
+    "glyph_top": 335,
+    "glyph_h": 28,
+    "top": 332,
+    "h": 34,
+    "baseline": 357,
+    "width": 300.203,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 993,
+    "w": 587.453,
+    "glyph_top": 405,
+    "glyph_h": 25,
+    "top": 403,
+    "h": 30,
+    "baseline": 425,
+    "width": 587.453,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 500.219,
+    "glyph_top": 567,
+    "glyph_h": 24,
+    "top": 565,
+    "h": 29,
+    "baseline": 586,
+    "width": 500.219,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 602,
+    "w": 842,
+    "h": 29
+   },
+   "language note": {
+    "x": 969,
+    "w": 471.297,
+    "glyph_top": 605,
+    "glyph_h": 22,
+    "top": 602,
+    "h": 29,
+    "baseline": 623,
+    "width": 471.297,
+    "lines": 1
+   },
+   "EU dot": {
+    "x": 969,
+    "y": 412,
+    "w": 12,
+    "h": 12
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 698
+   }
+  },
+  "15b": {
+   "EU label": {
+    "x": 84,
+    "w": 282.344,
+    "glyph_top": 506,
+    "glyph_h": 37,
+    "top": 506,
+    "h": 37,
+    "baseline": 535,
+    "width": 282.344,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 64,
+    "y": 486,
+    "w": 1312,
+    "h": 148
+   },
+   "EU folder box": {
+    "x": 418,
+    "y": 548,
+    "w": 938,
+    "h": 34
+   },
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 650,
+    "glyph_h": 37,
+    "top": 650,
+    "h": 38,
+    "baseline": 679,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 642,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 850,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1019.766,
+    "w": 146.563,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 146.563,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1178.328,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1019.766,
+    "y": 500,
+    "w": 165.953,
+    "h": 45
+   },
+   "EU remove": {
+    "x": 1205.719,
+    "w": 130.891,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 130.891,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1205.719,
+    "y": 500,
+    "w": 150.281,
+    "h": 45
+   },
+   "EU folder": {
+    "x": 418,
+    "w": 421.203,
+    "glyph_top": 547,
+    "glyph_h": 36,
+    "top": 548,
+    "h": 34,
+    "baseline": 575,
+    "width": 421.203,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 418,
+    "w": 385.969,
+    "glyph_top": 506,
+    "glyph_h": 36,
+    "top": 503,
+    "h": 43,
+    "baseline": 535,
+    "width": 385.969,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 444,
+    "w": 704.953,
+    "glyph_top": 587,
+    "glyph_h": 30,
+    "top": 584,
+    "h": 36,
+    "baseline": 611,
+    "width": 704.953,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 642.672,
+    "glyph_top": 798,
+    "glyph_h": 30,
+    "top": 794,
+    "h": 38,
+    "baseline": 822,
+    "width": 642.672,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 794,
+    "w": 1272,
+    "h": 38
+   },
+   "EU dot": {
+    "x": 418,
+    "y": 595,
+    "w": 14,
+    "h": 14
+   }
+  },
+  "15c": {
+   "EU label": {
+    "x": 84,
+    "w": 282.344,
+    "glyph_top": 506,
+    "glyph_h": 37,
+    "top": 506,
+    "h": 37,
+    "baseline": 535,
+    "width": 282.344,
+    "lines": 1
+   },
+   "EU row": {
+    "x": 64,
+    "y": 486,
+    "w": 1312,
+    "h": 148
+   },
+   "EU folder box": {
+    "x": 418,
+    "y": 548,
+    "w": 938,
+    "h": 34
+   },
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 650,
+    "glyph_h": 37,
+    "top": 650,
+    "h": 38,
+    "baseline": 679,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 642,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 696,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 722.5,
+    "glyph_h": 37,
+    "top": 722.5,
+    "h": 37,
+    "baseline": 751.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 850,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "EU change": {
+    "x": 1019.766,
+    "w": 146.563,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 146.563,
+    "lines": 1
+   },
+   "EU change dot": {
+    "x": 1178.328,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU change box": {
+    "x": 1019.766,
+    "y": 500,
+    "w": 165.953,
+    "h": 45
+   },
+   "EU remove": {
+    "x": 1205.719,
+    "w": 130.891,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 130.891,
+    "lines": 1
+   },
+   "EU remove dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 500,
+    "glyph_h": 45,
+    "top": 500,
+    "h": 45,
+    "baseline": 535,
+    "width": 7.391,
+    "lines": 1
+   },
+   "EU remove box": {
+    "x": 1205.719,
+    "y": 500,
+    "w": 150.281,
+    "h": 45
+   },
+   "EU folder": {
+    "x": 418,
+    "w": 421.203,
+    "glyph_top": 547,
+    "glyph_h": 36,
+    "top": 548,
+    "h": 34,
+    "baseline": 575,
+    "width": 421.203,
+    "lines": 1
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 862.5,
+    "glyph_h": 75,
+    "top": 862.5,
+    "h": 75,
+    "baseline": 920.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "EU file": {
+    "x": 418,
+    "w": 385.969,
+    "glyph_top": 506,
+    "glyph_h": 36,
+    "top": 503,
+    "h": 43,
+    "baseline": 535,
+    "width": 385.969,
+    "lines": 1
+   },
+   "EU status": {
+    "x": 444,
+    "w": 704.953,
+    "glyph_top": 587,
+    "glyph_h": 30,
+    "top": 584,
+    "h": 36,
+    "baseline": 611,
+    "width": 704.953,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 642.672,
+    "glyph_top": 798,
+    "glyph_h": 30,
+    "top": 794,
+    "h": 38,
+    "baseline": 822,
+    "width": 642.672,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 794,
+    "w": 1272,
+    "h": 38
+   },
+   "EU dot": {
+    "x": 418,
+    "y": 595,
+    "w": 14,
+    "h": 14
+   }
+  },
+  "15d": {
+   "item 0": {
+    "x": 1168,
+    "y": 504,
+    "w": 720,
+    "h": 80
+   },
+   "item 1": {
+    "x": 1168,
+    "y": 588,
+    "w": 720,
+    "h": 80
+   },
+   "item 2": {
+    "x": 1168,
+    "y": 672,
+    "w": 720,
+    "h": 80
+   },
+   "item 3": {
+    "x": 1168,
+    "y": 756,
+    "w": 720,
+    "h": 80
+   },
+   "item 4": {
+    "x": 1168,
+    "y": 840,
+    "w": 720,
+    "h": 80
+   },
+   "item 5": {
+    "x": 1168,
+    "y": 924,
+    "w": 720,
+    "h": 80
+   },
+   "item 1 label": {
+    "x": 1578.938,
+    "w": 233.984,
+    "glyph_top": 594,
+    "glyph_h": 68,
+    "top": 594,
+    "h": 68,
+    "baseline": 647,
+    "width": 233.984,
+    "lines": 1
+   },
+   "item 1 note": {
+    "x": 1437.625,
+    "w": 113.313,
+    "glyph_top": 615.5,
+    "glyph_h": 24,
+    "top": 613.5,
+    "h": 29,
+    "baseline": 634.5,
+    "width": 113.313,
+    "lines": 1
+   },
+   "item 3 note": {
+    "x": 1451.578,
+    "w": 163.109,
+    "glyph_top": 783.5,
+    "glyph_h": 24,
+    "top": 781.5,
+    "h": 29,
+    "baseline": 802.5,
+    "width": 163.109,
+    "lines": 1
+   }
+  },
+  "16a": {
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 481,
+    "glyph_h": 27,
+    "top": 481,
+    "h": 27,
+    "baseline": 502,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 463,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 661,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 95.672,
+    "lines": 1
+   },
+   "Base ROM": {
+    "x": 689,
+    "w": 139.469,
+    "glyph_top": 99,
+    "glyph_h": 27,
+    "top": 99,
+    "h": 27,
+    "baseline": 120,
+    "width": 139.469,
+    "lines": 1
+   },
+   "Patch": {
+    "x": 689,
+    "w": 87.828,
+    "glyph_top": 201,
+    "glyph_h": 27,
+    "top": 201,
+    "h": 27,
+    "baseline": 222,
+    "width": 87.828,
+    "lines": 1
+   },
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 380,
+    "glyph_h": 27,
+    "top": 380,
+    "h": 27,
+    "baseline": 401,
+    "width": 64.953,
+    "lines": 1
+   },
+   "base row": {
+    "x": 949,
+    "y": 81,
+    "w": 882,
+    "h": 92
+   },
+   "patch row": {
+    "x": 949,
+    "y": 183,
+    "w": 882,
+    "h": 92
+   },
+   "Save row": {
+    "x": 949,
+    "y": 362,
+    "w": 882,
+    "h": 91
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 670.328,
+    "glyph_top": 575,
+    "glyph_h": 24,
+    "top": 573,
+    "h": 29,
+    "baseline": 594,
+    "width": 670.328,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 610,
+    "w": 842,
+    "h": 29
+   },
+   "language note": {
+    "x": 969,
+    "w": 705.469,
+    "glyph_top": 613,
+    "glyph_h": 22,
+    "top": 610,
+    "h": 29,
+    "baseline": 631,
+    "width": 705.469,
+    "lines": 1
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 706
+   }
+  },
+  "16b": {
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 660,
+    "glyph_h": 37,
+    "top": 660,
+    "h": 38,
+    "baseline": 689,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 652,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 860,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 872.5,
+    "glyph_h": 75,
+    "top": 872.5,
+    "h": 75,
+    "baseline": 930.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "Base ROM": {
+    "x": 84,
+    "w": 180.594,
+    "glyph_top": 228,
+    "glyph_h": 37,
+    "top": 228,
+    "h": 37,
+    "baseline": 257,
+    "width": 180.594,
+    "lines": 1
+   },
+   "Patch": {
+    "x": 84,
+    "w": 113.766,
+    "glyph_top": 348,
+    "glyph_h": 37,
+    "top": 348,
+    "h": 37,
+    "baseline": 377,
+    "width": 113.766,
+    "lines": 1
+   },
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 552,
+    "glyph_h": 37,
+    "top": 552,
+    "h": 37,
+    "baseline": 581,
+    "width": 83.766,
+    "lines": 1
+   },
+   "base row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 112
+   },
+   "patch row": {
+    "x": 64,
+    "y": 328,
+    "w": 1312,
+    "h": 112
+   },
+   "Save row": {
+    "x": 64,
+    "y": 532,
+    "w": 1312,
+    "h": 112
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 872.5,
+    "glyph_h": 75,
+    "top": 872.5,
+    "h": 75,
+    "baseline": 930.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 961.984,
+    "glyph_top": 808,
+    "glyph_h": 30,
+    "top": 804,
+    "h": 38,
+    "baseline": 832,
+    "width": 961.984,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 804,
+    "w": 1272,
+    "h": 38
+   }
+  },
+  "16c": {
+   "Language label": {
+    "x": 84,
+    "w": 190.797,
+    "glyph_top": 660,
+    "glyph_h": 37,
+    "top": 660,
+    "h": 38,
+    "baseline": 689,
+    "width": 190.797,
+    "lines": 1
+   },
+   "language row": {
+    "x": 64,
+    "y": 652,
+    "w": 1312,
+    "h": 200
+   },
+   "language en": {
+    "x": 84,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language en-eu": {
+    "x": 297,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language fr": {
+    "x": 510,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language de": {
+    "x": 723,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language it": {
+    "x": 936,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language es": {
+    "x": 1149,
+    "y": 706,
+    "w": 205,
+    "h": 90
+   },
+   "language en name": {
+    "x": 109.797,
+    "w": 153.391,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 153.391,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 322.266,
+    "w": 154.453,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 154.453,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 559.391,
+    "w": 106.203,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 106.203,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 770.984,
+    "w": 109.031,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 109.031,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 988.469,
+    "w": 100.047,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 100.047,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1201.156,
+    "w": 100.672,
+    "glyph_top": 732.5,
+    "glyph_h": 37,
+    "top": 732.5,
+    "h": 37,
+    "baseline": 761.5,
+    "width": 100.672,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 860,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 872.5,
+    "glyph_h": 75,
+    "top": 872.5,
+    "h": 75,
+    "baseline": 930.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "Base ROM": {
+    "x": 84,
+    "w": 180.594,
+    "glyph_top": 228,
+    "glyph_h": 37,
+    "top": 228,
+    "h": 37,
+    "baseline": 257,
+    "width": 180.594,
+    "lines": 1
+   },
+   "Patch": {
+    "x": 84,
+    "w": 113.766,
+    "glyph_top": 348,
+    "glyph_h": 37,
+    "top": 348,
+    "h": 37,
+    "baseline": 377,
+    "width": 113.766,
+    "lines": 1
+   },
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 552,
+    "glyph_h": 37,
+    "top": 552,
+    "h": 37,
+    "baseline": 581,
+    "width": 83.766,
+    "lines": 1
+   },
+   "base row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 112
+   },
+   "patch row": {
+    "x": 64,
+    "y": 328,
+    "w": 1312,
+    "h": 112
+   },
+   "Save row": {
+    "x": 64,
+    "y": 532,
+    "w": 1312,
+    "h": 112
+   },
+   "Play dot": {
+    "x": 1343.688,
+    "w": 12.313,
+    "glyph_top": 872.5,
+    "glyph_h": 75,
+    "top": 872.5,
+    "h": 75,
+    "baseline": 930.5,
+    "width": 12.313,
+    "lines": 1
+   },
+   "language note": {
+    "x": 84,
+    "w": 961.984,
+    "glyph_top": 808,
+    "glyph_h": 30,
+    "top": 804,
+    "h": 38,
+    "baseline": 832,
+    "width": 961.984,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 84,
+    "y": 804,
+    "w": 1272,
+    "h": 38
+   }
+  },
+  "16d": {
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 481,
+    "glyph_h": 27,
+    "top": 481,
+    "h": 27,
+    "baseline": 502,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 463,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 661,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 95.672,
+    "lines": 1
+   },
+   "Base ROM": {
+    "x": 689,
+    "w": 139.469,
+    "glyph_top": 99,
+    "glyph_h": 27,
+    "top": 99,
+    "h": 27,
+    "baseline": 120,
+    "width": 139.469,
+    "lines": 1
+   },
+   "Patch": {
+    "x": 689,
+    "w": 87.828,
+    "glyph_top": 201,
+    "glyph_h": 27,
+    "top": 201,
+    "h": 27,
+    "baseline": 222,
+    "width": 87.828,
+    "lines": 1
+   },
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 380,
+    "glyph_h": 27,
+    "top": 380,
+    "h": 27,
+    "baseline": 401,
+    "width": 64.953,
+    "lines": 1
+   },
+   "base row": {
+    "x": 949,
+    "y": 81,
+    "w": 882,
+    "h": 92
+   },
+   "patch row": {
+    "x": 949,
+    "y": 183,
+    "w": 882,
+    "h": 92
+   },
+   "Save row": {
+    "x": 949,
+    "y": 362,
+    "w": 882,
+    "h": 91
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 825.703,
+    "glyph_top": 575,
+    "glyph_h": 24,
+    "top": 573,
+    "h": 29,
+    "baseline": 594,
+    "width": 825.703,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 610,
+    "w": 842,
+    "h": 29
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 706
+   }
+  },
+  "16e": {
+   "Language label": {
+    "x": 689,
+    "w": 146.969,
+    "glyph_top": 481,
+    "glyph_h": 27,
+    "top": 481,
+    "h": 27,
+    "baseline": 502,
+    "width": 146.969,
+    "lines": 1
+   },
+   "language row": {
+    "x": 949,
+    "y": 463,
+    "w": 882,
+    "h": 188
+   },
+   "language en": {
+    "x": 969,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language en-eu": {
+    "x": 1177,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language fr": {
+    "x": 1385,
+    "y": 475,
+    "w": 200,
+    "h": 41
+   },
+   "language de": {
+    "x": 969,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language it": {
+    "x": 1177,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language es": {
+    "x": 1385,
+    "y": 524,
+    "w": 200,
+    "h": 41
+   },
+   "language en name": {
+    "x": 1005.078,
+    "w": 127.828,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 127.828,
+    "lines": 1
+   },
+   "language en-eu name": {
+    "x": 1212.641,
+    "w": 128.703,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 128.703,
+    "lines": 1
+   },
+   "language fr name": {
+    "x": 1440.734,
+    "w": 88.516,
+    "glyph_top": 480,
+    "glyph_h": 31,
+    "top": 480,
+    "h": 31,
+    "baseline": 504,
+    "width": 88.516,
+    "lines": 1
+   },
+   "language de name": {
+    "x": 1023.563,
+    "w": 90.859,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 90.859,
+    "lines": 1
+   },
+   "language it name": {
+    "x": 1235.313,
+    "w": 83.375,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.375,
+    "lines": 1
+   },
+   "language es name": {
+    "x": 1443.047,
+    "w": 83.891,
+    "glyph_top": 529,
+    "glyph_h": 31,
+    "top": 529,
+    "h": 31,
+    "baseline": 553,
+    "width": 83.891,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 661,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 95.672,
+    "lines": 1
+   },
+   "Base ROM": {
+    "x": 689,
+    "w": 139.469,
+    "glyph_top": 99,
+    "glyph_h": 27,
+    "top": 99,
+    "h": 27,
+    "baseline": 120,
+    "width": 139.469,
+    "lines": 1
+   },
+   "Patch": {
+    "x": 689,
+    "w": 87.828,
+    "glyph_top": 201,
+    "glyph_h": 27,
+    "top": 201,
+    "h": 27,
+    "baseline": 222,
+    "width": 87.828,
+    "lines": 1
+   },
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 380,
+    "glyph_h": 27,
+    "top": 380,
+    "h": 27,
+    "baseline": 401,
+    "width": 64.953,
+    "lines": 1
+   },
+   "base row": {
+    "x": 949,
+    "y": 81,
+    "w": 882,
+    "h": 92
+   },
+   "patch row": {
+    "x": 949,
+    "y": 183,
+    "w": 882,
+    "h": 92
+   },
+   "Save row": {
+    "x": 949,
+    "y": 362,
+    "w": 882,
+    "h": 91
+   },
+   "Play dot": {
+    "x": 1799.922,
+    "w": 11.078,
+    "glyph_top": 665,
+    "glyph_h": 68,
+    "top": 665,
+    "h": 68,
+    "baseline": 718,
+    "width": 11.078,
+    "lines": 1
+   },
+   "language expl": {
+    "x": 969,
+    "w": 699.516,
+    "glyph_top": 575,
+    "glyph_h": 24,
+    "top": 573,
+    "h": 29,
+    "baseline": 594,
+    "width": 699.516,
+    "lines": 1
+   },
+   "language note box": {
+    "x": 969,
+    "y": 610,
+    "w": 842,
+    "h": 29
+   },
+   "language note": {
+    "x": 969,
+    "w": 729.172,
+    "glyph_top": 613,
+    "glyph_h": 22,
+    "top": 610,
+    "h": 29,
+    "baseline": 631,
+    "width": 729.172,
+    "lines": 1
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 706
+   }
+  },
+  "16f": {
+   "item 0": {
+    "x": 1168,
+    "y": 504,
+    "w": 720,
+    "h": 80
+   },
+   "item 1": {
+    "x": 1168,
+    "y": 588,
+    "w": 720,
+    "h": 80
+   },
+   "item 2": {
+    "x": 1168,
+    "y": 672,
+    "w": 720,
+    "h": 80
+   },
+   "item 3": {
+    "x": 1168,
+    "y": 756,
+    "w": 720,
+    "h": 80
+   },
+   "item 4": {
+    "x": 1168,
+    "y": 840,
+    "w": 720,
+    "h": 80
+   },
+   "item 5": {
+    "x": 1168,
+    "y": 924,
+    "w": 720,
+    "h": 80
+   },
+   "item 1 label": {
+    "x": 1578.938,
+    "w": 233.984,
+    "glyph_top": 594,
+    "glyph_h": 68,
+    "top": 594,
+    "h": 68,
+    "baseline": 647,
+    "width": 233.984,
+    "lines": 1
+   },
+   "item 1 note": {
+    "x": 1475.875,
+    "w": 75.063,
+    "glyph_top": 615.5,
+    "glyph_h": 24,
+    "top": 613.5,
+    "h": 29,
+    "baseline": 634.5,
+    "width": 75.063,
+    "lines": 1
+   },
+   "item 3 note": {
+    "x": 1451.578,
+    "w": 163.109,
+    "glyph_top": 783.5,
+    "glyph_h": 24,
+    "top": 781.5,
+    "h": 29,
+    "baseline": 802.5,
+    "width": 163.109,
     "lines": 1
    }
   }

@@ -42,6 +42,7 @@ typedef struct OraclesHomeHost {
      * later; and the folder of its save. */
     void (*choose_rom)(void *opaque, int game, struct SDL_Window *window);
     void (*choose_patch)(void *opaque, int game, struct SDL_Window *window);
+    void (*choose_eu_rom)(void *opaque, int game, struct SDL_Window *window);   /* an Oracle's European ROM */
     void (*file_chosen)(void *opaque, int game, int kind, int result, const char *path, int copied, char *message, size_t capacity);
     void (*open_folder)(void *opaque, int game, char *message, size_t capacity);
     /* Mods: the mods folder read into nav->mods and nav->mods_folder, with each Oracle's active mods (the refresh reads

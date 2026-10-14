@@ -25,6 +25,9 @@ typedef struct OraclesSessionOptions {
     const char *mods_dirs[8];        /* the mods' directories: --mods, repeated, at most ORACLES_MOD_SET_MAX */
     unsigned mods_count;
     const char *start_house;         /* --start-at-house: every file of the save starts in front of this mod's house, or NULL */
+    /* --language, the European ROM it comes from (a file or a directory) and its pack (read, or written once extracted):
+     * for the session alone, never stored; NULL for none. */
+    const char *language, *eu_rom_path, *language_pack;
     /* The command line's --colour-correction (on, off) and --vsync (auto, on, off), or NULL for the settings': for
      * the session alone, never stored, as camera_profile. */
     const char *colour_option, *vsync_option;
@@ -56,6 +59,7 @@ typedef struct OraclesSessionResult {
      * host counts none, the frames whose work took over one frame past the first second, whichever are more. */
     int enhanced;
     uint32_t frames_played, frames_late;
+    char language_note[256];         /* what the language's session says beside playing, such as a pack it could not write */
 } OraclesSessionResult;
 
 /* Defaults: Faithful, the neighbours' objects shown in Enhanced, a window at scale 4. */

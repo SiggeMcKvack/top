@@ -1,0 +1,103 @@
+# Mistakes of the official translations, corrected when the pack is extracted (engine/language/language_corrections.c).
+# A row: the game (ages, seasons), the texts (TX_GGII, four hexadecimal digits each, or a range first-last,
+# space-separated), the languages (en-eu, fr, de, it, es, comma-separated, or all), a word or a phrase as the text writes it,
+# what it should be, and why. Both are written in config/language_own.tsv's syntax: the font's letters in UTF-8, \n a
+# line break, \stop the end of a box, \col(N) a colour, \\ a backslash, \xNN any other byte; a phrase may so run over a
+# line break or a colour, and its correction break the line again. Every occurrence is replaced, a whole word where it
+# starts or ends with a letter, the rows in their order; the text must still fit its lines and keep the US text's
+# commands, else it stays as it is. Only the words and their correction: the texts themselves stay in the user's
+# European ROM. Where the reference is an item's name, it is the one the inventory gives (the item list, TX_09xx), and
+# a place's the one most of the language's texts give.
+# game	texts	languages	from	to	why
+ages	2f10-2f12	es	Onox	Veran	Vire serves Veran in Ages, and the Spanish names Onox, the villain of Seasons, as the one someone tries to stop
+ages	3104	it	una o due	due o tre	the Goron shops must be visited at least two or three times each, the US says, not once or twice
+ages	313b	fr	Labrynna	Holodrum	the secret lets the Biggoron's Sword be used in Holodrum, the other game, as the European English and the other languages say
+ages	550b	it	Labrynna	Holodrum	the secret is told in Holodrum, not here in Labrynna, as the US and the other languages say
+seasons	301a	es	Labrynna	Holodrum	the ring secret fails for a player who has not come to Holodrum, the land of Seasons, as the US and the other languages say
+ages	003e	fr	Filet	Steak	the Rock Brisket (TREASURE_ROCK_BRISKET) is the Steak de Roc in the Goron's texts; the US itself names it Rock Sirloin in the inventory (TX_094d)
+ages	094d	fr	Filet de Galet	Steak de Roc	the inventory names the Rock Brisket (TREASURE_ROCK_BRISKET) as the US inventory does, Rock Sirloin, where the Goron's texts say Steak de Roc
+ages	094d	it	Filetto Roccia	Petto di Roccia	the inventory names the Rock Brisket (TREASURE_ROCK_BRISKET) as the US inventory does, Rock Sirloin, where the Goron's texts say Petto di Roccia
+ages	3606 360c	it	Globo	Bulbo	the Tokay Eyeball is the Bulbo Tokay in the inventory and the other Italian texts
+ages	2c0d	it	Radiobombe	Radiomine	the Bombchus are the Radiomine of the other Italian texts (Radiomina in the inventory)
+ages	3606	de	Glausauge	Glasauge	a misspelling: the inventory and the other German texts say Tokay-Glasauge
+ages	4309 430d	fr	Graines	Noix	the Gasha Nuts are meant (the Noix Gasha of the other French texts), not the seeds planted
+ages	4309	fr	planté la	plantée la	the participle agrees with la graine
+ages	430a	fr	Graine	Noix	the Gasha Nut is meant (the Noix Gasha of the other French texts), not the seed planted
+ages	430c	fr	force des\n\col(01)Graines	force des\n\col(01)Noix	what new places and secret stairways improve is the Gasha Nuts, the US says, not the seeds planted
+ages	430b	fr	graine	noix	the contents that depend on the planter's deeds are a nut's, the US says, not a seed's
+ages	4311	fr	graines	noix	the Gasha Seeds make nuts, and the nuts have things inside, the US says
+seasons	430d 3101	fr	Graines	Noix	the Gasha Nuts are meant (the Noix Gasha of the other French texts), not the seeds
+seasons	3101	fr	La graine	La noix	what the place and the planter affect is what the nut produces, the US says
+seasons	3101	es	Semillas	Nueces	the mayor is fascinated with the Gasha Nuts (the Nueces Gasha of the other Spanish texts), not the seeds
+ages	0046 0f01 303a 3202 320c	fr	Mystique	Mystiques	the Mystical Seeds are plural, Graines Mystiques
+seasons	0046 303a 3202 320c	fr	Mystique	Mystiques	the Mystical Seeds are plural, Graines Mystiques
+ages	1e06	fr	Mystère	Mystiques	Tingle speaks of the Mystical Seeds (Graines Mystiques in the other French texts), not the Mystery Seeds
+ages	1e04	fr	Graines Mystère	Graines\nMystiques	Tingle speaks of the Mystical Seeds (Graines Mystiques in the other French texts), not the Mystery Seeds
+ages	4807 480c	fr	Mystères	Mystère	the Mystery Seeds are the Graines Mystère in the inventory and the other French texts
+ages	0046 1e04	de	Arkanum-\nKerne	Mystische\nKerne	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+seasons	0046	de	Arkanum-\nKerne	Mystische\nKerne	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+ages	0f01	de	Arkanum-Kerne	Mystische Kerne	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+ages	1e06	de	all die \col(01)Arkanum-\nKerne\col(00), die Sie\ngesammelt haben!	all die \col(01)Mysti-\nschen Kerne\col(00),\ndie Sie gesam-\nmelt haben!	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+ages	303a	de	die aus\n\col(01)Arkanum-Kernen\col(00)\ngewonnen werden,	die\naus \col(01)Mystischen\nKernen\col(00) gewonnen\nwerden,	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+seasons	303a	de	die aus\n\col(01)Arkanum-Kernen\col(00)\ngewonnen werden,	die\naus \col(01)Mystischen\nKernen\col(00) gewonnen\nwerden,	the Mystical Seeds are the Mystische Kerne of the Maku Tree's texts (TX_3202, TX_320c); the Arkanum-Kerne are the Mystery Seeds
+ages	301a 3026	es	búsqueda o	búsqueda ni	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has come by a secret (object_code/common/interactions/vasu.s)
+seasons	301a 3026	es	búsqueda o	búsqueda ni	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has come by a secret (object_code/common/interactions/vasu.s)
+ages	301a 3026	de	nicht\nabgeschlossen\noder	weder\nabgeschlossen\nnoch	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has done either (object_code/common/interactions/vasu.s)
+seasons	301a 3026	de	nicht\nabgeschlossen\noder	weder\nabgeschlossen\nnoch	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has done either (object_code/common/interactions/vasu.s)
+ages	301a	fr	pas\nfini la quête,\nou que tu\nn'as pas\nutilisé tous\nles \col(01)secrets\col(00)\npour visiter	ni\nfini la quête,\nni utilisé de\n\col(01)secret\col(00) pour\nvisiter	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either or has not used every secret (object_code/common/interactions/vasu.s)
+seasons	301a	fr	pas\nfini la quête,\nou que tu\nn'as pas\nutilisé tous\nles \col(01)secrets\col(00)\npour visiter	ni\nfini la quête,\nni utilisé de\n\col(01)secret\col(00) pour\nvisiter	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either or has not used every secret (object_code/common/interactions/vasu.s)
+ages	3026	fr	ou que tu n'es	et que tu n'es	the link fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+seasons	3026	fr	ou que tu n'es	et que tu n'es	the link fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+ages	301a	it	meta o\nnon hai usato	meta né\nhai usato	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+seasons	301a	it	meta o\nnon hai usato	meta né\nhai usato	the ring secret fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+ages	3026	it	prima o\nnon sei venuto a	prima\nné sei venuto a	the link fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+seasons	3026	it	prima o\nnon sei venuto a	prima\nné sei venuto a	the link fails for a player who has neither finished the quest nor come by a secret, not for one who has not done either (object_code/common/interactions/vasu.s)
+ages	0010	fr	obtenez le\n\col(01)Hurlement Echo	obtenez\nl'\col(01)Echo du\nHurlement	the Echoing Howl is the Echo du Hurlement in the inventory
+ages	05b4 05c4	fr	as le\n\col(02)Cri de l'Echo	as\nl'\col(02)Echo du\nHurlement	the Echoing Howl is the Echo du Hurlement in the inventory
+ages	05b4 05c4	fr	Lynnna	Lynna	a misspelling the US text has too: the city is Lynna
+ages	0071	de	Harfe der Zeit	Harfe der\nZeiten	the Harp of Ages is the Harfe der Zeiten in the inventory and the other German texts
+ages	0078	de	Harfe der Zeit\col(00)\nzurück	Harfe der\nZeiten\col(00) zurück	the Harp of Ages is the Harfe der Zeiten in the inventory and the other German texts
+ages	0068 0069	fr	Etrange\nFlûte\col(00) est celle\nde	Flûte\nEtrange\col(00) est\ncelle de	the Strange Flute is the Flûte Etrange in the inventory
+ages	006a 006b 006c	fr	Etrange\nFlûte	Flûte\nEtrange	the Strange Flute is the Flûte Etrange in the inventory
+ages	0068-006c	fr	appeller	appeler	a misspelling
+ages	0047 3432 344b 3602	fr	Ecaille des	Ecaille de	the Zora Scale is the Ecaille de Zora in the inventory
+ages	3602	fr	Ecaille\ndes Zora	Ecaille\nde Zora	the Zora Scale is the Ecaille de Zora in the inventory
+ages	3132	fr	Epée de\nBiggoron	Epée Biggoron	the Biggoron's Sword is the Epée Biggoron in the inventory and the other French texts
+ages	303a	fr	Boîte à Anneau	Boîte à Anneaux	the Ring Box is the Boîte à Anneaux of the other French texts
+seasons	300b	fr	à Anneau	à Anneaux	the Ring Box is the Boîte à Anneaux of the other French texts
+seasons	300c	fr	Boîte à anneaux	Boîte à Anneaux	the Ring Box is the Boîte à Anneaux of the other French texts
+seasons	303b	fr	boîte\nd'anneaux	Boîte à\nAnneaux	the Ring Box is the Boîte à Anneaux of the other French texts, the next line's among them
+ages	2d04	es	Nuez Tuni	Nuez de Tuni	the Tuni Nut is the Nuez de Tuni in the inventory and the other Spanish texts
+ages	0d01	de	Magische Flasche	Magieflasche	the Magic Potion is the Magieflasche in the inventory and the other German texts
+seasons	0d01	de	Magische Flasche	Magieflasche	the Magic Potion is the Magieflasche in the inventory and the other German texts
+seasons	003b 0069 006a 0e1b	fr	Etrange	Bizarre	the Strange Flute is the Flûte Bizarre in the inventory of Seasons
+seasons	172b	fr	Appaisante	Apaisante	a misspelling: the inventory and the other French texts say Pluie Apaisante
+seasons	1728 172a	fr	Nourrissante	Nutritive	the Nurturing Warmth is the Chaleur Nutritive in the inventory and the text that gives it
+seasons	0063	fr	Oiseau en	Oiseau de	the Wooden Bird is the Oiseau de Bois in the inventory
+seasons	3b14	fr	Minerai Dur	Minerai\nSolide	the Hard Ore is the Minerai Solide in the inventory and the other French texts
+seasons	0032	fr	Bombes Missiles	Missiles	the Bombchus are the Missiles of the shop and the other French texts (Missile in the inventory)
+ages	541e	fr	1/2 dégâts	Aucun dégât	the Green Holy Ring cancels the damage of an electric shock (the code sets it to zero); the US English is wrong here and right in the ring list (TX_309e), and the other languages say no damage in both
+seasons	5330-5332	it	da \col(03)Monte Goron\col(00) a	a \col(03)Monte Goron\col(00) da	the ancestor came to Goron Mountain from Labrynna, not the other way
+seasons	0b3b	fr	Je rentre à la\nmaison.	Je rentre chez\n\col(03)Malon\col(00).	he goes back home to Malon, his daughter, as the US and the other languages say
+seasons	5306	es	Hadas\col(00) me\nenseñaron	Hadas\col(00) de\n\col(03)Labrynna\col(00) me\nenseñaron	the fairies' woods are Labrynna's, as the US and the other languages say
+seasons	5306	fr	les fées du Bois\nde la Fée de\nLabrynna.	les \col(03)fées\col(00) du \col(03)Bois\nde la Fée\col(00) de\n\col(03)Labrynna\col(00).	the names the US text colours, the fairies, their woods and Labrynna, are coloured as in the other languages
+ages	280c	fr	Labrynna\col(04)	Labrynna\col(00)	the name's colour is closed with 4, palette 1's white (code/textbox.s, textColorData), where the US text closes with 0, palette 0's white; both print white, and TX_280d-280f and TX_281b use 4 in every language: only the US text's colour is restored
+ages	3700	de	Lynna-Dorf	Lynna-Stadt	the mayor is the mayor of the city, Lynna-Stadt as in TX_3714 and TX_3715; Lynna-Dorf is the village of the past
+seasons	0b58	de	Ich lehre dir	Ich verrate dir	lehren takes the accusative (Ich lehre dich); Ich verrate dir is the other German secrets' wording
+ages	1615-161f 1d16	fr	Cité de	Cité	Lynna City is the Cité Lynna of most French texts and of the map
+ages	05b3 05c3	fr	du Croissant	Croissant	Crescent Island is the Ile Croissant of most French texts and of the map
+ages	360c	fr	Ile du\nCroissant	Ile\nCroissant	Crescent Island is the Ile Croissant of most French texts and of the map
+ages	3415 3416 3443	fr	Roi Zora	Roi des Zora	King Zora is the Roi des Zora of most French texts
+ages	3427	fr	Rois des Zora	Roi des Zora	a misspelling: King Zora is one king
+ages	550f	fr	Zoras	Zora	King Zora is the Roi des Zora of the other French texts
+ages	3448	fr	Roi des\col(00)\nZora	Roi des\nZora\col(00)	the name's colour ends inside it
+seasons	0b58 4c2c	fr	dans \col(03)Labrynna	à \col(03)Labrynna	Labrynna takes à in most French texts of Seasons
+seasons	0c10	fr	dans\n\col(03)Labrynna	à\n\col(03)Labrynna	Labrynna takes à in most French texts of Seasons
+seasons	3106	fr	en\n\col(03)Labrynna	à\n\col(03)Labrynna	Labrynna takes à in most French texts of Seasons
+seasons	4408	fr	appeller	appeler	a misspelling
+ages	541e	en-eu	1/2 damage	No damage	the Green Holy Ring cancels the damage of an electric shock (the code sets it to zero), as the ring list says (TX_309e); the European English kept the US mistake
+ages	094d	en-eu	Rock Sirloin	Rock Brisket	the inventory names the Rock Brisket (TREASURE_ROCK_BRISKET) Rock Sirloin, where the text that gives it and the Goron's texts say Rock Brisket; TX_24a1, a hungry Goron naming foods, keeps both
+ages	05b4 05c4	en-eu	Lynnna	Lynna	a misspelling the US text has too: the city is Lynna
+ages	301a	en-eu	Oracle of\nSeasons here	Oracle of\nSeasons game	the rings go to the player's Oracle of Seasons game, as the sentence before says; the US text has the same slip
+seasons	4f00	en-eu	depair	despair	a misspelling the US text has too: the Flame of Despair
+seasons	4c11 4c12	en-eu	undertand	understand	a misspelling the US text has too

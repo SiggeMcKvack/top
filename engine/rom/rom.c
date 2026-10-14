@@ -19,6 +19,8 @@ static const struct {
     { ORACLES_MOONRISE_SHA1, ORACLES_GAME_AGES, ORACLES_ROM_REVISION_MOONRISE_1_0_6 },
     { ORACLES_TEMPLE_SHA1, ORACLES_GAME_SEASONS, ORACLES_ROM_REVISION_TEMPLE_1_073 },
     { ORACLES_KINOMI_SHA1, ORACLES_GAME_AGES, ORACLES_ROM_REVISION_KINOMI_1_1_2 },
+    { "9f2dff3c46406839f839a8d535353dfc1e3e8670", ORACLES_GAME_AGES, ORACLES_ROM_REVISION_AGES_EU },
+    { "360b9408e569ba826212eac1ebea1b09573cb48c", ORACLES_GAME_SEASONS, ORACLES_ROM_REVISION_SEASONS_EU },
 };
 
 #define HEADER_TITLE 0x134u
@@ -62,6 +64,19 @@ const char *oracles_game_name(OraclesGame game)
     }
 }
 
+int oracles_rom_known(const char *sha1, OraclesRomInfo *info)
+{
+    for (size_t i = 0; i < sizeof known_roms / sizeof known_roms[0]; i++) {
+        if (strcmp(sha1, known_roms[i].sha1) == 0) {
+            info->game = known_roms[i].game;
+            info->revision = known_roms[i].revision;
+            info->known = 1;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int oracles_rom_identify(const uint8_t *rom, size_t size, OraclesRomInfo *info, char *error, size_t error_capacity)
 {
     memset(info, 0, sizeof *info);
@@ -71,14 +86,7 @@ int oracles_rom_identify(const uint8_t *rom, size_t size, OraclesRomInfo *info, 
     info->title[11] = 0;
     oracles_sha1_hex(rom, size, info->sha1);
 
-    for (size_t i = 0; i < sizeof known_roms / sizeof known_roms[0]; i++) {
-        if (strcmp(info->sha1, known_roms[i].sha1) == 0) {
-            info->game = known_roms[i].game;
-            info->revision = known_roms[i].revision;
-            info->known = 1;
-            return 0;
-        }
-    }
+    if (oracles_rom_known(info->sha1, info) == 0) return 0;
 
     if (strncmp(info->title, "ZELDA NAYRU", 11) == 0) info->game = ORACLES_GAME_AGES;
     else if (strncmp(info->title, "ZELDA DIN", 9) == 0) info->game = ORACLES_GAME_SEASONS;

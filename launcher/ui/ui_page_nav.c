@@ -117,10 +117,133 @@ const char *oracles_page_play_note(const OraclesHomeNav *nav)
     return oracles_home_fan_game(page_game(nav)) ? "Choose both files first" : "Choose a ROM first";
 }
 
-/* The page has the row: the Patch row is a fan game's only. */
+int oracles_page_eu_shown(const OraclesHomeGame *game) { return !game->fan && game->rom == ORACLES_ROM_ORIGINAL; }
+
+int oracles_page_language_shown(const OraclesHomeNav *nav, const OraclesHomeGame *game)
+{
+    return game->fan ? nav->fan_languages : oracles_page_eu_shown(game);
+}
+
+const char *const oracles_page_language_names[ORACLES_PAGE_LANGUAGES] = {
+    "English (US)", "English (EU)", "Fran\xc3\xa7" "ais", "Deutsch", "Italiano", "Espa\xc3\xb1" "ol"
+};
+
+int oracles_page_language_available(const OraclesHomeGame *game, int language)
+{
+    const int european = game->eu == ORACLES_ROM_ORIGINAL && (!game->fan || game->rom == ORACLES_ROM_ORIGINAL);
+    return language == 0 || (language > 0 && language < ORACLES_PAGE_LANGUAGES && european);
+}
+
+/* The language chosen, when the game has it; its row shown or not. */
+static int chosen_language(const OraclesHomeGame *game) { return oracles_page_language_available(game, game->language) ? game->language : 0; }
+
+int oracles_page_language(const OraclesHomeNav *nav, const OraclesHomeGame *game)
+{
+    return oracles_page_language_shown(nav, game) ? chosen_language(game) : 0;
+}
+
+const char *oracles_page_eu_file(const OraclesHomeGame *game) { return game->eu != ORACLES_ROM_NONE && game->eu_file[0] ? game->eu_file : "None"; }
+
+void oracles_page_eu_status(const OraclesHomeNav *nav, char *out, size_t capacity, OraclesTone *tone)
+{
+    const OraclesHomeGame *game = oracles_page_game_const(nav);
+    switch (game->eu) {
+        case ORACLES_ROM_ORIGINAL: {
+            size_t used = (size_t)snprintf(out, capacity, "Recognized: ");
+            for (int l = 1; l < ORACLES_PAGE_LANGUAGES && used < capacity; l++)
+                used += (size_t)snprintf(out + used, capacity - used, "%s%s", l > 1 ? ", " : "", oracles_page_language_names[l]);
+            *tone = ORACLES_TONE_OK;
+            break;
+        }
+        case ORACLES_ROM_UNRECOGNISED:
+            snprintf(out, capacity, "Not the European ROM of Oracle of %s", page_game(nav) == ORACLES_HOME_GAME_SEASONS ? "Seasons" : "Ages");
+            *tone = ORACLES_TONE_ERROR;
+            break;
+        case ORACLES_ROM_REFUSED: snprintf(out, capacity, "Refused: %s.", game->eu_reason); *tone = ORACLES_TONE_ERROR; break;
+        default: {
+            size_t used = (size_t)snprintf(out, capacity, "Optional: ");
+            for (int l = 1; l < ORACLES_PAGE_LANGUAGES && used < capacity; l++)
+                used += (size_t)snprintf(out + used, capacity - used, "%s%s", l > 1 ? ", " : "", oracles_page_language_names[l]);
+            *tone = ORACLES_TONE_NONE;
+            break;
+        }
+    }
+}
+
+unsigned oracles_page_eu_buttons(const OraclesHomeGame *game, const char *labels[2])
+{
+    if (game->eu == ORACLES_ROM_NONE) {
+        labels[0] = "Choose\xe2\x80\xa6";
+        labels[1] = NULL;
+        return 1;
+    }
+    labels[0] = "Change\xe2\x80\xa6";
+    labels[1] = "Remove";
+    return 2;
+}
+
+const char *oracles_page_language_explanation(const OraclesHomeGame *game)
+{
+    if (game->fan) {
+        const int ages = game->fan->base == ORACLES_HOME_GAME_AGES;
+        if (!oracles_page_language_available(game, 1))
+            return ages ? "Choose the European ROM of Oracle of Ages in its Cartridge to play it in another language."
+                        : "Choose the European ROM of Oracle of Seasons in its Cartridge to play it in another language.";
+        if (!chosen_language(game)) return "The original text of your fan game.";
+        return ages ? "Texts the fan game shares with Oracle of Ages, from its European edition."
+                    : "Texts the fan game shares with Oracle of Seasons, from its European edition.";
+    }
+    return chosen_language(game) ? "The European edition's text, from your European ROM." : "The original text of your US ROM.";
+}
+
+void oracles_page_language_note(const OraclesHomeGame *game, char *out, size_t capacity)
+{
+    if (!chosen_language(game)) snprintf(out, capacity, "%s", "");
+    else if (!game->fan) snprintf(out, capacity, "Where the official translation was wrong, the port corrects it.");
+    else
+        snprintf(out, capacity, "Only the texts it shares with Oracle of %s are translated; its own dialogues stay in English.",
+                 game->fan->base == ORACLES_HOME_GAME_AGES ? "Ages" : "Seasons");
+}
+
+/* The page has the row: the Patch row is a fan game's only, European ROM an Oracle's with its original ROM, Language
+ * that Oracle's and a fan game's. */
 static int has_row(const OraclesHomeNav *nav, unsigned row)
 {
-    return row < ORACLES_GAME_ROWS && (row != ORACLES_ROW_PATCH || oracles_page_game_const(nav)->fan);
+    const OraclesHomeGame *game = oracles_page_game_const(nav);
+    if (row == ORACLES_ROW_EU_ROM) return oracles_page_eu_shown(game);
+    if (row == ORACLES_ROW_LANGUAGE) return oracles_page_language_shown(nav, game);
+    return row < ORACLES_GAME_ROWS && (row != ORACLES_ROW_PATCH || game->fan);
+}
+
+/* The European ROM gone: no file, English (US), for the Oracle and the fan games made on it; the host forgets them
+ * (ORACLES_HOME_STORE). */
+static OraclesHomeCommand remove_eu(OraclesHomeNav *nav)
+{
+    OraclesHomeGame *game = oracles_page_game(nav);
+    game->eu = ORACLES_ROM_NONE;
+    game->eu_file[0] = game->eu_folder[0] = game->eu_reason[0] = 0;
+    game->language = 0;
+    for (unsigned f = 0; f < ORACLES_HOME_FAN_GAMES; f++)
+        if (&nav->games[oracles_home_fan_games[f].base] == game) nav->games[oracles_home_fan_games[f].game].eu = ORACLES_ROM_NONE;
+    nav->eu_action = 0;
+    return ORACLES_HOME_STORE;
+}
+
+/* The language `language`, when the game has it. */
+static OraclesHomeCommand language_set(OraclesHomeNav *nav, int language)
+{
+    OraclesHomeGame *game = oracles_page_game(nav);
+    if (!oracles_page_language_available(game, language) || language == game->language) return ORACLES_HOME_STAY;
+    game->language = language;
+    return ORACLES_HOME_STORE;
+}
+
+/* The next language (`by` 1) or the one before (-1), wrapping; English alone changes nothing. */
+static OraclesHomeCommand language_step(OraclesHomeNav *nav, int by)
+{
+    const OraclesHomeGame *game = oracles_page_game_const(nav);
+    if (!oracles_page_language_available(game, 1)) return ORACLES_HOME_STAY;
+    return language_set(nav, ((game->language + by) % ORACLES_PAGE_LANGUAGES + ORACLES_PAGE_LANGUAGES) % ORACLES_PAGE_LANGUAGES);
 }
 
 static OraclesHomeCommand activate(OraclesHomeNav *nav, unsigned row)
@@ -130,6 +253,8 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, unsigned row)
         case ORACLES_ROW_ROM: return ORACLES_HOME_CHOOSE_ROM;
         case ORACLES_ROW_PATCH: return ORACLES_HOME_CHOOSE_PATCH;
         case ORACLES_ROW_SAVE: return game->usable || game->save_file[0] ? ORACLES_HOME_OPEN_FOLDER : ORACLES_HOME_STAY;
+        case ORACLES_ROW_EU_ROM: return game->eu != ORACLES_ROM_NONE && nav->eu_action == 1 ? remove_eu(nav) : ORACLES_HOME_CHOOSE_EU_ROM;
+        case ORACLES_ROW_LANGUAGE: return language_step(nav, 1);
         case ORACLES_ROW_PLAY: return game->usable ? oracles_home_start_command(page_game(nav)) : ORACLES_HOME_STAY;
         default: return ORACLES_HOME_STAY;
     }
@@ -149,7 +274,11 @@ OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction actio
         case ORACLES_HOME_UP: nav->row = step(nav, row, ORACLES_GAME_ROWS - 1u); return ORACLES_HOME_STAY;
         case ORACLES_HOME_DOWN: nav->row = step(nav, row, 1u); return ORACLES_HOME_STAY;
         case ORACLES_HOME_LEFT:
-        case ORACLES_HOME_RIGHT: return ORACLES_HOME_STAY;
+        case ORACLES_HOME_RIGHT:
+            /* European ROM: between Change and Remove, once there is a file; Language: the language before or after. */
+            if (row == ORACLES_ROW_EU_ROM && oracles_page_game_const(nav)->eu != ORACLES_ROM_NONE) nav->eu_action = action == ORACLES_HOME_RIGHT;
+            if (row == ORACLES_ROW_LANGUAGE) return language_step(nav, action == ORACLES_HOME_RIGHT ? 1 : -1);
+            return ORACLES_HOME_STAY;
         case ORACLES_HOME_OK: return activate(nav, row);
         case ORACLES_HOME_BACK:
             /* Back to the home screen, on the item that opened the page. */
@@ -160,15 +289,29 @@ OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction actio
     return ORACLES_HOME_STAY;
 }
 
+void oracles_page_keep_row(OraclesHomeNav *nav)
+{
+    if (nav->screen != ORACLES_SCREEN_GAME || has_row(nav, nav->row)) return;
+    for (unsigned d = 1; d < ORACLES_GAME_ROWS; d++) {
+        if (nav->row >= d && has_row(nav, nav->row - d)) { nav->row -= d; return; }
+        if (nav->row + d < ORACLES_GAME_ROWS && has_row(nav, nav->row + d)) { nav->row += d; return; }
+    }
+    nav->row = ORACLES_ROW_ROM;
+}
+
 void oracles_page_hover(OraclesHomeNav *nav, unsigned row)
 {
     if (has_row(nav, row)) nav->row = row;
 }
 
-OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row)
+OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row, int option)
 {
     if (!has_row(nav, row)) return ORACLES_HOME_STAY;
     nav->row = row;
+    /* A language clicked is chosen; the row itself only takes the highlight. */
+    if (row == ORACLES_ROW_LANGUAGE) return option >= 0 ? language_set(nav, option) : ORACLES_HOME_STAY;
+    /* European ROM: Remove clicked removes the file; elsewhere on the row, the dialog opens. */
+    if (row == ORACLES_ROW_EU_ROM) nav->eu_action = option == 1 && oracles_page_game_const(nav)->eu != ORACLES_ROM_NONE;
     return activate(nav, row);
 }
 

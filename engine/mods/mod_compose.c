@@ -8,7 +8,8 @@
  * names; the composition writes data only, never code:
  *   - the image grows to 2 MiB; the small layout groups of the rooms move
  *     into the extension (table and streams copied, their root repointed), and
- *     the new layouts, stored raw, follow the copied streams;
+ *     the new layouts, stored raw, follow the copied streams, below the banks
+ *     a language takes (oracles_rom.h);
  *   - each interior's music and object list (the keeper, in the tail of the
  *     objects' bank) are written at its index;
  *   - each house takes a destination in each group (one no source sends to,
@@ -34,7 +35,6 @@
 #include <string.h>
 
 #define BANK 0x4000u
-#define IMAGE_SIZE (2u * 1024u * 1024u)
 #define SMALL_LAYOUT 80u
 #define READ_AHEAD 176u
 #define MAX_LAYOUT_GROUPS 16u
@@ -155,7 +155,7 @@ static int relocate(image *im, const OraclesTables *t, unsigned group, unsigned 
         if (reach > end) end = reach;
     }
     const size_t table = (im->next_free + BANK - 1u) / BANK * BANK, streams = table + BANK;
-    if (streams + end + SMALL_LAYOUT * layouts + READ_AHEAD > im->size || end + SMALL_LAYOUT * layouts > 0x4000u) {
+    if (streams + end + SMALL_LAYOUT * layouts + READ_AHEAD > (size_t)ORACLES_IMAGE_LANGUAGE_BANK * BANK || end + SMALL_LAYOUT * layouts > 0x4000u) {
         snprintf(error, capacity, "too many houses: the rooms of layout group %u have room for %zu new layouts, %u are asked", group,
                  end < 0x4000u ? (0x4000u - end) / SMALL_LAYOUT : 0u, layouts);
         return -1;
@@ -291,10 +291,10 @@ int mod_compose(OraclesMod *const *mods, size_t count, const uint8_t *base, size
             return -1;
         }
     }
-    if (base_size >= IMAGE_SIZE) return fail(error, capacity, "the ROM is already extended");
+    if (base_size >= ORACLES_IMAGE_SIZE) return fail(error, capacity, "the ROM is already extended");
     const OraclesTables *t = game == ORACLES_GAME_AGES ? &oracles_tables_ages : &oracles_tables_seasons;
     const house_model *model = game == ORACLES_GAME_AGES ? &ages_house : &seasons_house;
-    image im = { calloc(1, IMAGE_SIZE), IMAGE_SIZE, base_size };
+    image im = { calloc(1, ORACLES_IMAGE_SIZE), ORACLES_IMAGE_SIZE, base_size };
     if (!im.data) return fail(error, capacity, "out of memory");
     memcpy(im.data, base, base_size);
     mod_warps *w = NULL;
@@ -380,15 +380,7 @@ int mod_compose(OraclesMod *const *mods, size_t count, const uint8_t *base, size
     if (!(after = mod_warps_lookups(w))) { fail(error, capacity, "out of memory"); goto done; }
     if (mod_warps_check(before, after, checked, house_count, model->interior_group, model->leave, error, capacity) != 0) goto done;
 
-    /* The header of a 2 MiB cartridge, and its checksums. */
-    im.data[0x148] = 0x06;
-    uint8_t x = 0;
-    for (size_t i = 0x134; i < 0x14d; i++) x = (uint8_t)(x - im.data[i] - 1u);
-    im.data[0x14d] = x;
-    unsigned sum = 0;
-    for (size_t i = 0; i < im.size; i++) if (i != 0x14e && i != 0x14f) sum += im.data[i];
-    im.data[0x14e] = (uint8_t)(sum >> 8);
-    im.data[0x14f] = (uint8_t)sum;
+    oracles_image_finish(im.data, im.size);
     fprintf(stderr, "oracles: %u house(s) composed, %u bytes of bank 04 left\n", house_count, mod_warps_free_bytes(w));
     *out = im.data;
     *out_size = im.size;

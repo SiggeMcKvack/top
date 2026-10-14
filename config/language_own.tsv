@@ -1,0 +1,8 @@
+# The port's own translations, unofficial: the US texts the European ROMs have no translation of, written for the port
+# in the game's register (config/language_exceptions_*.tsv says which texts take them). A row: a key, a language (en-eu,
+# fr, de, it, es), the text. The text is written in the font's characters as UTF-8; \n is a line break, \stop the end of a
+# box, \col(N) a colour (N hexadecimal), \\ a backslash, \xNN any other byte. A line holds sixteen characters at most.
+# key	language	text
+rounds-cleared	fr	\x0e\xc7Tu as passé \x0c\x08\nrounds sur 8!\nBien joué!\nTu es presque\naussi bon que\nmoi!\nVoici ton prix!
+biggoron-forge	fr	Ce n'est pas\nn'importe quel\nGoron qui peut\nforger la grande\stop\n\col(01)Epée Biggoron\col(00)\nà deux mains!\nIl paraît qu'il\nexiste un Goron\nde la taille\nd'une montagne\nen \col(03)Holodrum\col(00)...\nC'est vrai?\n  \x0c\x10Oui \x0c\x10Non
+fairy-note	fr	\x0c\x38Note de la\n\col(03)Grande Fée\col(00)\npour \col(03)Tingle\col(00)

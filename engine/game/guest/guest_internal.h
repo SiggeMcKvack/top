@@ -6,6 +6,7 @@
 
 #include "guest.h"
 #include "guest_struct_offsets.h"
+#include "oracles_rom.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -84,6 +85,9 @@ struct OraclesGuest {
     OraclesGuestCall calls[ORACLES_GUEST_CALLS];
     unsigned call_count, calls_done;
     uint16_t call_watch_sp;                          /* 0, or SP at the entry of the checkReloadStatusBarGraphics a call returns through */
+    const uint8_t *language_index;                   /* the language transaction (guest_text.c): the index in the core's ROM, or NULL */
+    char language[ORACLES_LANGUAGE_INDEX_CODE_BYTES];
+    unsigned language_served, language_english, language_missing;
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
 };
@@ -96,5 +100,7 @@ void oracles_guest_item_buttons_state(OraclesGuest *guest, OraclesGuestInventory
 /* guest_call.c: at the entry of checkReloadStatusBarGraphics, and before every instruction while a call waits for its return. */
 void oracles_guest_call_point(OraclesGuest *guest, uint16_t sp);
 void oracles_guest_call_step(OraclesGuest *guest, uint16_t sp, uint8_t opcode);
+/* guest_text.c: at the return of getTextAddress. */
+void oracles_guest_serve_text(OraclesGuest *guest);
 
 #endif

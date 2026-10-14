@@ -79,6 +79,29 @@ int oracles_rom_read8(const OraclesRom *rom, size_t offset, uint8_t *out);
 int oracles_rom_read16le(const OraclesRom *rom, size_t offset, unsigned *out);
 int oracles_rom_read16be(const OraclesRom *rom, size_t offset, unsigned *out);
 
+/* ---- the extended image ----------------------------------------------- */
+
+/* An image composed for the mods' houses or a language is 2 MiB (docs/ROM_DATA_FORMATS.md, section 16): the houses
+ * take the extension from bank $40 up to ORACLES_IMAGE_LANGUAGE_BANK, excluded; a language takes the banks from it to
+ * the end, its index at the start of the first. */
+#define ORACLES_IMAGE_SIZE (2u * 1024u * 1024u)
+#define ORACLES_IMAGE_LANGUAGE_BANK 0x70u
+/* The language's index: the magic, a version byte, the number of internal text groups, the language's code ("fr",
+ * "en-eu": ORACLES_LANGUAGE_INDEX_CODE_BYTES, its characters then zeros);
+ * from ORACLES_LANGUAGE_INDEX_GROUPS, 4 bytes a group: the offset of its entries from the bank's start and their
+ * number (16 bits each); an entry, 3 bytes a text: the bank and the CPU address of the language's text, or bank 0 for
+ * a text the game reads in English: address ORACLES_LANGUAGE_KEPT when the language keeps it, 0 when it has none. */
+#define ORACLES_LANGUAGE_INDEX_MAGIC "ORACLES LANGUAGE"
+#define ORACLES_LANGUAGE_INDEX_MAGIC_BYTES 16u
+#define ORACLES_LANGUAGE_INDEX_VERSION 2u
+#define ORACLES_LANGUAGE_INDEX_CODE 18u
+#define ORACLES_LANGUAGE_INDEX_CODE_BYTES 8u
+#define ORACLES_LANGUAGE_INDEX_GROUPS 32u
+#define ORACLES_LANGUAGE_KEPT 1u
+
+/* A composed image's header: its size byte (6 for 2 MiB, 7 for 4 MiB), and its two sums. */
+void oracles_image_finish(uint8_t *image, size_t size);
+
 /* ---- rooms ------------------------------------------------------------ */
 
 #define ORACLES_ROOM_LAYOUT_BYTES 176u   /* 11 rows of 16, row stride 16 in RAM */

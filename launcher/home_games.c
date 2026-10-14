@@ -4,6 +4,7 @@
 #include "compositor.h"
 #include "file_dialog.h"
 #include "guest_tables.h"
+#include "language.h"
 #include "mod_folder.h"
 #include "pause.h"
 #include "rom.h"
@@ -99,14 +100,79 @@ static void inspect(const OraclesHomeGames *games, OraclesSettingsGame g, Oracle
     find_save(path, state);
 }
 
+/* What a European ROM is for Oracle `game`: ORIGINAL when it is the game's own, UNRECOGNISED for another file, REFUSED
+ * with the loader's reason when it cannot be read. */
+static OraclesRomState eu_state(const char *path, OraclesGame game, char *reason, size_t capacity)
+{
+    size_t size = 0;
+    uint8_t *rom = oracles_rom_read_file(path, &size, reason, capacity);
+    if (!rom) return ORACLES_ROM_REFUSED;
+    OraclesRomInfo info;
+    char error[ORACLES_HOME_TEXT_LENGTH];
+    const int own = oracles_rom_identify(rom, size, &info, error, sizeof error) == 0 && oracles_language_source_game(&info) == game;
+    free(rom);
+    return own ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
+}
+
+/* eu_state, kept in games->eu_found[g] while the file is the same: read again only once it changed. */
+static OraclesRomState eu_found(OraclesHomeGames *games, OraclesSettingsGame g, const char *path, char *reason, size_t capacity)
+{
+    struct stat file;
+    const int there = stat(path, &file) == 0;
+    OraclesHomeFound *found = &games->eu_found[g];
+    if (there && !strcmp(found->path, path) && found->size == (long long)file.st_size && found->modified == (long long)file.st_mtime) {
+        snprintf(reason, capacity, "%s", found->reason);
+        return found->state;
+    }
+    const OraclesRomState state = eu_state(path, game_of(g), reason, capacity);
+    found->path[0] = 0;
+    if (there) {
+        snprintf(found->path, sizeof found->path, "%s", path);
+        found->size = (long long)file.st_size;
+        found->modified = (long long)file.st_mtime;
+        found->state = state;
+        snprintf(found->reason, sizeof found->reason, "%s", reason);
+    }
+    return state;
+}
+
+/* The game a file is the European ROM of, ORACLES_GAME_UNKNOWN when it is none. */
+static OraclesGame european_game(const char *path)
+{
+    OraclesRomInfo info;
+    char error[ORACLES_HOME_TEXT_LENGTH];
+    return identify(path, &info, error, sizeof error) ? oracles_language_source_game(&info) : ORACLES_GAME_UNKNOWN;
+}
+
+/* An Oracle's European ROM as settings.txt names it, and its language, English unless the ROM is recognized. */
+static void inspect_eu(OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeGame *state)
+{
+    const char *path = games->settings->eu_rom[g];
+    state->eu = ORACLES_ROM_NONE;
+    state->eu_file[0] = state->eu_folder[0] = state->eu_reason[0] = 0;
+    state->language = 0;
+    if (!path[0]) return;
+    split_path(path, state->eu_file, sizeof state->eu_file, state->eu_folder, sizeof state->eu_folder);
+    state->eu = eu_found(games, g, path, state->eu_reason, sizeof state->eu_reason);
+    if (state->eu == ORACLES_ROM_ORIGINAL) state->language = games->settings->language[g];
+}
+
 /* A fan game as the launcher finds it: its base, its Oracle's ROM as the Oracle's page shows it; its patch, read; the
- * image the patch makes of the base, identified, as a session builds it at each start; its save, beside the patch. */
-static void inspect_fan(const OraclesHomeGames *games, const OraclesHomeFanGame *fan, OraclesHomeGame *state)
+ * image the patch makes of the base, identified, as a session builds it at each start; its save, beside the patch; with
+ * the fan games' languages on, its language, with the state of its Oracle's European ROM, and the share of its texts a
+ * language translates. */
+static void inspect_fan(OraclesHomeGames *games, const OraclesHomeFanGame *fan, OraclesHomeGame *state)
 {
     const oracles_settings *settings = games->settings;
     const unsigned f = fan_index(fan);
     const OraclesSettingsGame base = rom_setting(fan->base);
     inspect(games, base, state);
+    if (games->fan_languages) {
+        OraclesHomeGame oracle;
+        inspect_eu(games, base, &oracle);
+        state->eu = oracle.eu;
+        state->language = oracle.eu == ORACLES_ROM_ORIGINAL ? settings->fan_language[f] : 0;
+    }
     const int base_usable = state->usable;
     state->usable = 0;
     state->fan = fan;
@@ -242,11 +308,13 @@ static void read_mods(void *opaque, OraclesHomeNav *nav)
 
 static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window)
 {
-    const OraclesHomeGames *games = opaque;
+    OraclesHomeGames *games = opaque;
+    nav->fan_languages = games->fan_languages;
     inspect_display(games->settings, &nav->display, window);
     inspect_controls(games->settings, &nav->controls);
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         inspect(games, (OraclesSettingsGame)g, &nav->games[g]);
+        inspect_eu(games, (OraclesSettingsGame)g, &nav->games[g]);
         if (nav->games[g].rom == ORACLES_ROM_REFUSED && !games->refused[g].path[0])
             fprintf(stderr, "oracles: %s ROM %s refused: %s\n", oracles_game_name(game_of((OraclesSettingsGame)g)), games->settings->rom[g], nav->games[g].rom_reason);
     }
@@ -288,6 +356,22 @@ static void store(void *opaque, const OraclesHomeNav *nav)
         for (unsigned i = 0; i < nav->mods[g].count; i++)
             if (nav->mods[g].mods[i].active) oracles_settings_mod_set(prefs->mods[g], nav->mods[g].mods[i].name, 1);
     }
+    /* Each Oracle's European ROM removed on its page, with its language; the language chosen while the ROM is
+     * recognized.  A ROM gone or another file keeps the choice settings.txt has.  So does a fan game's language: chosen
+     * while its Oracle's European ROM is recognized, with its Oracle's original ROM. */
+    for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
+        const OraclesHomeGame *game = &nav->games[g];
+        if (game->eu == ORACLES_ROM_NONE) {
+            prefs->eu_rom[g][0] = 0;
+            prefs->language[g] = 0;
+        } else if (game->eu == ORACLES_ROM_ORIGINAL) {
+            prefs->language[g] = game->language;
+        }
+    }
+    for (unsigned f = 0; nav->fan_languages && f < ORACLES_HOME_FAN_GAMES; f++) {
+        const OraclesHomeGame *game = &nav->games[oracles_home_fan_games[f].game];
+        if (oracles_page_language_available(game, 1)) prefs->fan_language[f] = game->language;
+    }
     oracles_settings_store(games->settings);
 }
 
@@ -313,6 +397,20 @@ static int offer(OraclesHomeGames *games, OraclesSettingsGame g, const char *pat
     oracles_settings_store(games->settings);
     fprintf(stderr, "oracles: %s ROM set to %s (%s)\n", oracles_game_name(info.game), path, oracles_rom_is_original(&info) ? "original US" : "not an original, header accepted");
     return 1;
+}
+
+/* A European ROM for Oracle `g`: kept in settings.txt whatever it is, its page saying whether it is the game's; another
+ * file sets the language back to English.  Returns what it is. */
+static OraclesRomState offer_eu(OraclesHomeGames *games, OraclesSettingsGame g, const char *path)
+{
+    char reason[ORACLES_HOME_TEXT_LENGTH];
+    const OraclesRomState state = eu_found(games, g, path, reason, sizeof reason);
+    snprintf(games->settings->eu_rom[g], sizeof games->settings->eu_rom[g], "%s", path);
+    if (state != ORACLES_ROM_ORIGINAL) games->settings->language[g] = 0;
+    oracles_settings_store(games->settings);
+    fprintf(stderr, "oracles: %s European ROM set to %s (%s)\n", oracles_game_name(game_of(g)), path,
+            state == ORACLES_ROM_ORIGINAL ? "recognized" : state == ORACLES_ROM_UNRECOGNISED ? "not its European ROM" : reason);
+    return state;
 }
 
 /* A patch for a fan game: kept in settings.txt when it is a BPS patch, else shown refused and not kept.  Whether it is
@@ -376,19 +474,34 @@ static void choose_patch(void *opaque, int game, struct SDL_Window *window)
     choose(window, ORACLES_DIALOG_PATCH, current, game);
 }
 
+static void choose_eu_rom(void *opaque, int game, struct SDL_Window *window)
+{
+    const OraclesHomeGames *games = opaque;
+    if (oracles_home_fan_game(game)) return;
+    /* The dialog opens where the European ROM is, or else where the game's ROM is. */
+    const OraclesSettingsGame g = rom_setting(game);
+    choose(window, ORACLES_DIALOG_EU_ROM, games->settings->eu_rom[g][0] ? games->settings->eu_rom[g] : games->settings->rom[g], game);
+}
+
 static void file_chosen(void *opaque, int game, int kind, int result, const char *path, int copied, char *message, size_t capacity)
 {
     OraclesHomeGames *games = opaque;
     char error[ORACLES_HOME_TEXT_LENGTH];
+    const char *what = kind == ORACLES_DIALOG_PATCH ? "patch" : kind == ORACLES_DIALOG_EU_ROM ? "European ROM" : "ROM";
     switch ((OraclesDialogResult)result) {
         case ORACLES_DIALOG_UNAVAILABLE:
-            snprintf(message, capacity, "No file dialog on this system: drop the %s on this window", kind == ORACLES_DIALOG_PATCH ? "patch" : "ROM");
+            snprintf(message, capacity, "No file dialog on this system: drop the %s on this window", what);
             return;
         case ORACLES_DIALOG_FAILED:
-            snprintf(message, capacity, "The %s cannot be copied into the application's folder", kind == ORACLES_DIALOG_PATCH ? "patch" : "ROM");
+            snprintf(message, capacity, "The %s cannot be copied into the application's folder", what);
             return;
         case ORACLES_DIALOG_CANCELLED: return;
         case ORACLES_DIALOG_CHOSEN: break;
+    }
+    /* A European ROM is kept whatever it is, its page saying whether it is the game's: a copy made for it stays. */
+    if (kind == ORACLES_DIALOG_EU_ROM) {
+        if (!oracles_home_fan_game(game)) offer_eu(games, rom_setting(game), path);
+        return;
     }
     const OraclesHomeFanGame *fan = oracles_home_fan_game(game);
     const int kept = kind == ORACLES_DIALOG_PATCH ? fan && offer_patch(games, fan, path, error, sizeof error)   /* the page's fan game */
@@ -468,6 +581,17 @@ static int drop(void *opaque, const char *path, int page_game, char *message, si
         else snprintf(message, capacity, "Refused: %s.", error);
         return page_game >= 0 ? -1 : ORACLES_HOME_FAN;
     }
+    /* A European ROM is the European ROM of the Oracle whose page is open, which says whether it is its own; elsewhere,
+     * of the game it is the European ROM of, a toast saying so. */
+    const OraclesGame eu_game = european_game(path);
+    if (eu_game != ORACLES_GAME_UNKNOWN) {
+        const int oracle = page_game == ORACLES_HOME_GAME_AGES || page_game == ORACLES_HOME_GAME_SEASONS;
+        const OraclesSettingsGame g = oracle ? rom_setting(page_game) : eu_game == ORACLES_GAME_AGES ? ORACLES_SETTINGS_AGES : ORACLES_SETTINGS_SEASONS;
+        offer_eu(games, g, path);
+        if (oracle) return -1;
+        snprintf(message, capacity, "%s European ROM set", oracles_game_name(game_of(g)));
+        return page_game >= 0 ? -1 : g == ORACLES_SETTINGS_AGES ? ORACLES_HOME_AGES : ORACLES_HOME_SEASONS;
+    }
     /* On a game's page a file dropped is a ROM for that game, as Choose ROM's (a fan game's base ROM): refused, it
      * shows there with why. */
     if (page_game >= 0) { offer(games, rom_setting(page_game), path); return -1; }
@@ -522,7 +646,38 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
      * A view given on the command line wins, as --rom would play it: --enhanced alone is still the 256x144 band. */
     OraclesHomeGame state;
     if (fan) inspect_fan(games, fan, &state);
-    else inspect(games, g, &state);
+    else {
+        inspect(games, g, &state);
+        inspect_eu(games, g, &state);
+    }
+    /* The language of the game's page: an Oracle's on its original ROM, with its European ROM recognized; with the fan
+     * games' languages on, a fan game's on its recognized image, with its Oracle's European ROM; else English.
+     * The command line's --language and --eu-rom win, for the session alone.  The pack is the game's own, beside
+     * settings.txt, extracted at the first game in a language and read after; never --language-pack's, which names one
+     * game's pack: the home screen starts several, and a session extracting another game's would write it over that
+     * file.  A European ROM gone, or another file there since, plays in English, and the toast says why. */
+    char pack[ORACLES_SETTINGS_PATH_LENGTH], language_note[ORACLES_HOME_TEXT_LENGTH + 128] = "";
+    OraclesHomeGame oracle = state;
+    if (fan && games->fan_languages) inspect_eu(games, g, &oracle);
+    const int language = !fan ? games->settings->language[g] : games->fan_languages ? games->settings->fan_language[fan_index(fan)] : 0;
+    const int recognized = fan ? state.image == ORACLES_ROM_ORIGINAL : state.rom == ORACLES_ROM_ORIGINAL;
+    const char *oracle_name = oracles_game_name(game_of(g));
+    if (fan) oracles_settings_fan_language_pack(games->settings, fan_index(fan), pack, sizeof pack);
+    else oracles_settings_language_pack(games->settings, g, pack, sizeof pack);
+    o.language_pack = pack[0] ? pack : NULL;
+    if (!o.eu_rom_path && games->settings->eu_rom[g][0]) o.eu_rom_path = games->settings->eu_rom[g];
+    if (!o.language && language > 0 && language < ORACLES_SETTINGS_LANGUAGES && recognized) {
+        if (oracle.eu == ORACLES_ROM_ORIGINAL) o.language = oracles_settings_language_names[language];
+        else if (oracle.eu == ORACLES_ROM_UNRECOGNISED)
+            snprintf(language_note, sizeof language_note, "%s is not the European ROM of %s: the game played in English.", oracle.eu_file, oracle_name);
+        else if (oracle.eu == ORACLES_ROM_NONE)
+            snprintf(language_note, sizeof language_note, "No European ROM of %s: the game played in English. Choose it in the Cartridge of %s.",
+                     oracle_name, oracle_name);
+        else
+            snprintf(language_note, sizeof language_note, "The European ROM of %s cannot be read (%s): the game played in English.", oracle_name,
+                     oracle.eu_reason);
+        if (language_note[0]) fprintf(stderr, "oracles: %s\n", language_note);
+    }
     const int command_line_view = o.enhanced || o.zoom_out || o.view || o.continuous_transitions;
     const OraclesProfile chosen = command_line_view ? ORACLES_PROFILE_ENHANCED : games->settings->profile;
     const int effective = oracles_page_profile(&state, chosen);
@@ -561,10 +716,10 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
     else snprintf(window_text, sizeof window_text, "windowed at scale %u", o.sdl.scale);
     char surface_text[24];
     snprintf(surface_text, sizeof surface_text, "%ux%u", surface.width, surface.height);
-    fprintf(stderr, "oracles: starting %s in the %s profile (%s), %s, continuous transitions %s, item hotkeys %s, %u mod%s\n", name,
+    fprintf(stderr, "oracles: starting %s in the %s profile (%s), %s, continuous transitions %s, item hotkeys %s, %u mod%s, language %s\n", name,
             oracles_settings_profile_name(profile), surface_text,
             window_text, o.continuous_swim ? "on, swimming too" : o.continuous_transitions ? "on" : "off", o.hotkeys_option, o.mods_count,
-            o.mods_count == 1 ? "" : "s");
+            o.mods_count == 1 ? "" : "s", o.language ? o.language : "en");
     /* Escape opens the pause menu over the game, its settings read and written as the home screen's are. */
     OraclesHomeHost pause_host;
     oracles_home_games_host(games, &pause_host);
@@ -584,6 +739,8 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
     else if (result.hotkeys_dropped && result.route_written) snprintf(message, capacity, "%s Route written to %s", dropped, o.record_path);
     else if (result.hotkeys_dropped) snprintf(message, capacity, "%s", dropped);
     else if (result.route_written) snprintf(message, capacity, "Route written to %s", o.record_path);
+    if (!result.error[0] && language_note[0]) oracles_ui_append_middle(message, capacity, language_note);
+    if (!result.error[0] && result.language_note[0]) oracles_ui_append_middle(message, capacity, result.language_note);
     /* A game that ran slowly: the home screen suggests something lighter, once for the quality it ran at. */
     *slow = !result.error[0] && oracles_settings_slow_hint(games->settings, result.enhanced, result.frames_played, result.frames_late);
     if (*slow) oracles_settings_store(games->settings);
@@ -599,6 +756,7 @@ void oracles_home_games_host(OraclesHomeGames *games, OraclesHomeHost *host)
     host->store = store;
     host->choose_rom = choose_rom;
     host->choose_patch = choose_patch;
+    host->choose_eu_rom = choose_eu_rom;
     host->file_chosen = file_chosen;
     host->open_folder = open_folder;
     host->read_mods = read_mods;

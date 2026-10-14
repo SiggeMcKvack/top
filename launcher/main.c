@@ -99,10 +99,14 @@ static int usage(void)
                     "                           [--ghosts auto|1|2]   (Enhanced: the ghosts preparing the rooms around at once, for this run; auto: two on four processor threads or more)\n"
                     "                           [--mods DIR]...   (a mod in Lua, run during the game, --mods repeated for up to 8; its conversations hold the keys and draw over the screen)\n"
                     "                           [--start-at-house NAME]   (with --mods: every file of the save starts in front of the house NAME, or MOD/NAME)\n"
+                    "                           [--language en|en-eu|fr|de|it|es [--eu-rom FILE|DIR] [--language-pack FILE]]   (Ages or Seasons in a language of\n"
+                    "                           the European ROM, its English or its official translations, a file or a directory where it is found; its pack read, or written once extracted;\n"
+                    "                           a fan game with --patch: its texts that are the US game's, the European ROM being its Oracle's)\n"
                     "                           [--item-hotkeys=off|use|equip]   (item hotkeys: four keys that use or equip an item without the menu, for this run; the slots and the keys are remembered)\n"
                     "                           [--pretend-slow]   (each game in Enhanced counts as one that ran slowly: the home screen suggests a lighter quality)\n"
                     "       --patch: a fan game, the BPS patch applied to --rom in memory at each start; its save beside the patch\n"
-                    "       without --rom, the home screen opens; the game options apply to the games it starts, --record to the first\n"
+                    "       without --rom, the home screen opens; the game options apply to the games it starts, --record to the first,\n"
+                    "       --language-pack to none: each game keeps its pack beside settings.txt\n"
                     "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow]\n"
                     "                           [--launcher-frame GAME.ppm]\n"
                     "                           (the home screen drawn offscreen, 1920x1080 by default, and written as a PPM; with a game's image\n"
@@ -179,6 +183,9 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
         }
         else if (!strcmp(argv[i], "--mods") && i + 1 < argc) { if (o->mods_count == 8u) return 1; o->mods_dirs[o->mods_count++] = argv[++i]; }
         else if (!strcmp(argv[i], "--start-at-house") && more) o->start_house = argv[++i];
+        else if (!strcmp(argv[i], "--language") && more) o->language = argv[++i];
+        else if (!strcmp(argv[i], "--eu-rom") && more) o->eu_rom_path = argv[++i];
+        else if (!strcmp(argv[i], "--language-pack") && more) o->language_pack = argv[++i];
         else if (!strncmp(argv[i], "--item-hotkeys=", 15)) o->hotkeys_option = argv[i] + 15;
         else if (!strcmp(argv[i], "--launcher-screenshot") && more) l->screenshot = argv[++i];
         else if (!strcmp(argv[i], "--launcher-size") && more) { if (sscanf(argv[++i], "%dx%d", &l->width, &l->height) != 2) return 1; }

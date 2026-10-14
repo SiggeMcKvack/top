@@ -27,7 +27,11 @@ typedef enum OraclesRomRevision {
     ORACLES_ROM_REVISION_SEASONS_US,
     ORACLES_ROM_REVISION_MOONRISE_1_0_6,
     ORACLES_ROM_REVISION_TEMPLE_1_073,
-    ORACLES_ROM_REVISION_KINOMI_1_1_2
+    ORACLES_ROM_REVISION_KINOMI_1_1_2,
+    /* The European ROMs (English, French, German, Spanish, Italian): never played, the sources of a language for the
+     * US ROM of their game (engine/language). */
+    ORACLES_ROM_REVISION_AGES_EU,
+    ORACLES_ROM_REVISION_SEASONS_EU
 } OraclesRomRevision;
 
 typedef struct OraclesRomInfo {
@@ -44,6 +48,10 @@ uint8_t *oracles_rom_read_file(const char *path, size_t *size, char *error, size
 
 /* Identifies an image. Returns 0 when it can be played, -1 with an error message otherwise. */
 int oracles_rom_identify(const uint8_t *rom, size_t size, OraclesRomInfo *info, char *error, size_t error_capacity);
+
+/* The authenticated image of a SHA-1 (40 lower-case hexadecimal characters): its game and revision in `info`, as
+ * oracles_rom_identify gives them.  0, or -1 for a SHA-1 the port does not know. */
+int oracles_rom_known(const char *sha1, OraclesRomInfo *info);
 
 const char *oracles_game_name(OraclesGame game);
 /* One of the two original US ROMs, not another authenticated image of their family (a fan game's). */

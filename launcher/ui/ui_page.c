@@ -49,8 +49,8 @@
 static const uint32_t tone_dots[4] = { 0x76cf8au, 0xebbd57u, 0xf97770u, 0x6f6c78u };
 static const uint32_t tone_texts[4] = { 0xd6d3dcu, 0xecd198u, 0xf9aea7u, 0xa19eaau };
 
-/* The tones of the page's status lines: the ROM's, and a fan game's patch's and image's. */
-typedef struct page_tones { OraclesTone rom, patch, image; } page_tones;
+/* The tones of the page's status lines: the ROM's, a fan game's patch's and image's, an Oracle's European ROM's. */
+typedef struct page_tones { OraclesTone rom, patch, image, eu; } page_tones;
 
 static void game_texts(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *state, page_tones *tones)
 {
@@ -76,6 +76,18 @@ static void game_texts(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *s
     t->rom_note = oracles_page_rom_note(nav);
     t->rom_hotkeys_note = oracles_page_rom_hotkeys_note(nav);
     t->play_note = oracles_page_play_note(nav);
+    t->european = oracles_page_eu_shown(game);
+    if (t->european) {
+        snprintf(t->eu_file, sizeof t->eu_file, "%s", oracles_page_eu_file(game));
+        snprintf(t->eu_folder, sizeof t->eu_folder, "%s", game->eu != ORACLES_ROM_NONE ? game->eu_folder : "");
+        oracles_page_eu_status(nav, t->eu_status, sizeof t->eu_status, &tones->eu);
+        t->eu_buttons = oracles_page_eu_buttons(game, t->eu_button_labels);
+    }
+    t->languages = oracles_page_language_shown(nav, game);
+    if (t->languages) {
+        t->language_explanation = oracles_page_language_explanation(game);
+        oracles_page_language_note(game, t->language_note, sizeof t->language_note);
+    }
 }
 
 /* What differs between the layouts in the drawing: the rows' corners, the frames' corners and width. */
@@ -156,7 +168,9 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
 
     head(draw, st, &l.head, "Cartridge", t.over, t.state, accent);
     panel(draw, &l.panel);
-    for (unsigned r = 0; r < ORACLES_GAME_ROWS; r++) highlight(draw, lk, &l.rows[r], r == row);
+    /* Language is dimmed, label and all, while English (US) alone is there. */
+    const float language_opacity = oracles_page_language_available(game, 1) ? 1.0f : ROW_NOT_APPLIED;
+    for (unsigned r = 0; r < ORACLES_GAME_ROWS; r++) highlight_dimmed(draw, lk, &l.rows[r], r == row, r == ORACLES_ROW_LANGUAGE ? language_opacity : 1.0f);
     text(draw, st->row_label, &l.label_rom, t.patched ? "Base ROM" : "ROM", oracles_ui_rgb(LABEL));
     text(draw, st->row_label, &l.label_save, "Save", oracles_ui_rgb(LABEL));
 
@@ -165,9 +179,9 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
     text(draw, st->row_title, &l.rom_file, t.rom_file, oracles_ui_rgb(game->rom_file[0] ? TEXT : TEXT_NONE));
     text(draw, st->row_path, &l.rom_folder, t.rom_folder, oracles_ui_rgb(PATH));
     dot(draw, &l.rom_dot, tones.rom);
-    text(draw, st->row_status, &l.rom_status, t.rom_status, oracles_ui_rgb(tone_texts[tones.rom]));
-    text(draw, st->row_text, &l.rom_note, t.rom_note, oracles_ui_rgb(NOTE));
-    text(draw, st->row_text, &l.rom_hotkeys_note, t.rom_hotkeys_note, oracles_ui_rgb(NOTE));
+    wrapped(draw, st->row_status, &l.rom_status, oracles_ui_rgb(tone_texts[tones.rom]));
+    wrapped(draw, st->row_text, &l.rom_note, oracles_ui_rgb(NOTE));
+    wrapped(draw, st->row_text, &l.rom_hotkeys_note, oracles_ui_rgb(NOTE));
     const OraclesUiColor rom_button = row == ORACLES_ROW_ROM ? accent : normal;
     text(draw, st->row_button, &l.rom_button, "Choose ROM\xe2\x80\xa6", rom_button);
     text(draw, st->row_button, &l.rom_button_dot, oracles_ui_item_dot, rom_button);
@@ -191,6 +205,38 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
     text(draw, st->row_button, &l.save_button, "Open folder", save_button);
     text(draw, st->row_button, &l.save_button_dot, oracles_ui_item_dot, save_button);
 
+    if (t.european) {
+        /* European ROM: its file, folder and status; its buttons, the one left and right chose in the accent while the
+         * row is highlighted. */
+        text(draw, st->row_label, &l.label_eu, "European ROM", oracles_ui_rgb(LABEL));
+        text(draw, st->row_title, &l.eu_file, t.eu_file, oracles_ui_rgb(game->eu != ORACLES_ROM_NONE ? TEXT : TEXT_NONE));
+        text(draw, st->row_path, &l.eu_folder, t.eu_folder, oracles_ui_rgb(PATH));
+        dot(draw, &l.eu_dot, tones.eu);
+        text(draw, st->row_status, &l.eu_status, t.eu_status, oracles_ui_rgb(tone_texts[tones.eu]));
+        for (unsigned i = 0; i < t.eu_buttons; i++) {
+            const int chosen = t.eu_buttons == 1 || nav->eu_action == (int)i;
+            const OraclesUiColor color = row == ORACLES_ROW_EU_ROM && chosen ? accent : normal;
+            text(draw, st->row_button, &l.eu_buttons[i], t.eu_button_labels[i], color);
+            text(draw, st->row_button, &l.eu_button_dots[i], oracles_ui_item_dot, color);
+        }
+    }
+    if (t.languages) {
+        /* Language: each language the game has framed, the one chosen marked; the others keep their place. */
+        text(draw, st->row_label, &l.label_language, "Language", oracles_ui_rgba(LABEL, language_opacity));
+        for (int i = 0; i < ORACLES_PAGE_LANGUAGES; i++) {
+            if (!oracles_page_language_available(game, i)) continue;
+            const OraclesUiOptionLayout *o = &l.languages[i];
+            const int on = game->language == i || (i == 0 && !oracles_page_language(nav, game));
+            const int focused = row == ORACLES_ROW_LANGUAGE;
+            const OraclesUiColor frame = on ? (focused ? accent : oracles_ui_rgba(0xffffffu, FRAME_ON_OPACITY)) : oracles_ui_rgba(0xffffffu, FRAME_OFF_OPACITY);
+            const OraclesUiColor color = on ? (focused ? accent : oracles_ui_rgb(TEXT)) : oracles_ui_rgb(CHOICE_OFF);
+            oracles_ui_stroke_round_rect(draw, o->box.x, o->box.y, o->box.w, o->box.h, lk->choice_radius, lk->frame_width, oracles_ui_fade(frame, language_opacity));
+            text(draw, st->language, &o->name, oracles_page_language_names[i], oracles_ui_fade(color, language_opacity));
+        }
+        text(draw, st->row_text, &l.language_explanation, t.language_explanation, oracles_ui_rgba(NOTE, language_opacity));
+        text(draw, st->row_note, &l.language_note, t.language_note, oracles_ui_rgba(NOTE_ITALIC, language_opacity));
+    }
+
     const OraclesUiColor play = !game->usable ? oracles_ui_rgb(row == ORACLES_ROW_PLAY ? BUTTON_DISABLED_FOCUSED : BUTTON_DISABLED)
                                               : row == ORACLES_ROW_PLAY ? accent : normal;
     text(draw, st->row_text, &l.play_note, t.play_note, oracles_ui_rgb(NOTE));
@@ -200,7 +246,7 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
 
 static int inside(const OraclesUiBox *b, float x, float y) { return x >= b->x && x < b->x + b->w && y >= b->y && y < b->y + b->h; }
 
-int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y)
+int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y, int *option)
 {
     OraclesUiGameTexts t;
     char state[ORACLES_HOME_STATE_LENGTH];
@@ -208,6 +254,11 @@ int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y)
     game_texts(nav, &t, state, &tones);
     OraclesUiGameLayout l;
     oracles_ui_layout_game(nav->layout, &t, &l);
+    *option = -1;
+    /* European ROM's buttons, and the languages the game has: the others are not drawn. */
+    for (unsigned i = 0; t.european && i < t.eu_buttons; i++) if (inside(&l.eu_button_boxes[i], x, y)) { *option = (int)i; return ORACLES_ROW_EU_ROM; }
+    for (int i = 0; t.languages && i < ORACLES_PAGE_LANGUAGES; i++)
+        if (oracles_page_language_available(oracles_page_game_const(nav), i) && inside(&l.languages[i].box, x, y)) { *option = i; return ORACLES_ROW_LANGUAGE; }
     for (int r = 0; r < ORACLES_GAME_ROWS; r++) if (inside(&l.rows[r], x, y)) return r;   /* a row the page has not is empty */
     return -1;
 }

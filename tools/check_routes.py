@@ -22,7 +22,9 @@ view's 480x270 surface, --zoom-out; the synchronous one never runs
 the ghost into a wrong room either).
 options: extra harness flags, `-` for none (a route recorded with
 --continuous-transitions carries the option in its header, and the harness
-turns it on by itself); a --mods directory is relative to the repository.  expect: `;`-separated `key=value` or `key<=value`
+turns it on by itself); a --mods directory is relative to the repository; a
+row with --language and no --eu-rom gets the ROM directory as its --eu-rom,
+where the harness finds the European ROM by its SHA-1.  expect: `;`-separated `key=value` or `key<=value`
 over the harness summary (--summary), on top of the rules every row must
 satisfy (below); a rule prefixed with a core (`mgba:key<=value`) holds on that
 core only, a row of both holding each core's measure.  run_hash: the Enhanced run hash the row last produced, `-`
@@ -153,6 +155,22 @@ def route_header(path: Path) -> dict:
     return header
 
 
+def european_rom(game: str) -> str:
+    """The SHA-1 of the European ROM a game's languages come from: the one its table of exceptions pins
+    (config/language_exceptions_<game>.tsv, its `rom` row), which the extraction requires of the ROM it is given."""
+    with open(REPO / "config" / f"language_exceptions_{game}.tsv", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("rom\t"):
+                return line.split("\t")[1].strip()
+    sys.exit(f"config/language_exceptions_{game}.tsv pins no European ROM")
+
+
+# The European ROMs the rows in a language read their translations from, by the routes' folder: a fan game's routes
+# read the translations of its Oracle's European ROM.
+EU_ROMS = {"ages": european_rom("ages"), "seasons": european_rom("seasons")}
+EU_ROMS.update({"moonrise-regalia": EU_ROMS["ages"], "gifts-of-kinomi": EU_ROMS["ages"], "temple-of-seasons": EU_ROMS["seasons"]})
+
+
 def find_roms(rom_dir: Path) -> dict:
     """SHA-1 -> the harness's ROM arguments, for every ROM in the directory (not recursive) and every image
     a BPS patch there makes of one of them."""
@@ -222,13 +240,15 @@ def read_manifests(manifests: list, routes: Path) -> list:
     return rows
 
 
-def harness_options(options: list) -> list:
+def harness_options(options: list, rom_dir: Path) -> list:
     """The row's options as the harness takes them: a --mods directory resolved against the repository, the harness
-    running in the build directory."""
+    running in the build directory, and a language's European ROM looked for in the ROM directory."""
     out = list(options)
     for i in range(len(out) - 1):
         if out[i] == "--mods" and not Path(out[i + 1]).is_absolute():
             out[i + 1] = str(REPO / out[i + 1])
+    if "--language" in out and "--eu-rom" not in out:
+        out += ["--eu-rom", str(rom_dir)]
     return out
 
 
@@ -277,7 +297,7 @@ def check(rule: str, values: dict) -> str:
     return ""
 
 
-def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, work: Path, threaded_args: tuple = ()) -> dict:
+def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_dir: Path, work: Path, threaded_args: tuple = ()) -> dict:
     # A route's rows for one core and its rows for both may share a mode: the line tells them apart.
     name = f"{row['label']}-{row['mode']}" + (f"-{row['line']}" if row["options"] or row["core"] != "-" else "") + ("" if core == "sameboy" else f"-{core}")
     w = work / name
@@ -291,7 +311,7 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, work:
         game = Path(row["route"]).parent.name
         return {"row": row, "name": name, "error": f"no ROM of {game} with SHA-1 {header.get('rom_sha1', '?')} in the ROM directory"
                 " (a fan game replays from its base ROM and its BPS patch placed there, or from its patched image)"}
-    options = harness_options(row["options"]) + ["--core", core]
+    options = harness_options(row["options"], rom_dir) + ["--core", core]
     summary = w / "summary.txt"
     if summary.exists():
         summary.unlink()
@@ -317,7 +337,7 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, work:
     if compare_cores and values:
         reference = w / "positions-sameboy.tsv"
         with open(w / "harness-sameboy.log", "w") as log:
-            subprocess.run([str(harness)] + rom + ["--route", str(route_path), "--positions", str(reference)] + harness_options(row["options"])
+            subprocess.run([str(harness)] + rom + ["--route", str(route_path), "--positions", str(reference)] + harness_options(row["options"], rom_dir)
                            + ["--core", "sameboy"], stdout=log, stderr=subprocess.STDOUT)
         if (w / "positions.tsv").exists() and reference.exists():
             same, parted = rooms_in_common(str(reference), str(w / "positions.tsv"))
@@ -425,12 +445,23 @@ def main() -> int:
     if args.only:
         rows = [r for r in rows if args.only in r["route"] or args.only in f"{r['label']}-{r['mode']}" or args.only in r["mode"]
                 or (args.only.startswith("--") and args.only in " ".join(r["options"]))]
+    # A row in a language replays with the game's European ROM, which a ROM directory may not hold (the CI's never does).
+    for r in rows:
+        if "--language" in r["options"] and Path(r["route"]).parent.name not in EU_ROMS:
+            sys.exit(f"{r['manifest']}:{r['line']}: a row in a language, but no European ROM is known for the routes of "
+                     f"{Path(r['route']).parent.name} (EU_ROMS)")
+    missing = [r for r in rows if "--language" in r["options"] and EU_ROMS[Path(r["route"]).parent.name] not in roms]
+    if missing:
+        print(f"check_routes: {len(missing)} row(s) in a language skipped: no European ROM of their game in {rom_dir}")
+        rows = [r for r in rows if r not in missing]
+        if not rows:
+            return 77
     if not rows:
         print("check_routes: no row selected")
         return 2
     args.work.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        results = list(pool.map(lambda r: run_row(r, args.harness, args.core, args.routes, roms, args.work, tuple(shlex.split(args.threaded_args))), rows))
+        results = list(pool.map(lambda r: run_row(r, args.harness, args.core, args.routes, roms, rom_dir, args.work, tuple(shlex.split(args.threaded_args))), rows))
     failed = 0
     changed = {}
     for res in results:

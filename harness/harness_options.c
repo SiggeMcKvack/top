@@ -19,6 +19,7 @@ int harness_usage(void)
                     "                       [--zoom-out]   (with --enhanced-check: the drawn-back view's 480x270 surface, 480x360 with --aspect 4:3, as the launcher's --zoom-out; --view far)\n"
                     "                       [--view near|medium|far] [--aspect 16:9|4:3]   (with --enhanced-check: the view's level and the screen's shape, docs/PLAYING.md)\n"
                     "                       [--mods DIR]... [--mod-trace FILE]   (the mods the route was recorded with, and their state after every frame, to --compare with the session's ROUTE.mod.tsv)\n"
+                    "                       [--language en|en-eu|fr|de|it|es [--eu-rom FILE|DIR] [--language-pack FILE]]   (the European ROM's English or a translation, from that ROM or its pack, served at getTextAddress; a fan game's too, with --patch)\n"
                     "                       (--enhanced-paced holds each frame to the Game Boy's period by a busy wait: a core a replay, as in play)\n"
                     "                       [--continuous-transitions]   (the gameplay policy of the continuous transitions, both games; on by itself for a route recorded with it)\n"
                     "                       [--continuous-swim]   (the same with Link swimming at the surface too, implies --continuous-transitions; on by itself for a route recorded with it)\n"
@@ -73,6 +74,9 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         else if (!strcmp(argv[i], "--ghost-check") && i + 1 < argc) o->ghost_dir = argv[++i];
         else if (!strcmp(argv[i], "--mods") && i + 1 < argc && o->mods_count < 8u) o->mods_dirs[o->mods_count++] = argv[++i];
         else if (!strcmp(argv[i], "--mod-trace") && i + 1 < argc) o->mod_trace_path = argv[++i];
+        else if (!strcmp(argv[i], "--language") && i + 1 < argc) o->language = argv[++i];
+        else if (!strcmp(argv[i], "--eu-rom") && i + 1 < argc) o->eu_rom_path = argv[++i];
+        else if (!strcmp(argv[i], "--language-pack") && i + 1 < argc) o->language_pack = argv[++i];
         else if (!strcmp(argv[i], "--ghost-lead") && i + 1 < argc) o->ghost_lead = (unsigned)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(argv[i], "--ghost-threaded")) o->ghost_threaded = 1;
         else if (!strcmp(argv[i], "--ghost-trace")) o->ghost_trace = 1;

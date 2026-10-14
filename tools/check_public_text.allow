@@ -4,6 +4,13 @@ engine/mods/mod_draw.c	\{ "[^"]+", 0x[0-9a-f]{2} \}
 # The same glyphs, listed in the documents that say which characters the game's font draws.
 docs/MODDING.md	ÀÂÄÆÇÈÉÊËÎÏÑÖŒÙÛÜàâäæçèéêëîïñöœùûü
 docs/ROM_DATA_FORMATS.md	ÀÂÄÆÇÈÉÊËÎÏÑÖŒÙÛÜàâäæçèéêëîïñöœùûü
+docs/ROM_DATA_FORMATS.md	^\| `\$[89a-d]x` \|
+# The port's own translations, in French, German, Italian and Spanish, and the test of the syntax they are written in.
+config/language_own.tsv	^[a-z-]+\t(fr|de|it|es)\t
+tests/test_language.c	Grüße
+# The words of the official translations the port corrects, and the test that each correction is served.
+config/language_corrections.tsv	^(ages|seasons)\t
+tests/test_language_roms.c	^    \{ (AGES|SEASONS), (FR|DE|IT|ES), 0x
 # A mod's text with an accented letter, the case the glyph table serves.
 tests/test_mods.c	Ô rôdeur
 # The curve's name.

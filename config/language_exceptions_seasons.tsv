@@ -1,0 +1,16 @@
+# The texts of Seasons whose translation is not the European text of the same identifier (engine/language/language.h).
+# Every other US text takes the European text of its identifier, when its commands are the US text's.
+# The first row pins the European ROM the table was measured on, by its SHA-1. A row then: the texts (TX_GGII, four
+# hexadecimal digits each, or a range first-last, space-separated), the languages (en-eu, fr, de, it, es,
+# comma-separated, or all: the five of the European ROM), the source of their translation, and why. A source is one of:
+#   eu:TX_GGII   the European text of that identifier: the European ROM moved the text there
+#   rule:NAME    the European text of the same identifier, adapted to the US code by a rule (language_rules.c)
+#   own:KEY      the port's own translation, unofficial (config/language_own.tsv)
+#   english      the US English, kept
+# texts	languages	source	why
+rom	360b9408e569ba826212eac1ebea1b09573cb48c
+0400 2d00	fr,de,it,es	eu:TX_0900	empty texts of groups the European ROM leaves out of four languages; TX_0900 is empty in all five
+2e0d	all	eu:TX_2e0d	rewritten in the European ROM, as TX_2c00 is, which every language serves: the two agree
+0034	en-eu,de,it,es	rule:number-as-more	the Ring Box: the European text shows a count of rings (\num1) the US code does not set
+0b4d 0b4e 0b50	fr,de,it,es	rule:lead	the box placed (\pos) after a sound, where the US code reads it first; the European English is the US text
+0064	de	rule:lead	the box placed (\pos) at the start, where the US text has none

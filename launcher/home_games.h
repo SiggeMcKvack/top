@@ -6,8 +6,10 @@
  * patch; a ROM or a patch chosen in the
  * system's dialog, or dropped on the window, identified by engine/rom and
  * filed under its game, or refused: then shown under its game with the
- * reason and not kept; the folder of its save; and the session Start game or
- * Play plays in the launcher's window. */
+ * reason and not kept; an Oracle's European ROM, chosen or dropped, kept
+ * and recognized by its SHA-1, and the language its game plays in; the
+ * folder of its save; and the session Start game or Play plays in the
+ * launcher's window, in that language. */
 #ifndef ORACLES_LAUNCHER_HOME_GAMES_H
 #define ORACLES_LAUNCHER_HOME_GAMES_H
 
@@ -17,12 +19,24 @@
 
 #include <time.h>
 
+/* What a file was found to be, with the file as it was then: its path (empty: nothing found yet), size and
+ * modification time. */
+typedef struct OraclesHomeFound {
+    char path[ORACLES_SETTINGS_PATH_LENGTH];
+    long long size, modified;
+    OraclesRomState state;
+    char reason[ORACLES_HOME_TEXT_LENGTH];
+} OraclesHomeFound;
+
 typedef struct OraclesHomeGames {
     oracles_settings *settings;
     /* The command line's session options: an option given there wins over the pages' choices. */
     const OraclesSessionOptions *options;
     int window_from_command_line;    /* --scale or --fullscreen given: Display's window does not apply */
     int route_recorded;              /* --record given to the home screen: its first session wrote the route */
+    /* The fan games' languages (nav->fan_languages): their Language row, their language read from settings.txt, its
+     * share counted and the game started in it.  The launcher leaves them off: a fan game starts in English. */
+    int fan_languages;
     char hotkeys_failed[ORACLES_SETTINGS_GAMES][ORACLES_SETTINGS_PATH_LENGTH];   /* the ROM the item hotkeys could not attach to */
     /* A ROM chosen or dropped for a game and refused: shown on the game's page with the reason (the
      * layout reference's frame 1j), and not kept in settings.txt; a ROM accepted for the game replaces it. */
@@ -35,6 +49,9 @@ typedef struct OraclesHomeGames {
         char path[ORACLES_SETTINGS_PATH_LENGTH];
         char reason[ORACLES_HOME_TEXT_LENGTH];
     } refused_patch[ORACLES_HOME_FAN_GAMES];
+    /* What each Oracle's European ROM was found to be, kept while the file is the same: a refresh, at each return to
+     * the home screen and each pause, does not read and hash it again. */
+    OraclesHomeFound eu_found[ORACLES_SETTINGS_GAMES];
 } OraclesHomeGames;
 
 /* The host of the home screen for these games. */
