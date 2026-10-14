@@ -3,11 +3,12 @@
  * a file without them keeps the defaults, a value the launcher does not know
  * leaves its key alone, and names that were never the launcher's (zoom-out as
  * a profile, per-game profile and transitions keys) are neither read nor
- * written. */
+ * written; menu_pad= is taken as the session plays it. */
 #include "home_choices.h"
 #include "session.h"
 #include "settings.h"
 #include "core.h"
+#include "ui_controls_nav.h"
 #include "ui_page_nav.h"
 
 #include <stdio.h>
@@ -43,6 +44,38 @@ static int file_has_line(const char *path, const char *wanted)
     while (f && fgets(line, sizeof line, f)) found |= !strcmp(line, wanted);
     if (f) fclose(f);
     return found;
+}
+
+/* menu_pad= `name` with pad_select= `select` and pad_hotkey1= `hotkey`, read as every screen takes it: the menu's
+ * button that remains, and its first game's toast. */
+static int menu_pad_is(const char *name, const char *select, const char *hotkey, const char *wanted, const char *toast)
+{
+    oracles_settings s;
+    oracles_settings_defaults(&s);
+    snprintf(s.menu_pad, sizeof s.menu_pad, "%s", name);
+    snprintf(s.pad_names[2], sizeof s.pad_names[2], "%s", select);
+    snprintf(s.hotkey_pad_names[0], sizeof s.hotkey_pad_names[0], "%s", hotkey);
+    oracles_home_resolve_menu_pad(&s);
+    OraclesHomeControls controls;
+    oracles_home_inspect_controls(&s, &controls);
+    char text[64];
+    oracles_controls_menu_toast(s.menu_pad, text, sizeof text);
+    return !strcmp(s.menu_pad, wanted) && !strcmp(controls.menu_pad, wanted) && !strcmp(text, toast);
+}
+
+/* The menu's button is the one the session plays with: a 1.1.0 player's left stick's click, which an item hotkey slot
+ * or the game's Select may have, leaves the menu to Guide alone, without a toast promising L3; an unknown name is the
+ * default, a trigger stays. */
+static void menu_pad_resolved(void)
+{
+    CHECK(menu_pad_is("leftstick", "back", "x", "leftstick", "Press L3 for the menu."));
+    CHECK(menu_pad_is("righttrigger", "back", "x", "righttrigger", "Press RT for the menu."));
+    CHECK(menu_pad_is("leftstick", "back", "leftstick", "", ""));
+    CHECK(menu_pad_is("leftstick", "leftstick", "x", "", ""));
+    CHECK(menu_pad_is("nosuchbutton", "back", "x", "leftstick", "Press L3 for the menu."));
+    CHECK(menu_pad_is("nosuchbutton", "back", "leftstick", "", ""));
+    CHECK(menu_pad_is("dpup", "back", "x", "", "") && menu_pad_is("guide", "back", "x", "", "") && menu_pad_is("a", "back", "x", "", ""));
+    CHECK(menu_pad_is("", "back", "x", "", ""));
 }
 
 /* Display's choices written back: from the pause, the running game's core and workers are not; a margin
@@ -108,6 +141,8 @@ int main(int argc, char **argv)
     CHECK(written.transitions && written.item_hotkeys[0] == ORACLES_HOTKEYS_OFF && written.item_hotkeys[1] == ORACLES_HOTKEYS_OFF);
     CHECK(!written.swim_hold);   /* the mermaid suit as the game plays it */
     CHECK(!strcmp(written.vsync, "auto"));
+    CHECK(!strcmp(written.menu_pad, "leftstick"));   /* the left stick's click opens the pause menu */
+    CHECK(!written.menu_toast_shown);   /* the toast that names it, due over the first game started with a controller */
 
     /* Paths as players have them: spaces, an equals sign, backslashes, and as long as the field holds. */
     snprintf(written.path, sizeof written.path, "%s", path);
@@ -139,6 +174,8 @@ int main(int argc, char **argv)
     written.key_names[5][0] = 0;
     snprintf(written.pad_names[0], sizeof written.pad_names[0], "x");
     written.hotkey_pad_names[0][0] = 0;
+    snprintf(written.menu_pad, sizeof written.menu_pad, "righttrigger");
+    written.menu_toast_shown = 1;
     snprintf(written.hotkey_bind_b, sizeof written.hotkey_bind_b, "Right Shift");
     written.transitions = 0;
     written.swim_hold = 1;
@@ -172,6 +209,7 @@ int main(int argc, char **argv)
     CHECK(read_back.camera == 1);   /* the keys around them still read */
     CHECK(!strcmp(read_back.key_names[0], "D") && read_back.key_names[5][0] == 0 && !strcmp(read_back.key_names[1], "Left"));
     CHECK(!strcmp(read_back.pad_names[0], "x") && read_back.hotkey_pad_names[0][0] == 0 && !strcmp(read_back.hotkey_pad_names[1], "y"));
+    CHECK(!strcmp(read_back.menu_pad, "righttrigger") && read_back.menu_toast_shown);
     CHECK(!strcmp(read_back.hotkey_bind_b, "Right Shift") && !strcmp(read_back.hotkey_bind_a, "Left Ctrl"));
     CHECK(read_back.transitions == 0 && read_back.swim_hold == 1);
     CHECK(read_back.item_hotkeys[ORACLES_SETTINGS_AGES] == ORACLES_HOTKEYS_EQUIP && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_USE);
@@ -215,9 +253,11 @@ int main(int argc, char **argv)
         if (!strcmp(line, "language_temple=fr\n")) seen |= 32768;
         if (!strcmp(line, "language_kinomi=en-eu\n")) seen |= 65536;
         if (!strcmp(line, "swim_hold=on\n")) seen |= 131072;
+        if (!strcmp(line, "menu_pad=righttrigger\n")) seen |= 262144;
+        if (!strcmp(line, "menu_toast=shown\n")) seen |= 524288;
     }
     if (f) fclose(f);
-    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072));   /* and not 128: no per-game profile or transitions */
+    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072 | 262144 | 524288));   /* and not 128: no per-game profile or transitions */
 
     /* A file of an earlier version, without the keys: the defaults; the keys it has hold, colour correction off. */
     write_text(path, "colour_correction=0\nvsync=off\n");
@@ -229,6 +269,12 @@ int main(int argc, char **argv)
     CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0);
     CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
+    CHECK(!strcmp(read_back.menu_pad, "leftstick") && !read_back.menu_toast_shown);
+    /* An empty menu_pad= is none: Guide alone. */
+    write_text(path, "menu_pad=\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.menu_pad[0] == 0);
 
     /* The mods folder beside settings.txt, whichever separator its path uses; none without a settings directory. */
     oracles_settings mods_at;
@@ -648,6 +694,7 @@ int main(int argc, char **argv)
     written.view = 0;
     CHECK(!oracles_settings_lighter(&written, &lighter, &lighter_view) && !oracles_settings_slow_hint(&written, 1, 6000, 300));
 
+    menu_pad_resolved();
     display_stored();
     pause_changes();
 

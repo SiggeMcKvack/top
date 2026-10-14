@@ -49,10 +49,11 @@ typedef struct OraclesHomeHost {
      * it too), when the page opens; the folder in the system's file manager, made when it is not there. */
     void (*read_mods)(void *opaque, OraclesHomeNav *nav);
     void (*open_mods)(void *opaque, char *message, size_t capacity);
-    /* Plays the game in the launcher's window until the player leaves it, the pause menu drawn with `draw`.  Returns
+    /* Plays the game in the launcher's window until the player leaves it, the pause menu drawn with `draw`; `from_pad`,
+     * the last input before it came from a controller.  Returns
      * 1 when the window was closed meanwhile (the launcher then ends too); *message is what to show, empty when all
      * went well; *slow, 1 when the game ran slowly and the home screen suggests something lighter (nav->slow). */
-    int (*start)(void *opaque, OraclesHomeCommand game, struct SDL_Window *window, struct SDL_Renderer *renderer,
+    int (*start)(void *opaque, OraclesHomeCommand game, int from_pad, struct SDL_Window *window, struct SDL_Renderer *renderer,
                  OraclesUiDraw *draw, char *message, size_t capacity, int *slow);
 } OraclesHomeHost;
 

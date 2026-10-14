@@ -227,6 +227,7 @@ typedef struct OraclesHomeControls {
     char pads[ORACLES_HOME_PAD_BUTTONS][ORACLES_HOME_NAME_LENGTH];
     char hotkey_keys[ORACLES_HOME_HOTKEY_ROWS][ORACLES_HOME_NAME_LENGTH];
     char hotkey_pads[ORACLES_HOME_SLOTS][ORACLES_HOME_NAME_LENGTH];
+    char menu_pad[ORACLES_HOME_NAME_LENGTH];   /* the controller's Escape: the pause menu in a game, Back here (settings.txt's menu_pad=) */
     char items[2][ORACLES_HOME_SLOTS][ORACLES_HOME_NAME_LENGTH];   /* the item in each slot, empty when none */
     int swim_hold;               /* Swimming, for every game: 0 Tap, 1 Hold (settings.txt's swim_hold=) */
     int column, row;             /* the highlighted cell (ui_controls_nav.h) */

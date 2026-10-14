@@ -244,6 +244,8 @@ void oracles_ui_wrap_pretty(const OraclesUiTextStyle *style, const char *text, f
 void oracles_ui_fit(const OraclesUiTextStyle *style, const char *text, float width, char *out, size_t capacity);
 /* `length` bytes of `text` into `out`, shortened in their middle with an ellipsis when they do not hold in it. */
 void oracles_ui_copy_middle(char *out, size_t capacity, const char *text, size_t length);
+/* `text` into `out`, its end cut where it does not hold, on a character's boundary. */
+void oracles_ui_copy_whole(char *out, size_t capacity, const char *text);
 /* `text` after the text `out` holds, a space between them when it holds one, shortened in its middle with an ellipsis
  * when it does not hold in the rest of `out`: whole characters, its end kept. */
 void oracles_ui_append_middle(char *out, size_t capacity, const char *text);

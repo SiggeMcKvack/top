@@ -9,8 +9,8 @@
 void oracles_ui_controls_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent);
 
 /* What lies under a point: 1 with a cell's column and row (Reset: row 8; Swimming: row 9, and its Tap or Hold in
- * *option, else -1; the Item hotkeys line: row -1, and its Off or On in *option; 4:3's tabs: row -2, the tab in
- * *option), 0 for nothing. */
+ * *option, else -1; Menu's controller cell: row 10, column 2, 4:3's 0; the Item hotkeys line: row -1, and its Off or On
+ * in *option; 4:3's tabs: row -2, the tab in *option), 0 for nothing. */
 int oracles_ui_controls_hit(const OraclesHomeNav *nav, float x, float y, int *column, int *row, int *option);
 
 #endif

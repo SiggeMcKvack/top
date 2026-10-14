@@ -222,6 +222,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->camera = 2;
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) copy_name(s->key_names[i], oracles_controls_default_keys[i]);
     for (unsigned i = 0; i < 4; i++) copy_name(s->pad_names[i], oracles_controls_default_pads[i]);
+    copy_name(s->menu_pad, oracles_controls_default_menu_pad);
     for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) {
         copy_name(s->hotkey_key_names[i], oracles_controls_default_hotkey_keys[i]);
         copy_name(s->hotkey_pad_names[i], oracles_controls_default_hotkey_pads[i]);
@@ -258,10 +259,11 @@ void oracles_settings_defaults(oracles_settings *s)
     s->scaling_fill = 0;   /* sharp, Android included */
     s->screen_margin = ORACLES_SCREEN_MARGIN_OFF;
     s->quality_hint = -1;
+    s->menu_toast_shown = 0;
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -291,6 +293,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "hud")) {
         if (!strcmp(value, "original") || !strcmp(value, "full")) s->hud_full = !strcmp(value, "full");
+        return 1;
+    }
+    if (!strcmp(name, "menu_toast")) {
+        if (!strcmp(value, "due") || !strcmp(value, "shown")) s->menu_toast_shown = !strcmp(value, "shown");
         return 1;
     }
     if (!strcmp(name, "ghosts")) {
@@ -398,6 +404,7 @@ void oracles_settings_load(oracles_settings *s)
         if (oracles_hotkey_line_parse(name, value, &game, &n, &slot)) { s->hotkeys[game][n] = slot; continue; }
         for (unsigned i = 0; i < ORACLES_BINDINGS; i++) load_name(name, value, "key_", oracles_sdl_binding_names[i], s->key_names[i]);
         for (unsigned i = 0; i < 4; i++) load_name(name, value, "pad_", pad_setting_names[i], s->pad_names[i]);
+        load_name(name, value, "menu_", "pad", s->menu_pad);
         for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) {
             const char digit[2] = { (char)('1' + i), 0 };
             load_name(name, value, "key_hotkey", digit, s->hotkey_key_names[i]);
@@ -485,6 +492,11 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "launcher_window=%dx%d\n", s->launcher_width, s->launcher_height);
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) fprintf(f, "key_%s=%s\n", oracles_sdl_binding_names[i], s->key_names[i]);
     for (unsigned i = 0; i < 4; i++) fprintf(f, "pad_%s=%s\n", pad_setting_names[i], s->pad_names[i]);
+    fprintf(f, "# The controller's Escape in a game, the pause menu, as Guide is too: a button, or lefttrigger or righttrigger;\n"
+               "# one the game's buttons or the item hotkeys have stays theirs; empty: Guide alone.\n");
+    fprintf(f, "menu_pad=%s\n", s->menu_pad);
+    fprintf(f, "# The toast that names that button, over the first game started with a controller: due, or shown already.\n");
+    fprintf(f, "menu_toast=%s\n", s->menu_toast_shown ? "shown" : "due");
     fprintf(f, "# Item hotkeys (--item-hotkeys=use|equip, for the run that asks): a key per slot; held with the bind keys it takes the item of B or of A,\n"
                "# and in the inventory it takes the item under the cursor. A slot is <b|a>:<item>:<variant or -->, in the ROM's own identifiers.\n");
     for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) fprintf(f, "key_hotkey%u=%s\n", i + 1u, s->hotkey_key_names[i]);

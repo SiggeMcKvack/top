@@ -65,6 +65,8 @@ typedef struct oracles_settings {
     int camera;                   /* the Enhanced camera profile: 1 or 2 */
     char key_names[ORACLES_BINDINGS][ORACLES_SETTINGS_NAME_LENGTH];
     char pad_names[4][ORACLES_SETTINGS_NAME_LENGTH];
+    char menu_pad[ORACLES_SETTINGS_NAME_LENGTH];   /* menu_pad=: the controller's Escape in a game, Guide's too (leftstick by default; a
+                                                    * trigger, lefttrigger or righttrigger, too; empty: Guide alone) */
     /* Item hotkeys: the key and the button of each slot, the two keys that bind from a button, and the slots of each
      * game (0 ages, 1 seasons).  With --rom the mode holds for the run that asks for it (deliberately:
      * a command line speaks for its own run); the home screen remembers each game's (item_hotkeys_<game>=off|use, Controls' Off or On; equip,
@@ -119,6 +121,8 @@ typedef struct oracles_settings {
     int screen_margin;            /* an OraclesScreenMargin: screen_margin=off|auto|small|large, the band of the screen the game, the
                                    * touch controls and the launcher's pages keep to (oracles_touch_band); off, the whole screen, by
                                    * default; a value the launcher does not know is off */
+    int menu_toast_shown;         /* menu_toast=due|shown: the toast over the first game started with a controller, which names the
+                                   * button that opens the menu, was shown (once, whatever the game); due by default */
     int quality_hint;             /* quality_hint=low|medium|high|max|custom: the quality a game that ran slowly was last suggested to leave,
                                    * -1 none: the suggestion is made once a quality, until the view, the core or the workers change */
     int first_run;                /* no settings.txt was read: the first opening, which takes the device's profile */

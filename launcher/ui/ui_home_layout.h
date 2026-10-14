@@ -65,7 +65,7 @@ extern const OraclesUiTextStyle oracles_ui_hint_key, oracles_ui_hint_label;
 extern const OraclesUiTextStyle oracles_ui_version, oracles_ui_toast;
 extern const OraclesUiTextStyle oracles_ui_tab_4_3, oracles_ui_hero_over_4_3, oracles_ui_hero_title_4_3, oracles_ui_hero_state_4_3;
 extern const OraclesUiTextStyle oracles_ui_item_note_4_3, oracles_ui_item_label_4_3, oracles_ui_hint_key_4_3, oracles_ui_hint_label_4_3;
-extern const OraclesUiTextStyle oracles_ui_version_4_3, oracles_ui_toast_4_3;
+extern const OraclesUiTextStyle oracles_ui_version_4_3, oracles_ui_toast_4_3, oracles_ui_pad_toast_4_3;
 extern const OraclesUiTextStyle oracles_ui_slow_path, oracles_ui_slow_path_4_3;
 
 /* The styles a layout draws the home screen's pieces in. */
@@ -73,6 +73,7 @@ typedef struct OraclesUiHomeStyles {
     const OraclesUiTextStyle *hero_over, *hero_title, *hero_state, *item_note, *item_label, *hint_key, *hint_label, *version, *toast;
     const OraclesUiTextStyle *tab;   /* the games' tabs: 4:3's only, NULL in 16:9 */
     const OraclesUiTextStyle *slow_path;   /* the slow game's toast: its text in `toast`'s style, the row it leads to in this one */
+    const OraclesUiTextStyle *pad_toast;   /* the first game's with a controller, over the game */
 } OraclesUiHomeStyles;
 const OraclesUiHomeStyles *oracles_ui_home_styles(OraclesUiLayout layout);
 
@@ -89,6 +90,8 @@ void oracles_ui_layout_menu(OraclesUiLayout layout, const char *const *notes, co
 void oracles_ui_layout_hints(OraclesUiLayout layout, const OraclesHomeHint *hints, unsigned count, OraclesUiHintLayout *out);
 void oracles_ui_layout_version(OraclesUiLayout layout, const char *text, OraclesUiLine *out);
 void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);
+/* Over the first game started with a controller, at the top, centred: "Press L3 for the menu." */
+void oracles_ui_layout_pad_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);
 /* The slow game's toast (oracles_home_slow_text): its text and the row it leads to ("Display › Quality"). */
 void oracles_ui_layout_slow(OraclesUiLayout layout, const char *text, const char *path, OraclesUiSlowLayout *out);
 

@@ -214,6 +214,18 @@ void oracles_ui_copy_middle(char *out, size_t capacity, const char *text, size_t
     cut_middle(text, length, length + 4 - capacity, out);
 }
 
+void oracles_ui_copy_whole(char *out, size_t capacity, const char *text)
+{
+    if (!capacity) return;
+    size_t length = strlen(text);
+    if (length >= capacity) {
+        length = capacity - 1;
+        while (length > 0 && ((unsigned char)text[length] & 0xc0u) == 0x80u) length--;
+    }
+    memcpy(out, text, length);
+    out[length] = 0;
+}
+
 void oracles_ui_append_middle(char *out, size_t capacity, const char *text)
 {
     size_t used = strnlen(out, capacity);

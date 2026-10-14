@@ -5,7 +5,8 @@
  * Buttons, Hotkeys and In game (the prompt in their place during a
  * capture), over the shown tab alone: the game buttons' grid and Reset, the
  * Item hotkeys line and its grid, or the fixed shortcuts as a list and
- * Swimming; no panels, no slots' note. */
+ * Swimming; no panels, no slots' note.  The fixed shortcuts begin with Menu:
+ * Esc, then the cell of the controller's button that opens it too. */
 #ifndef ORACLES_UI_CONTROLS_LAYOUT_H
 #define ORACLES_UI_CONTROLS_LAYOUT_H
 
@@ -36,8 +37,12 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiLine slots_note;
     OraclesUiLine shortcuts_label;
     const char *shortcuts_text;                 /* the label's: "In game", 4:3's "Fixed keys in game" */
+    /* The fixed keys, framed, and their meanings, F2 to F11 then Esc, whose Menu comes first, after Esc's frame and
+     * the cell of Menu's controller button (its box, the pointer's target, and its text). */
     OraclesUiBox shortcut_keys[6];
     OraclesUiLine shortcut_key_texts[6], shortcut_labels[6];
+    OraclesUiBox menu_pad;
+    OraclesUiLine menu_pad_text;
     /* 4:3: each tab's box (the pointer's target), its label, and the line along its bottom, zero during a capture;
      * zero in 16:9, and the pieces of the tabs not shown.  Under the Item hotkeys' text, a fan game's line that its
      * hotkeys stay off. */
@@ -62,6 +67,9 @@ extern const OraclesUiTextStyle oracles_ui_controls_mode_title, oracles_ui_contr
 /* 4:3's, larger for a 640x480 screen: the cells' 32 px, the d-pad's 27. */
 extern const OraclesUiTextStyle oracles_ui_controls_title_4_3, oracles_ui_controls_heading_4_3, oracles_ui_controls_cell_4_3;
 extern const OraclesUiTextStyle oracles_ui_controls_cell_locked_4_3, oracles_ui_controls_cell_waiting_4_3, oracles_ui_controls_shortcut_key_4_3;
+/* Menu's controller cell, smaller than the grids' (20 px in 16:9, 30 in 4:3), italic while it waits. */
+extern const OraclesUiTextStyle oracles_ui_controls_menu_cell, oracles_ui_controls_menu_cell_waiting;
+extern const OraclesUiTextStyle oracles_ui_controls_menu_cell_4_3, oracles_ui_controls_menu_cell_waiting_4_3;
 extern const char oracles_ui_controls_mode_text[], oracles_ui_controls_mode_note[], oracles_ui_controls_slots[];
 extern const char *const oracles_ui_controls_mode_choices[2];
 extern const char oracles_ui_controls_swim_text[], oracles_ui_controls_swim_fan[];
@@ -71,6 +79,7 @@ extern const char *const oracles_ui_controls_swim_choices[2];   /* "Tap", "Hold"
 typedef struct OraclesUiControlsStyles {
     const OraclesUiTextStyle *title, *prompt, *heading, *name, *cell, *cell_locked, *cell_waiting, *item, *item_empty, *slots_note;
     const OraclesUiTextStyle *shortcut_key, *shortcut_label, *reset, *mode_title, *mode_text, *note, *chip, *tab;
+    const OraclesUiTextStyle *menu_cell, *menu_cell_waiting;
 } OraclesUiControlsStyles;
 const OraclesUiControlsStyles *oracles_ui_controls_styles(OraclesUiLayout layout);
 

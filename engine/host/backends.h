@@ -36,17 +36,26 @@ typedef struct oracles_sdl_options {
     const char *hotkey_key_names[ORACLES_SDL_HOTKEY_SLOTS];
     const char *hotkey_pad_names[ORACLES_SDL_HOTKEY_SLOTS];
     const char *hotkey_bind_b, *hotkey_bind_a;
+    /* The controller button, or trigger (oracles_sdl_menu_input), that opens the pause menu, as Guide does too, and
+     * does nothing without one (--rom): NULL keeps the default (oracles_sdl_default_menu_pad_name), an
+     * empty name leaves Guide alone.  A button the game's buttons, the d-pad or a hotkey slot already have stays theirs. */
+    const char *menu_pad_name;
     /* Escape asks for the pause menu (ORACLES_HOST_EVENT_PAUSE) instead of ending the session: a game the home
      * screen started.  With --rom Escape still ends it. */
     int pause_menu;
     int touch_controls;   /* the game's buttons on a touch screen: always on Android, where the tests ask elsewhere */
     int fill;             /* Scaling's Fill: in fullscreen the image fills the screen in its proportions; a window keeps whole scales */
     int screen_margin;    /* screen_margin=, an OraclesScreenMargin: the band of the screen the image and the touch controls keep to */
+    /* Drawn over each game frame before it is presented, while it returns 1 (the toast over the first game started with
+     * a controller): NULL, nothing. */
+    int (*overlay)(void *opaque, struct SDL_Renderer *renderer);
+    void *overlay_opaque;
 } oracles_sdl_options;
 
 /* Default names, in the order above, for the settings file. */
 extern const char *const oracles_sdl_default_key_names[ORACLES_BINDINGS];
 extern const char *const oracles_sdl_default_pad_names[4];
+extern const char *const oracles_sdl_default_menu_pad_name;
 extern const char *const oracles_sdl_binding_names[ORACLES_BINDINGS];
 
 /* Commands the SDL backend emits as ORACLES_HOST_EVENT_COMMAND. */
@@ -101,6 +110,20 @@ void oracles_sdl_pads_event(OraclesSdlPads *pads, const union SDL_Event *event);
 void oracles_sdl_pads_close(OraclesSdlPads *pads);
 /* "N open: name, name" for a report. */
 void oracles_sdl_pads_describe(const OraclesSdlPads *pads, char *out, size_t capacity);
+/* The menu's controller input as settings.txt names it (menu_pad=): an SDL_GamepadButton in *button, or a trigger,
+ * "lefttrigger" or "righttrigger", its SDL_GamepadAxis in *axis, the other invalid; both for an empty name.  0 for a
+ * name that is neither. */
+int oracles_sdl_menu_input(const char *name, int *button, int *axis);
+/* A trigger read as a button, at its axis' `value`: down past half its travel, up below a quarter, *held following;
+ * 1 when this value presses it. */
+int oracles_sdl_trigger_pressed(int value, int *held);
+/* The trigger `axis` (SDL_GAMEPAD_AXIS_INVALID: none) read as one button over every open controller: an axis event's
+ * value, or another controller's as far down, as oracles_sdl_trigger_pressed reads it.  1 when this event presses it;
+ * a controller letting go while another still holds it lets nothing go. */
+int oracles_sdl_trigger_moved(const union SDL_Event *event, int axis, int *held);
+/* Whether trigger `axis` (SDL_GAMEPAD_AXIS_INVALID: none) of an open controller is past a quarter of its travel now:
+ * where *held starts after a pause or a game, whose moves the next screen did not see. */
+int oracles_sdl_trigger_held(int axis);
 /* The SDL_GamepadButton of a button event as settings.txt names it: a face button labelled A, B, X or Y is that
  * letter's, as SDL 2 had it, whatever its place (a Nintendo controller's A is on the right). */
 int oracles_sdl_pad_button(const union SDL_Event *event);

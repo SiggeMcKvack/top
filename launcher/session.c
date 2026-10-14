@@ -364,10 +364,14 @@ static void window_options(session *s, const OraclesSessionOptions *o)
 #endif
     }
     s->sdl.pause_menu = s->pause != NULL && !o->no_window;
+    /* Over the first frames, the pause's toast when one is due (oracles_pause_toast); dropped at once when none is. */
+    s->sdl.overlay = s->sdl.pause_menu ? oracles_pause_overlay : NULL;
+    s->sdl.overlay_opaque = s->pause;
     s->sdl.fill = prefs->scaling_fill;
     s->sdl.screen_margin = oracles_session_screen_margin(o->screen_margin, prefs);
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) s->sdl.key_names[i] = prefs->key_names[i];
     for (unsigned i = 0; i < 4; i++) s->sdl.pad_names[i] = prefs->pad_names[i];
+    s->sdl.menu_pad_name = prefs->menu_pad;
     if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) {
         for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) { s->sdl.hotkey_key_names[i] = prefs->hotkey_key_names[i]; s->sdl.hotkey_pad_names[i] = prefs->hotkey_pad_names[i]; }
         s->sdl.hotkey_bind_b = prefs->hotkey_bind_b;

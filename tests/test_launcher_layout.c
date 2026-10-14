@@ -5,7 +5,7 @@
  * greyed), and a toast; in the 4:3 layout, 10a (Ages), 10b (Fan games), 10c
  * (Seasons, no ROM), a toast, and the pause menu, 10n, and 10t in a 640x480
  * window; the toast after a game that ran slowly, 11c, 11f and 11h; the language beside Cartridge, 14f, 15d and
- * 16f: a text is
+ * 16f; the toast over the first game started with a controller, 18d and 18e: a text is
  * compared by its left edge, its width, the top and height of its line box,
  * and its baseline; an element by its box.  And the choice of the layout by the
  * window's shape. */
@@ -279,6 +279,13 @@ static void toast(void)
     oracles_ui_layout_toast(ORACLES_UI_LAYOUT_4_3, "Refused: not an Oracle of Ages or Seasons ROM", &t);
     layout_box("toast 4:3", "toast", &t.box);
     layout_line("toast 4:3", "toast text", &t.text);
+    /* Over the first game started with a controller, at the top (18d, 18e). */
+    oracles_ui_layout_pad_toast(ORACLES_UI_LAYOUT_16_9, "Press L3 for the menu.", &t);
+    layout_box("18d", "toast", &t.box);
+    layout_line("18d", "toast text", &t.text);
+    oracles_ui_layout_pad_toast(ORACLES_UI_LAYOUT_4_3, "Press L3 for the menu.", &t);
+    layout_box("18e", "toast", &t.box);
+    layout_line("18e", "toast text", &t.text);
 }
 
 /* The toast after a game that ran slowly at High, at the bottom left (11c), in 4:3 on two lines (11f), and in a 640x480

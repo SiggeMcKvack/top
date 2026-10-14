@@ -29,6 +29,8 @@
 #define PAGE_SHADE 0x09080cu
 #define PAGE_SHADE_ALPHA 0.86f
 #define NARROW_MIN_SCALE 0.5f   /* the reduced menu's smallest scale: 27 px labels, a menu 360 px wide */
+#define PAD_TOAST_SHOWN_MS 4000.0   /* the first game's toast, whatever the player presses, then its fade */
+#define PAD_TOAST_FADE_MS 600.0
 
 struct OraclesPause {
     OraclesUiDraw *draw;
@@ -39,6 +41,8 @@ struct OraclesPause {
     OraclesTouchEdges edges;    /* the screen margin and what it was read from (oracles_safe_area_edges): the menu keeps to its band */
     int prepared_width, prepared_height, prepared_top, prepared_band;   /* the output and the band the glyphs were rasterised for */
     unsigned late_glyphs;
+    char toast[64];             /* over the game's first frames (oracles_pause_toast); empty: none */
+    double toast_since_ms;      /* its first frame's time, 0 before it */
 };
 
 /* Every glyph a screen of the pause may draw: the printable ASCII and the launcher's signs, and each character after an
@@ -76,6 +80,12 @@ OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *h
 
 void oracles_pause_destroy(OraclesPause *pause) { free(pause); }
 
+void oracles_pause_toast(OraclesPause *pause, const char *text)
+{
+    oracles_ui_copy_whole(pause->toast, sizeof pause->toast, text);
+    pause->toast_since_ms = 0.0;
+}
+
 unsigned oracles_pause_late_glyphs(const OraclesPause *pause) { return pause ? pause->late_glyphs : 0; }
 
 static double now_ms(void) { return (double)SDL_GetPerformanceCounter() * 1000.0 / (double)SDL_GetPerformanceFrequency(); }
@@ -89,11 +99,12 @@ static int styles(OraclesUiLayout layout, const OraclesUiTextStyle **out)
     const OraclesUiControlsStyles *controls = oracles_ui_controls_styles(layout);
     const OraclesUiTextStyle *const all[] = {
         home->hero_over, home->hero_title, home->hero_state, home->item_note, home->item_label,
-        home->hint_key, home->hint_label, home->version, home->toast,
+        home->hint_key, home->hint_label, home->version, home->toast, home->pad_toast,
         page->section, page->over, page->title, page->row_label, page->row_title, page->row_text, page->row_note, page->row_button,
         page->option_name, page->option_size, page->choice, page->diagram_label, page->help, page->help_note, page->page_note, page->quality_sets,
         controls->title, controls->prompt, controls->heading, controls->name, controls->cell, controls->cell_locked, controls->cell_waiting,
         controls->item, controls->item_empty, controls->slots_note, controls->shortcut_key, controls->shortcut_label, controls->tab,
+        controls->menu_cell, controls->menu_cell_waiting,
     };
     int count = 0;
     for (size_t i = 0; i < sizeof all / sizeof all[0]; i++) if (all[i]) out[count++] = all[i];
@@ -173,6 +184,36 @@ int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture
     return moving;
 }
 
+int oracles_pause_overlay(void *opaque, SDL_Renderer *renderer)
+{
+    OraclesPause *pause = opaque;
+    if (!pause->toast[0]) return 0;
+    const double now = now_ms();
+    if (pause->toast_since_ms <= 0.0) pause->toast_since_ms = now;
+    const double shown = now - pause->toast_since_ms;
+    if (shown >= PAD_TOAST_SHOWN_MS + PAD_TOAST_FADE_MS) { pause->toast[0] = 0; return 0; }
+    const float opacity = shown < PAD_TOAST_SHOWN_MS ? 1.0f : 1.0f - oracles_ui_curve_at(&oracles_ui_ease, (float)((shown - PAD_TOAST_SHOWN_MS) / PAD_TOAST_FADE_MS));
+    /* In the window's pixels, as the pause draws: the game's logical size lifted, then set back. */
+    int logical_w = 0, logical_h = 0, w = 0, h = 0;
+    SDL_RendererLogicalPresentation presentation = SDL_LOGICAL_PRESENTATION_DISABLED;
+    SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
+    SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+    SDL_GetRenderOutputSize(renderer, &w, &h);
+    const OraclesUiLayout layout = oracles_ui_layout_pause(w, h, pause->aspect);
+    band(pause, w, h);
+    oracles_ui_draw_layout(pause->draw, layout);
+    if (oracles_ui_draw_begin_over(pause->draw, w, h, min_scale(oracles_ui_layout_narrow(layout, w)), now)) {
+        oracles_ui_draw_anchor(pause->draw, 0.5f, 0.0f);
+        oracles_ui_home_pad_toast(pause->draw, layout, pause->toast, opacity);
+        oracles_ui_draw_end(pause->draw);
+    }
+    SDL_SetRenderClipRect(renderer, NULL);
+    SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    return 1;
+}
+
 typedef struct pause_loop {
     OraclesPause *pause;
     SDL_Window *window;
@@ -182,6 +223,7 @@ typedef struct pause_loop {
     OraclesUiHome view;
     int dirty, moving, done;
     int redraws;   /* frames still to draw whatever changed (ANDROID_REDRAWS) */
+    int trigger_held;   /* the menu's trigger, when menu_pad= names one (oracles_home_button_action) */
     unsigned glyphs_before;   /* the glyphs rasterised when the pause began, those the margin's change prepared added */
     OraclesPauseResult result;
 } pause_loop;
@@ -291,14 +333,21 @@ static void handle(pause_loop *p, const SDL_Event *e)
 {
     OraclesHomeAction action;
     OraclesHomeCommand captured;
-    if (oracles_home_capture(&p->nav, e, &captured)) { changed(p); command(p, captured); return; }
+    if (oracles_home_capture(&p->nav, e, &captured)) {
+        /* A trigger taken for the menu is held still: it counts once let go. */
+        if (captured == ORACLES_HOME_STORE) p->trigger_held = oracles_home_trigger_held(&p->nav);
+        changed(p);
+        command(p, captured);
+        return;
+    }
     switch (e->type) {
         case SDL_EVENT_QUIT: p->result = ORACLES_PAUSE_WINDOW_CLOSED; p->done = 1; break;
         case SDL_EVENT_KEY_DOWN:
             if (oracles_home_key_action(e->key.key, &action) && (!e->key.repeat || action <= ORACLES_HOME_RIGHT)) act(p, action);
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            if (oracles_home_button_action(e, &action)) act(p, action);
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            if (oracles_home_button_action(&p->nav, e, &p->trigger_held, &action)) act(p, action);
             break;
         case SDL_EVENT_MOUSE_MOTION: pointer(p, e->motion.x, e->motion.y, 0); break;
         case SDL_EVENT_MOUSE_BUTTON_UP: if (e->button.button == SDL_BUTTON_LEFT) pointer(p, e->button.x, e->button.y, 1); break;
@@ -339,6 +388,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     p.nav.display.core = session->core;
     p.nav.display.workers = session->ghosts;
     load_note(&p);
+    p.trigger_held = oracles_home_trigger_held(&p.nav);
     oracles_ui_home_start(&p.view, &p.nav);
     p.dirty = 1;
     double presented = 0.0;

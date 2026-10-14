@@ -2,6 +2,7 @@
 
 #include "backends.h"
 #include "guest_tables.h"
+#include "ui_controls_nav.h"
 
 #include <SDL3/SDL.h>
 
@@ -59,6 +60,7 @@ void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHome
         snprintf(c->hotkey_keys[i], sizeof c->hotkey_keys[i], "%s", settings->hotkey_key_names[i]);
         snprintf(c->hotkey_pads[i], sizeof c->hotkey_pads[i], "%s", settings->hotkey_pad_names[i]);
     }
+    snprintf(c->menu_pad, sizeof c->menu_pad, "%s", settings->menu_pad);
     snprintf(c->hotkey_keys[ORACLES_HOME_SLOTS], sizeof c->hotkey_keys[0], "%s", settings->hotkey_bind_b);
     snprintf(c->hotkey_keys[ORACLES_HOME_SLOTS + 1], sizeof c->hotkey_keys[0], "%s", settings->hotkey_bind_a);
     c->swim_hold = settings->swim_hold;
@@ -72,6 +74,22 @@ void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHome
     }
 }
 
+void oracles_home_resolve_menu_pad(oracles_settings *settings)
+{
+    int button, axis;
+    if (!oracles_sdl_menu_input(settings->menu_pad, &button, &axis)) {
+        fprintf(stderr, "oracles: unknown controller button '%s' for the menu; using %s\n", settings->menu_pad, oracles_controls_default_menu_pad);
+        snprintf(settings->menu_pad, sizeof settings->menu_pad, "%s", oracles_controls_default_menu_pad);
+    }
+    OraclesHomeControls controls;
+    oracles_home_inspect_controls(settings, &controls);
+    if (settings->menu_pad[0] && !oracles_controls_menu_free(&controls, settings->menu_pad)) {
+        fprintf(stderr, "oracles: menu_pad=%s is Guide, or a button the game, the d-pad or an item hotkey slot has, and stays so: Guide alone opens the menu\n",
+                settings->menu_pad);
+        settings->menu_pad[0] = 0;
+    }
+}
+
 void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings *settings)
 {
     for (int i = 0; i < ORACLES_HOME_BUTTONS; i++) snprintf(settings->key_names[i], sizeof settings->key_names[i], "%s", c->keys[i]);
@@ -80,6 +98,7 @@ void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings 
         snprintf(settings->hotkey_key_names[i], sizeof settings->hotkey_key_names[i], "%s", c->hotkey_keys[i]);
         snprintf(settings->hotkey_pad_names[i], sizeof settings->hotkey_pad_names[i], "%s", c->hotkey_pads[i]);
     }
+    snprintf(settings->menu_pad, sizeof settings->menu_pad, "%s", c->menu_pad);
     snprintf(settings->hotkey_bind_b, sizeof settings->hotkey_bind_b, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS]);
     snprintf(settings->hotkey_bind_a, sizeof settings->hotkey_bind_a, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS + 1]);
     settings->swim_hold = c->swim_hold;   /* a game started next takes it; a running one keeps its own */

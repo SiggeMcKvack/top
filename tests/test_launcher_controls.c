@@ -13,7 +13,9 @@
  * 17c and 17d (Swimming on Hold, highlighted, at 1440x1080 and 640x480) and
  * 17e (from the pause menu); and a fan game's Controls, from the pause menu
  * in 16:9 with its Item hotkeys' line that they stay off (swim fan), and
- * its Swimming in 4:3 (swim fan 4:3). */
+ * its Swimming in 4:3 (swim fan 4:3); Menu's controller button, its moves,
+ * its capture and its toast, highlighted in 16:9 (18a) and in 4:3's In game
+ * (18b, 18c), and waiting (menu capture, menu capture 4:3). */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_controls_layout.h"
@@ -349,14 +351,19 @@ static void tabs_4_3(void)
     CHECK(oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_BUTTONS);
     oracles_home_act(&nav, ORACLES_HOME_LEFT);
     CHECK(oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME && !c->capturing);
-    /* In game: down to Swimming, where left and right turn it, the tab kept; up to the strip, down stays on Swimming;
-     * OK on the strip turns to Buttons. */
+    /* In game: down to Menu's button, then to Swimming, where left and right turn it, the tab kept; down stays on
+     * Swimming; up to Menu's button, then the strip; OK on the strip turns to Buttons. */
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->row == ORACLES_CONTROLS_ROW_MENU && c->column == 0 && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && c->row == ORACLES_CONTROLS_ROW_MENU && !c->capturing);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(c->row == ORACLES_CONTROLS_ROW_SWIM && c->column == 0 && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && c->swim_hold == 1 && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && c->swim_hold == 0);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(c->row == ORACLES_CONTROLS_ROW_SWIM);
+    oracles_home_act(&nav, ORACLES_HOME_UP);
+    CHECK(c->row == ORACLES_CONTROLS_ROW_MENU);
     oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(c->row == ORACLES_CONTROLS_ROW_TAB && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_BUTTONS && !c->capturing);
@@ -416,7 +423,7 @@ static void tabs_4_3(void)
     oracles_home_act(&nav, ORACLES_HOME_UP);
     oracles_home_act(&nav, ORACLES_HOME_RIGHT);
     nav.layout = ORACLES_UI_LAYOUT_16_9;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && c->column == 0 && c->row == ORACLES_CONTROLS_ROW_SWIM && !c->capturing);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && c->column == 2 && c->row == ORACLES_CONTROLS_ROW_MENU && !c->capturing);
     CHECK(c->swim_hold == 0);
     nav.layout = ORACLES_UI_LAYOUT_4_3;
     oracles_home_act(&nav, ORACLES_HOME_UP);
@@ -636,6 +643,7 @@ static void layout_4_3(void)
     /* 17c: Swimming on Hold, highlighted, under the fixed keys; 17d the same at 640x480, its hints too. */
     nav.controls.swim_hold = 1;
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.controls.row == ORACLES_CONTROLS_ROW_SWIM);
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
     static const char *const swim_frames[2] = { "17c", "17d" };
@@ -660,6 +668,114 @@ static void layout_4_3(void)
     layout_box("17e", "tab 2", &l.tabs[2]);
 }
 
+/* Menu's controller button against a frame's: Esc's frame and text, the cell and its text, Menu, and the other fixed
+ * keys, F2 to F11. */
+static void menu_probes(const char *frame, const OraclesUiControlsLayout *l)
+{
+    layout_box(frame, "menu key", &l->shortcut_keys[5]);
+    layout_line(frame, "menu key text", &l->shortcut_key_texts[5]);
+    layout_box(frame, "menu pad", &l->menu_pad);
+    layout_line(frame, "menu pad text", &l->menu_pad_text);
+    layout_line(frame, "menu label", &l->shortcut_labels[5]);
+}
+
+static void fixed_keys(const char *frame, const OraclesUiControlsLayout *l)
+{
+    for (int i = 0; i < 5; i++) {
+        char what[32];
+        snprintf(what, sizeof what, "key %d", i); layout_box(frame, what, &l->shortcut_keys[i]);
+        snprintf(what, sizeof what, "key %d text", i); layout_line(frame, what, &l->shortcut_key_texts[i]);
+        snprintf(what, sizeof what, "key %d label", i); layout_line(frame, what, &l->shortcut_labels[i]);
+    }
+}
+
+/* Menu's controller button (turn 18): reached under the hotkeys' rows, beside Start's; it waits for a button the game
+ * and the hotkeys leave free, or a trigger, and a cell that takes its button leaves it without one; Reset gives L3
+ * back; its toast names it.  In 16:9 (18a, its capture) and in 4:3's In game tab (18b, 18c, its capture). */
+static void menu(void)
+{
+    OraclesHomeNav nav;
+    controls_nav(&nav);
+    OraclesHomeControls *c = &nav.controls;
+    CHECK(!strcmp(c->menu_pad, "leftstick") && !strcmp(oracles_controls_cell_text(&nav, 2, ORACLES_CONTROLS_ROW_MENU), "L3"));
+    CHECK(!strcmp(oracles_controls_cell_text(&nav, 1, 4), "A") && !strcmp(oracles_controls_cell_text(&nav, 3, 2), "LB"));
+    CHECK(!strcmp(oracles_controls_button_label("righttrigger"), "RT") && !strcmp(oracles_controls_button_label("misc1"), "misc1"));
+    /* Right from Start's button, down from the last slot's: Menu's; up to Bind to A's key, left back to Start's. */
+    c->column = 1; c->row = 7;
+    for (int i = 0; i < 2; i++) { oracles_home_act(&nav, ORACLES_HOME_RIGHT); CHECK(c->column == 2 && c->row == ORACLES_CONTROLS_ROW_MENU); }
+    oracles_home_act(&nav, ORACLES_HOME_UP);
+    CHECK(c->column == 2 && c->row == 5);
+    c->column = 3; c->row = 3; oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->column == 2 && c->row == ORACLES_CONTROLS_ROW_MENU);
+    oracles_home_act(&nav, ORACLES_HOME_LEFT);
+    CHECK(c->column == 1 && c->row == 7);
+    /* OK waits; the game's buttons, the hotkeys', the d-pad, Guide and a key do not bind there. */
+    oracles_controls_click(&nav, 2, ORACLES_CONTROLS_ROW_MENU, -1);
+    CHECK(c->capturing && !strcmp(oracles_controls_prompt(&nav), "Press a gamepad button \xc2\xb7 Esc cancels"));
+    CHECK(!strcmp(oracles_controls_cell_text(&nav, 2, ORACLES_CONTROLS_ROW_MENU), "Press\xe2\x80\xa6"));
+    static const char *const taken[] = { "a", "back", "x", "rightshoulder", "dpdown", "guide" };
+    for (size_t i = 0; i < sizeof taken / sizeof taken[0]; i++) CHECK(oracles_controls_capture_button(&nav, taken[i]) == ORACLES_HOME_STAY && c->capturing);
+    CHECK(oracles_controls_capture_key(&nav, "M") == ORACLES_HOME_STAY && c->capturing);
+    CHECK(!oracles_controls_menu_free(c, "b") && oracles_controls_menu_free(c, "lefttrigger") && oracles_controls_menu_free(c, "rightstick"));
+    CHECK(oracles_controls_capture_button(&nav, "righttrigger") == ORACLES_HOME_STORE && !c->capturing && !strcmp(c->menu_pad, "righttrigger"));
+    CHECK(!strcmp(oracles_controls_cell_text(&nav, 2, ORACLES_CONTROLS_ROW_MENU), "RT"));
+    char toast[64];
+    oracles_controls_menu_toast(c->menu_pad, toast, sizeof toast);
+    CHECK(!strcmp(toast, "Press RT for the menu."));
+    /* None: Guide alone, and no toast. */
+    c->menu_pad[0] = 0;
+    CHECK(!strcmp(oracles_controls_cell_text(&nav, 2, ORACLES_CONTROLS_ROW_MENU), "\xe2\x80\x94"));
+    oracles_controls_menu_toast(c->menu_pad, toast, sizeof toast);
+    CHECK(!toast[0]);
+    /* Reset to defaults: L3 again. */
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_RESET, -1) == ORACLES_HOME_STORE && !strcmp(c->menu_pad, "leftstick"));
+    oracles_controls_menu_toast(c->menu_pad, toast, sizeof toast);
+    CHECK(!strcmp(toast, "Press L3 for the menu."));
+
+    /* 18a: Menu's button highlighted, first of the fixed keys under the item hotkeys' panel. */
+    OraclesUiControlsLayout l;
+    c->column = 2; c->row = ORACLES_CONTROLS_ROW_MENU;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    menu_probes("18a", &l);
+    fixed_keys("18a", &l);
+    layout_line("18a", "In game", &l.shortcuts_label);
+    layout_box("18a", "right panel", &l.right_panel);
+    /* Its button waiting: the cell wider, the keys after it moved. */
+    oracles_home_act(&nav, ORACLES_HOME_OK);
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    menu_probes("menu capture", &l);
+    fixed_keys("menu capture", &l);
+    layout_line("menu capture", "prompt", &l.prompt);
+    layout_line("menu capture", "In game", &l.shortcuts_label);
+    oracles_controls_cancel(&nav);
+
+    /* 18b and 18c: 4:3's In game tab, Menu's row first, before the other keys and Swimming. */
+    nav.layout = ORACLES_UI_LAYOUT_4_3;
+    oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_TAB, ORACLES_CONTROLS_TAB_IN_GAME);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_MENU && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    static const char *const frames[2] = { "18b", "18c" };
+    for (int f = 0; f < 2; f++) {
+        menu_probes(frames[f], &l);
+        fixed_keys(frames[f], &l);
+        swim_probes(frames[f], &l);
+        layout_line(frames[f], "title", &l.shortcuts_label);
+        for (int i = 0; i < ORACLES_CONTROLS_TABS; i++) {
+            char what[32];
+            snprintf(what, sizeof what, "tab %d", i); layout_box(frames[f], what, &l.tabs[i]);
+            snprintf(what, sizeof what, "tab %d label", i); layout_line(frames[f], what, &l.tab_labels[i]);
+        }
+        hints_4_3(frames[f], &nav, 3);
+    }
+    oracles_home_act(&nav, ORACLES_HOME_OK);
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    menu_probes("menu capture 4:3", &l);
+    layout_line("menu capture 4:3", "prompt", &l.prompt);
+    layout_box("menu capture 4:3", "key 0", &l.shortcut_keys[0]);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !c->capturing);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2 || !layout_reference_load(argv[1])) { fprintf(stderr, "usage: oracles-test-launcher-controls launcher_layout_reference.json\n"); return 2; }
@@ -667,6 +783,7 @@ int main(int argc, char **argv)
     capture();
     moves();
     swimming();
+    menu();
     pause_menu();
     layout();
     tabs_4_3();

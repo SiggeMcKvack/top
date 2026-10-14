@@ -13,7 +13,6 @@
  * a cancel; it opens in the ROM's folder. */
 #include "backends.h"
 #include "file_dialog.h"
-#include "home_input.h"
 #include "touch_controls.h"
 
 #include <SDL3/SDL.h>

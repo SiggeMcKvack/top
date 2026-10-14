@@ -30,15 +30,17 @@ const OraclesUiTextStyle oracles_ui_hint_key_4_3 = { ORACLES_UI_FONT_MONO, 27.0f
 const OraclesUiTextStyle oracles_ui_hint_label_4_3 = { ORACLES_UI_FONT_SANS, 30.0f, 0.0f, 0 };
 const OraclesUiTextStyle oracles_ui_version_4_3 = { ORACLES_UI_FONT_SERIF, 27.0f, 0.0f, 0 };
 const OraclesUiTextStyle oracles_ui_toast_4_3 = { ORACLES_UI_FONT_SANS, 30.0f, 0.0f, 0 };
+const OraclesUiTextStyle oracles_ui_pad_toast_4_3 = { ORACLES_UI_FONT_SANS, 36.0f, 0.0f, 0 };
 const OraclesUiTextStyle oracles_ui_slow_path_4_3 = { ORACLES_UI_FONT_SERIF, 27.0f, 0.14f, 1 };
 
 static const OraclesUiHomeStyles styles_16_9 = {
     &oracles_ui_hero_over, &oracles_ui_hero_title, &oracles_ui_hero_state, &oracles_ui_item_note, &oracles_ui_item_label,
-    &oracles_ui_hint_key, &oracles_ui_hint_label, &oracles_ui_version, &oracles_ui_toast, NULL, &oracles_ui_slow_path,
+    &oracles_ui_hint_key, &oracles_ui_hint_label, &oracles_ui_version, &oracles_ui_toast, NULL, &oracles_ui_slow_path, &oracles_ui_toast,
 };
 static const OraclesUiHomeStyles styles_4_3 = {
     &oracles_ui_hero_over_4_3, &oracles_ui_hero_title_4_3, &oracles_ui_hero_state_4_3, &oracles_ui_item_note_4_3, &oracles_ui_item_label_4_3,
     &oracles_ui_hint_key_4_3, &oracles_ui_hint_label_4_3, &oracles_ui_version_4_3, &oracles_ui_toast_4_3, &oracles_ui_tab_4_3, &oracles_ui_slow_path_4_3,
+    &oracles_ui_pad_toast_4_3,
 };
 
 const OraclesUiHomeStyles *oracles_ui_home_styles(OraclesUiLayout layout) { return layout == ORACLES_UI_LAYOUT_4_3 ? &styles_4_3 : &styles_16_9; }
@@ -57,6 +59,7 @@ typedef struct metrics {
     float version_left, version_bottom;
     float toast_bottom, toast_pad_x, toast_pad_y;
     float slow_left, slow_bottom, slow_max_width, slow_pad_x, slow_pad_y, slow_gap, slow_line;   /* the slow game's toast */
+    float pad_toast_top, pad_toast_pad_x, pad_toast_pad_y, pad_toast_min_h;   /* the first game's with a controller */
 } metrics;
 
 static const metrics metrics_16_9 = {
@@ -72,6 +75,7 @@ static const metrics metrics_16_9 = {
     .toast_bottom = 1080.0f - 78.0f, .toast_pad_x = 26.0f, .toast_pad_y = 14.0f,
     .slow_left = 96.0f, .slow_bottom = 1080.0f - 96.0f, .slow_max_width = 760.0f, .slow_pad_x = 26.0f, .slow_pad_y = 16.0f, .slow_gap = 6.0f,
     .slow_line = 24.0f * 1.35f,
+    .pad_toast_top = 64.0f, .pad_toast_pad_x = 26.0f, .pad_toast_pad_y = 14.0f, .pad_toast_min_h = 0.0f,
 };
 /* 4:3: every target at least 90 tall; the hero under the tabs, and higher in the pause, which has none. */
 static const metrics metrics_4_3 = {
@@ -87,6 +91,7 @@ static const metrics metrics_4_3 = {
     .toast_bottom = 1080.0f - 120.0f, .toast_pad_x = 28.0f, .toast_pad_y = 16.0f,
     .slow_left = 64.0f, .slow_bottom = 1080.0f - 120.0f, .slow_max_width = 640.0f, .slow_pad_x = 28.0f, .slow_pad_y = 18.0f, .slow_gap = 6.0f,
     .slow_line = 30.0f * 1.3f,
+    .pad_toast_top = 48.0f, .pad_toast_pad_x = 30.0f, .pad_toast_pad_y = 0.0f, .pad_toast_min_h = 90.0f,
 };
 
 static const metrics *metrics_of(OraclesUiLayout layout) { return layout == ORACLES_UI_LAYOUT_4_3 ? &metrics_4_3 : &metrics_16_9; }
@@ -286,6 +291,20 @@ void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUi
     out->box.y = m->toast_bottom - out->box.h;
     out->text.x = out->box.x + TOAST_BORDER + m->toast_pad_x;
     out->text.y = out->box.y + TOAST_BORDER + m->toast_pad_y;
+    out->text.baseline += out->text.y;
+}
+
+void oracles_ui_layout_pad_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out)
+{
+    const metrics *m = metrics_of(layout);
+    out->text = line_at(oracles_ui_home_styles(layout)->pad_toast, text, 0.0f, 0.0f, 0.0f);
+    out->box.w = out->text.w + 2.0f * (m->pad_toast_pad_x + TOAST_BORDER);
+    out->box.h = out->text.h + 2.0f * (m->pad_toast_pad_y + TOAST_BORDER);
+    if (out->box.h < m->pad_toast_min_h) out->box.h = m->pad_toast_min_h;
+    out->box.x = m->scene_w * 0.5f - out->box.w * 0.5f;
+    out->box.y = m->pad_toast_top;
+    out->text.x = out->box.x + TOAST_BORDER + m->pad_toast_pad_x;
+    out->text.y = out->box.y + (out->box.h - out->text.h) * 0.5f;
     out->text.baseline += out->text.y;
 }
 

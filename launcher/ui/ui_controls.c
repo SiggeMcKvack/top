@@ -34,6 +34,7 @@
 #define TAB_CHOSEN 0xf3f1f5u
 #define TAB_OTHER 0x8a8793u
 #define TAB_FOCUS_OPACITY 0.07f
+#define MENU_CELL_RADIUS 6.0f          /* Menu's controller cell, in both layouts */
 
 /* What differs between the layouts in the drawing: corners, the chips' border. */
 typedef struct look {
@@ -168,8 +169,9 @@ static void hotkeys(OraclesUiDraw *draw, const OraclesHomeNav *nav, const Oracle
     if (st->slots_note) text(draw, st->slots_note, &l->slots_note, oracles_ui_controls_slots, oracles_ui_rgba(TEXT, grid));
 }
 
-/* The fixed shortcuts. */
-static void shortcuts(OraclesUiDraw *draw, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk)
+/* The fixed shortcuts, and Menu's controller cell, framed as a cell is. */
+static void shortcuts(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
+                      OraclesUiColor accent)
 {
     text(draw, st->heading, &l->shortcuts_label, l->shortcuts_text, oracles_ui_rgb(HEADING));
     for (int i = 0; i < 6; i++) {
@@ -178,6 +180,13 @@ static void shortcuts(OraclesUiDraw *draw, const OraclesUiControlsLayout *l, con
         text(draw, st->shortcut_key, &l->shortcut_key_texts[i], oracles_controls_shortcuts[i][0], oracles_ui_rgb(KEY_TEXT));
         text(draw, st->shortcut_label, &l->shortcut_labels[i], oracles_controls_shortcuts[i][1], oracles_ui_rgb(SHORTCUT));
     }
+    const OraclesUiBox *b = &l->menu_pad;
+    const int focused = nav->controls.row == ORACLES_CONTROLS_ROW_MENU, waiting = focused && nav->controls.capturing;
+    const char *s = oracles_controls_cell_text(nav, 0, ORACLES_CONTROLS_ROW_MENU);
+    if (waiting || focused) oracles_ui_fill_round_rect(draw, b->x, b->y, b->w, b->h, MENU_CELL_RADIUS, oracles_ui_rgba(0xffffffu, waiting ? CELL_WAITING_OPACITY : CELL_FOCUS_OPACITY));
+    oracles_ui_stroke_round_rect(draw, b->x, b->y, b->w, b->h, MENU_CELL_RADIUS, waiting ? 2.0f : 1.0f, focused ? accent : oracles_ui_rgba(0xffffffu, CELL_BORDER_OPACITY));
+    const int none = !waiting && !strcmp(s, "\xe2\x80\x94");
+    text(draw, waiting ? st->menu_cell_waiting : st->menu_cell, &l->menu_pad_text, s, focused ? accent : oracles_ui_rgb(none ? CELL_NONE : CELL_TEXT));
 }
 
 /* 4:3's tabs: the shown one underlined in the accent, its label in the accent on a lighter ground while the highlight
@@ -208,7 +217,7 @@ void oracles_ui_controls_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Or
             case ORACLES_CONTROLS_TAB_BUTTONS: buttons(draw, nav, &l, st, &look_4_3, accent); break;
             case ORACLES_CONTROLS_TAB_HOTKEYS: hotkeys(draw, nav, &l, st, &look_4_3, accent); break;
             default:
-                shortcuts(draw, &l, st, &look_4_3);
+                shortcuts(draw, nav, &l, st, &look_4_3, accent);
                 swim(draw, nav, &l, st, &look_4_3, accent);
                 break;
         }
@@ -219,7 +228,7 @@ void oracles_ui_controls_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Or
     swim(draw, nav, &l, st, &look_16_9, accent);
     panel(draw, &l.right_panel);
     hotkeys(draw, nav, &l, st, &look_16_9, accent);
-    shortcuts(draw, &l, st, &look_16_9);
+    shortcuts(draw, nav, &l, st, &look_16_9, accent);
 }
 
 static int inside(const OraclesUiBox *b, float x, float y) { return x >= b->x && x < b->x + b->w && y >= b->y && y < b->y + b->h; }
@@ -235,6 +244,7 @@ int oracles_ui_controls_hit(const OraclesHomeNav *nav, float x, float y, int *co
         for (int r = 0; r < ORACLES_HOME_BUTTONS; r++)
             if (l.cells[c][r].w > 0.0f && inside(&l.cells[c][r], x, y) && !oracles_controls_cell_locked(c, r)) { *column = c; *row = r; return 1; }
     if (inside(&l.reset, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_RESET; return 1; }
+    if (inside(&l.menu_pad, x, y)) { *column = nav->layout == ORACLES_UI_LAYOUT_4_3 ? 0 : 2; *row = ORACLES_CONTROLS_ROW_MENU; return 1; }
     for (int i = 0; i < 2; i++) if (inside(&l.swim_choices[i].box, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_SWIM; *option = i; return 1; }
     if (inside(&l.swim, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_SWIM; return 1; }
     for (int i = 0; i < 2; i++) if (inside(&l.mode_choices[i].box, x, y)) { *column = 2; *row = ORACLES_CONTROLS_ROW_MODE; *option = i; return 1; }

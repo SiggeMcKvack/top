@@ -25,6 +25,7 @@
  * it is edited, by Display and Controls, and by F2 in game. */
 #include "backends.h"
 #include "home.h"
+#include "home_choices.h"
 #include "home_games.h"
 #include "session.h"
 #include "settings.h"
@@ -228,6 +229,7 @@ static void load_settings(oracles_settings *prefs, const OraclesSessionOptions *
         if (oracles_sdl_settings_dir(dir, sizeof dir)) snprintf(prefs->path, sizeof prefs->path, "%ssettings.txt", dir);
     }
     oracles_settings_load(prefs);
+    oracles_home_resolve_menu_pad(prefs);
     /* A first opening takes the device's quality: what weighs on it set for it, Display's Quality to change. */
     if (prefs->first_run) {
         const OraclesQuality quality = oracles_settings_default_quality(oracles_sdl_fullscreen_only(), SDL_GetNumLogicalCPUCores(), SDL_GetSystemRAM());

@@ -567,7 +567,7 @@ static int drop(void *opaque, const char *path, int page_game, char *message, si
     return g == ORACLES_SETTINGS_AGES ? ORACLES_HOME_AGES : ORACLES_HOME_SEASONS;
 }
 
-static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *window, struct SDL_Renderer *renderer,
+static int start(void *opaque, OraclesHomeCommand game, int from_pad, struct SDL_Window *window, struct SDL_Renderer *renderer,
                  OraclesUiDraw *draw, char *message, size_t capacity, int *slow)
 {
     OraclesHomeGames *games = opaque;
@@ -681,6 +681,14 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
     OraclesPause *pause = draw ? oracles_pause_create(draw, &pause_host, home_game, profile, games->settings->aspect,
                                                                 oracles_session_screen_margin(o.screen_margin, games->settings)) : NULL;
     o.pause = pause;
+    /* The first game started with a controller says, once, which of its buttons opens the menu. */
+    char toast[64];
+    oracles_controls_menu_toast(games->settings->menu_pad, toast, sizeof toast);
+    if (pause && from_pad && toast[0] && !games->settings->menu_toast_shown) {
+        oracles_pause_toast(pause, toast);
+        games->settings->menu_toast_shown = 1;
+        oracles_settings_store(games->settings);
+    }
     OraclesSessionResult result;
     oracles_session_run(&o, games->settings, &result);
     oracles_pause_destroy(pause);

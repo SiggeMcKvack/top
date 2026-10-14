@@ -208,11 +208,19 @@ if(BUILD_TESTING)
         # The launcher's window lent to a session whose start fails (no audio driver by that name) comes back intact; what
         # is dropped on it is left to SDL; a controller unplugged and plugged in during a session is taken back; the file
         # dialog answers on the queue, and one that cannot open is no dialog.
-        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-sdl-backend PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR})
         target_link_libraries(oracles-test-launcher-sdl-backend PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-sdl-backend)
         add_test(NAME oracles-launcher-sdl-backend COMMAND oracles-test-launcher-sdl-backend ${CMAKE_CURRENT_BINARY_DIR}/launcher-dialog)
+
+        # The controller's Escape: the menu's button, its trigger and Guide in play, on the home screen and in the pause,
+        # and the device an event comes from.
+        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        target_include_directories(oracles-test-launcher-menu PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR})
+        target_link_libraries(oracles-test-launcher-menu PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
+        oracles_set_warnings(oracles-test-launcher-menu)
+        add_test(NAME oracles-launcher-menu COMMAND oracles-test-launcher-menu)
 
         # Every text style the launcher's sources define fits the atlases of one drawing at one scale.  The list is
         # read from the sources at configure: a style added later is in it.

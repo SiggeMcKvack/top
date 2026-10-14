@@ -3,7 +3,8 @@
  * Keyboard by default: arrows, X = A, Z = B, Return = Start, Backspace =
  * Select; F2 = colour correction, F3 = Enhanced wide/framed, F5 = save state, F7 = load state,
  * F11 = fullscreen, Escape = quit, or the pause menu for a game the home screen started.
- * Controller by default: d-pad or left stick, A, B, Start, Back = Select.
+ * Controller by default: d-pad or left stick, A, B, Start, Back = Select; the left stick's click (L3) and Guide open
+ * the pause menu of a game the home screen started, and do nothing with --rom, which has none.
  * Both are rebindable through oracles_sdl_options. */
 #include "backends.h"
 #include "safe_area.h"
@@ -30,12 +31,16 @@
 const char *const oracles_sdl_binding_names[ORACLES_BINDINGS] = { "right", "left", "up", "down", "a", "b", "select", "start" };
 const char *const oracles_sdl_default_key_names[ORACLES_BINDINGS] = { "Right", "Left", "Up", "Down", "X", "Z", "Backspace", "Return" };
 const char *const oracles_sdl_default_pad_names[4] = { "a", "b", "back", "start" };
+const char *const oracles_sdl_default_menu_pad_name = "leftstick";
 
 typedef struct sdl_backend {
     SDL_Keycode keys[ORACLES_BINDINGS];
     SDL_GamepadButton pad[4];   /* A, B, Select, Start */
     SDL_Keycode hotkey_keys[ORACLES_SDL_HOTKEY_SLOTS], hotkey_bind_b, hotkey_bind_a;   /* SDLK_UNKNOWN: none */
     SDL_GamepadButton hotkey_pad[ORACLES_SDL_HOTKEY_SLOTS];
+    SDL_GamepadButton menu_pad;   /* Escape's on a controller, besides Guide; SDL_GAMEPAD_BUTTON_INVALID: none */
+    SDL_GamepadAxis menu_trigger; /* or a trigger's (SDL_GAMEPAD_AXIS_INVALID: none), pressed as oracles_sdl_trigger_pressed says */
+    int menu_trigger_held;
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
@@ -50,6 +55,8 @@ typedef struct sdl_backend {
     OraclesTouchScreen touch;   /* the game's buttons on a touch screen (Android), and those its fingers press */
     unsigned touch_buttons;
     int touch_enabled;
+    int (*overlay)(void *, SDL_Renderer *);   /* over the frames while it returns 1 (oracles_sdl_options) */
+    void *overlay_opaque;
     void (*on_suspend)(void *);   /* the host's store at a suspension (watch_suspend), and its argument */
     void *on_suspend_opaque;
     int suspended;   /* the watch saw a suspension, which the next poll hands to the host */
@@ -393,6 +400,7 @@ static int sdl_start(void *opaque, uint32_t width, uint32_t height, uint32_t sam
         oracles_sdl_pads_describe(&backend->pads, pads, sizeof pads);
         fprintf(stderr, "oracles: game controllers: %s\n", pads);
     }
+    backend->menu_trigger_held = oracles_sdl_trigger_held(backend->menu_trigger);   /* a trigger held from the home screen asks nothing */
     if (!audio_enabled) return 1;
     /* The device's buffer SDL 2 was asked for, 512 frames; the stream converts to what the device plays. */
     SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "512");
@@ -503,6 +511,89 @@ static int translate_hotkey_button(const sdl_backend *backend, SDL_GamepadButton
     return 0;
 }
 
+int oracles_sdl_menu_input(const char *name, int *button, int *axis)
+{
+    *button = SDL_GAMEPAD_BUTTON_INVALID;
+    *axis = SDL_GAMEPAD_AXIS_INVALID;
+    if (!name || !name[0]) return 1;
+    const SDL_GamepadAxis trigger = SDL_GetGamepadAxisFromString(name);
+    if (trigger == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || trigger == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) { *axis = trigger; return 1; }
+    *button = SDL_GetGamepadButtonFromString(name);
+    return *button != SDL_GAMEPAD_BUTTON_INVALID;
+}
+
+int oracles_sdl_trigger_pressed(int value, int *held)
+{
+    const int was = *held;
+    if (value > SDL_JOYSTICK_AXIS_MAX / 2) *held = 1;
+    else if (value < SDL_JOYSTICK_AXIS_MAX / 4) *held = 0;
+    return *held && !was;
+}
+
+int oracles_sdl_trigger_moved(const SDL_Event *event, int axis, int *held)
+{
+    if (event->type != SDL_EVENT_GAMEPAD_AXIS_MOTION || axis == SDL_GAMEPAD_AXIS_INVALID || event->gaxis.axis != axis) return 0;
+    int value = event->gaxis.value, count = 0;
+    SDL_JoystickID *ids = SDL_GetGamepads(&count);
+    for (int i = 0; i < count; i++) {
+        SDL_Gamepad *pad = ids[i] == event->gaxis.which ? NULL : SDL_GetGamepadFromID(ids[i]);
+        const int other = pad ? SDL_GetGamepadAxis(pad, (SDL_GamepadAxis)axis) : 0;
+        if (other > value) value = other;
+    }
+    SDL_free(ids);
+    return oracles_sdl_trigger_pressed(value, held);
+}
+
+int oracles_sdl_trigger_held(int axis)
+{
+    int count = 0, held = 0;
+    SDL_JoystickID *ids = axis == SDL_GAMEPAD_AXIS_INVALID ? NULL : SDL_GetGamepads(&count);
+    for (int i = 0; i < count && !held; i++) {
+        SDL_Gamepad *pad = SDL_GetGamepadFromID(ids[i]);
+        held = pad && SDL_GetGamepadAxis(pad, (SDL_GamepadAxis)axis) >= SDL_JOYSTICK_AXIS_MAX / 4;
+    }
+    SDL_free(ids);
+    return held;
+}
+
+/* The menu's button or trigger, after the game's buttons and the hotkeys': a button of theirs, or of the d-pad, stays
+ * theirs, as a hotkey's button the game has stays the game's, and Guide alone opens the menu; an unknown name keeps
+ * the default.  The game reads no trigger. */
+static void resolve_menu(sdl_backend *backend, const oracles_sdl_options *options)
+{
+    const char *wanted = options && options->menu_pad_name ? options->menu_pad_name : oracles_sdl_default_menu_pad_name;
+    int button, axis;
+    if (!oracles_sdl_menu_input(wanted, &button, &axis)) {
+        SDL_Log("unknown controller button '%s' for the menu; using %s", wanted, oracles_sdl_default_menu_pad_name);
+        oracles_sdl_menu_input(oracles_sdl_default_menu_pad_name, &button, &axis);
+    }
+    unsigned taken;
+    const char *owner = NULL;
+    if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) owner = "the d-pad's";
+    else if (button != SDL_GAMEPAD_BUTTON_INVALID && translate_controller_button(backend, (SDL_GamepadButton)button, &taken)) owner = "the game's";
+    else if (button != SDL_GAMEPAD_BUTTON_INVALID && translate_hotkey_button(backend, (SDL_GamepadButton)button, &taken)) owner = "an item hotkey's";
+    if (owner && backend->pause_menu) {
+        fprintf(stderr, "oracles: menu_pad=%s is %s already and stays so: Guide alone opens the menu\n",
+                SDL_GetGamepadStringForButton((SDL_GamepadButton)button), owner);
+    }
+    if (owner) button = SDL_GAMEPAD_BUTTON_INVALID;
+    backend->menu_pad = (SDL_GamepadButton)button;
+    backend->menu_trigger = (SDL_GamepadAxis)axis;
+    backend->menu_trigger_held = oracles_sdl_trigger_held(axis);
+}
+
+/* The menu's button or trigger, or Guide, went down on a controller: the pause, and which input of which controller
+ * asked, for a device whose buttons are not those expected.  Without a pause menu (--rom) nothing: Escape alone ends
+ * such a session, as before the controller had an Escape. */
+static void push_menu(sdl_backend *backend, SDL_JoystickID id, const char *input)
+{
+    if (!backend->pause_menu) return;
+    const char *name = SDL_GetGamepadNameForID(id);
+    fprintf(stderr, "oracles: controller input %s of %s (%s) opens the pause menu\n", input, name ? name : "an unnamed controller",
+            SDL_GetGamepadStringForType(SDL_GetGamepadTypeForID(id)));
+    push_event(backend, ORACLES_HOST_EVENT_PAUSE);
+}
+
 static void update_axis(sdl_backend *backend, unsigned negative, unsigned positive, Sint16 value)
 {
     const unsigned wanted = value < -AXIS_THRESHOLD ? negative : value > AXIS_THRESHOLD ? positive : 0;
@@ -574,13 +665,20 @@ static void handle_event(sdl_backend *backend, const SDL_Event *e)
             else if (translate_hotkey(backend, e->key.key, &button)) push_hotkey(backend, button, 0, 1);
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-        case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            if (translate_controller_button(backend, (SDL_GamepadButton)oracles_sdl_pad_button(e), &button)) push_button(backend, button, e->gbutton.down);
-            else if (translate_hotkey_button(backend, (SDL_GamepadButton)oracles_sdl_pad_button(e), &button)) push_hotkey(backend, button, e->gbutton.down, 0);
+        case SDL_EVENT_GAMEPAD_BUTTON_UP: {
+            const SDL_GamepadButton pressed = (SDL_GamepadButton)oracles_sdl_pad_button(e);
+            if (translate_controller_button(backend, pressed, &button)) push_button(backend, button, e->gbutton.down);
+            else if (translate_hotkey_button(backend, pressed, &button)) push_hotkey(backend, button, e->gbutton.down, 0);
+            /* Escape's, never the game's: its release, perhaps after the pause, is nobody's. */
+            else if ((pressed == backend->menu_pad || pressed == SDL_GAMEPAD_BUTTON_GUIDE) && e->gbutton.down)
+                push_menu(backend, e->gbutton.which, SDL_GetGamepadStringForButton(pressed));
             break;
+        }
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
             if (e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX) update_axis(backend, ORACLES_KEY_LEFT, ORACLES_KEY_RIGHT, e->gaxis.value);
             else if (e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY) update_axis(backend, ORACLES_KEY_UP, ORACLES_KEY_DOWN, e->gaxis.value);
+            else if (oracles_sdl_trigger_moved(e, backend->menu_trigger, &backend->menu_trigger_held))
+                push_menu(backend, e->gaxis.which, SDL_GetGamepadStringForAxis((SDL_GamepadAxis)e->gaxis.axis));
             break;
         case SDL_EVENT_GAMEPAD_ADDED:
         case SDL_EVENT_GAMEPAD_REMOVED:
@@ -626,6 +724,7 @@ static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame
         if (!SDL_RenderClear(backend->renderer)) return 0;
         if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
     }
+    if (backend->overlay && !backend->overlay(backend->overlay_opaque, backend->renderer)) backend->overlay = NULL;
     const uint64_t present_started_ns = sdl_monotonic_ns(backend);
     SDL_RenderPresent(backend->renderer);
     backend->last_present_ns = sdl_monotonic_ns(backend);
@@ -845,6 +944,8 @@ int oracles_sdl_backend_init(oracles_host_backend *backend, const oracles_sdl_op
     state->borrowed = state->window != NULL;
     state->pause_menu = options ? options->pause_menu : 0;
     state->fill = options && options->fill;
+    state->overlay = options ? options->overlay : NULL;
+    state->overlay_opaque = options ? options->overlay_opaque : NULL;
     state->touch.edges.margin = options ? options->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
 #ifdef __ANDROID__
     state->touch_enabled = 1;
@@ -853,6 +954,7 @@ int oracles_sdl_backend_init(oracles_host_backend *backend, const oracles_sdl_op
 #endif
     resolve_bindings(state, options);
     resolve_hotkeys(state, options);
+    resolve_menu(state, options);
     memset(backend, 0, sizeof *backend);
     backend->opaque = state;
     backend->start = sdl_start;
@@ -907,6 +1009,8 @@ void oracles_sdl_backend_hold(const oracles_host_backend *backend, int held)
     if (held) { oracles_touch_release(&state->touch.touch); state->touch_buttons = 0; }   /* the pause's menu takes the fingers */
     /* The pause's menu had the plugs and unplugs, and left none in the queue: those unplugged are let go, those plugged in are taken. */
     if (!held) oracles_sdl_pads_open(&state->pads);
+    /* Nor the trigger's moves: one that closed the pause is still held, one let go there is released. */
+    if (!held) state->menu_trigger_held = oracles_sdl_trigger_held(state->menu_trigger);
     /* Nor the safe area's and the display's changes, which the pause's loop took: the margin's band is read again. */
     if (!held && state->window) {
         const OraclesTouchEdges before = state->touch.edges;
@@ -920,6 +1024,7 @@ void oracles_sdl_backend_rebind(const oracles_host_backend *backend, const oracl
     sdl_backend *state = backend->opaque;
     resolve_bindings(state, options);
     resolve_hotkeys(state, options);
+    resolve_menu(state, options);
     state->axis_buttons = 0;
 }
 

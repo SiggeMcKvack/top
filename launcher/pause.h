@@ -53,6 +53,13 @@ void oracles_pause_prepare(OraclesPause *pause, SDL_Renderer *renderer);
 /* The pause, until the player resumes or leaves; `frame` holds the game's last image, `width` x `height`. */
 OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *frame,
                                      int width, int height, const OraclesPauseSession *session);
+/* The first game started with a controller: `text` ("Press L3 for the menu.") shown over the game from its first frame
+ * for about 4 s, whatever the player presses, then faded out over 0.6 s; it never takes an input.  Its glyphs are the
+ * pause's, prepared beforehand. */
+void oracles_pause_toast(OraclesPause *pause, const char *text);
+/* Draws that toast over the frame about to be presented (the SDL backend's overlay, `opaque` the pause): 1 while it
+ * shows, 0 once it is gone. */
+int oracles_pause_overlay(void *opaque, SDL_Renderer *renderer);
 /* Glyphs rasterised during the session's pauses (none when prepared beforehand), for the session's report. */
 unsigned oracles_pause_late_glyphs(const OraclesPause *pause);
 
