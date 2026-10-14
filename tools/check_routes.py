@@ -462,13 +462,14 @@ def main() -> int:
     args.work.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         results = list(pool.map(lambda r: run_row(r, args.harness, args.core, args.routes, roms, rom_dir, args.work, tuple(shlex.split(args.threaded_args))), rows))
-    failed = 0
+    failed = broken = 0
     changed = {}
     for res in results:
         row = res["row"]
         if "error" in res:
             print(f"ERROR  {res['name']}: {res['error']}")
             failed += 1
+            broken += 1
             continue
         hash_note = ""
         held = core_hashes(row["run_hash"], row["core"]).get(args.core, "-")
@@ -487,7 +488,12 @@ def main() -> int:
             "cores.rooms_same", "cores.parted") if k in v)
         if res["violations"]:
             failed += 1
-            print(f"FAIL   {res['name']}: " + "; ".join(res["violations"]) + f" [{figures}]{hash_note} (log: {res['log']})")
+            # A run hash that moved is told apart from a rule that broke: one hides the other otherwise.
+            rules = [x for x in res["violations"] if not x.startswith("run hash")]
+            if rules:
+                broken += 1
+            print(("FAIL   " if rules else "HASH   ") + f"{res['name']}: " + "; ".join(rules + [x for x in res["violations"] if x.startswith("run hash")])
+                  + f" [{figures}]{hash_note} (log: {res['log']})")
         else:
             print(f"ok     {res['name']}: {figures}{hash_note}{res.get('retried', '')}")
     verdicts = compare_fingerprints(results, args.harness)
@@ -497,6 +503,7 @@ def main() -> int:
             print(f"ok     {label}: live state identical with and without the Enhanced view ({verdict['text']})")
         else:
             failed += 1
+            broken += 1
             print(f"FAIL   {label}: live state differs with the Enhanced view: {verdict['text']}")
     for manifest in sorted({m for m, _ in changed}):
         lines = manifest.read_text(encoding="utf-8").split("\n")
@@ -510,6 +517,8 @@ def main() -> int:
         print(f"check_routes: {sum(1 for m, _ in changed if m == manifest)} run hash(es) rewritten in {manifest}")
     total = len(results) + len(verdicts)
     print(f"check_routes: {total - failed} of {total} checks hold on {args.core}")
+    if failed:
+        print(f"check_routes: {broken} with a rule broken, {failed - broken} with only their run hash moved (HASH)")
     return 1 if failed else 0
 
 
