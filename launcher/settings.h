@@ -128,6 +128,8 @@ typedef struct oracles_settings {
                                    * default; a value the launcher does not know is off */
     int menu_toast_shown;         /* menu_toast=due|shown: the toast over the first game started with a controller, which names the
                                    * button that opens the menu, was shown (once, whatever the game); due by default */
+    int update_check;             /* update_check=on|off: when the home screen opens, one request to GitHub for the latest release
+                                   * (update_check.h); on by default, off asks nothing */
     int quality_hint;             /* quality_hint=low|medium|high|max|custom: the quality a game that ran slowly was last suggested to leave,
                                    * -1 none: the suggestion is made once a quality, until the view, the core or the workers change */
     int first_run;                /* no settings.txt was read: the first opening, which takes the device's profile */

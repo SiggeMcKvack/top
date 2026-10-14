@@ -58,6 +58,11 @@ typedef struct metrics {
     float label_line;                    /* the items' line height, 0: normal */
     float hints_bottom, hints_gap, hint_min_height, hint_pad_x, hint_pad_y, hint_gap, key_pad_x, key_pad_y;
     float version_left, version_bottom;
+    /* The newer version's notice: above the version (4:3), `update_gap` over its line, or after it on its line (16:9),
+     * `update_gap` right of it, so that its highlight's frame stays clear of the version; its line height, padding and
+     * border. */
+    int update_above;
+    float update_gap, update_line, update_pad_x, update_pad_y, update_border;
     float toast_bottom, toast_pad_x, toast_pad_y;
     float slow_left, slow_bottom, slow_max_width, slow_pad_x, slow_pad_y, slow_gap, slow_line;   /* the slow game's toast */
     float pad_toast_top, pad_toast_pad_x, pad_toast_pad_y, pad_toast_min_h;   /* the first game's with a controller */
@@ -73,6 +78,7 @@ static const metrics metrics_16_9 = {
     .hints_bottom = 1080.0f - 18.0f, .hints_gap = 36.0f, .hint_min_height = 0.0f, .hint_pad_x = 10.0f, .hint_pad_y = 4.0f, .hint_gap = 10.0f,
     .key_pad_x = 9.0f, .key_pad_y = 1.0f,
     .version_left = 24.0f, .version_bottom = 1080.0f - 20.0f,
+    .update_above = 0, .update_gap = 10.0f, .update_line = 28.0f, .update_pad_x = 12.0f, .update_pad_y = 4.0f, .update_border = 1.0f,
     .toast_bottom = 1080.0f - 78.0f, .toast_pad_x = 26.0f, .toast_pad_y = 14.0f,
     .slow_left = 96.0f, .slow_bottom = 1080.0f - 96.0f, .slow_max_width = 760.0f, .slow_pad_x = 26.0f, .slow_pad_y = 16.0f, .slow_gap = 6.0f,
     .slow_line = 24.0f * 1.35f,
@@ -90,6 +96,7 @@ static const metrics metrics_4_3 = {
     .hints_bottom = 1080.0f - 8.0f, .hints_gap = 16.0f, .hint_min_height = 90.0f, .hint_pad_x = 20.0f, .hint_pad_y = 0.0f, .hint_gap = 12.0f,
     .key_pad_x = 10.0f, .key_pad_y = 0.0f,
     .version_left = 28.0f, .version_bottom = 1080.0f - 38.0f,
+    .update_above = 1, .update_gap = 9.0f, .update_line = 34.0f, .update_pad_x = 14.0f, .update_pad_y = 5.0f, .update_border = 2.0f,
     .toast_bottom = 1080.0f - 120.0f, .toast_pad_x = 28.0f, .toast_pad_y = 16.0f,
     .slow_left = 64.0f, .slow_bottom = 1080.0f - 120.0f, .slow_max_width = 640.0f, .slow_pad_x = 28.0f, .slow_pad_y = 18.0f, .slow_gap = 6.0f,
     .slow_line = 30.0f * 1.3f,
@@ -286,6 +293,24 @@ void oracles_ui_layout_version(OraclesUiLayout layout, const char *text, Oracles
     *out = line_at(oracles_ui_home_styles(layout)->version, text, m->version_left, 0.0f, 0.0f);
     out->y = m->version_bottom - out->h;
     out->baseline += out->y;
+}
+
+void oracles_ui_layout_update(OraclesUiLayout layout, const OraclesUiLine *version, const char *release, OraclesUiUpdateLayout *out)
+{
+    const metrics *m = metrics_of(layout);
+    snprintf(out->label, sizeof out->label, "%s%s available", m->update_above ? "" : "\xc2\xb7 ", release);
+    out->text = line_at(oracles_ui_home_styles(layout)->version, out->label, 0.0f, 0.0f, m->update_line);
+    const float inset_x = m->update_border + m->update_pad_x, inset_y = m->update_border + m->update_pad_y, offset = out->text.baseline;
+    out->border = m->update_border;
+    out->box.w = out->text.w + 2.0f * inset_x;
+    out->box.h = out->text.h + 2.0f * inset_y;
+    /* Above, its frame as far left as the version's would be with the same padding; after it, its frame `update_gap` from
+     * the version's end and its text on the version's baseline. */
+    out->box.x = m->update_above ? version->x - m->update_pad_x : version->x + version->w + m->update_gap;
+    out->box.y = m->update_above ? version->y - m->update_gap - out->box.h : version->baseline - offset - inset_y;
+    out->text.x = out->box.x + inset_x;
+    out->text.y = out->box.y + inset_y;
+    out->text.baseline = out->text.y + offset;
 }
 
 void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out)

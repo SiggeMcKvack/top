@@ -262,10 +262,11 @@ void oracles_settings_defaults(oracles_settings *s)
     s->screen_margin = ORACLES_SCREEN_MARGIN_OFF;
     s->quality_hint = -1;
     s->menu_toast_shown = 0;
+    s->update_check = 1;
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -299,6 +300,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "menu_toast")) {
         if (!strcmp(value, "due") || !strcmp(value, "shown")) s->menu_toast_shown = !strcmp(value, "shown");
+        return 1;
+    }
+    if (!strcmp(name, "update_check")) {
+        if (!strcmp(value, "on") || !strcmp(value, "off")) s->update_check = !strcmp(value, "on");
         return 1;
     }
     if (!strcmp(name, "ghosts")) {
@@ -512,6 +517,9 @@ int oracles_settings_store(const oracles_settings *s)
                "# curved edge Android reports above or below), small or large (24 or 48 dp clear at the top and at the bottom,\n"
                "# for a screen whose edges hide part of the picture, auto's too where it is larger).\n");
     fprintf(f, "screen_margin=%s\n", oracles_screen_margin_names[s->screen_margin >= 0 && s->screen_margin < ORACLES_SCREEN_MARGINS ? s->screen_margin : 0]);
+    fprintf(f, "# The update check: on (when the home screen opens, one anonymous request to GitHub for the latest release, which\n"
+               "# the home screen names when it is newer; nothing is sent but the request) or off (no request).\n");
+    fprintf(f, "update_check=%s\n", s->update_check ? "on" : "off");
     fprintf(f, "launcher_window=%dx%d\n", s->launcher_width, s->launcher_height);
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) fprintf(f, "key_%s=%s\n", oracles_sdl_binding_names[i], s->key_names[i]);
     for (unsigned i = 0; i < 4; i++) fprintf(f, "pad_%s=%s\n", pad_setting_names[i], s->pad_names[i]);

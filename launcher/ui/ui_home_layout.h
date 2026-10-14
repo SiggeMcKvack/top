@@ -1,6 +1,7 @@
 /* Where the home screen's pieces go in the scene of a layout (ui_layout.h), without SDL: in 16:9 the stack of games
  * on the left, in 4:3 the games as tabs along the top; the hero and its menu, the version and the help bar, which
- * every screen has, and the toasts, a message's and the one after a game that ran slowly; computed from the text widths. */
+ * every screen has, the newer version's notice by the version, and the toasts, a message's and the one after a game that
+ * ran slowly; computed from the text widths. */
 #ifndef ORACLES_UI_HOME_LAYOUT_H
 #define ORACLES_UI_HOME_LAYOUT_H
 
@@ -51,6 +52,15 @@ typedef struct OraclesUiSlowLayout {
     OraclesUiLine path;
 } OraclesUiSlowLayout;
 
+/* The newer version's notice by the version: in 16:9 after it on its line, "· 1.3.0 available", in 4:3 on its own line
+ * above it, "1.3.0 available"; its frame (the highlight's border and background, `border` wide) and its text. */
+typedef struct OraclesUiUpdateLayout {
+    OraclesUiBox box;
+    float border;
+    char label[ORACLES_HOME_NAME_LENGTH + 16];
+    OraclesUiLine text;
+} OraclesUiUpdateLayout;
+
 /* A game's tab (4:3): its box, its label, and the line along its bottom, the chosen tab's drawn in the accent. */
 typedef struct OraclesUiTabLayout {
     OraclesUiBox box, line;
@@ -90,6 +100,9 @@ void oracles_ui_layout_menu(OraclesUiLayout layout, const char *const *notes, co
 /* The help bar, centred at the bottom. */
 void oracles_ui_layout_hints(OraclesUiLayout layout, const OraclesHomeHint *hints, unsigned count, OraclesUiHintLayout *out);
 void oracles_ui_layout_version(OraclesUiLayout layout, const char *text, OraclesUiLine *out);
+/* The notice of the newer version `release` ("1.3.0") by the `version` oracles_ui_layout_version laid out, which keeps
+ * its place. */
+void oracles_ui_layout_update(OraclesUiLayout layout, const OraclesUiLine *version, const char *release, OraclesUiUpdateLayout *out);
 void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);
 /* Over the first game started with a controller, at the top, centred: "Press L3 for the menu." */
 void oracles_ui_layout_pad_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);

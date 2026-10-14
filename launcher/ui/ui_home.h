@@ -16,6 +16,7 @@ typedef struct OraclesUiHome {
     OraclesUiTween motif_shift, motif_layer;    /* the motifs slide left and fade to half behind a page */
     OraclesUiTween highlight[ORACLES_HOME_MAX_ITEMS];
     OraclesUiTween toast;
+    OraclesUiTween update;       /* the newer version's notice, which fades in once (.4s) */
     char toast_text[256];
     double toast_until_ms;       /* when the toast starts to fade out; 0: none shown */
 } OraclesUiHome;
@@ -42,7 +43,7 @@ double oracles_ui_home_due_ms(const OraclesUiHome *home);
 
 typedef enum OraclesUiHomeHitKind {
     ORACLES_UI_HIT_NONE,
-    ORACLES_UI_HIT_ITEM,       /* a menu item: `index` */
+    ORACLES_UI_HIT_ITEM,       /* a menu item: `index`; the menu's count for the newer version's notice */
     ORACLES_UI_HIT_ENTRY,      /* an entry of the left stack (16:9) or its tab (4:3): `entry` */
     ORACLES_UI_HIT_BACK,       /* the help bar's hint that goes back */
     ORACLES_UI_HIT_ROW,        /* a row of a page: `index`, and one of its options: `option`, or -1 */

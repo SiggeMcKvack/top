@@ -30,6 +30,7 @@
 #include "home_games.h"
 #include "session.h"
 #include "settings.h"
+#include "update_check.h"
 
 /* SDL's entry point where a platform needs one (Windows: the command line in UTF-8; Android: the activity calls it). */
 #include <SDL3/SDL_main.h>
@@ -143,6 +144,7 @@ typedef struct launcher_options {
     int window_given;                /* --scale or --fullscreen: the window of the games the home screen starts */
     const char *screenshot, *inputs, *frame;
     int width, height;
+    const char *update_source;       /* --update-check-url: the update check's answer read from a file, or asked of another address */
 } launcher_options;
 
 /* Returns 0 when the arguments are understood. */
@@ -227,6 +229,7 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
         else if (!strcmp(argv[i], "--launcher-size") && more) { if (sscanf(argv[++i], "%dx%d", &l->width, &l->height) != 2) return 1; }
         else if (!strcmp(argv[i], "--launcher-input") && more) l->inputs = argv[++i];
         else if (!strcmp(argv[i], "--launcher-frame") && more) l->frame = argv[++i];
+        else if (!strcmp(argv[i], "--update-check-url") && more) l->update_source = argv[++i];   /* for the tests: not in the usage */
         else return 1;
     }
     if (o->sdl.scale == 0 || o->sdl.scale > 16) return 1;
@@ -239,6 +242,8 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
      * the game --rom starts: the home screen's games have their own save and no end.  The view and gameplay options
      * stay, and --record records the first game the home screen starts. */
     if (!o->rom_path && (o->no_window || o->save_path || o->play_path || o->frames || o->screenshot || o->patch_path)) return 1;
+    /* The update check is the home screen's: a game --rom starts asks nothing. */
+    if (o->rom_path && l->update_source) return 1;
     return 0;
 }
 
@@ -281,7 +286,7 @@ int main(int argc, char **argv)
 #endif
     OraclesSessionOptions options;
     oracles_session_defaults(&options);
-    launcher_options launcher = { 0, NULL, NULL, NULL, SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT };
+    launcher_options launcher = { 0, NULL, NULL, NULL, SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, NULL };
     if (parse(argc, argv, &options, &launcher) != 0) return usage();
 
     /* The settings are allocated: they hold a path per game. */
@@ -296,7 +301,12 @@ int main(int argc, char **argv)
     oracles_home_games_host(&games, &host);
     int status;
     if (launcher.screenshot) {
-        /* A capture reads the settings (the games' ROMs) and never writes them. */
+        /* A capture reads the settings (the games' ROMs) and never writes them, and asks for no update but the answer
+         * --update-check-url gives, waited for so that the capture shows it. */
+        if (launcher.update_source && prefs->update_check) {
+            oracles_update_check_start(launcher.update_source, ORACLES_PRODUCT_VERSION);
+            oracles_update_check_wait(ORACLES_UPDATE_TIMEOUT_MS + 2000);
+        } else if (launcher.update_source) fprintf(stderr, "oracles: update check: off (update_check=off)\n");
         char error[256];
         status = oracles_home_screenshot(&host, launcher.screenshot, launcher.width, launcher.height, launcher.inputs, launcher.frame, error, sizeof error);
         if (status) fprintf(stderr, "oracles: %s\n", error);
@@ -310,6 +320,9 @@ int main(int argc, char **argv)
         status = oracles_session_run(&options, prefs, &result);
     } else {
         oracles_settings_store(prefs);
+        /* Asked once a run, in the background: the home screen never waits for it. */
+        if (prefs->update_check) oracles_update_check_start(launcher.update_source ? launcher.update_source : oracles_update_default_url(), ORACLES_PRODUCT_VERSION);
+        else fprintf(stderr, "oracles: update check: off (update_check=off)\n");
         status = oracles_home_run(&host, &prefs->launcher_width, &prefs->launcher_height);
         oracles_settings_store(prefs);
     }

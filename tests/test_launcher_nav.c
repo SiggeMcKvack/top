@@ -1,5 +1,6 @@
 /* The home screen's navigation (ui_home_nav.h): entries, the list of fan
- * games, disabled items and their reasons, going back, the pointer; Display's rows from the pause. */
+ * games, disabled items and their reasons, going back, the pointer; Display's rows from the pause; the newer version's
+ * notice. */
 #include "ui_home_nav.h"
 #include "ui_page_nav.h"
 
@@ -436,6 +437,63 @@ static void display_in_game(void)
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.margin == 3);
 }
 
+/* The newer version's notice: without it, the menu wraps from Exit to Start game; with it, down from Exit reaches it,
+ * down again Start game, up Exit again, and up from Start game the notice.  OK, a click or a tap opens its page and the
+ * launcher stays; Select's hint says Open while it is highlighted.  On the home screen only: not in the pause, not on a
+ * page. */
+static void update_notice(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.games[0].usable = 1;
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    CHECK(!oracles_home_update_shown(&nav));
+    nav.focus = 6;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 6);
+    oracles_home_hover(&nav, 7);
+    CHECK(oracles_home_focus(&nav) == 6 && oracles_home_click(&nav, 7) == ORACLES_HOME_STAY);
+
+    snprintf(nav.update, sizeof nav.update, "1.3.0");
+    CHECK(oracles_home_update_shown(&nav) && !oracles_home_update_focused(&nav));
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Select"));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 7 && oracles_home_update_focused(&nav));
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Open") && !strcmp(hints[2].key, "Enter / A"));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_OPEN_UPDATE && nav.screen == ORACLES_SCREEN_HOME && oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0 && !oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 6);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_EXIT);
+    /* The pointer: hovered, it takes the highlight; clicked or tapped, it opens.  Past it, nothing. */
+    oracles_home_hover(&nav, 7);
+    CHECK(oracles_home_update_focused(&nav));
+    oracles_home_hover(&nav, 8);
+    CHECK(oracles_home_focus(&nav) == 7);
+    oracles_home_hover(&nav, 2);
+    CHECK(oracles_home_click(&nav, 7) == ORACLES_HOME_OPEN_UPDATE && oracles_home_update_focused(&nav) && nav.screen == ORACLES_SCREEN_HOME);
+    CHECK(oracles_home_click(&nav, 8) == ORACLES_HOME_STAY);
+    /* Another entry highlights its first item. */
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.entry == ORACLES_HOME_SEASONS && oracles_home_focus(&nav) == 0);
+    /* The list of fan games: after its Exit. */
+    oracles_home_select(&nav, ORACLES_HOME_FAN);
+    nav.focus = 3;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 4 && oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_OPEN_UPDATE && oracles_home_hero(&nav) == ORACLES_HOME_HERO_FAN);
+
+    /* Not on a page, where Select stays Select. */
+    oracles_home_select(&nav, ORACLES_HOME_AGES);
+    nav.focus = 3;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY && !oracles_home_update_shown(&nav));
+    oracles_home_act(&nav, ORACLES_HOME_BACK);
+    CHECK(nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 3 && oracles_home_update_shown(&nav));
+    /* Nor in the pause: its menu wraps from Quit to launcher to Resume. */
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
+    CHECK(!oracles_home_update_shown(&nav));
+    nav.focus = 6;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0);
+    CHECK(oracles_home_click(&nav, 7) == ORACLES_HOME_STAY && oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[1].label, "Select"));
+}
+
 int main(void)
 {
     entries();
@@ -446,6 +504,7 @@ int main(void)
     pointer();
     slow_toast();
     display_in_game();
+    update_notice();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("launcher navigation: entries, fan games, disabled items and going back behave as expected\n");
     return 0;

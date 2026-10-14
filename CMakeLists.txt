@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 project(the-oracles-project LANGUAGES C)
+# The update check asks with NSURLSession on macOS (launcher/macos/update_fetch.m).
+if(APPLE)
+    enable_language(OBJC)
+endif()
 # Let CMake drop a static library repeated on a link line where the linker
 # needs no repeat (Apple's ld warns about duplicates); CMake 3.29 and later.
 if(POLICY CMP0156)
@@ -96,6 +100,11 @@ if(ORACLES_BUILD_LAUNCHER)
     string(JSON ORACLES_PRODUCT_VERSION GET ${ORACLES_VERSION_JSON} version)
     if(NOT ORACLES_PRODUCT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
         message(FATAL_ERROR "config/version.json: ${ORACLES_PRODUCT_VERSION} is not MAJOR.MINOR.PATCH")
+    endif()
+    # The public repository whose latest release the home screen's update check asks GitHub for (launcher/update_check.h).
+    string(JSON ORACLES_UPDATE_REPOSITORY GET ${ORACLES_VERSION_JSON} repository)
+    if(NOT ORACLES_UPDATE_REPOSITORY MATCHES "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+        message(FATAL_ERROR "config/version.json: the repository ${ORACLES_UPDATE_REPOSITORY} is not OWNER/NAME")
     endif()
     if(NOT ORACLES_GIT_DESCRIBE)
         find_package(Git QUIET)

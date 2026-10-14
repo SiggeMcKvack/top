@@ -6,6 +6,7 @@
 #include "pause.h"
 #include "ui_home.h"
 #include "ui_page_nav.h"
+#include "update_check.h"
 
 #include <SDL3/SDL.h>
 
@@ -74,6 +75,10 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
     nav.display.room_h = height - 64;
     /* Over a game's frame, the pause's layout, as the game shows it. */
     nav.layout = frame ? oracles_ui_layout_pause(width, height, nav.display.aspect) : oracles_ui_layout_choose(width, height, nav.display.aspect);
+    /* The update check's answer, which main waited for: a newer version shown at rest. */
+    OraclesUpdateStatus update;
+    oracles_update_check_status(&update);
+    if (update.state == ORACLES_UPDATE_NEWER) snprintf(nav.update, sizeof nav.update, "%s", update.version);
     if (frame) {
         const int profile = oracles_page_profile(&nav.games[0], nav.display.profile);
         oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, profile < 0 ? ORACLES_PROFILE_FAITHFUL : (OraclesProfile)profile,

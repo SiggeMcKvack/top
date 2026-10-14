@@ -231,6 +231,47 @@ if(BUILD_TESTING)
         oracles_set_warnings(oracles-test-launcher-settings)
         add_test(NAME oracles-launcher-settings COMMAND oracles-test-launcher-settings ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_settings.tmp)
 
+        # The update check on GitHub's answer for v1.1.0 (update_release.json) and variants of it, and on its thread from a
+        # file: no test asks the network.
+        set(ORACLES_UPDATE_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/update_release.json)
+        add_executable(oracles-test-update-check test_update_check.c)
+        target_link_libraries(oracles-test-update-check PRIVATE oracles_update)
+        oracles_set_warnings(oracles-test-update-check)
+        add_test(NAME oracles-update-check COMMAND oracles-test-update-check ${ORACLES_UPDATE_RELEASE} ${CMAKE_CURRENT_BINARY_DIR}/test_update_check.tmp)
+        # The launcher's --update-check-url, for a capture: a release newer than any (v99.0.0) said on the standard error;
+        # update_check=off asks nothing, the file given or not; and refused with --rom, whose game asks nothing.
+        file(READ ${ORACLES_UPDATE_RELEASE} update_release)
+        string(REPLACE "\"tag_name\":\"v1.1.0\"" "\"tag_name\":\"v99.0.0\"" update_release "${update_release}")
+        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json "${update_release}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ORACLES_UPDATE_RELEASE})
+        set(update_off_home ${CMAKE_CURRENT_BINARY_DIR}/launcher-test-update-off)
+        file(MAKE_DIRECTORY ${update_off_home})
+        file(WRITE ${update_off_home}/settings.txt "update_check=off\n")
+        add_test(NAME oracles-launcher-update-check
+            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update.ppm --launcher-size 640x480
+                    --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
+        set_tests_properties(oracles-launcher-update-check PROPERTIES PASS_REGULAR_EXPRESSION "update check: version 99\\.0\\.0 available"
+            FAIL_REGULAR_EXPRESSION "https://|update_release_newer" TIMEOUT 30 ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")
+        # The home screen shows it above the version at a handheld's 640x480, highlighted by Up from Start game, after a
+        # controller's button (the layout reference's frame 24d).
+        add_test(NAME oracles-launcher-screenshot-update-draw
+            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm --launcher-size 640x480 --launcher-input pad,up
+                    --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
+        set_tests_properties(oracles-launcher-screenshot-update-draw PROPERTIES FIXTURES_SETUP launcher_update TIMEOUT 30
+            ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")
+        add_test(NAME oracles-launcher-screenshot-update
+            COMMAND oracles-test-launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm 640 480 ${ORACLES_LAYOUT_REFERENCE} 24d "update text")
+        set_tests_properties(oracles-launcher-screenshot-update PROPERTIES FIXTURES_REQUIRED launcher_update)
+        add_test(NAME oracles-launcher-update-check-off
+            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_off.ppm --launcher-size 640x480
+                    --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
+        set_tests_properties(oracles-launcher-update-check-off PROPERTIES PASS_REGULAR_EXPRESSION "update check: off"
+            FAIL_REGULAR_EXPRESSION "asking|available" TIMEOUT 30 ENVIRONMENT "ORACLES_SETTINGS_DIR=${update_off_home}")
+        add_test(NAME oracles-launcher-update-check-rom
+            COMMAND oracles --rom ${CMAKE_CURRENT_BINARY_DIR}/launcher_without_rom.tmp --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
+        set_tests_properties(oracles-launcher-update-check-rom PROPERTIES PASS_REGULAR_EXPRESSION "usage: the-oracles-project" TIMEOUT 20
+            ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home;SDL_VIDEO_DRIVER=dummy")
+
         # The launcher's window lent to a session whose start fails (no audio driver by that name) comes back intact; what
         # is dropped on it is left to SDL; a controller unplugged and plugged in during a session is taken back; the file
         # dialog answers on the queue, and one that cannot open is no dialog.

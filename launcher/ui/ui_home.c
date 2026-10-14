@@ -24,6 +24,7 @@
 #define CONTROLS_MOTIF_OPACITY 0.35f   /* behind Controls' grids */
 #define VERSION_GAP 24.0f               /* the least room between the version and the help bar */
 #define TOAST_SHOWN_MS 4000.0
+#define UPDATE_FADE_MS 400.0f
 
 /* The home screen's colours, converted once from oklch where they were given in oklch. */
 #define DIAGONAL 0x08080au
@@ -42,6 +43,9 @@
 #define ITEM_HIGHLIGHT 0xffffffu
 #define ITEM_HIGHLIGHT_OPACITY 0.07f
 #define VERSION_TEXT 0x8a8793u
+#define UPDATE_TEXT 0xc9c6cfu
+#define UPDATE_FOCUSED 0xf3f1f5u
+#define UPDATE_HIGHLIGHT_OPACITY 0.055f
 #define HINT_BACKGROUND 0x060609u
 #define HINT_BACKGROUND_OPACITY 0.55f
 #define HINT_KEY 0xd6d3dcu
@@ -56,12 +60,12 @@
 
 /* What differs between the layouts in the drawing: corners, the help bar's background, the pause's notes. */
 typedef struct look {
-    float item_radius, reason_radius, hint_radius, key_radius, toast_radius;
+    float item_radius, reason_radius, hint_radius, key_radius, toast_radius, update_radius;
     float hint_opacity;
     uint32_t paused_note;
 } look;
-static const look look_16_9 = { 6.0f, 5.0f, 6.0f, 4.0f, 8.0f, HINT_BACKGROUND_OPACITY, PAUSED_STATE };
-static const look look_4_3 = { 8.0f, 6.0f, 9.0f, 5.0f, 9.0f, 0.6f, ITEM_NOTE };
+static const look look_16_9 = { 6.0f, 5.0f, 6.0f, 4.0f, 8.0f, 6.0f, HINT_BACKGROUND_OPACITY, PAUSED_STATE };
+static const look look_4_3 = { 8.0f, 6.0f, 9.0f, 5.0f, 9.0f, 7.0f, 0.6f, ITEM_NOTE };
 
 static const look *look_of(OraclesUiLayout layout) { return layout == ORACLES_UI_LAYOUT_4_3 ? &look_4_3 : &look_16_9; }
 
@@ -89,6 +93,7 @@ void oracles_ui_home_start(OraclesUiHome *home, const OraclesHomeNav *nav)
     oracles_ui_tween_jump(&home->motif_shift, nav->screen == ORACLES_SCREEN_HOME ? 0.0f : -ORACLES_UI_MOTIF_SLIDE);
     oracles_ui_tween_jump(&home->motif_layer, nav->screen == ORACLES_SCREEN_HOME ? 1.0f : nav->screen == ORACLES_SCREEN_CONTROLS ? CONTROLS_MOTIF_OPACITY : PAGE_MOTIF_OPACITY);
     oracles_ui_tween_jump(&home->toast, 0.0f);
+    oracles_ui_tween_jump(&home->update, nav->update[0] ? 1.0f : 0.0f);
 }
 
 void oracles_ui_home_follow(OraclesUiHome *home, const OraclesHomeNav *nav, double now_ms)
@@ -107,6 +112,7 @@ void oracles_ui_home_follow(OraclesUiHome *home, const OraclesHomeNav *nav, doub
     oracles_ui_tween_to(&home->motif_shift, page ? -ORACLES_UI_MOTIF_SLIDE : 0.0f, now_ms, MOTIF_SLIDE_MS, &oracles_ui_ease_swift);
     const float layer = !page ? 1.0f : nav->screen == ORACLES_SCREEN_CONTROLS ? CONTROLS_MOTIF_OPACITY : PAGE_MOTIF_OPACITY;
     oracles_ui_tween_to(&home->motif_layer, layer, now_ms, MOTIF_LAYER_MS, &oracles_ui_ease);
+    if (nav->update[0]) oracles_ui_tween_to(&home->update, 1.0f, now_ms, UPDATE_FADE_MS, &oracles_ui_ease);
 }
 
 void oracles_ui_home_toast(OraclesUiHome *home, const char *text, double now_ms)
@@ -260,6 +266,25 @@ static void draw_hints(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUi
     }
 }
 
+/* The newer version's notice by the version, while it does not reach the help bar (whose left edge is `hints_x`): its
+ * frame drawn when highlighted, in the accent. */
+static int draw_update(OraclesUiDraw *draw, const OraclesUiHome *home, const OraclesHomeNav *nav, OraclesUiLayout scene, const OraclesUiLine *version,
+                       float hints_x, OraclesUiColor accent, double now_ms)
+{
+    if (!oracles_home_update_shown(nav)) return 0;
+    OraclesUiUpdateLayout l;
+    oracles_ui_layout_update(scene, version, nav->update, &l);
+    if (l.box.x + l.box.w + VERSION_GAP > hints_x) return 0;
+    const float opacity = oracles_ui_tween_value(&home->update, now_ms), radius = look_of(scene)->update_radius;
+    const int focused = oracles_home_update_focused(nav);
+    if (focused) {
+        oracles_ui_fill_round_rect(draw, l.box.x, l.box.y, l.box.w, l.box.h, radius, oracles_ui_rgba(ITEM_HIGHLIGHT, UPDATE_HIGHLIGHT_OPACITY * opacity));
+        oracles_ui_stroke_round_rect(draw, l.box.x, l.box.y, l.box.w, l.box.h, radius, l.border, oracles_ui_fade(accent, opacity));
+    }
+    draw_line(draw, oracles_ui_home_styles(scene)->version, &l.text, l.label, 0.0f, oracles_ui_rgba(focused ? UPDATE_FOCUSED : UPDATE_TEXT, opacity));
+    return oracles_ui_tween_running(&home->update, now_ms);
+}
+
 static int draw_toast(OraclesUiDraw *draw, OraclesUiHome *home, OraclesUiLayout scene, double now_ms)
 {
     if (home->toast_until_ms > 0.0 && now_ms >= home->toast_until_ms) {
@@ -361,8 +386,11 @@ int oracles_ui_home_draw(OraclesUiDraw *draw, OraclesUiHome *home, const Oracles
     oracles_ui_draw_anchor(draw, 0.0f, 1.0f);
     /* The version gives way to the help bar where the two would meet: a long `git describe` in the pause's small
      * window. */
-    if (version.x + version.w + VERSION_GAP <= hints_left(nav, scene) + oracles_ui_draw_anchor_shift(draw, 0.0f, 0.5f))
+    const float hints_x = hints_left(nav, scene) + oracles_ui_draw_anchor_shift(draw, 0.0f, 0.5f);
+    if (version.x + version.w + VERSION_GAP <= hints_x) {
         draw_line(draw, oracles_ui_home_styles(scene)->version, &version, ORACLES_VERSION, 0.0f, oracles_ui_rgb(VERSION_TEXT));
+        moving |= draw_update(draw, home, nav, scene, &version, hints_x, accent, now_ms);
+    }
     oracles_ui_draw_anchor(draw, 0.5f, 1.0f);
     draw_hints(draw, nav, scene);
     oracles_ui_draw_anchor(draw, 0.0f, 1.0f);
@@ -395,6 +423,14 @@ OraclesUiHomeHit oracles_ui_home_hit(const OraclesHomeNav *nav, float x, float y
     OraclesUiSlowLayout slow;
     const char *path;
     if (layout_slow(nav, &slow, &path) && inside(&slow.box, x, y)) { hit.kind = ORACLES_UI_HIT_SLOW; return hit; }
+    if (oracles_home_update_shown(nav)) {
+        OraclesUiLine version;
+        OraclesUiUpdateLayout update;
+        OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+        oracles_ui_layout_version(oracles_ui_home_scene(nav), ORACLES_VERSION, &version);
+        oracles_ui_layout_update(oracles_ui_home_scene(nav), &version, nav->update, &update);
+        if (inside(&update.box, x, y)) { hit.kind = ORACLES_UI_HIT_ITEM; hit.index = oracles_home_items(nav, items); return hit; }
+    }
     if (nav->screen == ORACLES_SCREEN_CONTROLS) {
         if (oracles_ui_controls_hit(nav, x, y, &hit.column, &hit.row, &hit.option)) hit.kind = ORACLES_UI_HIT_CELL;
         return hit;

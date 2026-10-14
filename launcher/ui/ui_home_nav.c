@@ -170,11 +170,23 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
     return n;
 }
 
+int oracles_home_update_shown(const OraclesHomeNav *nav)
+{
+    return nav->update[0] && nav->screen == ORACLES_SCREEN_HOME && !nav->in_game;
+}
+
 unsigned oracles_home_focus(const OraclesHomeNav *nav)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items);
+    if (nav->focus >= count && oracles_home_update_shown(nav)) return count;
     return nav->focus < count ? nav->focus : count - 1u;
+}
+
+int oracles_home_update_focused(const OraclesHomeNav *nav)
+{
+    OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+    return oracles_home_update_shown(nav) && nav->focus >= oracles_home_items(nav, items);
 }
 
 void oracles_home_others(const OraclesHomeNav *nav, OraclesHomeEntry others[2])
@@ -237,6 +249,7 @@ static unsigned hints_of(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLE
         { "Esc / B", "Fan games", 1, 0 },
     };
     memcpy(hints, base, sizeof base);
+    if (oracles_home_update_focused(nav)) hints[2].label = "Open";   /* the newer version's page */
     return nav->entry != ORACLES_HOME_FAN || nav->fan_pick == ORACLES_HOME_HERO_FAN ? 3 : 4;
 }
 
@@ -325,7 +338,8 @@ void oracles_home_select(OraclesHomeNav *nav, OraclesHomeEntry entry)
 void oracles_home_hover(OraclesHomeNav *nav, unsigned item)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
-    if (item < oracles_home_items(nav, items)) nav->focus = item;
+    const unsigned count = oracles_home_items(nav, items);
+    if (item < count || (item == count && oracles_home_update_shown(nav))) nav->focus = item;
 }
 
 static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *it)
@@ -354,7 +368,9 @@ OraclesHomeCommand oracles_home_click(OraclesHomeNav *nav, unsigned item)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     nav->slow = 0;
-    if (item >= oracles_home_items(nav, items)) return ORACLES_HOME_STAY;
+    const unsigned count = oracles_home_items(nav, items);
+    if (item == count && oracles_home_update_shown(nav)) { nav->focus = item; return ORACLES_HOME_OPEN_UPDATE; }
+    if (item >= count) return ORACLES_HOME_STAY;
     nav->focus = item;
     return activate(nav, &items[item]);
 }
@@ -378,6 +394,8 @@ OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction actio
     if (nav->screen == ORACLES_SCREEN_CHEATS) return oracles_cheats_act(nav, action);
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items), focus = oracles_home_focus(nav);
+    /* The newer version's notice, when shown, is a place after the last item. */
+    const unsigned places = count + (oracles_home_update_shown(nav) ? 1u : 0u);
     if (nav->screen == ORACLES_SCREEN_PAUSE && (action == ORACLES_HOME_LEFT || action == ORACLES_HOME_RIGHT)) return ORACLES_HOME_STAY;
     if (nav->screen == ORACLES_SCREEN_PAUSE && action == ORACLES_HOME_BACK) return ORACLES_HOME_RESUME;   /* Escape, B, the menu button or Guide resumes */
     switch (action) {
@@ -387,9 +405,9 @@ OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction actio
             oracles_home_select(nav, (OraclesHomeEntry)(((int)nav->entry + step) % ORACLES_HOME_ENTRIES));
             return ORACLES_HOME_STAY;
         }
-        case ORACLES_HOME_UP: nav->focus = (focus + count - 1u) % count; return ORACLES_HOME_STAY;
-        case ORACLES_HOME_DOWN: nav->focus = (focus + 1u) % count; return ORACLES_HOME_STAY;
-        case ORACLES_HOME_OK: return activate(nav, &items[focus]);
+        case ORACLES_HOME_UP: nav->focus = (focus + places - 1u) % places; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_DOWN: nav->focus = (focus + 1u) % places; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_OK: return focus < count ? activate(nav, &items[focus]) : ORACLES_HOME_OPEN_UPDATE;
         case ORACLES_HOME_BACK:
             /* Back from a fan game to the list, its line highlighted; nothing to go back to elsewhere. */
             if (nav->entry == ORACLES_HOME_FAN && nav->fan_pick != ORACLES_HOME_HERO_FAN) {

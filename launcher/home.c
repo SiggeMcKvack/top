@@ -8,6 +8,7 @@
 #include "ui_controls_nav.h"
 #include "ui_home.h"
 #include "ui_page_nav.h"
+#include "update_check.h"
 
 #include <SDL3/SDL.h>
 
@@ -164,6 +165,16 @@ static void start(home_app *app, OraclesHomeCommand game)
     if (message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
 }
 
+/* The update check's answer: a newer version, shown by the version from then on (it fades in). */
+static void read_update(home_app *app)
+{
+    OraclesUpdateStatus status;
+    oracles_update_check_status(&status);
+    if (status.state != ORACLES_UPDATE_NEWER || app->nav.update[0]) return;
+    snprintf(app->nav.update, sizeof app->nav.update, "%s", status.version);
+    changed(app);
+}
+
 /* The game's page asks the host for a file, a folder, or to keep a choice. */
 static void page_command(home_app *app, OraclesHomeCommand c)
 {
@@ -219,6 +230,7 @@ static int input(const SDL_Event *e)
 static void command(home_app *app, OraclesHomeCommand c)
 {
     if (c == ORACLES_HOME_EXIT) app->running = 0;
+    else if (c == ORACLES_HOME_OPEN_UPDATE) oracles_update_check_open();   /* the browser opens; the launcher stays */
     else if (c == ORACLES_HOME_START_AGES || c == ORACLES_HOME_START_SEASONS || c == ORACLES_HOME_START_AGES_MODS || c == ORACLES_HOME_START_SEASONS_MODS
              || oracles_home_fan_game_started(c)) start(app, c);
     else if (c != ORACLES_HOME_STAY) page_command(app, c);
@@ -339,6 +351,8 @@ static void handle(home_app *app, const SDL_Event *e)
             fprintf(stderr, "oracles: home screen event 0x%x, %.0f ms after the game\n", (unsigned)e->type, now_ms() - app->watch_since_ms);
     }
     if (oracles_safe_area_event(app->window, "home screen", e, &app->edges)) app->dirty = 1;
+    /* The update check's answer (update_check.h). */
+    if (oracles_update_check_event() && e->type == oracles_update_check_event()) read_update(app);
     if (e->type == SDL_EVENT_WINDOW_FOCUS_GAINED || e->type == SDL_EVENT_WINDOW_FOCUS_LOST || e->type == SDL_EVENT_WINDOW_DISPLAY_CHANGED
         || e->type == SDL_EVENT_WINDOW_HIDDEN || e->type == SDL_EVENT_WINDOW_SHOWN)
         fprintf(stderr, "oracles: home screen window: %s\n", e->type == SDL_EVENT_WINDOW_FOCUS_GAINED ? "focus gained" : e->type == SDL_EVENT_WINDOW_FOCUS_LOST ? "focus lost"
@@ -453,6 +467,7 @@ static int open_window(home_app *app)
 int oracles_home_run(const OraclesHomeHost *host, int *width, int *height)
 {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) { fprintf(stderr, "oracles: %s\n", SDL_GetError()); return 1; }
+    oracles_update_check_events(1);
     home_app app;
     memset(&app, 0, sizeof app);
     app.fullscreen = oracles_sdl_fullscreen_only();
@@ -469,6 +484,7 @@ int oracles_home_run(const OraclesHomeHost *host, int *width, int *height)
         refresh(&app);   /* the screen margin's edges read with Display's */
         oracles_safe_area_report(app.window, "home screen", "opened", &app.edges);
         oracles_ui_home_start(&app.view, &app.nav);
+        read_update(&app);   /* an answer that came before the events were on */
         app.dirty = 1;
         app.redraws = ANDROID_REDRAWS;
         app.running = 1;
@@ -510,6 +526,7 @@ int oracles_home_run(const OraclesHomeHost *host, int *width, int *height)
     oracles_sdl_pads_close(&app.pads);
     if (app.renderer) SDL_DestroyRenderer(app.renderer);
     if (app.window) SDL_DestroyWindow(app.window);
+    oracles_update_check_close();   /* no event pushed past SDL_Quit */
     SDL_Quit();
     return status;
 }

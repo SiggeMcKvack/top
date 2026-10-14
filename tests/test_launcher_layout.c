@@ -7,7 +7,8 @@
  * window; the toast after a game that ran slowly, 11c, 11f and 11h; the language beside Cartridge, 14f, 15d and
  * 16f; the toast over the first game started with a controller, 18d and 18e; the help bar after a key or a
  * controller's button, at home (21a to 21d), in the pause menu (21e, 21f, its entries naming no key: 21y) and on
- * Display (21g, 21h); Cheats in the menus, 22g, 22k, 22q and 22r, and a fan game's menu without it, 23g: a text is
+ * Display (21g, 21h); Cheats in the menus, 22g, 22k, 22q and 22r, and a fan game's menu without it, 23g; the newer
+ * version's notice by the version, 24a to 24d, and the version alone, 24e: a text is
  * compared by its left edge, its width, the top and height of its line box,
  * and its baseline; an element by its box.  And the choice of the layout by the
  * window's shape. */
@@ -606,6 +607,74 @@ static void cheats_entry(void)
     CHECK(oracles_home_items(&nav, it) == 6 && it[4].id == ORACLES_HOME_ITEM_DISPLAY && it[5].id == ORACLES_HOME_ITEM_QUIT_GAME);
 }
 
+/* The newer version's notice (turn 24), GitHub's 1.3.0 read by 1.2.0, on the home screen: after the version on its line
+ * in 16:9 (24a, Start game highlighted after a key; 24b, the notice highlighted, down from Exit, after a controller's
+ * button, Select's hint saying Open), on its own line above it in 4:3 (24c) and at 640x480 on Android (24d); without a
+ * newer version, the version alone (24e).  The menu and the help bar keep their places.  Turn 24's prototype puts the
+ * version in a padded box, `lift` pixels lower than turn 23 drew it (16:9: 2, and 3 without the notice, whose frame makes
+ * the line 2 px taller; 4:3: 5): the launcher keeps the version where 1a and 10a measure it, and lays the notice out from
+ * it as the prototype does, its box and its text `lift` higher than the frame's.  In 16:9 the launcher sets the notice
+ * `shift` (10) pixels further right than the prototype, whose highlighted frame touched the version. */
+static void update_frame(const char *frame, OraclesUiLayout layout, OraclesInputDevice device, int android, int focused, const char *release, float lift,
+                         float shift)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.layout = layout;
+    nav.android = android;
+    nav.games[0].usable = 1;
+    if (release) snprintf(nav.update, sizeof nav.update, "%s", release);
+    oracles_home_input(&nav, device);
+    if (focused) {
+        nav.focus = 6;
+        oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    }
+    CHECK(oracles_home_focus(&nav) == (focused ? 7u : 0u) && oracles_home_update_focused(&nav) == focused);
+    OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
+    if (menu(&nav, items) != 7) { fprintf(stderr, "FAIL %s: seven items expected\n", frame); layout_fail(); return; }
+    for (int i = 0; i < 7; i++) {
+        char name[32];
+        snprintf(name, sizeof name, "item %d", i);
+        layout_box(frame, name, &items[i].box);
+    }
+    hints_of(frame, &nav, layout, 3);
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    oracles_home_hints(&nav, hints);
+    CHECK(!strcmp(hints[2].label, focused ? "Open" : "Select"));
+    OraclesUiLine version;
+    oracles_ui_layout_version(layout, "v1.2.0 (abc1234)", &version);
+    layout_near(frame, "version", "x", version.x);
+    layout_near(frame, "version", "w", version.w);
+    layout_near(frame, "version", "baseline", version.baseline + lift);
+    CHECK(oracles_home_update_shown(&nav) == (release != NULL));
+    if (!release) return;
+    OraclesUiUpdateLayout update;
+    oracles_ui_layout_update(layout, &version, release, &update);
+    OraclesUiBox box = update.box;
+    box.y += lift;
+    box.x -= shift;
+    layout_box(frame, "update", &box);
+    OraclesUiLine text = update.text;
+    text.x -= shift;
+    text.y += lift;
+    text.baseline += lift;
+    layout_line(frame, "update text", &text);
+}
+
+static void update_notice(void)
+{
+    update_frame("24a", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 2.0f, 10.0f);
+    update_frame("24b", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_GAMEPAD, 0, 1, "1.3.0", 2.0f, 10.0f);
+    update_frame("24c", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 5.0f, 0.0f);
+    update_frame("24d", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_GAMEPAD, 1, 1, "1.3.0", 5.0f, 0.0f);
+    update_frame("24e", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, NULL, 3.0f, 0.0f);
+    /* The version stays where it was: 24e's is 1a's, but for its text. */
+    OraclesUiLine before, after;
+    oracles_ui_layout_version(ORACLES_UI_LAYOUT_16_9, "v1.0.0", &before);
+    oracles_ui_layout_version(ORACLES_UI_LAYOUT_16_9, "v1.2.0 (abc1234)", &after);
+    CHECK(before.x == after.x && before.y == after.y && before.h == after.h && before.baseline == after.baseline);
+}
+
 /* The layout of a window's shape: the nearer of 4:3 and 16:9 by their ratio, unless aspect= names one; the narrow
  * pause menu in 16:9 only, and the pause in 4:3 from 640x480 only. */
 static void layout_choice(void)
@@ -662,6 +731,7 @@ int main(int argc, char **argv)
     slow_toast("11h", 640, 480, 2);
     devices();
     cheats_entry();
+    update_notice();
     layout_choice();
     if (layout_failures()) { fprintf(stderr, "%d failure(s)\n", layout_failures()); return 1; }
     printf("launcher layout: the home screen matches the layout reference within %.1f px\n", (double)LAYOUT_TOLERANCE);

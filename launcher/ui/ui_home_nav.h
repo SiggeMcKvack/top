@@ -5,7 +5,8 @@
  * Three entries: Oracle of Ages, Oracle of Seasons, Fan games.  The chosen
  * entry fills the right half with its title and its menu, the two others are
  * stacked on the left.  Left and right change the entry; up and down move in
- * the menu, which wraps; OK activates the highlighted item, Back leaves the
+ * the menu, which wraps (through the newer version's notice, when there is
+ * one); OK activates the highlighted item, Back leaves the
  * list of fan games.  A disabled item is highlighted like the others and
  * shows its reason.  Fan games opens the list of fan games in the menu;
  * a fan game picked there (oracles_home_fan_games) has the menu of a game.  Cartridge opens
@@ -83,6 +84,7 @@ typedef enum OraclesHomeCommand {
     ORACLES_HOME_START_SEASONS_MODS,
     ORACLES_HOME_MODS_LIMIT,     /* Mods: a ninth mod was switched on, and stays off; the screen says why */
     ORACLES_HOME_STORE,          /* a choice of the page changed: the settings are written */
+    ORACLES_HOME_OPEN_UPDATE,    /* the newer version's notice: its release's page in the system's browser, the launcher staying open */
     /* The pause menu's. */
     ORACLES_HOME_RESUME,
     ORACLES_HOME_SAVE_STATE,
@@ -304,6 +306,9 @@ typedef struct OraclesHomeNav {
     OraclesInputDevice device;
     int keyboard_used;
     int android;
+    /* The newer version the update check found (update_check.h), "1.3.0", empty while there is none: the home screen
+     * alone shows it by the version, a place after the menu's last item for the highlight (oracles_home_update_shown). */
+    char update[ORACLES_HOME_NAME_LENGTH];
 } OraclesHomeNav;
 
 typedef struct OraclesHomeItem {
@@ -329,8 +334,12 @@ void oracles_home_pause(OraclesHomeNav *nav, int game, OraclesProfile playing, i
 OraclesHomeHero oracles_home_hero(const OraclesHomeNav *nav);
 /* The menu of what the right half shows; returns the number of items. */
 unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS]);
-/* The highlighted item, within the menu. */
+/* The highlighted item, within the menu; the menu's count while the newer version's notice has the highlight. */
 unsigned oracles_home_focus(const OraclesHomeNav *nav);
+/* The newer version's notice is shown (on the home screen, nav->update set), and highlighted: down from the menu's last
+ * item, up from its first, the menu no longer wrapping from one to the other; OK opens its page. */
+int oracles_home_update_shown(const OraclesHomeNav *nav);
+int oracles_home_update_focused(const OraclesHomeNav *nav);
 /* The entries of the left stack, in order. */
 void oracles_home_others(const OraclesHomeNav *nav, OraclesHomeEntry others[2]);
 OraclesHomeHero oracles_home_entry_hero(OraclesHomeEntry entry);
@@ -362,7 +371,8 @@ int oracles_home_slow_text(const OraclesHomeNav *nav, char *text, size_t capacit
 /* The toast clicked: Display, on its Quality row (View under Custom); the toast goes. */
 void oracles_home_slow_open(OraclesHomeNav *nav);
 
-/* The pointer: an entry of the left stack clicked, an item hovered or clicked. */
+/* The pointer: an entry of the left stack clicked, an item hovered or clicked; the newer version's notice is the item
+ * after the menu's last. */
 void oracles_home_select(OraclesHomeNav *nav, OraclesHomeEntry entry);
 void oracles_home_hover(OraclesHomeNav *nav, unsigned item);
 OraclesHomeCommand oracles_home_click(OraclesHomeNav *nav, unsigned item);

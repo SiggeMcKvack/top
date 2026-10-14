@@ -12,6 +12,8 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <uses-feature android:name="android.hardware.type.pc" android:required="false" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The update check: one request to GitHub when the home screen opens (update_check=off: none). -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- hasFragileUserData: Android offers to keep the application's data at an uninstall, the ROMs, patches and saves
          of Android/data/<package>/files among them. -->

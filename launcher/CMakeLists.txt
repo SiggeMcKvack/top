@@ -50,6 +50,24 @@ if(ORACLES_BUILD_LAUNCHER)
     target_link_libraries(oracles_ui_sdl PUBLIC oracles_ui ${ORACLES_SDL_TARGET})
     target_compile_definitions(oracles_ui_sdl PUBLIC "ORACLES_VERSION=\"${ORACLES_VERSION}\"" "ORACLES_BUILD=\"${ORACLES_BUILD}\"")
     oracles_set_warnings(oracles_ui_sdl)
+    # The update check (update_check.h), with each platform's HTTP client: WinHTTP, NSURLSession, the system's libcurl
+    # loaded at run time (nothing linked), Android's through the activity.
+    if(APPLE)
+        add_library(oracles_update STATIC update_check.c macos/update_fetch.m)
+        target_link_libraries(oracles_update PRIVATE "-framework Foundation")
+        # -Wpedantic holds the C sources to ISO C, which Objective-C is not.
+        set_source_files_properties(macos/update_fetch.m PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
+    else()
+        add_library(oracles_update STATIC update_check.c update_fetch.c)
+    endif()
+    target_include_directories(oracles_update PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(oracles_update PUBLIC ${ORACLES_SDL_TARGET})
+    if(WIN32)
+        target_link_libraries(oracles_update PRIVATE winhttp)
+    endif()
+    target_compile_definitions(oracles_update PUBLIC "ORACLES_PRODUCT_VERSION=\"${ORACLES_PRODUCT_VERSION}\""
+                               PRIVATE "ORACLES_UPDATE_REPOSITORY=\"${ORACLES_UPDATE_REPOSITORY}\"")
+    oracles_set_warnings(oracles_update)
     set(ORACLES_LAUNCHER_SOURCES main.c session.c session_options.c session_route.c home.c home_input.c pause.c home_games.c home_choices.c home_screenshot.c file_dialog.c sdl_backend.c safe_area.c ${ORACLES_HOST_DIR}/null_backend.c ${ORACLES_SESSION_DIR}/route.c diagnostics.c settings.c ${ORACLES_SESSION_DIR}/hotkey_lines.c hotkeys_session.c ${ORACLES_SESSION_DIR}/route_effects.c ${ORACLES_SESSION_DIR}/hotbar_model.c ${ORACLES_SESSION_DIR}/state_refusal.c session_state.c ${ORACLES_SESSION_DIR}/mod_session.c ${ORACLES_SESSION_DIR}/mod_folder.c ${ORACLES_SESSION_DIR}/language_session.c touch_controls.c touch_sdl.c)
     if(ANDROID)
         # Android runs no executable: SDL's activity (android) loads libmain.so and calls its main, SDL_main.
@@ -66,7 +84,7 @@ if(ORACLES_BUILD_LAUNCHER)
     else()
         target_compile_definitions(oracles PRIVATE ORACLES_DEFAULT_CORE_KIND=ORACLES_CORE_SAMEBOY)
     endif()
-    target_link_libraries(oracles PRIVATE oracles_host oracles_guest oracles_render oracles_enhanced oracles_gameplay oracles_mods oracles_language oracles_ui_sdl ${ORACLES_SDL_TARGET})
+    target_link_libraries(oracles PRIVATE oracles_host oracles_guest oracles_render oracles_enhanced oracles_gameplay oracles_mods oracles_language oracles_ui_sdl oracles_update ${ORACLES_SDL_TARGET})
     oracles_set_warnings(oracles)
     if(WIN32)
         # The UTF-8 code page (launcher/windows/oracles.manifest): paths outside ASCII open as they are kept.

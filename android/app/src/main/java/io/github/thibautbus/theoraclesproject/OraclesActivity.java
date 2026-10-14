@@ -20,6 +20,11 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 import org.libsdl.app.SDLActivity;
@@ -287,6 +292,37 @@ public class OraclesActivity extends SDLActivity {
         final int sources = device.getSources();
         return (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
             || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+    }
+
+    /* The update check's request (launcher/update_fetch.c), on its thread: a GET of an https:// address, the system's
+     * TLS checking the certificate, with an Accept header and a User-Agent without the version, a redirection followed
+     * to https:// only.  "STATUS\nBODY", the body cut at a megabyte, or "0\nREASON". */
+    public static String httpGet(String address, int timeoutMs) {
+        HttpURLConnection connection = null;
+        try {
+            final URL url = new URL(address);
+            if (!"https".equals(url.getProtocol())) return "0\nnot an https:// address";
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(timeoutMs);
+            connection.setReadTimeout(timeoutMs);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Accept", "application/vnd.github+json");
+            connection.setRequestProperty("User-Agent", "the-oracles-project");
+            final int status = connection.getResponseCode();
+            final InputStream in = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            final ByteArrayOutputStream body = new ByteArrayOutputStream();
+            if (in != null) {
+                try (InputStream stream = in) {
+                    final byte[] chunk = new byte[16384];
+                    for (int read; (read = stream.read(chunk)) > 0 && body.size() <= 1024 * 1024;) body.write(chunk, 0, read);
+                }
+            }
+            return status + "\n" + new String(body.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "0\n" + e.getClass().getSimpleName() + (e.getMessage() != null ? ": " + e.getMessage() : "");
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
     }
 
     /* The name the document picker shows for a content:// URI ("Oracle of Ages.gbc"), or null: the launcher copies a
