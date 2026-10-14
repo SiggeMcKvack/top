@@ -300,13 +300,8 @@ void oracles_ui_layout_slow(OraclesUiLayout layout, const char *text, const char
     const float path_w = oracles_ui_text_width(st->slow_path, path);
     if (path_w > inner) inner = path_w;
     if (inner > m->slow_max_width - frame) inner = m->slow_max_width - frame;
-    OraclesUiWrapped wrapped, pretty;
-    oracles_ui_wrap(st->toast, text, inner, 0.0f, 0.0f, &wrapped);
-    /* text-wrap: pretty, as the browser applies it here: a last line of a single word takes the word before it. */
-    if (wrapped.count >= 2 && !strchr(wrapped.text[wrapped.count - 1], ' ')) {
-        oracles_ui_wrap(st->toast, text, wrapped.lines[wrapped.count - 2].w - 1.0f, 0.0f, 0.0f, &pretty);
-        if (pretty.count == wrapped.count) wrapped = pretty;
-    }
+    OraclesUiWrapped wrapped;
+    oracles_ui_wrap_pretty(st->toast, text, inner, 0.0f, 0.0f, &wrapped);
     const float left = m->slow_left + TOAST_BORDER + m->slow_pad_x;
     float y = 0.0f;
     for (unsigned i = 0; i < wrapped.count && i < ORACLES_UI_SLOW_LINES; i++) {

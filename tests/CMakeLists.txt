@@ -43,6 +43,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-guest)
     add_test(NAME oracles-guest COMMAND oracles-test-guest)
 
+    add_executable(oracles-test-swim-hold test_swim_hold.c)
+    target_link_libraries(oracles-test-swim-hold PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-swim-hold)
+    add_test(NAME oracles-swim-hold COMMAND oracles-test-swim-hold)
+
     add_executable(oracles-test-language test_language.c)
     target_include_directories(oracles-test-language PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
     target_link_libraries(oracles-test-language PRIVATE oracles_language)

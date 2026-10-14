@@ -47,6 +47,13 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
         return refuse(error, capacity, "the route was recorded with --continuous-swim, which %s does not support", oracles_compat_name(s->profile));
     if (route_swim && !s->continuous_swim) { s->continuous_swim = s->continuous_transitions = 1; s->enhanced = 1; fprintf(stderr, "oracles: the route was recorded with --continuous-swim: the option is on for the replay\n"); }
     else if (!route_swim && s->continuous_swim) fprintf(stderr, "oracles: the route was recorded without --continuous-swim: the replay diverges after its first transition swum\n");
+    /* The swim's hold, a setting the player may have on for every game: the route's, whatever it is. */
+    const int route_swim_hold = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_SWIM_HOLD);
+    if (route_swim_hold && !oracles_compat_swim_hold(s->profile))
+        return refuse(error, capacity, "the route was recorded with --swim-hold, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
+    if (route_swim_hold != s->swim_hold)
+        fprintf(stderr, "oracles: the route was recorded %s --swim-hold: the replay plays %s it\n", route_swim_hold ? "with" : "without", route_swim_hold ? "with" : "without");
+    s->swim_hold = route_swim_hold;
     char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
     if (oracles_route_language(&s->play.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&s->play.header, o->language))
         return refuse(error, capacity, "the route was played in a language (%s): replay it with --language %s and its European ROM", recorded, recorded);
@@ -89,6 +96,10 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
     if (s->language) {   /* the texts' lengths pace the dialogues: a replay plays in the same language */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_LANGUAGE "%s", used ? "," : "", o->language);
+    }
+    if (s->swim_hold) {   /* a stroke started by the hold is not in the keys: a replay starts it too */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_SWIM_HOLD, used ? "," : "");
     }
     snprintf(header.mods, sizeof header.mods, "%s", oracles_mod_session_identity(s->mod));
     header.store_sha1[0] = 0;

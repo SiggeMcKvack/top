@@ -4126,7 +4126,7 @@
     "x": 96,
     "y": 190,
     "w": 800,
-    "h": 665
+    "h": 812
    },
    "right panel": {
     "x": 936,
@@ -4579,7 +4579,7 @@
     "lines": 1
    },
    "In game": {
-    "x": 96,
+    "x": 968,
     "w": 121.063,
     "glyph_top": 931.5,
     "glyph_h": 27,
@@ -4590,27 +4590,197 @@
     "lines": 1
    },
    "F2": {
-    "x": 245.063,
+    "x": 1117.063,
     "y": 930,
     "w": 44,
     "h": 30
    },
    "F11": {
-    "x": 1000.797,
-    "y": 930,
+    "x": 1144.906,
+    "y": 972,
     "w": 56,
     "h": 30
    },
    "Menu": {
-    "x": 1254.328,
+    "x": 1398.438,
     "w": 54.156,
+    "glyph_top": 974.5,
+    "glyph_h": 24,
+    "top": 972.5,
+    "h": 29,
+    "baseline": 993.5,
+    "width": 54.156,
+    "lines": 1
+   },
+   "In game row": {
+    "x": 968,
+    "y": 930,
+    "w": 824,
+    "h": 72
+   },
+   "key 0": {
+    "x": 1117.063,
+    "y": 930,
+    "w": 44,
+    "h": 30
+   },
+   "key 1": {
+    "x": 1248.078,
+    "y": 930,
+    "w": 44,
+    "h": 30
+   },
+   "key 2": {
+    "x": 1521.406,
+    "y": 930,
+    "w": 44,
+    "h": 30
+   },
+   "key 3": {
+    "x": 968,
+    "y": 972,
+    "w": 44,
+    "h": 30
+   },
+   "key 4": {
+    "x": 1144.906,
+    "y": 972,
+    "w": 56,
+    "h": 30
+   },
+   "key 5": {
+    "x": 1332.438,
+    "y": 972,
+    "w": 56,
+    "h": 30
+   },
+   "key 0 label": {
+    "x": 1171.063,
+    "w": 49.016,
     "glyph_top": 932.5,
     "glyph_h": 24,
     "top": 930.5,
     "h": 29,
     "baseline": 951.5,
+    "width": 49.016,
+    "lines": 1
+   },
+   "key 1 label": {
+    "x": 1302.078,
+    "w": 191.328,
+    "glyph_top": 932.5,
+    "glyph_h": 24,
+    "top": 930.5,
+    "h": 29,
+    "baseline": 951.5,
+    "width": 191.328,
+    "lines": 1
+   },
+   "key 2 label": {
+    "x": 1575.406,
+    "w": 92.484,
+    "glyph_top": 932.5,
+    "glyph_h": 24,
+    "top": 930.5,
+    "h": 29,
+    "baseline": 951.5,
+    "width": 92.484,
+    "lines": 1
+   },
+   "key 3 label": {
+    "x": 1022,
+    "w": 94.906,
+    "glyph_top": 974.5,
+    "glyph_h": 24,
+    "top": 972.5,
+    "h": 29,
+    "baseline": 993.5,
+    "width": 94.906,
+    "lines": 1
+   },
+   "key 4 label": {
+    "x": 1210.906,
+    "w": 93.531,
+    "glyph_top": 974.5,
+    "glyph_h": 24,
+    "top": 972.5,
+    "h": 29,
+    "baseline": 993.5,
+    "width": 93.531,
+    "lines": 1
+   },
+   "key 5 label": {
+    "x": 1398.438,
+    "w": 54.156,
+    "glyph_top": 974.5,
+    "glyph_h": 24,
+    "top": 972.5,
+    "h": 29,
+    "baseline": 993.5,
     "width": 54.156,
     "lines": 1
+   },
+   "swim": {
+    "x": 129,
+    "y": 852,
+    "w": 734,
+    "h": 125
+   },
+   "swim label": {
+    "x": 149,
+    "w": 119.266,
+    "glyph_top": 870.5,
+    "glyph_h": 28,
+    "top": 867.5,
+    "h": 34,
+    "baseline": 892.5,
+    "width": 119.266,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 672.438,
+    "y": 864,
+    "w": 74.219,
+    "h": 41
+   },
+   "swim hold": {
+    "x": 754.656,
+    "y": 864,
+    "w": 88.344,
+    "h": 41
+   },
+   "swim tap text": {
+    "x": 689.438,
+    "w": 40.219,
+    "glyph_top": 869,
+    "glyph_h": 31,
+    "top": 869,
+    "h": 31,
+    "baseline": 893,
+    "width": 40.219,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 771.656,
+    "w": 54.344,
+    "glyph_top": 869,
+    "glyph_h": 31,
+    "top": 869,
+    "h": 31,
+    "baseline": 893,
+    "width": 54.344,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 149,
+    "w": 620.531,
+    "glyph_top": 909,
+    "glyph_h": 24,
+    "top": 907,
+    "h": 29,
+    "baseline": 928,
+    "width": 620.531,
+    "lines": 2
    }
   },
   "2d": {
@@ -4669,7 +4839,7 @@
     "x": 96,
     "y": 190,
     "w": 800,
-    "h": 667
+    "h": 814
    }
   },
   "8a": {
@@ -10156,7 +10326,7 @@
     "x": 64,
     "y": 140,
     "w": 1312,
-    "h": 525
+    "h": 725
    },
    "key 0": {
     "x": 84,
@@ -10324,6 +10494,1095 @@
     "h": 43,
     "baseline": 639.5,
     "width": 81.219,
+    "lines": 1
+   },
+   "swim": {
+    "x": 64,
+    "y": 689,
+    "w": 1312,
+    "h": 176
+   },
+   "swim label": {
+    "x": 84,
+    "w": 153.328,
+    "glyph_top": 715.5,
+    "glyph_h": 36,
+    "top": 712.5,
+    "h": 43,
+    "baseline": 744.5,
+    "width": 153.328,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 1107.75,
+    "y": 689,
+    "w": 110,
+    "h": 90
+   },
+   "swim hold": {
+    "x": 1229.75,
+    "y": 689,
+    "w": 126.25,
+    "h": 90
+   },
+   "swim tap text": {
+    "x": 1133.797,
+    "w": 57.906,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 57.906,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 1253.75,
+    "w": 78.25,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 78.25,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 84,
+    "w": 1154.203,
+    "glyph_top": 786,
+    "glyph_h": 30,
+    "top": 783,
+    "h": 36,
+    "baseline": 810,
+    "width": 1154.203,
+    "lines": 2
+   }
+  },
+  "17a": {
+   "swim": {
+    "x": 129,
+    "y": 852,
+    "w": 734,
+    "h": 125
+   },
+   "swim label": {
+    "x": 149,
+    "w": 119.266,
+    "glyph_top": 870.5,
+    "glyph_h": 28,
+    "top": 867.5,
+    "h": 34,
+    "baseline": 892.5,
+    "width": 119.266,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 672.438,
+    "y": 864,
+    "w": 74.219,
+    "h": 41
+   },
+   "swim hold": {
+    "x": 754.656,
+    "y": 864,
+    "w": 88.344,
+    "h": 41
+   },
+   "swim tap text": {
+    "x": 689.438,
+    "w": 40.219,
+    "glyph_top": 869,
+    "glyph_h": 31,
+    "top": 869,
+    "h": 31,
+    "baseline": 893,
+    "width": 40.219,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 771.656,
+    "w": 54.344,
+    "glyph_top": 869,
+    "glyph_h": 31,
+    "top": 869,
+    "h": 31,
+    "baseline": 893,
+    "width": 54.344,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 149,
+    "w": 620.531,
+    "glyph_top": 909,
+    "glyph_h": 24,
+    "top": 907,
+    "h": 29,
+    "baseline": 928,
+    "width": 620.531,
+    "lines": 2
+   },
+   "left panel": {
+    "x": 96,
+    "y": 190,
+    "w": 800,
+    "h": 812
+   },
+   "Reset": {
+    "x": 129,
+    "y": 778,
+    "w": 734,
+    "h": 52
+   },
+   "swim Tap box": {
+    "x": 672.438,
+    "y": 864,
+    "w": 74.219,
+    "h": 41
+   },
+   "swim Hold box": {
+    "x": 754.656,
+    "y": 864,
+    "w": 88.344,
+    "h": 41
+   },
+   "In game row": {
+    "x": 968,
+    "y": 930,
+    "w": 824,
+    "h": 72
+   }
+  },
+  "17b": {
+   "swim": {
+    "x": 129,
+    "y": 840,
+    "w": 734,
+    "h": 137
+   },
+   "swim label": {
+    "x": 149,
+    "w": 119.266,
+    "glyph_top": 850.5,
+    "glyph_h": 28,
+    "top": 847.5,
+    "h": 34,
+    "baseline": 872.5,
+    "width": 119.266,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 672.438,
+    "y": 844,
+    "w": 74.219,
+    "h": 41
+   },
+   "swim hold": {
+    "x": 754.656,
+    "y": 844,
+    "w": 88.344,
+    "h": 41
+   },
+   "swim tap text": {
+    "x": 689.438,
+    "w": 40.219,
+    "glyph_top": 849,
+    "glyph_h": 31,
+    "top": 849,
+    "h": 31,
+    "baseline": 873,
+    "width": 40.219,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 771.656,
+    "w": 54.344,
+    "glyph_top": 849,
+    "glyph_h": 31,
+    "top": 849,
+    "h": 31,
+    "baseline": 873,
+    "width": 54.344,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 149,
+    "w": 620.531,
+    "glyph_top": 889,
+    "glyph_h": 24,
+    "top": 887,
+    "h": 29,
+    "baseline": 908,
+    "width": 620.531,
+    "lines": 2
+   },
+   "swim later": {
+    "x": 149,
+    "w": 186,
+    "glyph_top": 949,
+    "glyph_h": 22,
+    "top": 947,
+    "h": 26,
+    "baseline": 967,
+    "width": 186,
+    "lines": 1
+   },
+   "left panel": {
+    "x": 96,
+    "y": 190,
+    "w": 800,
+    "h": 812
+   },
+   "right panel": {
+    "x": 936,
+    "y": 190,
+    "w": 888,
+    "h": 703
+   },
+   "Reset": {
+    "x": 129,
+    "y": 778,
+    "w": 734,
+    "h": 52
+   },
+   "Item hotkeys": {
+    "x": 969,
+    "y": 215,
+    "w": 822,
+    "h": 152
+   },
+   "later": {
+    "x": 989,
+    "w": 186,
+    "glyph_top": 331,
+    "glyph_h": 22,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 186,
+    "lines": 1
+   },
+   "In game row": {
+    "x": 968,
+    "y": 930,
+    "w": 824,
+    "h": 72
+   }
+  },
+  "17c": {
+   "tab 0": {
+    "x": 310.172,
+    "y": 24,
+    "w": 171.109,
+    "h": 90
+   },
+   "tab 1": {
+    "x": 489.281,
+    "y": 24,
+    "w": 177.063,
+    "h": 90
+   },
+   "tab 2": {
+    "x": 674.344,
+    "y": 24,
+    "w": 179.75,
+    "h": 90
+   },
+   "tab 0 label": {
+    "x": 334.172,
+    "w": 123.109,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 123.109,
+    "lines": 1
+   },
+   "tab 1 label": {
+    "x": 513.281,
+    "w": 129.063,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 129.063,
+    "lines": 1
+   },
+   "tab 2 label": {
+    "x": 698.344,
+    "w": 131.75,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 131.75,
+    "lines": 1
+   },
+   "list": {
+    "x": 64,
+    "y": 140,
+    "w": 1312,
+    "h": 725
+   },
+   "key 5": {
+    "x": 84,
+    "y": 606,
+    "w": 84,
+    "h": 46
+   },
+   "key 5 label": {
+    "x": 268,
+    "w": 81.219,
+    "glyph_top": 610.5,
+    "glyph_h": 36,
+    "top": 607.5,
+    "h": 43,
+    "baseline": 639.5,
+    "width": 81.219,
+    "lines": 1
+   },
+   "swim": {
+    "x": 64,
+    "y": 689,
+    "w": 1312,
+    "h": 176
+   },
+   "swim label": {
+    "x": 84,
+    "w": 153.328,
+    "glyph_top": 715.5,
+    "glyph_h": 36,
+    "top": 712.5,
+    "h": 43,
+    "baseline": 744.5,
+    "width": 153.328,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 1107.75,
+    "y": 689,
+    "w": 110,
+    "h": 90
+   },
+   "swim hold": {
+    "x": 1229.75,
+    "y": 689,
+    "w": 126.25,
+    "h": 90
+   },
+   "swim tap text": {
+    "x": 1133.797,
+    "w": 57.906,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 57.906,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 1253.75,
+    "w": 78.25,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 78.25,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 84,
+    "w": 1154.203,
+    "glyph_top": 786,
+    "glyph_h": 30,
+    "top": 783,
+    "h": 36,
+    "baseline": 810,
+    "width": 1154.203,
+    "lines": 2
+   },
+   "hint 0": {
+    "x": 330.094,
+    "y": 982,
+    "w": 202.297,
+    "h": 90
+   },
+   "hint 1": {
+    "x": 548.391,
+    "y": 982,
+    "w": 302.922,
+    "h": 90
+   },
+   "hint 2": {
+    "x": 867.313,
+    "y": 982,
+    "w": 242.578,
+    "h": 90
+   },
+   "hint 0 key text": {
+    "x": 361.094,
+    "w": 64.813,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 64.813,
+    "lines": 1
+   },
+   "hint 1 key text": {
+    "x": 579.391,
+    "w": 145.813,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 145.813,
+    "lines": 1
+   },
+   "hint 2 key text": {
+    "x": 898.313,
+    "w": 113.406,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 113.406,
+    "lines": 1
+   },
+   "hint 0 label": {
+    "x": 448.906,
+    "w": 63.484,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 63.484,
+    "lines": 1
+   },
+   "hint 1 label": {
+    "x": 748.203,
+    "w": 83.109,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 83.109,
+    "lines": 1
+   },
+   "hint 2 label": {
+    "x": 1034.719,
+    "w": 55.172,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 55.172,
+    "lines": 1
+   }
+  },
+  "17d": {
+   "tab 0": {
+    "x": 310.172,
+    "y": 24,
+    "w": 171.109,
+    "h": 90
+   },
+   "tab 1": {
+    "x": 489.281,
+    "y": 24,
+    "w": 177.063,
+    "h": 90
+   },
+   "tab 2": {
+    "x": 674.344,
+    "y": 24,
+    "w": 179.75,
+    "h": 90
+   },
+   "tab 0 label": {
+    "x": 334.172,
+    "w": 123.109,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 123.109,
+    "lines": 1
+   },
+   "tab 1 label": {
+    "x": 513.281,
+    "w": 129.063,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 129.063,
+    "lines": 1
+   },
+   "tab 2 label": {
+    "x": 698.344,
+    "w": 131.75,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 131.75,
+    "lines": 1
+   },
+   "list": {
+    "x": 64,
+    "y": 140,
+    "w": 1312,
+    "h": 725
+   },
+   "key 5": {
+    "x": 84,
+    "y": 606,
+    "w": 84,
+    "h": 46
+   },
+   "key 5 label": {
+    "x": 268,
+    "w": 81.219,
+    "glyph_top": 610.5,
+    "glyph_h": 36,
+    "top": 607.5,
+    "h": 43,
+    "baseline": 639.5,
+    "width": 81.219,
+    "lines": 1
+   },
+   "swim": {
+    "x": 64,
+    "y": 689,
+    "w": 1312,
+    "h": 176
+   },
+   "swim label": {
+    "x": 84,
+    "w": 153.328,
+    "glyph_top": 715.5,
+    "glyph_h": 36,
+    "top": 712.5,
+    "h": 43,
+    "baseline": 744.5,
+    "width": 153.328,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 1107.75,
+    "y": 689,
+    "w": 110,
+    "h": 90
+   },
+   "swim hold": {
+    "x": 1229.75,
+    "y": 689,
+    "w": 126.25,
+    "h": 90
+   },
+   "swim tap text": {
+    "x": 1133.797,
+    "w": 57.906,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 57.906,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 1253.75,
+    "w": 78.25,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 78.25,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 84,
+    "w": 1154.203,
+    "glyph_top": 786,
+    "glyph_h": 30,
+    "top": 783,
+    "h": 36,
+    "baseline": 810,
+    "width": 1154.203,
+    "lines": 2
+   },
+   "hint 0": {
+    "x": 330.094,
+    "y": 982,
+    "w": 202.297,
+    "h": 90
+   },
+   "hint 1": {
+    "x": 548.391,
+    "y": 982,
+    "w": 302.922,
+    "h": 90
+   },
+   "hint 2": {
+    "x": 867.313,
+    "y": 982,
+    "w": 242.578,
+    "h": 90
+   },
+   "hint 0 key text": {
+    "x": 361.094,
+    "w": 64.813,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 64.813,
+    "lines": 1
+   },
+   "hint 1 key text": {
+    "x": 579.391,
+    "w": 145.813,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 145.813,
+    "lines": 1
+   },
+   "hint 2 key text": {
+    "x": 898.313,
+    "w": 113.406,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 113.406,
+    "lines": 1
+   },
+   "hint 0 label": {
+    "x": 448.906,
+    "w": 63.484,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 63.484,
+    "lines": 1
+   },
+   "hint 1 label": {
+    "x": 748.203,
+    "w": 83.109,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 83.109,
+    "lines": 1
+   },
+   "hint 2 label": {
+    "x": 1034.719,
+    "w": 55.172,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 55.172,
+    "lines": 1
+   }
+  },
+  "17e": {
+   "tab 0": {
+    "x": 310.172,
+    "y": 24,
+    "w": 171.109,
+    "h": 90
+   },
+   "tab 1": {
+    "x": 489.281,
+    "y": 24,
+    "w": 177.063,
+    "h": 90
+   },
+   "tab 2": {
+    "x": 674.344,
+    "y": 24,
+    "w": 179.75,
+    "h": 90
+   },
+   "tab 0 label": {
+    "x": 334.172,
+    "w": 123.109,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 123.109,
+    "lines": 1
+   },
+   "tab 1 label": {
+    "x": 513.281,
+    "w": 129.063,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 129.063,
+    "lines": 1
+   },
+   "tab 2 label": {
+    "x": 698.344,
+    "w": 131.75,
+    "glyph_top": 45,
+    "glyph_h": 45,
+    "top": 45,
+    "h": 45,
+    "baseline": 80,
+    "width": 131.75,
+    "lines": 1
+   },
+   "list": {
+    "x": 64,
+    "y": 140,
+    "w": 1312,
+    "h": 759
+   },
+   "key 5": {
+    "x": 84,
+    "y": 606,
+    "w": 84,
+    "h": 46
+   },
+   "key 5 label": {
+    "x": 268,
+    "w": 81.219,
+    "glyph_top": 610.5,
+    "glyph_h": 36,
+    "top": 607.5,
+    "h": 43,
+    "baseline": 639.5,
+    "width": 81.219,
+    "lines": 1
+   },
+   "swim": {
+    "x": 64,
+    "y": 689,
+    "w": 1312,
+    "h": 210
+   },
+   "swim label": {
+    "x": 84,
+    "w": 153.328,
+    "glyph_top": 715.5,
+    "glyph_h": 36,
+    "top": 712.5,
+    "h": 43,
+    "baseline": 744.5,
+    "width": 153.328,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 1107.75,
+    "y": 689,
+    "w": 110,
+    "h": 90
+   },
+   "swim hold": {
+    "x": 1229.75,
+    "y": 689,
+    "w": 126.25,
+    "h": 90
+   },
+   "swim tap text": {
+    "x": 1133.797,
+    "w": 57.906,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 57.906,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 1253.75,
+    "w": 78.25,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 78.25,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 84,
+    "w": 1154.203,
+    "glyph_top": 786,
+    "glyph_h": 30,
+    "top": 783,
+    "h": 36,
+    "baseline": 810,
+    "width": 1154.203,
+    "lines": 2
+   },
+   "swim later": {
+    "x": 84,
+    "w": 228.266,
+    "glyph_top": 859,
+    "glyph_h": 27,
+    "top": 857,
+    "h": 32,
+    "baseline": 881,
+    "width": 228.266,
+    "lines": 1
+   }
+  },
+  "swim fan": {
+   "swim": {
+    "x": 129,
+    "y": 840,
+    "w": 734,
+    "h": 137
+   },
+   "swim label": {
+    "x": 149,
+    "w": 119.266,
+    "glyph_top": 850.5,
+    "glyph_h": 28,
+    "top": 847.5,
+    "h": 34,
+    "baseline": 872.5,
+    "width": 119.266,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 672.438,
+    "y": 844,
+    "w": 74.219,
+    "h": 41
+   },
+   "swim hold": {
+    "x": 754.656,
+    "y": 844,
+    "w": 88.344,
+    "h": 41
+   },
+   "swim tap text": {
+    "x": 689.438,
+    "w": 40.219,
+    "glyph_top": 849,
+    "glyph_h": 31,
+    "top": 849,
+    "h": 31,
+    "baseline": 873,
+    "width": 40.219,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 771.656,
+    "w": 54.344,
+    "glyph_top": 849,
+    "glyph_h": 31,
+    "top": 849,
+    "h": 31,
+    "baseline": 873,
+    "width": 54.344,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 149,
+    "w": 620.531,
+    "glyph_top": 889,
+    "glyph_h": 24,
+    "top": 887,
+    "h": 29,
+    "baseline": 908,
+    "width": 620.531,
+    "lines": 2
+   },
+   "swim later": {
+    "x": 149,
+    "w": 186,
+    "glyph_top": 949,
+    "glyph_h": 22,
+    "top": 947,
+    "h": 26,
+    "baseline": 967,
+    "width": 186,
+    "lines": 1
+   },
+   "left panel": {
+    "x": 96,
+    "y": 190,
+    "w": 800,
+    "h": 812
+   },
+   "right panel": {
+    "x": 936,
+    "y": 190,
+    "w": 888,
+    "h": 734
+   },
+   "Item hotkeys": {
+    "x": 969,
+    "y": 215,
+    "w": 822,
+    "h": 183
+   },
+   "fan note": {
+    "x": 989,
+    "w": 606.203,
+    "glyph_top": 331,
+    "glyph_h": 24,
+    "top": 329,
+    "h": 29,
+    "baseline": 350,
+    "width": 606.203,
+    "lines": 1
+   },
+   "later": {
+    "x": 989,
+    "w": 186,
+    "glyph_top": 362,
+    "glyph_h": 22,
+    "top": 360,
+    "h": 26,
+    "baseline": 380,
+    "width": 186,
+    "lines": 1
+   },
+   "Hotkeys": {
+    "x": 969,
+    "w": 122.828,
+    "glyph_top": 414,
+    "glyph_h": 27,
+    "top": 414,
+    "h": 27,
+    "baseline": 435,
+    "width": 122.828,
+    "lines": 1
+   },
+   "slot 0 key": {
+    "x": 1155,
+    "y": 455,
+    "w": 180,
+    "h": 56
+   },
+   "slots note": {
+    "x": 969,
+    "w": 413.531,
+    "glyph_top": 873,
+    "glyph_h": 23,
+    "top": 871,
+    "h": 28,
+    "baseline": 891,
+    "width": 413.531,
+    "lines": 1
+   },
+   "hint 0": {
+    "x": 657.625,
+    "y": 1025,
+    "w": 144.281,
+    "h": 37
+   }
+  },
+  "swim fan 4:3": {
+   "swim": {
+    "x": 64,
+    "y": 689,
+    "w": 1312,
+    "h": 214
+   },
+   "swim label": {
+    "x": 84,
+    "w": 153.328,
+    "glyph_top": 715.5,
+    "glyph_h": 36,
+    "top": 712.5,
+    "h": 43,
+    "baseline": 744.5,
+    "width": 153.328,
+    "lines": 1
+   },
+   "swim tap": {
+    "x": 1107.75,
+    "y": 689,
+    "w": 110,
+    "h": 90
+   },
+   "swim hold": {
+    "x": 1229.75,
+    "y": 689,
+    "w": 126.25,
+    "h": 90
+   },
+   "swim tap text": {
+    "x": 1133.797,
+    "w": 57.906,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 57.906,
+    "lines": 1
+   },
+   "swim hold text": {
+    "x": 1253.75,
+    "w": 78.25,
+    "glyph_top": 711.297,
+    "glyph_h": 45,
+    "top": 713.297,
+    "h": 41.391,
+    "baseline": 746.297,
+    "width": 78.25,
+    "lines": 1
+   },
+   "swim explanation": {
+    "x": 84,
+    "w": 1154.203,
+    "glyph_top": 786,
+    "glyph_h": 30,
+    "top": 783,
+    "h": 36,
+    "baseline": 810,
+    "width": 1154.203,
+    "lines": 2
+   },
+   "swim fan": {
+    "x": 84,
+    "w": 322.203,
+    "glyph_top": 860,
+    "glyph_h": 30,
+    "top": 857,
+    "h": 36,
+    "baseline": 884,
+    "width": 322.203,
     "lines": 1
    }
   },

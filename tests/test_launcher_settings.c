@@ -46,6 +46,7 @@ int main(int argc, char **argv)
     CHECK(written.profile == ORACLES_PROFILE_ENHANCED && written.window_scale == 0 && written.colour_correction == 1);
     CHECK(written.launcher_width == 1280 && written.launcher_height == 720);
     CHECK(written.transitions && written.item_hotkeys[0] == ORACLES_HOTKEYS_OFF && written.item_hotkeys[1] == ORACLES_HOTKEYS_OFF);
+    CHECK(!written.swim_hold);   /* the mermaid suit as the game plays it */
     CHECK(!strcmp(written.vsync, "auto"));
 
     /* Paths as players have them: spaces, an equals sign, backslashes, and as long as the field holds. */
@@ -80,6 +81,7 @@ int main(int argc, char **argv)
     written.hotkey_pad_names[0][0] = 0;
     snprintf(written.hotkey_bind_b, sizeof written.hotkey_bind_b, "Right Shift");
     written.transitions = 0;
+    written.swim_hold = 1;
     written.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_EQUIP;
     written.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
     written.window_scale = 0;   /* fullscreen */
@@ -111,7 +113,7 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.key_names[0], "D") && read_back.key_names[5][0] == 0 && !strcmp(read_back.key_names[1], "Left"));
     CHECK(!strcmp(read_back.pad_names[0], "x") && read_back.hotkey_pad_names[0][0] == 0 && !strcmp(read_back.hotkey_pad_names[1], "y"));
     CHECK(!strcmp(read_back.hotkey_bind_b, "Right Shift") && !strcmp(read_back.hotkey_bind_a, "Left Ctrl"));
-    CHECK(read_back.transitions == 0);
+    CHECK(read_back.transitions == 0 && read_back.swim_hold == 1);
     CHECK(read_back.item_hotkeys[ORACLES_SETTINGS_AGES] == ORACLES_HOTKEYS_EQUIP && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_USE);
     CHECK(read_back.window_scale == 0);
     CHECK(!strcmp(read_back.mods[ORACLES_SETTINGS_AGES], "claw-game,fortune-teller") && !strcmp(read_back.mods[ORACLES_SETTINGS_SEASONS], "claw-game"));
@@ -152,9 +154,10 @@ int main(int argc, char **argv)
         if (!strcmp(line, "language_moonrise=de\n")) seen |= 16384;
         if (!strcmp(line, "language_temple=fr\n")) seen |= 32768;
         if (!strcmp(line, "language_kinomi=en-eu\n")) seen |= 65536;
+        if (!strcmp(line, "swim_hold=on\n")) seen |= 131072;
     }
     if (f) fclose(f);
-    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536));   /* and not 128: no per-game profile or transitions */
+    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072));   /* and not 128: no per-game profile or transitions */
 
     /* A file of an earlier version, without the keys: the defaults; the keys it has hold, colour correction off. */
     write_text(path, "colour_correction=0\nvsync=off\n");
@@ -164,7 +167,7 @@ int main(int argc, char **argv)
           && read_back.patch[ORACLES_HOME_FAN_TEMPLE][0] == 0 && read_back.patch[ORACLES_HOME_FAN_KINOMI][0] == 0 && read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && read_back.language[ORACLES_SETTINGS_AGES] == 0 && read_back.language[ORACLES_SETTINGS_SEASONS] == 0);
     CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0);
-    CHECK(read_back.transitions == 1 && read_back.window_scale == 0);
+    CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
 
     /* The mods folder beside settings.txt, whichever separator its path uses; none without a settings directory. */
@@ -236,7 +239,7 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.mods[ORACLES_SETTINGS_AGES], "alpha,beta,zeta") && read_back.mods[ORACLES_SETTINGS_SEASONS][0] == 0);
 
     /* Values it does not know leave the default; an empty ROM clears it. */
-    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
+    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nswim_hold=1\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
                      "eu_rom_ages=\nlanguage_ages=ja\nlanguage_seasons=de\nlanguage_temple=xx\nlanguage_kinomi=it\nlanguage_moonrise=en-us\n");
     oracles_settings_defaults(&read_back);
     snprintf(read_back.rom[1], sizeof read_back.rom[1], "old.gbc");
@@ -247,7 +250,7 @@ int main(int argc, char **argv)
     CHECK(read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
     CHECK(read_back.rom[ORACLES_SETTINGS_SEASONS][0] == 0);
-    CHECK(read_back.transitions == 1 && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_OFF);
+    CHECK(read_back.transitions == 1 && read_back.swim_hold == 0 && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_OFF);
     CHECK(read_back.window_scale == 0);
     /* Display's View: far at the first opening, a level written and read by its name, an unknown name the default. */
     oracles_settings_defaults(&read_back);

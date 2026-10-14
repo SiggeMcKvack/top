@@ -73,6 +73,9 @@ static void on_event(void *opaque, const OraclesGuestEvent *e)
             break;   /* a mod's storage follows the game's files */
         case ORACLES_EVENT_TEXT_ADDRESS:
             break;   /* the language transaction's point */
+        case ORACLES_EVENT_MERMAID_STROKE:
+        case ORACLES_EVENT_FLIPPERS_STROKE:
+            break;   /* the swim's hold's points */
         case ORACLES_EVENT_VBLANK:
             if (e->value < 4) d->vblanks[e->value]++;
             break;

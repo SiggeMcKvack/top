@@ -92,6 +92,10 @@ typedef struct oracles_settings {
      * enhanced (enhanced by default: the view drawn back), transitions=off|on (on by default: they come with Enhanced). */
     OraclesProfile profile;
     int transitions;
+    int swim_hold;                /* swim_hold=off|on: swimming strokes from a direction held, where the game wants a button tapped (A
+                                   * with the flippers, A held too; the direction with Ages' mermaid suit);
+                                   * off by default, in either profile, for every game the home screen starts: Controls' Swimming,
+                                   * Tap or Hold */
     int view;                     /* view=near|medium|far, Display's View in Enhanced: an OraclesEnhancedLevel, far by default */
     int core;                     /* an OraclesCoreKind: core=sameboy|mgba, Display's Core; -1 until the player chooses one, the build's default
                                    * (ORACLES_DEFAULT_CORE) then playing, and the file holding no core= line */

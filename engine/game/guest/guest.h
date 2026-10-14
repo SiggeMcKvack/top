@@ -10,10 +10,10 @@
  *   - the live-WRAM fingerprint of the harness, which excludes only the dead
  *     stack bytes below each thread's stack pointer.
  *
- * Observation hooks never write to the guest.  The write paths are four closed
+ * Observation hooks never write to the guest.  The write paths are five closed
  * transactions: the call's (a mod's host scene, further below), the
- * inventory's (the item hotkeys, further below), the language's (further below)
- * and the transition's: at the return of
+ * inventory's (the item hotkeys, further below), the language's and the
+ * swim's hold (further below), and the transition's: at the return of
  * drawAllSprites, a policy may ask for a bounded change of the scroll
  * machine's step and of Link's position and walking animation, applied here
  * after its own checks; it never receives a writable view of the RAM.
@@ -75,7 +75,9 @@ typedef enum OraclesGuestEventType {
     ORACLES_EVENT_ITEM_STARTED,            /* entry of initializeParentItem: an item starts; e = its identifier, d = the button that fired it */
     ORACLES_EVENT_STATUS_BAR_CHECK,        /* entry of checkReloadStatusBarGraphics; from mainThreadStart, the call transaction arms its return there */
     ORACLES_EVENT_FILE_OPERATION,          /* entry of fileManagementFunction, hooked by the mods: c = 0 create, 1 save, 2 load, 3 erase the file of hActiveFileSlot */
-    ORACLES_EVENT_TEXT_ADDRESS             /* return of getTextAddress, with a language composed: the language transaction runs here */
+    ORACLES_EVENT_TEXT_ADDRESS,            /* return of getTextAddress, with a language composed: the language transaction runs here */
+    ORACLES_EVENT_MERMAID_STROKE,          /* the `and` after linkUpdateVelocity@mermaidSuit's read of wGameKeysJustPressed, with the swim's hold armed: its transaction runs here */
+    ORACLES_EVENT_FLIPPERS_STROKE          /* the `and` after linkUpdateFlippersSpeed@flippersState0's read of wGameKeysJustPressed, the same */
 } OraclesGuestEventType;
 
 typedef struct OraclesGuestEvent {
@@ -340,6 +342,44 @@ int oracles_guest_arm_language(OraclesGuest *guest);
 const char *oracles_guest_language(const OraclesGuest *guest);
 /* The texts the game looked up since the attach: served in the language, kept in English by it, absent from it. */
 void oracles_guest_language_counts(const OraclesGuest *guest, unsigned *served, unsigned *english, unsigned *missing);
+
+/* ---- the swim's hold ------------------------------------------------------------------
+ *
+ * Swimming, Link speeds up by strokes, each started by a new press (wGameKeysJustPressed, link.s): of a direction with
+ * Ages' mermaid suit (linkUpdateVelocity@mermaidSuit), which speeds him up for the five frames after it, of A with the
+ * flippers (linkUpdateFlippersSpeed, state 0, the stroke's 25 frames reading no press); the player taps.  With the hold
+ * armed, at the one instruction of each routine that tests the bits the routine has just loaded in a, the transaction
+ * adds the bits held when a stroke would serve.  The suit: no stroke started and the last one ending, and Link below
+ * his speed cap, moving elsewhere than the direction held, or a frame from losing a step of speed.  The flippers: A or
+ * a direction held, A not newly pressed, the routine being at its state 0, waiting for a stroke; it adds A.  A direction
+ * counts only where it gives Link an angle (wLinkAngle's bit 7 clear): two opposite ones give none, and Link no stroke.
+ * The routine then plays its stroke as for a press; nothing else reads that register, and nothing is written in
+ * memory. */
+
+/* What the suit's stroke test reads, at the instruction: the register and Link's fields (link.s, linkUpdateVelocity). */
+typedef struct OraclesGuestStrokeState {
+    uint8_t just_pressed;            /* a: wGameKeysJustPressed */
+    uint8_t pressed;                 /* wGameKeysPressed */
+    uint8_t input_angle;             /* wLinkAngle: the direction held, 32 steps; bit 7 none */
+    uint8_t angle, speed, speed_cap; /* w1Link.angle, speed, speedTmp */
+    uint8_t step_counter, step_period, stroke_counter;   /* w1Link.var12, var13, var3e */
+} OraclesGuestStrokeState;
+#define ORACLES_GAME_DIRECTIONS 0xf0u   /* BTN_RIGHT | BTN_LEFT | BTN_UP | BTN_DOWN, the game's own bits */
+#define ORACLES_GAME_BUTTON_A 0x01u     /* BTN_A */
+
+/* Pure: the direction bits to add to a at the suit's test, 0 for none. */
+uint8_t oracles_guest_mermaid_press(const OraclesGuestStrokeState *state);
+/* Pure: the A bit to add to a at the flippers' test (`just_pressed`, a; `pressed`, wGameKeysPressed; `input_angle`,
+ * wLinkAngle): A held, or a direction held that gives an angle, A not newly pressed; 0 for none. */
+uint8_t oracles_guest_flippers_press(uint8_t just_pressed, uint8_t pressed, uint8_t input_angle);
+/* Pure: the address of a stroke's test in `rom` (the flat image, bank n from n * $4000): the `and` of the one
+ * `ld a,(wGameKeysJustPressed) / and mask` within the routine's first $40 bytes; 0 when there is none or several. */
+uint16_t oracles_guest_find_stroke_test(const uint8_t *rom, size_t size, OraclesGuestSym routine, OraclesGuestSym keys_just_pressed, uint8_t mask);
+/* Arms the transaction at each routine the game has; -1 when the profile does not qualify it, a routine's test is not
+ * found once, or the hook table is full. */
+int oracles_guest_arm_swim_hold(OraclesGuest *guest);
+/* The strokes the transaction started since the attach, with the mermaid suit and with the flippers. */
+void oracles_guest_swim_strokes(const OraclesGuest *guest, unsigned *mermaid, unsigned *flippers);
 
 typedef struct OraclesGuestRegWrite {
     uint8_t ly;

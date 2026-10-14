@@ -1,14 +1,19 @@
 /* Controls and the pause menu (ui_controls_nav.h, ui_controls_layout.h,
  * ui_home_nav.h): the capture of a key or a button (its states, a key taken
  * from another cell, the cancel), the moves between cells, Reset, the Item
- * hotkeys' line; in 4:3 the tabs (keys and pointer), the moves within a tab,
- * the capture from Buttons and Hotkeys, In game, and Controls opened from
- * the pause menu; the pause menu and its reduced form under 960 pixels wide;
- * and Controls' layout against the layout reference,
- * tests/launcher_layout_reference.json (layout_reference.h), the test's
- * argument, in its frames 7g (at rest) and 2d (A's key waiting), and in 4:3
- * 10u (Buttons), 10i (A's key waiting), 10j (Hotkeys), 10q (a fan game's
- * Hotkeys from the pause menu) and 10k (In game). */
+ * hotkeys' line, Swimming; in 4:3 the tabs (keys and pointer), the moves
+ * within a tab, the capture from Buttons and Hotkeys, In game and its
+ * Swimming, and Controls opened from the pause menu; the pause menu and its
+ * reduced form under 960 pixels wide; and Controls' layout against the
+ * layout reference, tests/launcher_layout_reference.json
+ * (layout_reference.h), the test's argument, in its frames 7g (at rest), 2d
+ * (A's key waiting), 17a (Swimming on Hold, highlighted) and 17b (from the
+ * pause menu), and in 4:3 10u (Buttons), 10i (A's key waiting), 10j
+ * (Hotkeys), 10q (a fan game's Hotkeys from the pause menu), 10k (In game),
+ * 17c and 17d (Swimming on Hold, highlighted, at 1440x1080 and 640x480) and
+ * 17e (from the pause menu); and a fan game's Controls, from the pause menu
+ * in 16:9 with its Item hotkeys' line that they stay off (swim fan), and
+ * its Swimming in 4:3 (swim fan 4:3). */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_controls_layout.h"
@@ -109,6 +114,82 @@ static void moves(void)
     CHECK(!strcmp(oracles_controls_item_heading(&nav), "In Ages"));
 }
 
+/* Swimming against a frame's: its box, its title, Tap and Hold, its explanation's first line and its count of lines. */
+static void swim_probes(const char *frame, const OraclesUiControlsLayout *l)
+{
+    layout_box(frame, "swim", &l->swim);
+    layout_line(frame, "swim label", &l->swim_title);
+    layout_box(frame, "swim tap", &l->swim_choices[0].box);
+    layout_box(frame, "swim hold", &l->swim_choices[1].box);
+    layout_line(frame, "swim tap text", &l->swim_choices[0].name);
+    layout_line(frame, "swim hold text", &l->swim_choices[1].name);
+    layout_line(frame, "swim explanation", &l->swim_text.lines[0]);
+    layout_near(frame, "swim explanation", "lines", (float)l->swim_text.count);
+    layout_near(frame, "swim explanation", "width", l->swim_text.w);
+}
+
+/* Swimming, under Reset: down from Reset; left, right and OK turn it, each stored; the pointer's Tap and Hold; Reset
+ * keeps it; up back to Reset. */
+static void swimming(void)
+{
+    OraclesHomeNav nav;
+    controls_nav(&nav);
+    OraclesHomeControls *c = &nav.controls;
+    CHECK(c->swim_hold == 0);
+    c->column = 1; c->row = 7;
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_RESET);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_SWIM);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->row == ORACLES_CONTROLS_ROW_SWIM);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && c->swim_hold == 1 && c->row == ORACLES_CONTROLS_ROW_SWIM);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && c->swim_hold == 0 && c->column == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && c->swim_hold == 1 && !c->capturing);
+    CHECK(oracles_controls_click(&nav, 1, ORACLES_CONTROLS_ROW_SWIM, 1) == ORACLES_HOME_STAY && c->swim_hold == 1 && c->column == 0);
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_SWIM, 0) == ORACLES_HOME_STORE && c->swim_hold == 0);
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_SWIM, -1) == ORACLES_HOME_STAY && c->swim_hold == 0);
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_SWIM, 1) == ORACLES_HOME_STORE && c->swim_hold == 1);
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_RESET, -1) == ORACLES_HOME_STORE && c->swim_hold == 1);
+    oracles_controls_hover(&nav, 1, ORACLES_CONTROLS_ROW_SWIM);
+    CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_SWIM);
+    oracles_home_act(&nav, ORACLES_HOME_UP);
+    CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_RESET);
+    /* A fan game's: from the pause menu in 16:9 (swim fan), its Item hotkeys say that they stay off and Swimming has no
+     * line of its own; in 4:3's In game (swim fan 4:3), Swimming says that fan games ignore it. */
+    OraclesUiControlsLayout l;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    CHECK(l.swim_fan.h == 0.0f);
+    nav.games[ORACLES_HOME_GAME_MOONRISE].usable = 1;
+    nav.entry = ORACLES_HOME_FAN;
+    nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    nav.controls.swim_hold = 0;
+    nav.controls.row = 0;
+    nav.in_game = 1;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    swim_probes("swim fan", &l);
+    CHECK(l.swim_fan.h == 0.0f);
+    layout_line("swim fan", "swim later", &l.swim_later);
+    layout_box("swim fan", "left panel", &l.left_panel);
+    layout_box("swim fan", "right panel", &l.right_panel);
+    layout_box("swim fan", "Item hotkeys", &l.mode);
+    layout_line("swim fan", "fan note", &l.mode_fan);
+    layout_line("swim fan", "later", &l.mode_later);
+    layout_line("swim fan", "Hotkeys", &l.heading_hotkeys);
+    layout_box("swim fan", "slot 0 key", &l.cells[2][0]);
+    layout_line("swim fan", "slots note", &l.slots_note);
+    CHECK(!strcmp(l.mode_fan_text, "Fan games refuse item hotkeys: they stay off for Moonrise Regalia."));
+    nav.in_game = 0;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    CHECK(l.swim.w == 0.0f);
+    nav.controls.row = ORACLES_CONTROLS_ROW_TAB;
+    nav.controls.tab = ORACLES_CONTROLS_TAB_IN_GAME;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    swim_probes("swim fan 4:3", &l);
+    layout_line("swim fan 4:3", "swim fan", &l.swim_fan);
+    CHECK(l.swim_later.h == 0.0f);
+}
+
 static void pause_menu(void)
 {
     OraclesHomeNav nav;
@@ -192,10 +273,17 @@ static void layout(void)
     layout_line_top("7g", "Empty", &l.items[3]);
     layout_line_top("7g", "slots note", &l.slots_note);
     /* The fixed shortcuts. */
+    /* The fixed keys in game under the right panel, on two lines from F7. */
     layout_line_top("7g", "In game", &l.shortcuts_label);
     layout_box("7g", "F2", &l.shortcut_keys[0]);
     layout_box("7g", "F11", &l.shortcut_keys[4]);
     layout_line_top("7g", "Menu", &l.shortcut_labels[5]);
+    for (int i = 0; i < 6; i++) {
+        char what[32];
+        snprintf(what, sizeof what, "key %d", i); layout_box("7g", what, &l.shortcut_keys[i]);
+        snprintf(what, sizeof what, "key %d label", i); layout_line("7g", what, &l.shortcut_labels[i]);
+    }
+    swim_probes("7g", &l);
 
     /* 2d: A's key waits, its border 2 px, its row 2 px taller; the rows under it and Reset move down by 2. */
     nav.controls.row = 4;
@@ -208,10 +296,32 @@ static void layout(void)
     layout_box("2d", "B key", &l.cells[0][5]);
     layout_line_top("2d", "Reset to defaults", &l.reset_text);
     layout_box("2d", "left panel", &l.left_panel);
-    /* In a game, the Item hotkeys' line says it waits for the next Play. */
+    oracles_controls_cancel(&nav);
+
+    /* 17a: Swimming on Hold, highlighted; the panel and the rows unmoved. */
+    nav.controls.swim_hold = 1;
+    nav.controls.row = ORACLES_CONTROLS_ROW_SWIM;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    swim_probes("17a", &l);
+    layout_box("17a", "swim Tap box", &l.swim_choices[0].box);
+    layout_box("17a", "swim Hold box", &l.swim_choices[1].box);
+    layout_box("17a", "left panel", &l.left_panel);
+    layout_box("17a", "Reset", &l.reset);
+    CHECK(l.swim_later.h == 0.0f && l.swim_fan.h == 0.0f);
+
+    /* 17b: from a game, the Item hotkeys' line and Swimming's say they wait for the next Play, Swimming's in the room
+     * of its own spacing. */
     nav.in_game = 1;
+    nav.controls.swim_hold = 0;
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
     CHECK(l.mode_later.h > 0.0f && l.mode.h > 124.0f);
+    swim_probes("17b", &l);
+    layout_line("17b", "swim later", &l.swim_later);
+    layout_line("17b", "later", &l.mode_later);
+    layout_box("17b", "left panel", &l.left_panel);
+    layout_box("17b", "right panel", &l.right_panel);
+    layout_box("17b", "Reset", &l.reset);
+    layout_box("17b", "Item hotkeys", &l.mode);
 }
 
 /* 4:3: the tabs' strip, a row of its own; left, right and OK there turn the tab, the arrows move within it. */
@@ -239,8 +349,14 @@ static void tabs_4_3(void)
     CHECK(oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_BUTTONS);
     oracles_home_act(&nav, ORACLES_HOME_LEFT);
     CHECK(oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME && !c->capturing);
-    /* In game has no cell: the arrows up and down stay on the strip, OK turns to Buttons. */
+    /* In game: down to Swimming, where left and right turn it, the tab kept; up to the strip, down stays on Swimming;
+     * OK on the strip turns to Buttons. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->row == ORACLES_CONTROLS_ROW_SWIM && c->column == 0 && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && c->swim_hold == 1 && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && c->swim_hold == 0);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(c->row == ORACLES_CONTROLS_ROW_SWIM);
     oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(c->row == ORACLES_CONTROLS_ROW_TAB && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_IN_GAME);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_BUTTONS && !c->capturing);
@@ -296,6 +412,12 @@ static void tabs_4_3(void)
     oracles_controls_click(&nav, 2, ORACLES_CONTROLS_ROW_TAB, ORACLES_CONTROLS_TAB_HOTKEYS);
     nav.layout = ORACLES_UI_LAYOUT_16_9;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && c->column == 2 && c->row == ORACLES_CONTROLS_ROW_MODE);
+    nav.layout = ORACLES_UI_LAYOUT_4_3;
+    oracles_home_act(&nav, ORACLES_HOME_UP);
+    oracles_home_act(&nav, ORACLES_HOME_RIGHT);
+    nav.layout = ORACLES_UI_LAYOUT_16_9;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && c->column == 0 && c->row == ORACLES_CONTROLS_ROW_SWIM && !c->capturing);
+    CHECK(c->swim_hold == 0);
     nav.layout = ORACLES_UI_LAYOUT_4_3;
     oracles_home_act(&nav, ORACLES_HOME_UP);
     oracles_home_act(&nav, ORACLES_HOME_RIGHT);
@@ -509,6 +631,33 @@ static void layout_4_3(void)
         snprintf(what, sizeof what, "key %d text", i); layout_line("10k", what, &l.shortcut_key_texts[i]);
         snprintf(what, sizeof what, "key %d label", i); layout_line("10k", what, &l.shortcut_labels[i]);
     }
+    swim_probes("10k", &l);
+
+    /* 17c: Swimming on Hold, highlighted, under the fixed keys; 17d the same at 640x480, its hints too. */
+    nav.controls.swim_hold = 1;
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.controls.row == ORACLES_CONTROLS_ROW_SWIM);
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    static const char *const swim_frames[2] = { "17c", "17d" };
+    for (int f = 0; f < 2; f++) {
+        swim_probes(swim_frames[f], &l);
+        layout_box(swim_frames[f], "key 5", &l.shortcut_keys[5]);
+        layout_line(swim_frames[f], "key 5 label", &l.shortcut_labels[5]);
+        for (int i = 0; i < ORACLES_CONTROLS_TABS; i++) {
+            char what[32];
+            snprintf(what, sizeof what, "tab %d", i); layout_box(swim_frames[f], what, &l.tabs[i]);
+        }
+        hints_4_3(swim_frames[f], &nav, 3);
+    }
+    CHECK(l.swim_later.h == 0.0f && l.swim_fan.h == 0.0f);
+
+    /* 17e: from the pause menu, Swimming says it waits for the next Play. */
+    nav.in_game = 1;
+    nav.controls.swim_hold = 0;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    swim_probes("17e", &l);
+    layout_line("17e", "swim later", &l.swim_later);
+    layout_box("17e", "tab 2", &l.tabs[2]);
 }
 
 int main(int argc, char **argv)
@@ -517,6 +666,7 @@ int main(int argc, char **argv)
     if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
     capture();
     moves();
+    swimming();
     pause_menu();
     layout();
     tabs_4_3();
@@ -524,6 +674,6 @@ int main(int argc, char **argv)
     pause_4_3();
     layout_4_3();
     if (layout_failures()) { fprintf(stderr, "%d failure(s)\n", layout_failures()); return 1; }
-    printf("launcher controls: the capture, the moves, the 4:3 tabs and the pause menu behave as expected, and Controls matches the layout reference in both layouts within %.1f px\n", (double)LAYOUT_TOLERANCE);
+    printf("launcher controls: the capture, the moves, Swimming, the 4:3 tabs and the pause menu behave as expected, and Controls matches the layout reference in both layouts within %.1f px\n", (double)LAYOUT_TOLERANCE);
     return 0;
 }

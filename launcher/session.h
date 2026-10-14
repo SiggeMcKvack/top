@@ -40,6 +40,8 @@ typedef struct OraclesSessionOptions {
     int ghosts;                      /* --ghosts: auto, 1 or 2 as 1, 2 or 3, for the run, never stored; 0: the settings' ghosts= */
     int core;                        /* --core: an OraclesCoreKind plus one, for the run, never stored; 0: the settings' core= */
     int continuous_swim;             /* --continuous-swim: the transitions with Link swimming at the surface too (implies them) */
+    int swim_hold;                   /* --swim-hold, or settings.txt's swim_hold=on for a game the home screen starts: a direction held
+                                      * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
     int camera_profile;              /* 0: the settings' camera; 1 or 2: this one for the session, not stored */
     int pretend_slow;                /* --pretend-slow: the game counts as one that ran slowly, to try the home screen's suggestion */

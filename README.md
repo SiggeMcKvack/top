@@ -6,7 +6,7 @@ A faithful, moddable port of Oracle of Ages and Oracle of Seasons for PC, macOS 
 
 - **Faithful**: the original image, 160x144, exactly what the game draws;
 - **Enhanced**: a widescreen view with the neighbouring rooms, which the game itself computes in a second instance of the core, a smooth camera, and the status bar repositioned in a band of its own;
-- **gameplay options**: continuous transitions (Link keeps walking through the scrolling transitions), item hotkeys (four keys that use or equip an item without the menu), and a drawn-back view that shows three rooms across and two down outdoors;
+- **gameplay options**: continuous transitions (Link keeps walking through the scrolling transitions), item hotkeys (four keys that use or equip an item without the menu), swimming with a button held rather than tapped (the flippers' A, Ages' mermaid suit), and a drawn-back view that shows three rooms across and two down outdoors;
 - **Lua mods**: houses, characters who talk and minigames, which act on the game through the game's own routines and replay exactly;
 - **fan games** from their BPS patch, applied in memory to your ROM:
   - Gifts of Kinomi 1.1.2, built on Oracle of Ages;

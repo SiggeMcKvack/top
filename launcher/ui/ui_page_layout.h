@@ -233,6 +233,8 @@ void oracles_ui_layout_mods(OraclesUiLayout layout, const OraclesHomeNav *nav, O
 
 /* `text` broken into lines of at most `width`, the first at (x, y). */
 void oracles_ui_wrap(const OraclesUiTextStyle *style, const char *text, float width, float x, float y, OraclesUiWrapped *out);
+/* The same, as text-wrap: pretty breaks it in the browser: a last line of a single word takes the word before it. */
+void oracles_ui_wrap_pretty(const OraclesUiTextStyle *style, const char *text, float width, float x, float y, OraclesUiWrapped *out);
 
 /* `text` into `out`, shortened in its middle with an ellipsis when wider than `width` or longer than `out`, so that its
  * end, a path's last folder, stays.  Each text is elided once: the last few are kept. */

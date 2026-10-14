@@ -51,6 +51,10 @@ const char oracles_ui_controls_mode_text[] = "A hotkey uses its item at once, wi
 const char oracles_ui_controls_mode_note[] = "After loading a savestate, hotkeys stop acting until the next session.";
 const char oracles_ui_controls_slots[] = "Slots fill in game; the item column is read-only.";
 const char *const oracles_ui_controls_mode_choices[2] = { "Off", "On" };
+const char oracles_ui_controls_swim_text[] =
+    "Hold a direction to swim at full speed, instead of tapping A with the flippers or the direction with the mermaid suit.";
+const char oracles_ui_controls_swim_fan[] = "Fan games ignore it for now.";
+const char *const oracles_ui_controls_swim_choices[2] = { "Tap", "Hold" };
 
 /* Controls' geometry, in scene pixels. */
 #define TITLE_X 96.0f
@@ -86,8 +90,14 @@ const char *const oracles_ui_controls_mode_choices[2] = { "Off", "On" };
 #define CHIP_PAD_Y 4.0f
 #define CHIP_GAP 8.0f
 #define SLOTS_MARGIN 12.0f
+#define SWIM_MARGIN 14.0f           /* above Swimming, under Reset */
+#define SWIM_MARGIN_IN_GAME 2.0f    /* in a game, its line that waits for the next Play takes back this room and its padding's */
+#define SWIM_PAD_Y_IN_GAME 4.0f
+#define SHORTCUTS_X (RIGHT_X + PANEL_PAD_X)
+#define SHORTCUTS_W (RIGHT_W - 2.0f * PANEL_PAD_X)
 #define SHORTCUTS_Y 930.0f
 #define SHORTCUTS_GAP 28.0f
+#define SHORTCUTS_LINE_GAP 12.0f
 #define SHORTCUT_GAP 10.0f
 #define KEY_PAD_X 9.0f
 #define KEY_PAD_Y 1.0f
@@ -127,6 +137,7 @@ const char *const oracles_ui_controls_mode_choices[2] = { "Off", "On" };
 #define SHORTCUT_KEY_W_4_3 160.0f
 #define SHORTCUT_GAP_4_3 24.0f
 #define SHORTCUT_H_4_3 72.0f
+#define SWIM_MARGIN_4_3 16.0f      /* above Swimming, under the fixed keys */
 #define KEY_PAD_X_4_3 14.0f
 #define KEY_PAD_Y_4_3 2.0f
 
@@ -154,6 +165,8 @@ static OraclesUiBox box(float x, float y, float w, float h)
     const OraclesUiBox b = { x, y, w, h };
     return b;
 }
+
+static float max_f(float a, float b) { return a > b ? a : b; }
 
 /* A line centred in a box, as a flex item centred both ways. */
 static OraclesUiLine centred(const OraclesUiTextStyle *style, const char *text, OraclesUiBox b)
@@ -218,6 +231,71 @@ static void layout_title(const OraclesHomeNav *nav, OraclesUiControlsLayout *out
     move_line(&out->prompt, TITLE_X + out->title.w + TITLE_GAP, out->title.baseline - (out->prompt.baseline - out->prompt.y));
 }
 
+/* Two choices framed at the right of a line from `y`, the second's right at `right`; returns their height. */
+static float chips(const char *const *names, float right, float y, OraclesUiChipLayout *out)
+{
+    float x = right;
+    for (int i = 1; i >= 0; i--) {
+        OraclesUiChipLayout *c = &out[i];
+        c->name = line_at(&oracles_ui_controls_chip, names[i], 0.0f, 0.0f, 0.0f);
+        c->box = box(x - c->name.w - 2.0f * (CHIP_PAD_X + BORDER), y, c->name.w + 2.0f * (CHIP_PAD_X + BORDER), c->name.h + 2.0f * (CHIP_PAD_Y + BORDER));
+        move_line(&c->name, c->box.x + BORDER + CHIP_PAD_X, y + BORDER + CHIP_PAD_Y);
+        x = c->box.x - CHIP_GAP;
+    }
+    return out[0].box.h;
+}
+
+/* 4:3's: 90 tall, as Display's options. */
+static void chips_4_3(const char *const *names, float right, float y, OraclesUiChipLayout *out)
+{
+    float x = right;
+    for (int i = 1; i >= 0; i--) {
+        OraclesUiChipLayout *c = &out[i];
+        c->name = line_at(&oracles_ui_row_button_4_3, names[i], 0.0f, 0.0f, CHIP_LINE_4_3);
+        const float w = max_f(CHIP_MIN_W_4_3, c->name.w + 2.0f * (CHIP_PAD_X_4_3 + CHIP_BORDER_4_3));
+        c->box = box(x - w, y, w, MODE_H_4_3);
+        move_line(&c->name, c->box.x + (w - c->name.w) * 0.5f, y + (MODE_H_4_3 - c->name.h) * 0.5f);
+        x = c->box.x - CHIP_GAP_4_3;
+    }
+}
+
+/* The fan game shown, whose hotkeys stay off: the line that says so, else empty. */
+static void fan_note(const OraclesHomeNav *nav, char *out, size_t capacity)
+{
+    const OraclesHomeFanGame *fan = oracles_home_fan_game(oracles_home_game(nav));
+    if (fan) snprintf(out, capacity, "Fan games refuse item hotkeys: they stay off for %s.", oracles_home_title(fan->hero));
+    else if (capacity) out[0] = 0;
+}
+
+/* Under Swimming's explanation from `bottom`: in 4:3 a fan game's line that it does not apply there (16:9's Item hotkeys
+ * already say that fan games refuse them), and in a game that it waits for the next Play; returns their bottom. */
+static float swim_lines(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out, float x, float bottom)
+{
+    const OraclesUiControlsStyles *st = oracles_ui_controls_styles(layout);
+    if (layout == ORACLES_UI_LAYOUT_4_3 && oracles_home_fan_game(oracles_home_game(nav))) {
+        out->swim_fan = line_at(st->mode_text, oracles_ui_controls_swim_fan, x, bottom + MODE_LINE_GAP, 0.0f);
+        bottom = out->swim_fan.y + out->swim_fan.h;
+    }
+    if (nav->in_game) {
+        out->swim_later = line_at(st->note, oracles_ui_later, x, bottom + MODE_LINE_GAP, 0.0f);
+        bottom = out->swim_later.y + out->swim_later.h;
+    }
+    return bottom;
+}
+
+/* Swimming in the game buttons' panel from `y`: its title and Tap and Hold on one line, its explanation, its lines. */
+static void swim_16_9(const OraclesHomeNav *nav, OraclesUiControlsLayout *out, float left, float width, float y)
+{
+    const float pad = nav->in_game ? SWIM_PAD_Y_IN_GAME : MODE_PAD_Y, inner_x = left + MODE_PAD_X, inner_y = y + pad;
+    const float top_h = chips(oracles_ui_controls_swim_choices, left + width - MODE_PAD_X, inner_y, out->swim_choices);
+    out->swim_title = line_at(&oracles_ui_controls_mode_title, "Swimming", inner_x, 0.0f, 0.0f);
+    move_line(&out->swim_title, inner_x, inner_y + (top_h - out->swim_title.h) * 0.5f);
+    oracles_ui_wrap_pretty(&oracles_ui_controls_mode_text_style, oracles_ui_controls_swim_text, width - 2.0f * MODE_PAD_X, inner_x,
+                           inner_y + top_h + MODE_LINE_GAP, &out->swim_text);
+    const float bottom = swim_lines(ORACLES_UI_LAYOUT_16_9, nav, out, inner_x, out->swim_text.lines[0].y + out->swim_text.h);
+    out->swim = box(left, y, width, bottom + pad - y);
+}
+
 static void layout_buttons(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     const float left = LEFT_X + BORDER + PANEL_PAD_X, width = LEFT_W - 2.0f * (BORDER + PANEL_PAD_X);
@@ -243,30 +321,28 @@ static void layout_buttons(const OraclesHomeNav *nav, OraclesUiControlsLayout *o
     out->reset_dot = dot;
     out->reset_text = line_at(&oracles_ui_controls_reset, "Reset to defaults", 0.0f, 0.0f, 0.0f);
     move_line(&out->reset_text, dot.x - RESET_GAP - out->reset_text.w, dot.y);
-    out->left_panel = box(LEFT_X, PANEL_Y, LEFT_W, out->reset.y + out->reset.h + PANEL_PAD_Y + BORDER - PANEL_Y);
+    swim_16_9(nav, out, left, width, out->reset.y + out->reset.h + PANEL_GAP + (nav->in_game ? SWIM_MARGIN_IN_GAME : SWIM_MARGIN));
+    out->left_panel = box(LEFT_X, PANEL_Y, LEFT_W, out->swim.y + out->swim.h + PANEL_PAD_Y + BORDER - PANEL_Y);
 }
 
 static void layout_hotkeys(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     const float left = RIGHT_X + BORDER + PANEL_PAD_X, width = RIGHT_W - 2.0f * (BORDER + PANEL_PAD_X);
     float y = PANEL_Y + BORDER + PANEL_PAD_Y;
-    /* The Item hotkeys line: its title and Off, On on one line; its explanation, its note, and in a game the line that
-     * says it waits for the next Play. */
-    const float inner_x = left + MODE_PAD_X, right = left + width - MODE_PAD_X, inner_y = y + MODE_PAD_Y;
-    float chip_x = right;
-    for (int i = 1; i >= 0; i--) {
-        OraclesUiChipLayout *c = &out->mode_choices[i];
-        c->name = line_at(&oracles_ui_controls_chip, oracles_ui_controls_mode_choices[i], 0.0f, 0.0f, 0.0f);
-        c->box = box(chip_x - c->name.w - 2.0f * (CHIP_PAD_X + BORDER), inner_y, c->name.w + 2.0f * (CHIP_PAD_X + BORDER), c->name.h + 2.0f * (CHIP_PAD_Y + BORDER));
-        move_line(&c->name, c->box.x + BORDER + CHIP_PAD_X, inner_y + BORDER + CHIP_PAD_Y);
-        chip_x = c->box.x - CHIP_GAP;
-    }
-    const float top_h = out->mode_choices[0].box.h;
+    /* The Item hotkeys line: its title and Off, On on one line; its explanation, its note, a fan game's line that they
+     * stay off, and in a game the line that says it waits for the next Play. */
+    const float inner_x = left + MODE_PAD_X, inner_y = y + MODE_PAD_Y;
+    const float top_h = chips(oracles_ui_controls_mode_choices, left + width - MODE_PAD_X, inner_y, out->mode_choices);
     out->mode_title = line_at(&oracles_ui_controls_mode_title, "Item hotkeys", inner_x, 0.0f, 0.0f);
     move_line(&out->mode_title, inner_x, inner_y + (top_h - out->mode_title.h) * 0.5f);
     out->mode_text = line_at(&oracles_ui_controls_mode_text_style, oracles_ui_controls_mode_text, inner_x, inner_y + top_h + MODE_LINE_GAP, 0.0f);
     out->mode_note = line_at(&oracles_ui_controls_note, oracles_ui_controls_mode_note, inner_x, out->mode_text.y + out->mode_text.h + MODE_LINE_GAP, 0.0f);
     float bottom = out->mode_note.y + out->mode_note.h;
+    fan_note(nav, out->mode_fan_text, sizeof out->mode_fan_text);
+    if (out->mode_fan_text[0]) {
+        out->mode_fan = line_at(&oracles_ui_controls_mode_text_style, out->mode_fan_text, inner_x, bottom + MODE_LINE_GAP, 0.0f);
+        bottom = out->mode_fan.y + out->mode_fan.h;
+    }
     memset(&out->mode_later, 0, sizeof out->mode_later);
     if (nav->in_game) {
         out->mode_later = line_at(&oracles_ui_controls_note, oracles_ui_later, inner_x, bottom + MODE_LINE_GAP, 0.0f);
@@ -301,33 +377,45 @@ static void layout_hotkeys(const OraclesHomeNav *nav, OraclesUiControlsLayout *o
     out->right_panel = box(RIGHT_X, PANEL_Y, RIGHT_W, out->slots_note.y + out->slots_note.h + PANEL_PAD_Y + BORDER - PANEL_Y);
 }
 
+/* The fixed shortcuts under the right panel: "In game", then each key framed and its meaning, wrapped in the panel's
+ * width as a flex row does, each line centred on its tallest piece. */
 static void layout_shortcuts(OraclesUiControlsLayout *out)
 {
-    /* "In game", then each key framed and its meaning, on one line centred on its tallest piece. */
+    enum { PIECES = 7 };   /* the label, the six keys with their meanings */
     out->shortcuts_text = "In game";
-    out->shortcuts_label = line_at(&oracles_ui_controls_heading, out->shortcuts_text, TITLE_X, 0.0f, 0.0f);
-    float height = out->shortcuts_label.h;
+    out->shortcuts_label = line_at(&oracles_ui_controls_heading, out->shortcuts_text, 0.0f, 0.0f, 0.0f);
+    float w[PIECES] = { out->shortcuts_label.w }, h[PIECES] = { out->shortcuts_label.h };
     for (int i = 0; i < 6; i++) {
         out->shortcut_key_texts[i] = line_at(&oracles_ui_controls_shortcut_key, oracles_controls_shortcuts[i][0], 0.0f, 0.0f, 0.0f);
         out->shortcut_labels[i] = line_at(&oracles_ui_controls_shortcut_label, oracles_controls_shortcuts[i][1], 0.0f, 0.0f, 0.0f);
-        const float key_h = out->shortcut_key_texts[i].h + 2.0f * (KEY_PAD_Y + BORDER);
-        if (key_h > height) height = key_h;
-        if (out->shortcut_labels[i].h > height) height = out->shortcut_labels[i].h;
+        const OraclesUiLine *key = &out->shortcut_key_texts[i], *label = &out->shortcut_labels[i];
+        out->shortcut_keys[i] = box(0.0f, 0.0f, key->w + 2.0f * (KEY_PAD_X + BORDER), key->h + 2.0f * (KEY_PAD_Y + BORDER));
+        w[i + 1] = out->shortcut_keys[i].w + SHORTCUT_GAP + label->w;
+        h[i + 1] = max_f(out->shortcut_keys[i].h, label->h);
     }
-    const float middle = SHORTCUTS_Y + height * 0.5f;
-    move_line(&out->shortcuts_label, TITLE_X, middle - out->shortcuts_label.h * 0.5f);
-    float x = TITLE_X + out->shortcuts_label.w + SHORTCUTS_GAP;
-    for (int i = 0; i < 6; i++) {
-        OraclesUiLine *key = &out->shortcut_key_texts[i], *label = &out->shortcut_labels[i];
-        out->shortcut_keys[i] = box(x, 0.0f, key->w + 2.0f * (KEY_PAD_X + BORDER), key->h + 2.0f * (KEY_PAD_Y + BORDER));
-        out->shortcut_keys[i].y = middle - out->shortcut_keys[i].h * 0.5f;
-        move_line(key, x + BORDER + KEY_PAD_X, out->shortcut_keys[i].y + BORDER + KEY_PAD_Y);
-        move_line(label, x + out->shortcut_keys[i].w + SHORTCUT_GAP, middle - label->h * 0.5f);
-        x = label->x + label->w + SHORTCUTS_GAP;
+    float y = SHORTCUTS_Y;
+    for (int first = 0; first < PIECES;) {
+        int last = first;
+        float line_w = w[first], line_h = h[first];
+        while (last + 1 < PIECES && line_w + SHORTCUTS_GAP + w[last + 1] <= SHORTCUTS_W) {
+            line_w += SHORTCUTS_GAP + w[++last];
+            line_h = max_f(line_h, h[last]);
+        }
+        const float middle = y + line_h * 0.5f;
+        float x = SHORTCUTS_X;
+        for (int p = first; p <= last; x += w[p] + SHORTCUTS_GAP, p++) {
+            if (p == 0) { move_line(&out->shortcuts_label, x, middle - out->shortcuts_label.h * 0.5f); continue; }
+            OraclesUiBox *k = &out->shortcut_keys[p - 1];
+            OraclesUiLine *key = &out->shortcut_key_texts[p - 1], *label = &out->shortcut_labels[p - 1];
+            k->x = x;
+            k->y = middle - k->h * 0.5f;
+            move_line(key, x + BORDER + KEY_PAD_X, k->y + BORDER + KEY_PAD_Y);
+            move_line(label, x + k->w + SHORTCUT_GAP, middle - label->h * 0.5f);
+        }
+        y += line_h + SHORTCUTS_LINE_GAP;
+        first = last + 1;
     }
 }
-
-static float max_f(float a, float b) { return a > b ? a : b; }
 
 /* 4:3's header, 90 tall: the title, then the tabs or, during a capture, the prompt, all centred on it. */
 static void header_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
@@ -397,28 +485,12 @@ static void buttons_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
     move_line(&out->reset_text, out->reset_dot.x - RESET_GAP - out->reset_text.w, out->reset_dot.y);
 }
 
-/* The fan game shown, whose hotkeys stay off: the line that says so, else empty. */
-static void fan_note(const OraclesHomeNav *nav, char *out, size_t capacity)
-{
-    const OraclesHomeFanGame *fan = oracles_home_fan_game(oracles_home_game(nav));
-    if (fan) snprintf(out, capacity, "Fan games refuse item hotkeys: they stay off for %s.", oracles_home_title(fan->hero));
-    else if (capacity) out[0] = 0;
-}
-
 static void hotkeys_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     const float left = LEFT_4_3 + GRID_PAD_X_4_3, right = LEFT_4_3 + WIDTH_4_3 - GRID_PAD_X_4_3;
     /* The Item hotkeys line, 90 tall: its title at the left, Off and On at the right, framed as Display's options. */
     out->mode = box(LEFT_4_3, GRID_Y_4_3, WIDTH_4_3, MODE_H_4_3);
-    float chip_x = right;
-    for (int i = 1; i >= 0; i--) {
-        OraclesUiChipLayout *c = &out->mode_choices[i];
-        c->name = line_at(&oracles_ui_row_button_4_3, oracles_ui_controls_mode_choices[i], 0.0f, 0.0f, CHIP_LINE_4_3);
-        const float w = max_f(CHIP_MIN_W_4_3, c->name.w + 2.0f * (CHIP_PAD_X_4_3 + CHIP_BORDER_4_3));
-        c->box = box(chip_x - w, out->mode.y, w, MODE_H_4_3);
-        move_line(&c->name, c->box.x + (w - c->name.w) * 0.5f, c->box.y + (MODE_H_4_3 - c->name.h) * 0.5f);
-        chip_x = c->box.x - CHIP_GAP_4_3;
-    }
+    chips_4_3(oracles_ui_controls_mode_choices, right, out->mode.y, out->mode_choices);
     out->mode_title = line_at(&oracles_ui_row_title_4_3, "Item hotkeys", left, 0.0f, 0.0f);
     move_line(&out->mode_title, left, out->mode.y + (MODE_H_4_3 - out->mode_title.h) * 0.5f);
     /* Under it, its explanation and its note; a fan game's line; in a game, that it waits for the next Play. */
@@ -451,8 +523,9 @@ static void hotkeys_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
     }
 }
 
-/* In game: "Fixed keys in game", then a row of 72 for each key, framed, and its meaning, both centred in it. */
-static void shortcuts_4_3(OraclesUiControlsLayout *out)
+/* In game: "Fixed keys in game", then a row of 72 for each key, framed, and its meaning, both centred in it; then
+ * Swimming, its title and Tap and Hold on a line 90 tall, its explanation and its lines under them. */
+static void shortcuts_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
 {
     const float left = LEFT_4_3 + GRID_PAD_X_4_3;
     out->shortcuts_text = "Fixed keys in game";
@@ -469,6 +542,14 @@ static void shortcuts_4_3(OraclesUiControlsLayout *out)
         move_line(label, left + SHORTCUT_KEY_W_4_3 + SHORTCUT_GAP_4_3, y + (height - label->h) * 0.5f);
         y += height + SHORTCUTS_GAP_4_3;
     }
+    out->swim = box(LEFT_4_3, y + SWIM_MARGIN_4_3, WIDTH_4_3, MODE_H_4_3);
+    chips_4_3(oracles_ui_controls_swim_choices, LEFT_4_3 + WIDTH_4_3 - GRID_PAD_X_4_3, out->swim.y, out->swim_choices);
+    out->swim_title = line_at(&oracles_ui_row_title_4_3, "Swimming", left, 0.0f, 0.0f);
+    move_line(&out->swim_title, left, out->swim.y + (MODE_H_4_3 - out->swim_title.h) * 0.5f);
+    oracles_ui_wrap_pretty(&oracles_ui_row_text_4_3, oracles_ui_controls_swim_text, WIDTH_4_3 - 2.0f * GRID_PAD_X_4_3, left,
+                           out->swim.y + MODE_H_4_3 + MODE_TEXT_PAD_TOP_4_3, &out->swim_text);
+    const float bottom = swim_lines(ORACLES_UI_LAYOUT_4_3, nav, out, left, out->swim_text.lines[0].y + out->swim_text.h);
+    out->swim.h = bottom + MODE_TEXT_PAD_BOTTOM_4_3 - out->swim.y;
 }
 
 void oracles_ui_layout_controls(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
@@ -479,7 +560,7 @@ void oracles_ui_layout_controls(OraclesUiLayout layout, const OraclesHomeNav *na
         switch (oracles_controls_tab(nav)) {
             case ORACLES_CONTROLS_TAB_BUTTONS: buttons_4_3(nav, out); break;
             case ORACLES_CONTROLS_TAB_HOTKEYS: hotkeys_4_3(nav, out); break;
-            default: shortcuts_4_3(out); break;
+            default: shortcuts_4_3(nav, out); break;
         }
         return;
     }

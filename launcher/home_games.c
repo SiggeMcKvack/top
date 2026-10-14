@@ -645,6 +645,8 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
      * the command line's, for the routes recorded with it, and so is --continuous-swim. */
     o.continuous_swim = profile != ORACLES_PROFILE_FAITHFUL && (o.continuous_swim || games->settings->transitions);
     o.continuous_transitions = profile != ORACLES_PROFILE_FAITHFUL && (o.continuous_transitions || games->settings->transitions);
+    /* The swim's hold, in either profile: the command line's, else settings.txt's swim_hold=. */
+    o.swim_hold = o.swim_hold || games->settings->swim_hold;
     /* No fan game's profile allows the item hotkeys yet: off, whatever the command line gave for the Oracles. */
     if (fan) o.hotkeys_option = hotkey_names[0];
     else if (!o.hotkeys_option) o.hotkeys_option = hotkey_names[state.hotkeys];

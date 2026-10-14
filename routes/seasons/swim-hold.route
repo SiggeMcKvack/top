@@ -1,0 +1,61 @@
+oracles-route 5
+game seasons
+rom_sha1 ba1268290fb2b1b70505d2d7b5825fc8a4816a4b
+sram_sha1 4b5e3ab93423f5032efeb3a6a516a97dde69f83d
+options continuous-transitions,continuous-swim,swim-hold
+core joypad-bouncing-off
+# seasons/swim.route's inputs to frame 2682, Link entering the water with the flippers, then with the swim's
+# hold: right held alone, right with A held, up held, and nothing, Link slowing down and stopping.
+inputs
+0 keys 00
+473 keys 80
+483 keys 00
+494 keys 80
+503 keys 00
+555 keys 80
+563 keys 00
+569 keys 80
+579 keys 00
+662 keys 08
+886 keys 0a
+965 keys 02
+1013 keys 0a
+1020 keys 08
+1102 keys 0a
+1104 keys 02
+1345 keys 0a
+1356 keys 02
+1395 keys 06
+1422 keys 04
+1492 keys 06
+1509 keys 02
+1523 keys 06
+1527 keys 04
+1737 keys 06
+1738 keys 02
+1816 keys 06
+1844 keys 04
+2032 keys 00
+2042 keys 01
+2067 keys 05
+2073 keys 04
+2104 keys 05
+2108 keys 01
+2238 keys 05
+2239 keys 04
+2269 keys 14
+2278 keys 04
+2388 keys 14
+2396 keys 04
+2421 keys 06
+2424 keys 02
+2523 keys 0a
+2540 keys 02
+2571 keys 0a
+2611 keys 08
+2681 keys 00
+2682 keys 01
+2772 keys 11
+2832 keys 04
+2872 keys 00
+2952 keys 00

@@ -223,6 +223,7 @@ typedef struct OraclesHomeControls {
     char hotkey_keys[ORACLES_HOME_HOTKEY_ROWS][ORACLES_HOME_NAME_LENGTH];
     char hotkey_pads[ORACLES_HOME_SLOTS][ORACLES_HOME_NAME_LENGTH];
     char items[2][ORACLES_HOME_SLOTS][ORACLES_HOME_NAME_LENGTH];   /* the item in each slot, empty when none */
+    int swim_hold;               /* Swimming, for every game: 0 Tap, 1 Hold (settings.txt's swim_hold=) */
     int column, row;             /* the highlighted cell (ui_controls_nav.h) */
     int capturing;               /* the highlighted cell waits for a key or a button */
     int tab;                     /* 4:3: the tab shown while the highlight is on the tabs (ORACLES_CONTROLS_TAB_*) */

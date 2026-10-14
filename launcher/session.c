@@ -376,6 +376,11 @@ static void drop_hotkeys(session *s, OraclesSessionResult *result, const char *w
  * not allow; --rom refuses them, with the reason. */
 static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
 {
+    /* The swim's hold, a setting of every game: one where it is not qualified plays without it. */
+    if (s->swim_hold && !oracles_compat_swim_hold(s->profile)) {
+        fprintf(stderr, "oracles: the swim's hold is not qualified for %s; this game plays without it\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->swim_hold = 0;
+    }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
     const int from_home = o->sdl.window != NULL;
@@ -407,9 +412,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     /* The item hotkeys attach it in Faithful too: the image stays the core's; a replayed route that carries exchanges needs it as well. */
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
-    if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language) {
+    if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
+        || s->swim_hold) {
         s->guest = oracles_guest_attach(s->core, s->profile);
-        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language;
+        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -428,6 +434,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     char error[256];
     if (s->mod && oracles_mod_session_attach(s->mod, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
     if (s->language && oracles_language_session_attach(s->language, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
+    if (s->swim_hold) {
+        if (oracles_guest_arm_swim_hold(s->guest) != 0) return failed(result, "the swim's hold cannot find its strokes in this ROM");
+        fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    }
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
         if (!s->view) return failed(result, "cannot start the Enhanced view");
@@ -661,6 +671,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->enhanced = o->enhanced || o->zoom_out || o->view || o->continuous_transitions || o->continuous_swim;
     s->continuous_transitions = o->continuous_transitions || o->continuous_swim;
     s->continuous_swim = o->continuous_swim;
+    s->swim_hold = o->swim_hold;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near), and its shape: the screen's,
      * a window taking the surface's (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;

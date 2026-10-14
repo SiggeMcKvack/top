@@ -870,7 +870,15 @@
       "bank": 63,
       "address": "0x5012"
     },
-    "gfx_header_table": null
+    "gfx_header_table": null,
+    "link_update_velocity_mermaid": null,
+    "game_keys_pressed": null,
+    "game_keys_just_pressed": null,
+    "link_speed_cap": null,
+    "link_speed_step_counter": null,
+    "link_speed_step_period": null,
+    "link_stroke_counter": null,
+    "link_update_flippers_state0": null
   },
   "guest_table_absent": {
     "check_reload_status_bar_graphics": "item hotkeys not qualified for this revision",
@@ -928,7 +936,15 @@
     "treasure_object_data": "mods not qualified for this revision: they play on the original ROMs only",
     "treasure_object_lists_end": "mods not qualified for this revision: they play on the original ROMs only",
     "rupee_values": "mods not qualified for this revision: they play on the original ROMs only",
-    "gfx_header_table": "the graphics that carry text keep their English in a fan game: no reader takes this table"
+    "gfx_header_table": "the graphics that carry text keep their English in a fan game: no reader takes this table",
+    "link_update_velocity_mermaid": "the swim's hold not qualified for this revision",
+    "game_keys_pressed": "the swim's hold not qualified for this revision",
+    "game_keys_just_pressed": "the swim's hold not qualified for this revision",
+    "link_speed_cap": "the swim's hold not qualified for this revision",
+    "link_speed_step_counter": "the swim's hold not qualified for this revision",
+    "link_speed_step_period": "the swim's hold not qualified for this revision",
+    "link_stroke_counter": "the swim's hold not qualified for this revision",
+    "link_update_flippers_state0": "the swim's hold not qualified for this revision"
   },
   "guest_table_sizes": {
     "global_flags_size": 16,

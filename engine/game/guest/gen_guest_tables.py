@@ -73,6 +73,10 @@ FUNCTIONS = [
     # A language: the routine that turns wTextIndexH:wTextIndexL into the text's address (hl) and bank (w7ActiveBank),
     # the one place every text, its dictionary fragments, calls and jumps are read from (textbox.s).
     ("get_text_address", "getTextAddress"),
+    # The swim's hold: the routines whose reads of wGameKeysJustPressed start a stroke (link.s): the mermaid suit's, a
+    # direction (Ages), and the flippers', A (both games).
+    ("link_update_velocity_mermaid", "linkUpdateVelocity@mermaidSuit"),
+    ("link_update_flippers_state0", "linkUpdateFlippersSpeed@flippersState0"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -130,6 +134,11 @@ VARIABLES = [
     ("text_table_table", "textTableTable"), ("text_offset1_table", "textOffset1Table"), ("text_offset2_table", "textOffset2Table"),
     # and the graphics headers loadGfxHeader reads, whose entries a language repoints (docs/ROM_DATA_FORMATS.md, section 4.1).
     ("gfx_header_table", "gfxHeaderTable"),
+    # The swim's hold: the keys a stroke reads, and for the mermaid suit Link's speed cap, its step counter and period, and the
+    # frames left of his stroke (linkUpdateVelocity, link.s).
+    ("game_keys_pressed", "wGameKeysPressed"), ("game_keys_just_pressed", "wGameKeysJustPressed"),
+    ("link_speed_cap", "w1Link.speedTmp"), ("link_speed_step_counter", "w1Link.var12"), ("link_speed_step_period", "w1Link.var13"),
+    ("link_stroke_counter", "w1Link.var3e"),
     ("is_linked_game", "wIsLinkedGame"), ("switch_state", "wSwitchState"), ("rom_bank", "hRomBank"),
     # Ghost: Jabu-Jabu's water level decides its tiles (Ages); the hardware type opens the GBA shops (read by the substitutions, constant).
     ("jabu_water_level", "wJabuWaterLevel"), ("gameboy_type", "hGameboyType"),
@@ -234,7 +243,7 @@ DEFINES = [("game_state", "wGameState"), ("cutscene_index", "wCutsceneIndex")]
 # offset; absent from the game that has no such room.
 ROOM_FLAG_BYTES = [("maku_tree_tileset_room_flags", "wGroup1RoomFlags", "ROOM_AGES_148"),   # Ages: bit 0, the Maku Tree saved, 0:38's tileset
                    ("veran_room_flags", "wGroup4RoomFlags", "ROOM_AGES_4fc")]              # Ages: bit 7, Veran beaten, 0:38's staircase
-OPTIONAL = {"wPortalGroup", "wPortalRoom", "wLinkTimeWarpTile", "wJabuWaterLevel", "wLinkRaisedFloorOffset", "wSelectedHarpSong",   # Ages only
+OPTIONAL = {"linkUpdateVelocity@mermaidSuit", "wPortalGroup", "wPortalRoom", "wLinkTimeWarpTile", "wJabuWaterLevel", "wLinkRaisedFloorOffset", "wSelectedHarpSong",   # Ages only
             "wInBoxingMatch",   # Seasons only
             "wNumPlacedSlates"}   # neither original: a fan game's (Gifts of Kinomi)
 STRUCT_FIELDS = ["enabled", "id", "subid", "var03", "state", "substate", "counter1", "counter2", "direction",

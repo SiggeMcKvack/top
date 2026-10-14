@@ -574,6 +574,15 @@ void oracles_ui_wrap(const OraclesUiTextStyle *style, const char *text, float wi
     out->h = (float)out->count * height;
 }
 
+void oracles_ui_wrap_pretty(const OraclesUiTextStyle *style, const char *text, float width, float x, float y, OraclesUiWrapped *out)
+{
+    oracles_ui_wrap(style, text, width, x, y, out);
+    if (out->count < 2 || strchr(out->text[out->count - 1], ' ')) return;
+    OraclesUiWrapped pretty;
+    oracles_ui_wrap(style, text, out->lines[out->count - 2].w - 1.0f, x, y, &pretty);
+    if (pretty.count == out->count) *out = pretty;
+}
+
 static void move_wrapped(OraclesUiWrapped *w, float y)
 {
     const float dy = y - (w->count ? w->lines[0].y : y);

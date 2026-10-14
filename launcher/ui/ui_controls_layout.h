@@ -1,15 +1,17 @@
 /* Where Controls puts its pieces in the scene of a layout (ui_layout.h),
  * without SDL.  16:9: the title and the capture's prompt, the game buttons'
- * panel on the left, the item hotkeys' on the right, the fixed shortcuts
- * under them.  4:3: the title and the tabs, Buttons, Hotkeys and In game
- * (the prompt in their place during a capture), over the shown tab alone:
- * the game buttons' grid and Reset, the Item hotkeys line and its grid, or
- * the fixed shortcuts as a list; no panels, no slots' note. */
+ * panel on the left, Swimming at its foot, the item hotkeys' on the right,
+ * the fixed shortcuts under it, on two lines.  4:3: the title and the tabs,
+ * Buttons, Hotkeys and In game (the prompt in their place during a
+ * capture), over the shown tab alone: the game buttons' grid and Reset, the
+ * Item hotkeys line and its grid, or the fixed shortcuts as a list and
+ * Swimming; no panels, no slots' note. */
 #ifndef ORACLES_UI_CONTROLS_LAYOUT_H
 #define ORACLES_UI_CONTROLS_LAYOUT_H
 
 #include "ui_controls_nav.h"
 #include "ui_home_layout.h"
+#include "ui_page_layout.h"
 
 typedef struct OraclesUiChipLayout {
     OraclesUiBox box;
@@ -37,12 +39,19 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiBox shortcut_keys[6];
     OraclesUiLine shortcut_key_texts[6], shortcut_labels[6];
     /* 4:3: each tab's box (the pointer's target), its label, and the line along its bottom, zero during a capture;
-     * under the Item hotkeys' text, a fan game's line that its hotkeys stay off.  Zero in 16:9, and the pieces of the
-     * tabs not shown. */
+     * zero in 16:9, and the pieces of the tabs not shown.  Under the Item hotkeys' text, a fan game's line that its
+     * hotkeys stay off. */
     OraclesUiBox tabs[ORACLES_CONTROLS_TABS], tab_lines[ORACLES_CONTROLS_TABS];
     OraclesUiLine tab_labels[ORACLES_CONTROLS_TABS];
     OraclesUiLine mode_fan;
     char mode_fan_text[ORACLES_HOME_TEXT_LENGTH];
+    /* Swimming: its box (its highlight, the pointer's target), its title and Tap and Hold on one line, its explanation
+     * broken into lines under them, in 4:3 a fan game's line that it does not apply there, and in a game the line that
+     * it waits for the next Play (zero when not shown).  Zero in 4:3's Buttons and Hotkeys. */
+    OraclesUiBox swim;
+    OraclesUiLine swim_title, swim_fan, swim_later;
+    OraclesUiChipLayout swim_choices[2];
+    OraclesUiWrapped swim_text;
 } OraclesUiControlsLayout;
 
 extern const OraclesUiTextStyle oracles_ui_controls_title, oracles_ui_controls_prompt, oracles_ui_controls_heading;
@@ -55,6 +64,8 @@ extern const OraclesUiTextStyle oracles_ui_controls_title_4_3, oracles_ui_contro
 extern const OraclesUiTextStyle oracles_ui_controls_cell_locked_4_3, oracles_ui_controls_cell_waiting_4_3, oracles_ui_controls_shortcut_key_4_3;
 extern const char oracles_ui_controls_mode_text[], oracles_ui_controls_mode_note[], oracles_ui_controls_slots[];
 extern const char *const oracles_ui_controls_mode_choices[2];
+extern const char oracles_ui_controls_swim_text[], oracles_ui_controls_swim_fan[];
+extern const char *const oracles_ui_controls_swim_choices[2];   /* "Tap", "Hold" */
 
 /* The styles a layout draws Controls in; 4:3 has no slots' note (NULL), 16:9 no tabs (NULL). */
 typedef struct OraclesUiControlsStyles {
@@ -63,8 +74,8 @@ typedef struct OraclesUiControlsStyles {
 } OraclesUiControlsStyles;
 const OraclesUiControlsStyles *oracles_ui_controls_styles(OraclesUiLayout layout);
 
-/* The screen for `nav` in `layout` (its cells' texts, the prompt, the game shown's items; in a game, the line that
- * says the Item hotkeys wait for the next Play; in 4:3, nav's tab). */
+/* The screen for `nav` in `layout` (its cells' texts, the prompt, the game shown's items; in a game, the lines that
+ * say the Item hotkeys and Swimming wait for the next Play; in 4:3, nav's tab). */
 void oracles_ui_layout_controls(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out);
 /* The text of an item's cell: the item's name, or "Empty". */
 const char *oracles_ui_controls_item_text(const OraclesHomeNav *nav, int slot);

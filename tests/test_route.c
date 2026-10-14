@@ -62,6 +62,27 @@ int main(int argc, char **argv)
         if (older) { fprintf(older, "oracles-route 3\ngame ages\noptions language-fr\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 4"));
     }
+    {
+        /* The mermaid suit's hold, the longest options a session writes: format 5, which a reader of format 4 refuses
+         * rather than replay it without; an older format naming it is refused. */
+        OraclesRouteHeader held = route.header;
+        snprintf(held.options, sizeof held.options, "%s", "continuous-transitions,continuous-swim," ORACLES_ROUTE_OPTION_LANGUAGE "en-eu," ORACLES_ROUTE_OPTION_SWIM_HOLD);
+        OraclesRouteWriter writer_held;
+        CHECK(oracles_route_writer_open(&writer_held, path, &held) == 0);
+        oracles_route_writer_record(&writer_held, 0, 0x00);
+        CHECK(oracles_route_writer_close(&writer_held) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_SWIM_HOLD);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_SWIM_HOLD) && !strcmp(back.header.options, held.options));
+        CHECK(strcmp(oracles_route_language(&back.header, language, sizeof language), "en-eu") == 0);
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 4\ngame ages\noptions swim-hold\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 5"));
+        older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 6\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);   /* a later format */
+    }
 
     unsigned mask = 99;
     CHECK(oracles_route_mask_at(&route, 0, &mask) == 1 && mask == 0x00);
@@ -80,7 +101,7 @@ int main(int argc, char **argv)
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     CHECK(strstr(error, "line 5") != NULL);
     f = fopen(path, "w");
-    fprintf(f, "oracles-route 5\ninputs\n");
+    fprintf(f, "oracles-route 6\ninputs\n");
     fclose(f);
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     /* Format 2: the verbs that change the game's state, written and read back.  Two verbs may share a
@@ -124,7 +145,7 @@ int main(int argc, char **argv)
         "oracles-route 2\ninputs\n10 equip\n",
         "oracles-route 2\ninputs\n10 use s3 0a\n",                               /* a use is carried by a button */
         "oracles-route 2\nmods claw-game@2fd4e1c67a2d28fced849ee1bb76e7391b93eb12\ninputs\n0 keys 00\n",   /* mods need format 3 */
-        "oracles-route 5\ninputs\n0 keys 00\n",                                /* a format to come */
+        "oracles-route 6\ninputs\n0 keys 00\n",                                /* a format to come */
     };
     for (unsigned i = 0; i < sizeof refused / sizeof refused[0]; i++) {
         f = fopen(path, "w"); fputs(refused[i], f); fclose(f);

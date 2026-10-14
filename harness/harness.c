@@ -388,6 +388,12 @@ static void report_transitions(run *r, FILE *summary, uint8_t *rom)
 static void report_checks(run *r, const harness_options *o, FILE *summary, uint8_t *rom)
 {
     report_transitions(r, summary, rom);
+    if (o->swim_hold) {
+        unsigned mermaid = 0, flippers = 0;
+        oracles_guest_swim_strokes(r->guest, &mermaid, &flippers);
+        fprintf(stderr, "swim's hold: strokes started by a held button: %u with the mermaid suit, %u with the flippers\n", mermaid, flippers);
+        if (summary) fprintf(summary, "swim.mermaid_strokes=%u\nswim.flippers_strokes=%u\n", mermaid, flippers);
+    }
     if (r->guest) {
         unsigned overflow = 0, purged = 0;
         oracles_guest_dropped_returns(r->guest, &overflow, &purged);
@@ -549,6 +555,19 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         o->continuous_transitions = o->continuous_swim = 1;
         fprintf(stderr, "harness: the route was recorded with --continuous-swim: the option is on\n");
     }
+    const int route_swim_hold = oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_SWIM_HOLD);
+    if (route_swim_hold && !oracles_compat_swim_hold(r->profile)) {
+        fprintf(stderr, "harness: the route was recorded with --swim-hold, which %s does not support\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
+    if (o->swim_hold && !route_swim_hold && !oracles_compat_swim_hold(r->profile)) {
+        fprintf(stderr, "harness: --swim-hold does nothing in %s\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        o->swim_hold = 0;
+    }
+    if (route_swim_hold && !o->swim_hold) {
+        o->swim_hold = 1;
+        fprintf(stderr, "harness: the route was recorded with --swim-hold: the option is on\n");
+    }
     char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
     if (oracles_route_language(&r->route.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&r->route.header, o->language)) {
         fprintf(stderr, "harness: the route was played in a language (%s): replay it with --language %s and its European ROM\n", recorded, recorded);
@@ -585,6 +604,10 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     if (o->continuous_transitions && r->guest) {
         r->transition = oracles_room_transition_start(r->guest, rom, rom_size, o->continuous_swim);
         if (!r->transition) { fprintf(stderr, "harness: --continuous-transitions needs the hooks on\n"); return 1; }
+    }
+    if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
+        fprintf(stderr, "harness: --swim-hold needs the hooks on, and the swim's strokes found in the ROM\n");
+        return 1;
     }
     if (o->hotkeys_live.mode) {
         if (!r->guest || o->hotkeys_dir || r->route.action_count) { fprintf(stderr, "harness: --hotkeys-live needs the hooks on, and a route without exchanges of its own\n"); return 1; }

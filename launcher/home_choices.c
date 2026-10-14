@@ -47,7 +47,7 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     }
 }
 
-/* Controls' names from the settings, and each game's slots by their items' names. */
+/* Controls' names from the settings, each game's slots by their items' names, and Swimming. */
 void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHomeControls *c)
 {
     for (int i = 0; i < ORACLES_HOME_BUTTONS; i++) snprintf(c->keys[i], sizeof c->keys[i], "%s", settings->key_names[i]);
@@ -58,6 +58,7 @@ void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHome
     }
     snprintf(c->hotkey_keys[ORACLES_HOME_SLOTS], sizeof c->hotkey_keys[0], "%s", settings->hotkey_bind_b);
     snprintf(c->hotkey_keys[ORACLES_HOME_SLOTS + 1], sizeof c->hotkey_keys[0], "%s", settings->hotkey_bind_a);
+    c->swim_hold = settings->swim_hold;
     for (int g = 0; g < 2; g++) {
         const OraclesGuestTables *tables = g == 0 ? &oracles_guest_tables_ages : &oracles_guest_tables_seasons;
         for (int i = 0; i < ORACLES_HOME_SLOTS; i++) {
@@ -78,6 +79,7 @@ void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings 
     }
     snprintf(settings->hotkey_bind_b, sizeof settings->hotkey_bind_b, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS]);
     snprintf(settings->hotkey_bind_a, sizeof settings->hotkey_bind_a, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS + 1]);
+    settings->swim_hold = c->swim_hold;   /* a game started next takes it; a running one keeps its own */
 }
 
 /* The largest whole scale, up to the one asked for, at which the surface's window fits the display. */

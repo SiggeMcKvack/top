@@ -88,6 +88,7 @@ struct OraclesGuest {
     const uint8_t *language_index;                   /* the language transaction (guest_text.c): the index in the core's ROM, or NULL */
     char language[ORACLES_LANGUAGE_INDEX_CODE_BYTES];
     unsigned language_served, language_english, language_missing;
+    unsigned mermaid_strokes, flippers_strokes;      /* the swim's hold (guest_swim.c): strokes it started */
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
 };
@@ -102,5 +103,8 @@ void oracles_guest_call_point(OraclesGuest *guest, uint16_t sp);
 void oracles_guest_call_step(OraclesGuest *guest, uint16_t sp, uint8_t opcode);
 /* guest_text.c: at the return of getTextAddress. */
 void oracles_guest_serve_text(OraclesGuest *guest);
+/* guest_swim.c: at a stroke's test, the mermaid suit's or the flippers'. */
+void oracles_guest_mermaid_stroke(OraclesGuest *guest);
+void oracles_guest_flippers_stroke(OraclesGuest *guest);
 
 #endif

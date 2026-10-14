@@ -22,6 +22,7 @@ typedef struct OraclesCompatProfile {
     int item_hotkeys;
     int continuous_swim;             /* --continuous-swim: the tile types of the water read in the ROM */
     int zoom_out;
+    int swim_hold;                   /* --swim-hold: the swim's strokes from a held button, the mermaid suit's direction and the flippers' A */
     const OraclesGuestTables *guest_tables;
     const OraclesTables *data_tables;
     const uint8_t *room_flag_pages;
@@ -56,6 +57,7 @@ int oracles_compat_continuous_transitions(const OraclesCompatProfile *profile);
 int oracles_compat_item_hotkeys(const OraclesCompatProfile *profile);
 int oracles_compat_continuous_swim(const OraclesCompatProfile *profile);
 int oracles_compat_zoom_out(const OraclesCompatProfile *profile);
+int oracles_compat_swim_hold(const OraclesCompatProfile *profile);
 const OraclesGuestTables *oracles_compat_guest_tables(const OraclesCompatProfile *profile);
 const OraclesTables *oracles_compat_data_tables(const OraclesCompatProfile *profile);
 uint8_t oracles_compat_room_flag_page(const OraclesCompatProfile *profile, unsigned group);

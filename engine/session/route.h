@@ -12,13 +12,14 @@
 #define ORACLES_ROUTE_FORMAT 2          /* written without mods; format 1 (the `keys` verb alone) is read too */
 #define ORACLES_ROUTE_FORMAT_MODS 3     /* written with a `mods` line: a reader of format 2 would ignore the line and replay without the mods */
 #define ORACLES_ROUTE_FORMAT_LANGUAGE 4 /* written with a language among the options: a reader before it would replay in English */
+#define ORACLES_ROUTE_FORMAT_SWIM_HOLD 5   /* written with the swim's hold among the options: a reader before it would replay without */
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
     char game[16];        /* "ages" or "seasons" */
     char rom_sha1[41];
     char sram_sha1[41];   /* SHA-1 of the SRAM loaded before the run, or "none" */
-    char options[64];     /* the gameplay options the session ran with, comma-separated ("continuous-transitions"); empty for none */
+    char options[96];     /* the gameplay options the session ran with, comma-separated ("continuous-transitions"); empty for none */
     char core[48];        /* how the core ran, comma-separated ("joypad-bouncing-off", "mgba"); empty in the routes recorded before the core's joypad bouncing was cut */
     char mods[1024];      /* the mods the session ran, "NAME@SHA1,..." in the order of their names; empty for none */
     char store_sha1[41];  /* with mods: SHA-1 of the mods' storage the run starts from (ROUTE.store), or "none"; empty in routes before it */
@@ -27,6 +28,7 @@ typedef struct OraclesRouteHeader {
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS "continuous-transitions"
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM "continuous-swim"   /* with the transitions: Link swimming at the surface too */
 #define ORACLES_ROUTE_OPTION_LANGUAGE "language-"   /* and the language's code ("language-fr"): the texts the route was played in */
+#define ORACLES_ROUTE_OPTION_SWIM_HOLD "swim-hold"   /* the swim's strokes started by a held button */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);
 /* The language the route was played in ("fr"), "" for the game's own English. */

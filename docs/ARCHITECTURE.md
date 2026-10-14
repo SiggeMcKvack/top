@@ -32,7 +32,7 @@ native host
    Faithful: shows the core's framebuffer
    Enhanced: software PPU from the state committed at vblank, neighbours from a ghost instance,
              smooth camera, status bar placed in a wide band
-   gameplay options: continuous transitions, item hotkeys (closed transactions of the bus)
+   gameplay options: continuous transitions, item hotkeys, the swim's hold (closed transactions of the bus)
    mods: Lua run during the game, acting through the game's own routines
         |
         v
@@ -65,7 +65,7 @@ The tree:
 - **The core is the only authority.** The game runs in SameBoy, or in mGBA when the player chooses it; the host reads the game's state and never reimplements its logic. What needs a computation of the game (a neighbour's terrain with its substitutions) is asked of the game itself, in a ghost instance.
 - **Faithful depends on the core alone.** The renderer, the hooks and the mods are layers above; the Faithful profile shows the core's framebuffer and stays playable if everything else is absent or off.
 - **Reads by physical address, never through the guest CPU's bus.** The host reads the core's memory by bank and offset, through direct access; the CPU bus returns `$ff` on VRAM and OAM while the PPU draws and drops writes.
-- **The presentation never writes into the game.** Enhanced never changes the live instance, and the route suite compares the live-state fingerprints with and without the view on every route. The only guest writes are the four closed transactions of the bus, at the safe points of [`GAME_HOOKS.md`](GAME_HOOKS.md), section 6: the continuous transitions (with `--continuous-swim`, through a swim too), the item hotkeys, the mods' calls to the game's own routines, and a language's texts served where the game looks a text up.
+- **The presentation never writes into the game.** Enhanced never changes the live instance, and the route suite compares the live-state fingerprints with and without the view on every route. The only guest writes are the five closed transactions of the bus, at the safe points of [`GAME_HOOKS.md`](GAME_HOOKS.md), section 6: the continuous transitions (with `--continuous-swim`, through a swim too), the item hotkeys, the mods' calls to the game's own routines, a language's texts served where the game looks a text up, and the swim's hold, a stroke's test answered as for a press.
 - **One fact in one place.** An address or a format lives in the reference documents or in code generated from the pinned disassembly (`config/disasm.json`), resolved per game: Ages and Seasons do not share addresses.
 - **Every comparison is intra-core.** Same core, same inputs, with and without hooks, with and without Enhanced; the fingerprints exclude the dead stack bytes below each thread's SP and nothing else.
 - **Portability by construction.** No SDL, POSIX or system call outside the host facade and the launcher; no Python at run time.

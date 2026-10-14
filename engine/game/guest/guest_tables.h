@@ -97,6 +97,11 @@ typedef struct OraclesGuestTables {
      * the graphics headers, whose entries for the graphics that carry text it repoints (section 4.1). */
     OraclesGuestSym get_text_address, text_index_h, text_index_l, active_text_bank,
         text_table_table, text_offset1_table, text_offset2_table, gfx_header_table;
+    /* The swim's hold: the routines whose reads of wGameKeysJustPressed start a stroke, the mermaid suit's (Ages; absent
+     * in Seasons) and the flippers' state 0 (link.s), the keys they read, and for the suit Link's speed cap, the counter
+     * and period of his speed's steps and the frames left of his stroke (linkUpdateVelocity). */
+    OraclesGuestSym link_update_velocity_mermaid, link_update_flippers_state0, game_keys_pressed, game_keys_just_pressed,
+        link_speed_cap, link_speed_step_counter, link_speed_step_period, link_stroke_counter;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */

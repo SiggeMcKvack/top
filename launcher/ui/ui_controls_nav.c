@@ -44,6 +44,7 @@ void oracles_controls_defaults(OraclesHomeControls *controls)
     for (int i = 0; i < ORACLES_HOME_HOTKEY_ROWS; i++) copy_name(controls->hotkey_keys[i], oracles_controls_default_hotkey_keys[i]);
     for (int i = 0; i < ORACLES_HOME_SLOTS; i++) copy_name(controls->hotkey_pads[i], oracles_controls_default_hotkey_pads[i]);
     memset(controls->items, 0, sizeof controls->items);
+    controls->swim_hold = 0;
     controls->column = controls->row = 0;
     controls->capturing = 0;
     controls->tab = ORACLES_CONTROLS_TAB_BUTTONS;
@@ -61,14 +62,15 @@ int oracles_controls_tab(const OraclesHomeNav *nav)
 {
     const OraclesHomeControls *c = &nav->controls;
     if (c->row == ORACLES_CONTROLS_ROW_TAB) return c->tab;
+    if (c->row == ORACLES_CONTROLS_ROW_SWIM) return ORACLES_CONTROLS_TAB_IN_GAME;
     return c->column >= 2 ? ORACLES_CONTROLS_TAB_HOTKEYS : ORACLES_CONTROLS_TAB_BUTTONS;
 }
 
 int oracles_controls_cell_exists(int column, int row)
 {
     switch (column) {
-        case 0: return row >= 0 && row <= ORACLES_CONTROLS_ROW_RESET;
-        case 1: return row >= 0 && row <= ORACLES_CONTROLS_ROW_RESET;
+        case 0:
+        case 1: return row >= 0 && row <= ORACLES_CONTROLS_ROW_SWIM;
         case 2: return row >= ORACLES_CONTROLS_ROW_MODE && row < ORACLES_HOME_HOTKEY_ROWS;
         case 3: return row >= ORACLES_CONTROLS_ROW_MODE && row < ORACLES_HOME_SLOTS;
         default: return 0;
@@ -77,7 +79,7 @@ int oracles_controls_cell_exists(int column, int row)
 
 int oracles_controls_cell_locked(int column, int row) { return column == 1 && row >= 0 && row < ORACLES_HOME_BUTTONS - ORACLES_HOME_PAD_BUTTONS; }
 
-/* The name a cell holds, NULL for Reset, the Item hotkeys line and the d-pad's. */
+/* The name a cell holds, NULL for Reset, Swimming, the Item hotkeys line and the d-pad's. */
 static char *name_of(OraclesHomeControls *c, int column, int row)
 {
     if (row < 0 || row >= ORACLES_CONTROLS_ROW_RESET || oracles_controls_cell_locked(column, row)) return NULL;
@@ -165,7 +167,10 @@ static int cells(const OraclesHomeNav *nav, cell *out)
                 for (int r = 0; r < ORACLES_HOME_HOTKEY_ROWS; r++) out[n++] = (cell){ 2, r };
                 for (int r = 0; r < ORACLES_HOME_SLOTS; r++) out[n++] = (cell){ 3, r };
                 break;
-            default: out[n++] = (cell){ 0, ORACLES_CONTROLS_ROW_TAB }; break;
+            default:
+                out[n++] = (cell){ 0, ORACLES_CONTROLS_ROW_TAB };
+                out[n++] = (cell){ 0, ORACLES_CONTROLS_ROW_SWIM };
+                break;
         }
         return n;
     }
@@ -173,6 +178,8 @@ static int cells(const OraclesHomeNav *nav, cell *out)
     for (int r = ORACLES_HOME_BUTTONS - ORACLES_HOME_PAD_BUTTONS; r < ORACLES_HOME_BUTTONS; r++) out[n++] = (cell){ 1, r };
     out[n++] = (cell){ 0, ORACLES_CONTROLS_ROW_RESET };
     out[n++] = (cell){ 1, ORACLES_CONTROLS_ROW_RESET };
+    out[n++] = (cell){ 0, ORACLES_CONTROLS_ROW_SWIM };
+    out[n++] = (cell){ 1, ORACLES_CONTROLS_ROW_SWIM };
     for (int r = 0; r < ORACLES_HOME_HOTKEY_ROWS; r++) out[n++] = (cell){ 2, r };
     for (int r = 0; r < ORACLES_HOME_SLOTS; r++) out[n++] = (cell){ 3, r };
     out[n++] = (cell){ 2, ORACLES_CONTROLS_ROW_MODE };
@@ -180,10 +187,10 @@ static int cells(const OraclesHomeNav *nav, cell *out)
     return n;
 }
 
-/* Reset, the Item hotkeys line and the tabs' strip are one place each, whatever column they were reached from. */
+/* Reset, Swimming, the Item hotkeys line and the tabs' strip are one place each, whatever column they were reached from. */
 static void settle(OraclesHomeControls *c)
 {
-    if (c->row == ORACLES_CONTROLS_ROW_RESET) c->column = 0;
+    if (c->row == ORACLES_CONTROLS_ROW_RESET || c->row == ORACLES_CONTROLS_ROW_SWIM) c->column = 0;
     if (c->row == ORACLES_CONTROLS_ROW_MODE) c->column = 2;
     if (c->row == ORACLES_CONTROLS_ROW_TAB) c->column = c->tab == ORACLES_CONTROLS_TAB_HOTKEYS ? 2 : 0;
 }
@@ -226,25 +233,36 @@ static OraclesHomeCommand toggle_hotkeys(OraclesHomeNav *nav, int on)
     return ORACLES_HOME_STORE;
 }
 
+/* Swimming: Tap (0) or Hold (1), for every game. */
+static OraclesHomeCommand set_swim(OraclesHomeNav *nav, int hold)
+{
+    if (nav->controls.swim_hold == hold) return ORACLES_HOME_STAY;
+    nav->controls.swim_hold = hold;
+    return ORACLES_HOME_STORE;
+}
+
+/* The keys and buttons, the slots' items and Swimming kept. */
 static OraclesHomeCommand reset(OraclesHomeNav *nav)
 {
     OraclesHomeControls *c = &nav->controls;
     char items[2][ORACLES_HOME_SLOTS][ORACLES_HOME_NAME_LENGTH];
-    const int column = c->column, row = c->row, tab = c->tab;
+    const int column = c->column, row = c->row, tab = c->tab, swim_hold = c->swim_hold;
     memcpy(items, c->items, sizeof items);
     oracles_controls_defaults(c);
     memcpy(c->items, items, sizeof items);
+    c->swim_hold = swim_hold;
     c->column = column;
     c->row = row;
     c->tab = tab;
     return ORACLES_HOME_STORE;
 }
 
-/* OK on the highlighted place: a cell waits, Reset resets, the Item hotkeys line turns. */
+/* OK on the highlighted place: a cell waits, Reset resets, the Item hotkeys line and Swimming turn. */
 static OraclesHomeCommand activate(OraclesHomeNav *nav)
 {
     OraclesHomeControls *c = &nav->controls;
     if (c->row == ORACLES_CONTROLS_ROW_MODE) return toggle_hotkeys(nav, !oracles_controls_hotkeys_on(nav));
+    if (c->row == ORACLES_CONTROLS_ROW_SWIM) return set_swim(nav, !c->swim_hold);
     if (c->row == ORACLES_CONTROLS_ROW_RESET) return reset(nav);
     if (name_of(c, c->column, c->row)) c->capturing = 1;
     return ORACLES_HOME_STAY;
@@ -273,7 +291,7 @@ OraclesHomeCommand oracles_controls_act(OraclesHomeNav *nav, OraclesHomeAction a
             /* 16:9 has no strip: its tab's first cell. */
             const int hotkeys = c->tab == ORACLES_CONTROLS_TAB_HOTKEYS;
             c->column = hotkeys ? 2 : 0;
-            c->row = hotkeys ? ORACLES_CONTROLS_ROW_MODE : 0;
+            c->row = hotkeys ? ORACLES_CONTROLS_ROW_MODE : c->tab == ORACLES_CONTROLS_TAB_IN_GAME ? ORACLES_CONTROLS_ROW_SWIM : 0;
             return ORACLES_HOME_STAY;
         }
     }
@@ -281,6 +299,7 @@ OraclesHomeCommand oracles_controls_act(OraclesHomeNav *nav, OraclesHomeAction a
         case ORACLES_HOME_LEFT:
         case ORACLES_HOME_RIGHT:
             if (c->row == ORACLES_CONTROLS_ROW_MODE) return toggle_hotkeys(nav, !oracles_controls_hotkeys_on(nav));
+            if (c->row == ORACLES_CONTROLS_ROW_SWIM) return set_swim(nav, !c->swim_hold);
             move(nav, action);
             return ORACLES_HOME_STAY;
         case ORACLES_HOME_UP:
@@ -318,6 +337,7 @@ OraclesHomeCommand oracles_controls_click(OraclesHomeNav *nav, int column, int r
     c->row = row;
     settle(c);
     if (row == ORACLES_CONTROLS_ROW_MODE) return option >= 0 ? toggle_hotkeys(nav, option == 1) : ORACLES_HOME_STAY;
+    if (row == ORACLES_CONTROLS_ROW_SWIM) return option >= 0 ? set_swim(nav, option == 1) : ORACLES_HOME_STAY;
     return activate(nav);
 }
 

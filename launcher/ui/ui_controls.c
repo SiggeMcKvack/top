@@ -110,23 +110,41 @@ static void buttons(OraclesUiDraw *draw, const OraclesHomeNav *nav, const Oracle
     text(draw, st->reset, &l->reset_dot, oracles_ui_item_dot, reset ? accent : oracles_ui_rgb(BUTTON));
 }
 
+/* A line of two choices (the Item hotkeys', Swimming's): its highlight while focused, its title, the choices framed,
+ * the one chosen brighter, in the accent while focused. */
+static void choice_line(OraclesUiDraw *draw, const OraclesUiBox *b, const OraclesUiLine *title, const char *title_text, const OraclesUiChipLayout *choices,
+                        const char *const *names, int chosen, int focused, const OraclesUiControlsStyles *st, const look *lk, OraclesUiColor accent)
+{
+    if (focused) oracles_ui_fill_round_rect(draw, b->x, b->y, b->w, b->h, lk->row_radius, oracles_ui_rgba(0xffffffu, ROW_HIGHLIGHT_OPACITY));
+    text(draw, st->mode_title, title, title_text, oracles_ui_rgb(NAME));
+    for (int i = 0; i < 2; i++) {
+        const OraclesUiChipLayout *c = &choices[i];
+        const OraclesUiColor frame = i == chosen ? (focused ? accent : oracles_ui_rgba(0xffffffu, 0.4f)) : oracles_ui_rgba(0xffffffu, 0.1f);
+        oracles_ui_stroke_round_rect(draw, c->box.x, c->box.y, c->box.w, c->box.h, lk->chip_radius, lk->chip_border, frame);
+        text(draw, st->chip, &c->name, names[i], i == chosen ? (focused ? accent : oracles_ui_rgb(NAME)) : oracles_ui_rgb(CHOICE_OFF));
+    }
+}
+
 static void mode_line(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
                       OraclesUiColor accent)
 {
-    const int focused = nav->controls.row == ORACLES_CONTROLS_ROW_MODE, on = oracles_controls_hotkeys_on(nav);
-    if (focused) oracles_ui_fill_round_rect(draw, l->mode.x, l->mode.y, l->mode.w, l->mode.h, lk->row_radius, oracles_ui_rgba(0xffffffu, ROW_HIGHLIGHT_OPACITY));
-    text(draw, st->mode_title, &l->mode_title, "Item hotkeys", oracles_ui_rgb(NAME));
-    for (int i = 0; i < 2; i++) {
-        const OraclesUiChipLayout *c = &l->mode_choices[i];
-        const int chosen = i == on;
-        const OraclesUiColor frame = chosen ? (focused ? accent : oracles_ui_rgba(0xffffffu, 0.4f)) : oracles_ui_rgba(0xffffffu, 0.1f);
-        oracles_ui_stroke_round_rect(draw, c->box.x, c->box.y, c->box.w, c->box.h, lk->chip_radius, lk->chip_border, frame);
-        text(draw, st->chip, &c->name, oracles_ui_controls_mode_choices[i], chosen ? (focused ? accent : oracles_ui_rgb(NAME)) : oracles_ui_rgb(CHOICE_OFF));
-    }
+    choice_line(draw, &l->mode, &l->mode_title, "Item hotkeys", l->mode_choices, oracles_ui_controls_mode_choices, oracles_controls_hotkeys_on(nav),
+                nav->controls.row == ORACLES_CONTROLS_ROW_MODE, st, lk, accent);
     text(draw, st->mode_text, &l->mode_text, oracles_ui_controls_mode_text, oracles_ui_rgb(TEXT));
     text(draw, st->note, &l->mode_note, oracles_ui_controls_mode_note, oracles_ui_rgb(NOTE));
     if (l->mode_fan.h > 0.0f) text(draw, st->mode_text, &l->mode_fan, l->mode_fan_text, oracles_ui_rgb(WARN));
     if (l->mode_later.h > 0.0f) text(draw, st->note, &l->mode_later, oracles_ui_later, oracles_ui_rgb(NOTE));
+}
+
+/* Swimming: its line, its explanation, a fan game's line and the next Play's. */
+static void swim(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
+                 OraclesUiColor accent)
+{
+    choice_line(draw, &l->swim, &l->swim_title, "Swimming", l->swim_choices, oracles_ui_controls_swim_choices, nav->controls.swim_hold != 0,
+                nav->controls.row == ORACLES_CONTROLS_ROW_SWIM, st, lk, accent);
+    for (unsigned i = 0; i < l->swim_text.count; i++) text(draw, st->mode_text, &l->swim_text.lines[i], l->swim_text.text[i], oracles_ui_rgb(TEXT));
+    if (l->swim_fan.h > 0.0f) text(draw, st->mode_text, &l->swim_fan, oracles_ui_controls_swim_fan, oracles_ui_rgb(WARN));
+    if (l->swim_later.h > 0.0f) text(draw, st->note, &l->swim_later, oracles_ui_later, oracles_ui_rgb(NOTE));
 }
 
 /* The item hotkeys: their line, then the grid, dimmed while they are off. */
@@ -189,12 +207,16 @@ void oracles_ui_controls_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Or
         switch (oracles_controls_tab(nav)) {
             case ORACLES_CONTROLS_TAB_BUTTONS: buttons(draw, nav, &l, st, &look_4_3, accent); break;
             case ORACLES_CONTROLS_TAB_HOTKEYS: hotkeys(draw, nav, &l, st, &look_4_3, accent); break;
-            default: shortcuts(draw, &l, st, &look_4_3); break;
+            default:
+                shortcuts(draw, &l, st, &look_4_3);
+                swim(draw, nav, &l, st, &look_4_3, accent);
+                break;
         }
         return;
     }
     panel(draw, &l.left_panel);
     buttons(draw, nav, &l, st, &look_16_9, accent);
+    swim(draw, nav, &l, st, &look_16_9, accent);
     panel(draw, &l.right_panel);
     hotkeys(draw, nav, &l, st, &look_16_9, accent);
     shortcuts(draw, &l, st, &look_16_9);
@@ -213,6 +235,8 @@ int oracles_ui_controls_hit(const OraclesHomeNav *nav, float x, float y, int *co
         for (int r = 0; r < ORACLES_HOME_BUTTONS; r++)
             if (l.cells[c][r].w > 0.0f && inside(&l.cells[c][r], x, y) && !oracles_controls_cell_locked(c, r)) { *column = c; *row = r; return 1; }
     if (inside(&l.reset, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_RESET; return 1; }
+    for (int i = 0; i < 2; i++) if (inside(&l.swim_choices[i].box, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_SWIM; *option = i; return 1; }
+    if (inside(&l.swim, x, y)) { *column = 0; *row = ORACLES_CONTROLS_ROW_SWIM; return 1; }
     for (int i = 0; i < 2; i++) if (inside(&l.mode_choices[i].box, x, y)) { *column = 2; *row = ORACLES_CONTROLS_ROW_MODE; *option = i; return 1; }
     if (inside(&l.mode, x, y)) { *column = 2; *row = ORACLES_CONTROLS_ROW_MODE; return 1; }
     return 0;

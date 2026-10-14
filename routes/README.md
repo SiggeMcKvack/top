@@ -31,6 +31,7 @@ The routes recorded before SameBoy's joypad bouncing was cut (`ages/advanced`, `
 | `ages/zoom-out.route` | the drawn-back view on Ages: dialogues, time travel, interiors | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `ages/mods-claw-game.route` | Lua mods: a house, its characters, a minigame, `mod.storage`, the save | faithful, enhanced |
 | `ages/swim.route` | the continuous transitions through a swim: the sea with the mermaid suit, a dive and the sea floor, an underwater building | enhanced-zoom, enhanced-zoom-threaded |
+| `ages/mermaid-hold.route` | the swim's hold with the mermaid suit: `ages/underwater.route`'s start, then directions held on the sea floor, written by hand | faithful, enhanced |
 | `ages/save.route`, `ages/load.route` | the game's own save, written by hand after `ages/overworld.route`'s keys: the same cartridge RAM on both cores, and the file opened the same on both | faithful |
 | `seasons/overworld.route` | Enhanced on Seasons: Holodrum, vertical scrolls, interiors, a dungeon | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/continuous-transitions.route` | continuous transitions, Subrosia, white fades, large rooms | faithful, faithful-cc, enhanced, enhanced-threaded |
@@ -41,6 +42,7 @@ The routes recorded before SameBoy's joypad bouncing was cut (`ages/advanced`, `
 | `seasons/intro.route` | Seasons' introduction and cutscenes in the drawn-back view | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/dungeon.route` | a dungeon in the drawn-back view, large rooms whole | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/swim.route` | the continuous transitions through a swim with the flippers, strokes carrying Link across an edge | faithful, enhanced-zoom, enhanced-zoom-threaded |
+| `seasons/swim-hold.route` | the swim's hold with the flippers: `seasons/swim.route`'s start, Link entering the water, then a direction held alone, with A, and nothing, written by hand (SameBoy only) | faithful, enhanced-zoom |
 | `moonrise-regalia/exploration.route` | a fan game from its BPS patch: a new game, continuous transitions | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
 | `temple-of-seasons/subrosia-and-dungeon.route` | Temple of Seasons: Subrosia, its north and a dungeon, with continuous transitions, the drawn-back view and dialogues | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
 | `gifts-of-kinomi/castle-and-west.route` | Gifts of Kinomi: the starting castle, its way out and the west, in the drawn-back view with continuous transitions | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
