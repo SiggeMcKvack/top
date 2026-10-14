@@ -473,14 +473,16 @@ static uint8_t peek(OraclesCore *core, uint16_t address) { return GBView8(cpu_of
 static OraclesCoreRegisters registers(const OraclesCore *core)
 {
     const struct SM83Core *cpu = cpu_of(core);
-    const OraclesCoreRegisters out = { cpu->af, cpu->bc, cpu->de, cpu->hl, cpu->sp, cpu->pc };
+    /* a and f one by one: built by MinGW, whose bitfields take Microsoft's layout, f is four bytes and af no longer
+     * holds a (mGBA itself only ever reads them one by one). */
+    const OraclesCoreRegisters out = { (uint16_t)(cpu->a << 8 | cpu->f.packed), cpu->bc, cpu->de, cpu->hl, cpu->sp, cpu->pc };
     return out;
 }
 
 static void set_registers(OraclesCore *core, const OraclesCoreRegisters *in)
 {
     struct SM83Core *cpu = cpu_of(core);
-    cpu->af = in->af; cpu->bc = in->bc; cpu->de = in->de; cpu->hl = in->hl; cpu->sp = in->sp;
+    cpu->a = (uint8_t)(in->af >> 8); cpu->f.packed = (uint8_t)(in->af & 0xf0u); cpu->bc = in->bc; cpu->de = in->de; cpu->hl = in->hl; cpu->sp = in->sp;
     if (cpu->pc != in->pc) {
         cpu->pc = in->pc;
         cpu->memory.setActiveRegion(cpu, cpu->pc);
