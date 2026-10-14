@@ -668,6 +668,13 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
     const OraclesEnhancedSize surface = !o.enhanced ? (OraclesEnhancedSize){ 160u, 144u }
                                       : oracles_enhanced_view_size(level, o.screen_4_3 ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9);
     o.sdl.scale = oracles_home_fitting_scale(window, o.sdl.scale, surface);
+    /* Fill at one size, where every window comes to the one size the screen holds: fullscreen, as Display's diagram
+     * shows it (oracles_display_fullscreen); Sharp there keeps the window, as large. */
+    if (!o.sdl.fullscreen && !games->window_from_command_line && games->settings->scaling_fill) {
+        OraclesHomeDisplay display;
+        oracles_home_inspect_display(games->settings, &display, window);
+        o.sdl.fullscreen = oracles_display_one_size_for(&display, (int)surface.width, (int)surface.height);
+    }
     char window_text[48];
     if (o.sdl.fullscreen) snprintf(window_text, sizeof window_text, "fullscreen");
     else snprintf(window_text, sizeof window_text, "windowed at scale %u", o.sdl.scale);

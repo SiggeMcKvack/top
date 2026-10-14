@@ -98,7 +98,7 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
     } else if (frame) {
         /* The game fullscreen when Display says so, Scaling's Fill then filling the capture as it fills the screen. */
         int presentation, scale_mode;
-        oracles_sdl_presentation(nav.display.window == 3 || nav.display.fullscreen_only, nav.display.scaling, &presentation, &scale_mode);
+        oracles_sdl_presentation(oracles_display_fullscreen(&nav), nav.display.scaling, &presentation, &scale_mode);
         SDL_SetTextureScaleMode(image, (SDL_ScaleMode)scale_mode);
         OraclesUiHome view;
         oracles_ui_home_start(&view, &nav);

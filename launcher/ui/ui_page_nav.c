@@ -462,29 +462,45 @@ void oracles_display_surface(const OraclesHomeNav *nav, int *width, int *height)
     }
 }
 
+/* The largest whole scale of the surface w x h in room_w x room_h, at least 1. */
+static int whole_scale(int room_w, int room_h, int w, int h)
+{
+    const int kx = room_w / w, ky = room_h / h;
+    const int k = kx < ky ? kx : ky;
+    return k > 1 ? k : 1;
+}
+
 int oracles_display_scale(const OraclesHomeNav *nav, int window)
 {
     if (window < 3) return window + 2;
     int w, h;
     oracles_display_surface(nav, &w, &h);
-    const int kx = nav->display.screen_w / w, ky = nav->display.screen_h / h;
-    const int k = kx < ky ? kx : ky;
-    return k > 1 ? k : 1;
+    return whole_scale(nav->display.screen_w, nav->display.screen_h, w, h);
 }
 
 int oracles_display_fit(const OraclesHomeNav *nav)
 {
     int w, h;
     oracles_display_surface(nav, &w, &h);
-    const int kx = nav->display.room_w / w, ky = nav->display.room_h / h;
-    const int k = kx < ky ? kx : ky;
-    return k > 1 ? k : 1;
+    return whole_scale(nav->display.room_w, nav->display.room_h, w, h);
+}
+
+int oracles_display_one_size_for(const OraclesHomeDisplay *display, int w, int h)
+{
+    const int fit = whole_scale(display->room_w, display->room_h, w, h);
+    return display->fullscreen_only || (fit <= 2 && fit == whole_scale(display->screen_w, display->screen_h, w, h));
 }
 
 int oracles_display_one_size(const OraclesHomeNav *nav)
 {
-    const int fit = oracles_display_fit(nav);
-    return nav->display.fullscreen_only || (fit <= 2 && fit == oracles_display_scale(nav, 3));
+    int w, h;
+    oracles_display_surface(nav, &w, &h);
+    return oracles_display_one_size_for(&nav->display, w, h);
+}
+
+int oracles_display_fullscreen(const OraclesHomeNav *nav)
+{
+    return nav->display.window == 3 || nav->display.fullscreen_only || (nav->display.scaling && oracles_display_one_size(nav));
 }
 
 const char oracles_display_one_size_note[] = "One size only here; Scaling in Advanced can fill the screen.";
@@ -567,8 +583,8 @@ void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h
     oracles_display_surface(nav, &sw, &sh);
     int k = oracles_display_scale(nav, nav->display.window);
     if (nav->display.window < 3 && k > oracles_display_fit(nav)) k = oracles_display_fit(nav);   /* as Play reduces it */
-    /* Fill takes the screen in fullscreen only: Fullscreen chosen, or every window the one size the screen holds. */
-    const int fill = nav->display.scaling && (nav->display.window == 3 || oracles_display_one_size(nav));
+    /* Fill takes the screen in fullscreen only. */
+    const int fill = nav->display.scaling && oracles_display_fullscreen(nav);
     const float f = fill_scale(nav, sw, sh);
     const float image_w = fill ? f * (float)sw : (float)(k * sw), image_h = fill ? f * (float)sh : (float)(k * sh);
     /* The window on the screen drawn to the box's scale, rounded to the pixel, and kept inside. */

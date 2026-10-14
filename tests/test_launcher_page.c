@@ -1786,6 +1786,34 @@ static void one_size(void)
     CHECK(oracles_display_one_size(&nav) && oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 0) == ORACLES_HOME_STAY);
 }
 
+/* Fill at one size: on a 1366x768 screen the Far view's windows all come to 2x, whatever Window keeps (3x here, the row
+ * not changing), and Fill fills the screen, the game then fullscreen; Sharp keeps the window, 960x540. */
+static void fill_one_size(void)
+{
+    OraclesHomeNav nav;
+    display_4_3_nav(&nav, 1366, 768);
+    nav.layout = ORACLES_UI_LAYOUT_16_9;
+    nav.display.view = 2;
+    nav.display.window = 1;
+    nav.display.room_h = 768 - 40 - 64;   /* a taskbar, the window's frame */
+    nav.display.scaling = 1;
+    float w, h;
+    char label[64];
+    CHECK(oracles_display_one_size(&nav) && oracles_display_one_size_for(&nav.display, 480, 270) && oracles_display_fullscreen(&nav));
+    oracles_display_diagram(&nav, ORACLES_UI_DIAGRAM_W, ORACLES_UI_DIAGRAM_H, &w, &h, label, sizeof label);
+    CHECK(!strcmp(label, "1365\xc3\x97" "768 on a 1366\xc3\x97" "768 screen") && w == ORACLES_UI_DIAGRAM_W);
+    nav.display.scaling = 0;
+    CHECK(!oracles_display_fullscreen(&nav));
+    oracles_display_diagram(&nav, ORACLES_UI_DIAGRAM_W, ORACLES_UI_DIAGRAM_H, &w, &h, label, sizeof label);
+    CHECK(!strcmp(label, "960\xc3\x97" "540 on a 1366\xc3\x97" "768 screen"));
+    /* Faithful there: 4x windowed, 5x fullscreen, not one size: Fill applies with Fullscreen chosen only. */
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    nav.display.scaling = 1;
+    CHECK(!oracles_display_one_size(&nav) && !oracles_display_fullscreen(&nav) && !oracles_display_one_size_for(&nav.display, 160, 144));
+    nav.display.window = 3;
+    CHECK(oracles_display_fullscreen(&nav));
+}
+
 /* Display's rows and Quality's choices where another quality or another highlighted row leaves them: no row's height
  * changes with the choice or the focus. */
 static int same_places(const OraclesUiDisplayLayout *a, const OraclesUiDisplayLayout *b)
@@ -2182,6 +2210,7 @@ int main(int argc, char **argv)
     layout_10e();
     display_4_3();
     one_size();
+    fill_one_size();
     display_quality();
     display_quality_navigation();
     display_scaling();

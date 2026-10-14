@@ -181,8 +181,13 @@ int oracles_display_scale(const OraclesHomeNav *nav, int window);
 /* The largest whole scale at which a window of the surface fits the display's room, at least 1. */
 int oracles_display_fit(const OraclesHomeNav *nav);
 /* Every choice of Window comes to the same scale (2x, 3x and 4x reduced to the fit, fullscreen's no larger), or the
- * platform plays fullscreen only: the row does not change. */
+ * platform plays fullscreen only: the row does not change.  _for: on `display`, for the surface w x h. */
 int oracles_display_one_size(const OraclesHomeNav *nav);
+int oracles_display_one_size_for(const OraclesHomeDisplay *display, int w, int h);
+/* The game plays fullscreen: Fullscreen chosen, the platform's only way, or Fill chosen at one size, where a window
+ * would be no larger than the screen's whole scale and Fill takes the whole screen (the home screen's host starts it
+ * so). */
+int oracles_display_fullscreen(const OraclesHomeNav *nav);
 extern const char oracles_display_one_size_note[];   /* "One size only here; Scaling in Advanced can fill the screen." */
 /* The line under the windows: oracles_display_one_size_note at one size, else that a windowed scale chosen above the
  * fit is reduced to it, "Reduced to 3x to fit this screen."; empty when it fits. */
@@ -198,7 +203,7 @@ int oracles_display_window_size_length(const OraclesHomeNav *nav, int window);
 extern const char *const oracles_display_scaling_choices[2];
 void oracles_display_scaling_size(const OraclesHomeNav *nav, int scaling, char *out, size_t capacity);
 /* The diagram: the window the game will have, reduced to fit when it must, on the screen; with Fill chosen, when the
- * game plays fullscreen (Fullscreen chosen, or one size), the image filling the screen in its proportions. */
+ * game plays fullscreen (oracles_display_fullscreen), the image filling the screen in its proportions. */
 void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h, float *w, float *h, char *label, size_t capacity);
 /* The chosen profile's note, or that the game shown plays in Faithful. */
 const char *oracles_display_profile_note(const OraclesHomeNav *nav);
