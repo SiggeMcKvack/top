@@ -594,6 +594,16 @@ static void push_menu(sdl_backend *backend, SDL_JoystickID id, const char *input
     push_event(backend, ORACLES_HOST_EVENT_PAUSE);
 }
 
+/* Android's Back, said with the device it came from, as the activity saw it: a handheld's Back is often its built-in
+ * controller's. */
+static void push_android_back(sdl_backend *backend)
+{
+    char source[256];
+    oracles_android_activity_text("backSource", source, sizeof source);
+    fprintf(stderr, "oracles: Back of %s %s\n", source[0] ? source : "an unknown device", backend->pause_menu ? "opens the pause menu" : "ends the session");
+    push_event(backend, backend->pause_menu ? ORACLES_HOST_EVENT_PAUSE : ORACLES_HOST_EVENT_QUIT);
+}
+
 static void update_axis(sdl_backend *backend, unsigned negative, unsigned positive, Sint16 value)
 {
     const unsigned wanted = value < -AXIS_THRESHOLD ? negative : value > AXIS_THRESHOLD ? positive : 0;
@@ -648,7 +658,8 @@ static void handle_event(sdl_backend *backend, const SDL_Event *e)
         case SDL_EVENT_QUIT: backend->window_closed = 1; push_quit(backend); break;
         case SDL_EVENT_KEY_DOWN:
             if (e->key.repeat) break;
-            if (e->key.key == SDLK_ESCAPE || ANDROID_BACK(e->key.key)) {
+            if (ANDROID_BACK(e->key.key)) { push_android_back(backend); break; }
+            if (e->key.key == SDLK_ESCAPE) {
                 push_event(backend, backend->pause_menu ? ORACLES_HOST_EVENT_PAUSE : ORACLES_HOST_EVENT_QUIT);
                 break;
             }

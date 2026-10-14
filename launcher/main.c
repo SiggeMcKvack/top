@@ -42,6 +42,7 @@
 #ifdef __ANDROID__
 #include <SDL3/SDL_system.h>
 #include <android/log.h>
+#include <jni.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -82,6 +83,18 @@ static void log_stderr(void)
     setvbuf(stderr, NULL, _IOLBF, 0);
     pthread_t thread;
     if (pthread_create(&thread, NULL, forward_stderr, (void *)(intptr_t)pipes[0]) == 0) pthread_detach(thread);
+}
+
+/* A line of the Android activity's (OraclesActivity) for the log: the Java runtime's standard error is a copy of the
+ * process's taken before the redirection above, so that its lines would not reach the log. */
+JNIEXPORT void JNICALL Java_io_github_thibautbus_theoraclesproject_OraclesActivity_nativeLog(JNIEnv *env, jclass class, jstring line);
+JNIEXPORT void JNICALL Java_io_github_thibautbus_theoraclesproject_OraclesActivity_nativeLog(JNIEnv *env, jclass class, jstring line)
+{
+    (void)class;
+    const char *chars = line ? (*env)->GetStringUTFChars(env, line, NULL) : NULL;
+    if (!chars) return;
+    fprintf(stderr, "%s\n", chars);
+    (*env)->ReleaseStringUTFChars(env, line, chars);
 }
 #endif
 
