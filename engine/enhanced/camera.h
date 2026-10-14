@@ -120,6 +120,14 @@ typedef struct OraclesEnhancedObserver {
     int last_camera_x, last_camera_y;
     int last_offset_x, last_offset_y;
     uint64_t last_window_epoch;
+    /* Link's place at the previous observation, room-local: the frame on
+     * screen drew his sprite there (the game builds its OAM in the logic and
+     * the vblank copies it, so the frame shows the logic before). */
+    int have_last_link;
+    int last_link_x, last_link_y;
+    int32_t last_world_link_x, last_world_link_y;
+    uint8_t last_link_group, last_link_room;
+    uint64_t last_link_epoch;
     unsigned map_width;                      /* rooms per overworld row: 14 in Ages, 16 in Seasons (0: 16) */
     unsigned map_height;                     /* rows of the reference group's map under the tileset map rules (set by the view), 0: the grid's 16 */
     unsigned map_left, map_top;              /* its first column and row, 0 but for a map walled inside the grid (set by the view) */
@@ -144,6 +152,7 @@ typedef struct OraclesEnhancedObservation {
     int32_t window_left, window_top;         /* world position of the core's game-area window as drawn in the frame on screen */
     int drawn_camera_x, drawn_camera_y;      /* the game's camera (hCameraX/Y) that frame was drawn with, room-local, signed */
     int drawn_offset_x, drawn_offset_y;      /* and its screen offsets (wScreenOffsetX/Y): SCX = camera + offset, SCY = camera + offset - 16 */
+    int link_step_x, link_step_y;            /* Link's move since the previous observation: the frame on screen drew him that much behind world.link */
     uint8_t group, room;                     /* wActiveGroup/wActiveRoom as the game has them now */
     int in_transition;                       /* not in normal play: scroll mode != 1 or transition state != 2 */
     int in_scroll;                           /* a scrolling transition between two rooms (states 3 to 5): a seam */

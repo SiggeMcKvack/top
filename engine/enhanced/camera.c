@@ -327,6 +327,18 @@ void oracles_enhanced_observe(OraclesGuest *guest, OraclesEnhancedObserver *o, O
     shift_by_loops(o, &out->world);
     out->epoch = o->epoch * 8u + (uint64_t)out->world.domain;
     place_window(guest, t, o, out);
+    /* In the same room by his room's coordinates; across the end of a scroll,
+     * where the reference changes, by the world's, continuous there. */
+    if (o->have_last_link && o->last_link_epoch == out->epoch) {
+        const int same_room = o->last_link_group == o->ref_group && o->last_link_room == o->ref_room;
+        out->link_step_x = same_room ? link_x - o->last_link_x : out->world.link_x - o->last_world_link_x;
+        out->link_step_y = same_room ? link_y - o->last_link_y : out->world.link_y - o->last_world_link_y;
+    }
+    o->have_last_link = 1;
+    o->last_link_x = link_x; o->last_link_y = link_y;
+    o->last_world_link_x = out->world.link_x; o->last_world_link_y = out->world.link_y;
+    o->last_link_group = o->ref_group; o->last_link_room = o->ref_room;
+    o->last_link_epoch = out->epoch;
 }
 
 void oracles_enhanced_observation_rebound(const OraclesEnhancedObserver *o, OraclesEnhancedObservation *out)
@@ -488,7 +500,13 @@ static int32_t nearest_pixel(int64_t x)
  * axes on his frames, and he moves on the screen only as the camera gains or
  * loses a pixel on him.  Within a pixel of the reducer's position, it stays
  * inside the bounds that position does (both are whole pixels).  A new epoch
- * or segment (a snap) takes the offset afresh, the smooth one rounded. */
+ * or segment (a snap) takes the offset afresh, the smooth one rounded.
+ * `link` is Link's place as the frame on screen draws him, the previous
+ * observation's (link_step): the game builds its sprites in the logic and the
+ * vblank copies them, so the frame shows him a step behind his coordinates.
+ * Stepped with his coordinates, the camera would move a frame before his
+ * sprite and he would go a pixel back and forth on the screen at every
+ * irregular step (on stairs, at half a pixel a frame, every frame). */
 static int32_t shown_position(OraclesEnhancedShownOffset *s, const OraclesE11State *state, int32_t link)
 {
     const int64_t smooth = (int64_t)link * ORACLES_E11_F256 - state->camera_pos;
@@ -575,7 +593,7 @@ int oracles_enhanced_camera_reduce(OraclesEnhancedCamera *c, uint32_t frame, con
     c->state_y = ry.state;
     c->vertical_tracking = c->state_y.status == ORACLES_E11_TRACKING;
     if (!c->vertical_tracking) c->shown_y.valid = 0;
-    const int32_t shown_y = c->vertical_tracking ? shown_position(&c->shown_y, &c->state_y, here->link_y) : 0;
+    const int32_t shown_y = c->vertical_tracking ? shown_position(&c->shown_y, &c->state_y, here->link_y - observation->link_step_y) : 0;
     if (camera_y) *camera_y = c->vertical_tracking ? shown_y + vertical_margin(c, here) - inset_y : observation->window_top - window_inset;
 
     reducer_observation(c, frame, observation, 0, &obs);
@@ -583,7 +601,7 @@ int oracles_enhanced_camera_reduce(OraclesEnhancedCamera *c, uint32_t frame, con
     const OraclesE11Result r = oracles_e11_reduce(&c->state, &obs, config);
     c->state = r.state;
     if (c->state.status != ORACLES_E11_TRACKING) { c->shown_x.valid = 0; return 0; }
-    const int32_t shown_x = shown_position(&c->shown_x, &c->state, here->link_x);
+    const int32_t shown_x = shown_position(&c->shown_x, &c->state, here->link_x - observation->link_step_x);
     if (camera_x) *camera_x = shown_x - inset_x;
     return 1;
 }

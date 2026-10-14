@@ -47,6 +47,8 @@ static int reload_load_state(OraclesEnhancedCheck *c, const int shown[4], const 
     if (oracles_core_load_state(c->core, c->saved_core, c->saved_core_size) != 0) return 0;
     oracles_guest_reset_execution_state(c->guest);
     if (oracles_enhanced_view_load_state(c->view, c->saved_view, c->saved_view_size) != 0) return 0;
+    if (c->link_sprites) oracles_sprites_forget(c->link_sprites);
+    c->have_drawn_link = 0;
     return 1;
 }
 
@@ -221,6 +223,58 @@ void ec_measure_seams(OraclesEnhancedCheck *c, const OraclesEnhancedObservation 
     c->last_playing = ob->playing;
     c->last_mode_world = mode == ORACLES_ENHANCED_WORLD;
     c->have_last_observation = 1;
+}
+
+/* Link's sprite as the frame on screen draws it, in normal play: his tag (a
+ * special object, slot 0) among the entries of the OAM that frame showed, its
+ * corner placed in the band by the window's place and less the shown camera.
+ * A frame where it goes back against the step it made the frame before, on
+ * either axis, while his place in the world does not turn: Link shaking on
+ * the screen, which a camera stepping on frames his sprite does not makes.
+ * A camera catching up moves him one way at a time and is not counted. */
+void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_x, int32_t camera_y)
+{
+    int found = 0, left = 255, top = 255;
+    const uint8_t *oam = oracles_guest_oam(c->guest);
+    if (c->link_sprites && oam && mode == ORACLES_ENHANCED_WORLD && ob->playing && !ob->in_transition && !ob->cutscene) {
+        OraclesSpriteTag tags[ORACLES_SPRITE_TAGS];
+        const unsigned count = oracles_sprites_tags_for_oam(c->link_sprites, oam, tags, ORACLES_SPRITE_TAGS);
+        for (unsigned i = 0; i < count; i++) {
+            if (tags[i].kind != 0u || tags[i].slot != 0u || tags[i].terrain_effect) continue;
+            for (unsigned n = 0; n < tags[i].count && tags[i].first + n < 40u; n++) {
+                const uint8_t *e = oam + (tags[i].first + n) * 4u;
+                if (e[0] == 0u || e[0] >= 160u || e[1] == 0u || e[1] >= 168u) continue;   /* off the screen: not drawn */
+                if (e[0] < top) top = e[0];
+                if (e[1] < left) left = e[1];
+                found = 1;
+            }
+        }
+    }
+    if (!found || (c->have_drawn_link && ob->epoch != c->drawn_link_epoch)) { c->have_drawn_link = 0; if (!found) return; }
+    const int32_t world[2] = { ob->window_left + left, ob->window_top + top };
+    const int32_t screen[2] = { world[0] - camera_x, world[1] - camera_y };
+    if (c->have_drawn_link) {
+        c->link_drawn_steps++;
+        for (unsigned a = 0; a < 2u; a++) {
+            const int32_t step = screen[a] - c->drawn_screen[a], world_step = world[a] - c->drawn_world[a];
+            const int back = step && c->drawn_screen_step[a] && (step > 0) != (c->drawn_screen_step[a] > 0);
+            const int turned = world_step && c->drawn_world_step[a] && (world_step > 0) != (c->drawn_world_step[a] > 0);
+            if (back && !turned) {
+                if (a) c->link_backsteps_y++; else c->link_backsteps++;
+                const size_t used = strlen(c->link_backsteps_list);
+                if (used + 16 < sizeof c->link_backsteps_list)
+                    snprintf(c->link_backsteps_list + used, sizeof c->link_backsteps_list - used, "%s%u:%c", used ? " " : "", frame, a ? 'y' : 'x');
+            }
+            c->drawn_screen_step[a] = step; c->drawn_world_step[a] = world_step;
+        }
+    } else {
+        c->drawn_screen_step[0] = c->drawn_screen_step[1] = 0;
+        c->drawn_world_step[0] = c->drawn_world_step[1] = 0;
+    }
+    memcpy(c->drawn_screen, screen, sizeof screen);
+    memcpy(c->drawn_world, world, sizeof world);
+    c->drawn_link_epoch = ob->epoch;
+    c->have_drawn_link = 1;
 }
 
 /* The scroll registers in effect at the first game-area line of the frame

@@ -10,6 +10,7 @@
 
 #include "ghost.h"
 #include "guest_struct_offsets.h"
+#include "sprites.h"
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -82,6 +83,16 @@ struct OraclesEnhancedCheck {
     unsigned link_jumps_y;               /* Link's world y */
     int32_t largest_link_jump_y, last_link_y;
     int32_t largest_link_jump, largest_window_jump;
+    /* Link's sprite as the frame on screen draws it (his entries of the OAM
+     * that frame showed, tagged by object), placed in the band and less the
+     * shown camera: the frames it went a pixel or more back against the step
+     * the frame before, he himself not turning (ec_measure_link_backsteps). */
+    OraclesSprites *link_sprites;
+    int have_drawn_link;
+    uint64_t drawn_link_epoch;
+    int32_t drawn_screen[2], drawn_world[2], drawn_screen_step[2], drawn_world_step[2];
+    unsigned link_drawn_steps, link_backsteps, link_backsteps_y;
+    char link_backsteps_list[96];      /* the first frames, "frame:x" or "frame:y" */
     uint64_t epochs;
     unsigned neighbours_frames[5];       /* world frames with 0 to 4 neighbours shown */
     unsigned transitions, transitions_with_terrain, transitions_black, transitions_vertical;   /* the scrolling transitions judged: was the room entered shown, and true; those on the vertical axis among them */
@@ -154,6 +165,7 @@ void ec_measure_camera(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
 void ec_measure_coverage(OraclesEnhancedCheck *c, uint32_t frame, unsigned uncovered);
 void ec_measure_scroll(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, unsigned uncovered);
 void ec_measure_seams(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode);
+void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_x, int32_t camera_y);
 void ec_replay_scroll_registers(OraclesEnhancedCheck *c, int *scx, int *scy);
 void ec_check_window_place(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int rippled, int scx, int scy, uint32_t frame);
 

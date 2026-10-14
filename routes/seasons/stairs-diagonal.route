@@ -1,0 +1,34 @@
+oracles-route 2
+game seasons
+rom_sha1 ba1268290fb2b1b70505d2d7b5825fc8a4816a4b
+sram_sha1 ad06a39053f0627a0456f1f9dc270e909c8ba40d
+core joypad-bouncing-off
+# overworld.route's inputs to frame 1031, written by hand from there: up and down the stairs of 0:d9 twice (half a
+# pixel a frame), down into 0:e9, then diagonally down-right and up-left twice, down-left and up-right twice, and
+# nothing.
+inputs
+0 keys 00
+586 keys 80
+595 keys 00
+615 keys 80
+624 keys 00
+681 keys 80
+690 keys 00
+707 keys 80
+716 keys 00
+811 keys 08
+1032 keys 04
+1075 keys 08
+1118 keys 04
+1161 keys 08
+1204 keys 08
+1310 keys 09
+1330 keys 06
+1350 keys 09
+1370 keys 06
+1390 keys 0a
+1410 keys 05
+1430 keys 0a
+1450 keys 05
+1470 keys 00
+1480 keys 00

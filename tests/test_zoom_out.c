@@ -342,14 +342,15 @@ static void state_across_viewports(void)
     rig_stop(&r);
 }
 
-/* A diagonal walk at the game's diagonal speed, 0xb5/256 of a pixel a frame
- * each way: whole pixels on the frames the game's sub-pixel carries over.
- * The camera steps with Link: once it follows him, his place on the screen
- * never goes a pixel one way and back the next frame on either axis, and the
- * camera stays within a pixel of the reducer's position.  A state saved on
- * the way, its whole offsets with it, shows the next frame to the pixel the
- * walk showed; without them (a state saved before them), within a pixel. */
-static void diagonal_walk(void)
+/* A walk at the game's sub-pixel speeds: whole pixels on the frames the
+ * sub-pixel carries over.  The frame on screen draws Link where the previous
+ * observation had him (link_step), and the camera steps with him there: once
+ * it follows him, his sprite on the screen never goes a pixel one way and
+ * back the next frame on either axis, and the camera stays within a pixel of
+ * the reducer's position.  A state saved on the way, its whole offsets with
+ * it, shows the next frame to the pixel the walk showed; without them (a
+ * state saved before them), within a pixel. */
+static void gait_walk(unsigned speed_x, unsigned speed_y)
 {
     rig r;
     memset(&r, 0, sizeof r);
@@ -361,12 +362,13 @@ static void diagonal_walk(void)
     oracles_enhanced_camera_set_band(camera, W, BAND_H);
     OraclesEnhancedObservation walk[120];
     memset(walk, 0, sizeof walk);
-    unsigned sub = 0;
+    unsigned sub_x = 0, sub_y = 0;
     int x = 40, y = 30;
     for (unsigned f = 0; f < 120u; f++) {
         walk[f].playing = 1; walk[f].grid = 1; walk[f].epoch = 8;
         CHECK(oracles_enhanced_world_from_room(0, 0x45, 0, x, y, 16, 14, 0, 0, 0, 0, 0, 0x45, W, &walk[f].world) == 1);
-        if (f >= 10u) { sub += 0xb5u; x += (int)(sub >> 8); y += (int)(sub >> 8); sub &= 0xffu; }
+        if (f > 0u) { walk[f].link_step_x = walk[f].world.link_x - walk[f - 1].world.link_x; walk[f].link_step_y = walk[f].world.link_y - walk[f - 1].world.link_y; }
+        if (f >= 10u) { sub_x += speed_x; sub_y += speed_y; x += (int)(sub_x >> 8); y += (int)(sub_y >> 8); sub_x &= 0xffu; sub_y &= 0xffu; }
     }
     int32_t cam[120][2], last_step[2] = { 0, 0 };
     unsigned back_and_forth = 0, off_smooth = 0;
@@ -378,8 +380,9 @@ static void diagonal_walk(void)
         if (gap >= 256 || gap <= -256) off_smooth++;
         if (f > 0u)
             for (unsigned a = 0; a < 2u; a++) {
-                const int32_t link = a ? walk[f].world.link_y : walk[f].world.link_x, before = a ? walk[f - 1].world.link_y : walk[f - 1].world.link_x;
-                const int32_t step = (link - cam[f][a]) - (before - cam[f - 1][a]);
+                const int32_t drawn = a ? walk[f].world.link_y - walk[f].link_step_y : walk[f].world.link_x - walk[f].link_step_x;
+                const int32_t before = a ? walk[f - 1].world.link_y - walk[f - 1].link_step_y : walk[f - 1].world.link_x - walk[f - 1].link_step_x;
+                const int32_t step = (drawn - cam[f][a]) - (before - cam[f - 1][a]);
                 if (f >= 50u && step && step == -last_step[a]) back_and_forth++;
                 last_step[a] = step;
             }
@@ -388,7 +391,7 @@ static void diagonal_walk(void)
             oracles_enhanced_camera_shown_offsets(camera, &across, &down);
         }
     }
-    CHECK(walk[119].world.link_x - walk[50].world.link_x > 40);   /* he walked */
+    CHECK(walk[119].world.link_x - walk[50].world.link_x + walk[119].world.link_y - walk[50].world.link_y > 25);   /* he walked */
     CHECK(back_and_forth == 0);
     CHECK(off_smooth == 0);
     int32_t again = 0, again_y = 0;
@@ -401,6 +404,11 @@ static void diagonal_walk(void)
     oracles_enhanced_camera_stop(camera);
     rig_stop(&r);
 }
+
+/* Diagonally, 0xb5/256 of a pixel a frame each way (SPEED_100 at 45
+ * degrees); on stairs, half a pixel a frame (SPEED_080), the 1, 0 cadence. */
+static void diagonal_walk(void) { gait_walk(0xb5u, 0xb5u); }
+static void stairs_walk(void) { gait_walk(0u, 0x80u); }
 
 /* The scenes the game plays in its own rooms (Ages' intro and cutscenes),
  * at both sizes: a scene in the world stays in the band, the pregame intro,
@@ -673,6 +681,7 @@ int main(void)
     isolated_room_edges();
     state_across_viewports();
     diagonal_walk();
+    stairs_walk();
     cutscenes();
     seasons_scenes();
     blank_captures();

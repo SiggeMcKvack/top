@@ -45,6 +45,7 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
     }
     fprintf(out, "enhanced.camera_jumps=%u\nenhanced.largest_jump=%" PRId32 "\nenhanced.camera_jumps_y=%u\nenhanced.largest_jump_y=%" PRId32 "\n", c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);
     fprintf(out, "enhanced.link_jumps=%u\nenhanced.link_jumps_y=%u\nenhanced.window_jumps=%u\n", c->link_jumps, c->link_jumps_y, c->window_jumps);
+    fprintf(out, "enhanced.link_drawn_steps=%u\nenhanced.link_backsteps=%u\nenhanced.link_backsteps_y=%u\n", c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y);
     fprintf(out, "enhanced.link_edge_margin_min=%" PRId32 "\nenhanced.link_near_edge_frames=%u\n", c->link_edge_margin_min, c->link_near_edge_frames);
     fprintf(out, "enhanced.ghost_requested=%u\nenhanced.ghost_completed=%u\nenhanced.ghost_failed=%u\nenhanced.ghost_not_primeable=%u\nenhanced.ghost_load_failed=%u\nenhanced.ghost_never_settled=%u\nenhanced.ghost_wrong_room=%u\nenhanced.ghost_other=%u\n",
             requested, completed, failed, reasons[0], reasons[1], reasons[2], reasons[3], reasons[4]);
@@ -137,6 +138,8 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
             c->link_edge_margin_min, c->link_near_edge_frames);
     fprintf(out, "  seams: Link's world x jumps over 8 px within an epoch: %u (largest %" PRId32 "), his world y: %u (largest %" PRId32 "); the game window's: %u (largest %" PRId32 "); last epoch id %" PRIu64 "\n",
             c->link_jumps, c->largest_link_jump, c->link_jumps_y, c->largest_link_jump_y, c->window_jumps, c->largest_window_jump, c->epochs);
+    fprintf(out, "  Link's sprite as drawn, on the screen in normal play: %u steps between frames, %u back against the step before across and %u down, he not turning%s%s\n",
+            c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y, c->link_backsteps_list[0] ? "; first: " : "", c->link_backsteps_list);
     unsigned requested = 0, completed = 0, failed = 0;
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     unsigned reasons[5] = { 0, 0, 0, 0, 0 };

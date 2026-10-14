@@ -31,6 +31,9 @@ OraclesEnhancedCheck *oracles_enhanced_check_start(OraclesCore *core, OraclesGue
     c->width = oracles_enhanced_view_width(c->view);
     c->band_height = oracles_enhanced_view_height(c->view) - ORACLES_ENHANCED_HUD_HEIGHT;
     c->link_edge_margin_min = (int32_t)c->width;   /* no world frame measured yet */
+    /* Link's own entries of the OAM on screen; without the tagging's hooks, no measure rather than a wrong one. */
+    c->link_sprites = oracles_sprites_create(guest);
+    if (c->link_sprites && oracles_sprites_add_hooks(guest) != 0) { oracles_sprites_destroy(c->link_sprites); c->link_sprites = NULL; }
     char path[4096];
     snprintf(path, sizeof path, "%s/frames.tsv", dir);
     c->tsv = fopen(path, "w");
@@ -81,6 +84,7 @@ void oracles_enhanced_check_stop(OraclesEnhancedCheck *c)
     if (!c) return;
     if (c->tsv) fclose(c->tsv);
     free(c->saved_core);
+    oracles_sprites_destroy(c->link_sprites);
     oracles_enhanced_view_stop(c->view);
     free(c);
 }
@@ -142,6 +146,7 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
     ec_reload_step(c, frame, camera_x, shown, room);
     ec_measure_scroll(c, ob, mode, uncovered);
     ec_measure_seams(c, ob, mode);
+    ec_measure_link_backsteps(c, frame, ob, mode, camera_x, camera_y);
     if (ob->playing && !ob->in_transition) {
         for (unsigned d = 0; d < 4; d++) {
             c->last_shown[d] = shown[d]; c->last_room[d] = room[d];
@@ -192,6 +197,7 @@ static void judge_shown_terrain(OraclesEnhancedCheck *c, const OraclesGuestTable
 void oracles_enhanced_check_event(OraclesEnhancedCheck *c, const OraclesGuestEvent *event)
 {
     const OraclesGuestTables *t = oracles_guest_tables(c->guest);
+    if (c->link_sprites) oracles_sprites_event(c->link_sprites, event);
     if (event->type == ORACLES_EVENT_ROOM_INITIALIZED && c->pending_transition) { judge_shown_terrain(c, t); return; }
     if (event->type != ORACLES_EVENT_ROOM_ENTER) return;
     if (oracles_guest_read8(c->guest, t->scroll_mode) != SCROLL_MODE_TRANSITION_LOAD) return;

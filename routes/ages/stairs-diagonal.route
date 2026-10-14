@@ -1,0 +1,37 @@
+oracles-route 2
+game ages
+rom_sha1 880374fb978b18af4aa529e2e32f7ffb4d7dd2f4
+sram_sha1 97a5012defb42ba6b0767464234ea7f90548614f
+core joypad-bouncing-off
+# overworld.route's inputs to frame 1462, written by hand from there: down the stairs south of the start in 0:8d, up
+# and down them again (half a pixel a frame), west and up into 0:7d, then up and five times diagonally up-left and
+# down-right in its open corner (about 0.7 of a pixel a frame each way), and nothing.
+inputs
+0 keys 00
+490 keys 80
+496 keys 00
+529 keys 80
+537 keys 00
+642 keys 10
+653 keys 00
+677 keys 10
+686 keys 00
+1463 keys 08
+1530 keys 04
+1575 keys 08
+1610 keys 02
+1653 keys 06
+1662 keys 04
+1780 keys 04
+1838 keys 06
+1854 keys 09
+1870 keys 06
+1886 keys 09
+1902 keys 06
+1918 keys 09
+1934 keys 06
+1950 keys 09
+1966 keys 06
+1982 keys 09
+1998 keys 00
+2008 keys 00
