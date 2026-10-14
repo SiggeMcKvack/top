@@ -1,6 +1,7 @@
 #include "compositor.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "ppu.h"
@@ -181,4 +182,18 @@ unsigned oracles_enhanced_compose(const uint32_t *core, const OraclesEnhancedCom
     const OraclesEnhancedSize size = in->size.width ? in->size : oracles_enhanced_size(0);
     if (in->mode == ORACLES_ENHANCED_FRAMED) { compose_framed(core, in, size, out); return 0; }
     return compose_world(core, in, size, out);
+}
+
+void oracles_enhanced_far_fitting_words(unsigned screen_w, unsigned screen_h, char *out, size_t capacity)
+{
+    const OraclesEnhancedFitting f = oracles_enhanced_far_fitting(screen_w, screen_h);
+    const OraclesEnhancedSize far = oracles_enhanced_view_size(ORACLES_ENHANCED_FAR, f.aspect);
+    if (f.fit == ORACLES_ENHANCED_FIT_FITTED)
+        snprintf(out, capacity, "the far view fitted to the %ux%u screen: %ux%u at %ux, where %ux%u covers %u%% of it at %ux",
+                 screen_w, screen_h, f.size.width, f.size.height, f.scale, far.width, far.height, f.far_percent, f.far_scale);
+    else if (f.fit == ORACLES_ENHANCED_FIT_FILLS)
+        snprintf(out, capacity, "the far view at %ux%u: it covers %u%% of the %ux%u screen at %ux", f.size.width, f.size.height, f.far_percent, screen_w, screen_h, f.far_scale);
+    else
+        snprintf(out, capacity, "the far view at %ux%u: the %ux%u screen at %ux gives %ux%u, %s", f.size.width, f.size.height, screen_w, screen_h, f.scale,
+                 f.computed.width, f.computed.height, f.fit == ORACLES_ENHANCED_FIT_SMALL ? "under 400x224 or taller than wide" : "not a size the view takes");
 }

@@ -33,12 +33,13 @@
 
 /* The viewports a pinned configuration may frame: the normal band's, and the
  * bands of the view's levels outdoors (camera.c; compositor.h's sizes:
- * 213 near in 4:3, 320 and 384 medium, 480 far), framed at their middle.  The
- * digest names the rest of the configuration, which they share. */
+ * 213 near in 4:3, 320 and 384 medium, 480 far, 412 and 426 the far view
+ * fitted to a screen), framed at their middle.  The digest names the rest of
+ * the configuration, which they share. */
 #define ORACLES_E11_VIEWPORT 256
 #define ORACLES_E11_ZOOM_VIEWPORT 480
 static inline bool oracles_e11_viewport_valid(int32_t viewport_width, int32_t framing) {
-    static const int32_t widths[] = { 213, ORACLES_E11_VIEWPORT, 320, 384, ORACLES_E11_ZOOM_VIEWPORT };
+    static const int32_t widths[] = { 213, ORACLES_E11_VIEWPORT, 320, 384, 412, 426, ORACLES_E11_ZOOM_VIEWPORT };
     bool known = false;
     for (size_t i = 0; i < sizeof widths / sizeof widths[0]; i++) known = known || viewport_width == widths[i] * ORACLES_E11_F256;
     return known && framing * 2 == viewport_width;

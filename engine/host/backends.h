@@ -89,6 +89,8 @@ float oracles_sdl_pixel_ratio(struct SDL_Window *window);
 /* 1 when the screen the window is on (NULL: the main one) is nearer 4:3 than 16:9: the shape the Enhanced view takes
  * in fullscreen (docs/PLAYING.md). */
 int oracles_sdl_screen_4_3(struct SDL_Window *window);
+/* The size of that screen's desktop mode in pixels, which the far view fits to; 0 when SDL gives none. */
+int oracles_sdl_screen_size(struct SDL_Window *window, unsigned *width, unsigned *height);
 /* The window's coordinates per point of the launcher's sizes (settings.txt's window, its smallest): the display's
  * scale on Windows (1.25 at 125 %), where SDL 2 counted points and SDL 3 counts pixels; else 1.  NULL: the main
  * display's, for a window about to open. */

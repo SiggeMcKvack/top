@@ -131,7 +131,8 @@ static int usage(void)
                     "       --language-pack to none: each game keeps its pack beside settings.txt\n"
                     "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow,key,pad,android]\n"
                     "                           [--launcher-frame GAME.ppm]\n"
-                    "                           (the home screen drawn offscreen, 1920x1080 by default, and written as a PPM; with a game's image\n"
+                    "                           (the home screen drawn offscreen, 1920x1080 by default, and written as a PPM, Display's sizes those\n"
+                    "                           of a screen that size; with a game's image\n"
                     "                           from --screenshot, the pause menu over it, as the game's window shows it; slow: the return from a\n"
                     "                           game that ran slowly, its toast suggesting something lighter; key, pad: the device used last,\n"
                     "                           which the key hints follow; android: the screens as Android has them)\n");
@@ -301,7 +302,10 @@ int main(int argc, char **argv)
         if (status) fprintf(stderr, "oracles: %s\n", error);
     } else if (options.rom_path) {
         oracles_settings_store(prefs); /* also writes the defaults the first time, so they can be edited */
-        if (options.enhanced && !options.no_window) options.screen_4_3 = oracles_session_view_4_3(&options, prefs, NULL);   /* the view's shape */
+        if (options.enhanced && !options.no_window) {   /* the view's shape, and the screen far fits to */
+            options.screen_4_3 = oracles_session_view_4_3(&options, prefs, NULL);
+            oracles_session_far_screen(&options, prefs, NULL, &options.screen_w, &options.screen_h);
+        }
         OraclesSessionResult result;
         status = oracles_session_run(&options, prefs, &result);
     } else {

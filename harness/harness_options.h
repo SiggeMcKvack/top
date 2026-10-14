@@ -2,6 +2,7 @@
 #ifndef ORACLES_HARNESS_OPTIONS_H
 #define ORACLES_HARNESS_OPTIONS_H
 
+#include "compositor.h"
 #include "hotkeys_live.h"
 
 #include <stdint.h>
@@ -32,6 +33,8 @@ typedef struct harness_options {
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
     unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */
     int enhanced_level, enhanced_aspect;      /* --view (near unless --zoom-out) and --aspect: an OraclesEnhancedLevel and OraclesEnhancedAspect */
+    int aspect_given;                         /* --aspect named the shape */
+    unsigned screen_w, screen_h;              /* --screen: the screen the view's shape comes from, which far fits to; 0: none */
     int enhanced_hud_full;                    /* --hud full: the status bar drawn full width; original (0) by default, which every row hashed before it keeps */
     int hooks, colour_correction, ghost_threaded, ghost_trace, ghost_trace_load, compare_session;
     int core_kind;                            /* --core: an OraclesCoreKind; without it, the route's (SameBoy, or mGBA for a route that says so) */
@@ -43,5 +46,8 @@ typedef struct harness_options {
 int harness_parse_options(int argc, char **argv, harness_options *o);
 /* Prints the usage; returns the exit status that goes with it. */
 int harness_usage(void);
+/* The Enhanced view's surface the options ask: the level's in the shape, or the far view fitted to --screen's
+ * (compositor.h, oracles_enhanced_far_fitting), as the launcher sizes it. */
+OraclesEnhancedSize harness_view_size(const harness_options *o);
 
 #endif

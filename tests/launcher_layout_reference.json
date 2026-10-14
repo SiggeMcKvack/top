@@ -27195,6 +27195,1973 @@
     "width": 434.094,
     "lines": 1
    }
+  },
+  "23a": {
+   "section": {
+    "x": 64,
+    "w": 147.172,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 147.172,
+    "lines": 1
+   },
+   "title": {
+    "x": 64,
+    "w": 399.734,
+    "glyph_top": 63,
+    "glyph_h": 75,
+    "top": 69,
+    "h": 63,
+    "baseline": 121,
+    "width": 399.734,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "profile Enhanced": {
+    "x": 585.531,
+    "y": 213,
+    "w": 205.031,
+    "h": 90
+   },
+   "Window row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "one size": {
+    "x": 408,
+    "w": 602.406,
+    "glyph_top": 455,
+    "glyph_h": 30,
+    "top": 452,
+    "h": 36,
+    "baseline": 479,
+    "width": 602.406,
+    "lines": 1
+   },
+   "one size box": {
+    "x": 408,
+    "y": 425,
+    "w": 948,
+    "h": 90
+   },
+   "View": {
+    "x": 84,
+    "w": 89.641,
+    "glyph_top": 557.5,
+    "glyph_h": 37,
+    "top": 557.5,
+    "h": 37,
+    "baseline": 586.5,
+    "width": 89.641,
+    "lines": 1
+   },
+   "View row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "view 0": {
+    "x": 449.281,
+    "w": 78.844,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 78.844,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 605.406,
+    "w": 138.859,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 138.859,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 836.938,
+    "w": 48.063,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 48.063,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 408,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "view Medium": {
+    "x": 581.406,
+    "y": 531,
+    "w": 186.859,
+    "h": 90
+   },
+   "view Far": {
+    "x": 780.266,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "hud row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "Color row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "Advanced": {
+    "x": 942.438,
+    "w": 192.563,
+    "glyph_top": 54.5,
+    "glyph_h": 37,
+    "top": 54.5,
+    "h": 37,
+    "baseline": 83.5,
+    "width": 192.563,
+    "lines": 1
+   },
+   "advanced": {
+    "x": 916.438,
+    "y": 28,
+    "w": 273.563,
+    "h": 90
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 680.547,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 680.547,
+    "lines": 1
+   },
+   "help note box": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "profile 1 size": {
+    "x": 631.344,
+    "w": 113.406,
+    "glyph_top": 260.5,
+    "glyph_h": 36,
+    "top": 262.5,
+    "h": 32.391,
+    "baseline": 288.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 0 size": {
+    "x": 432,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 1 size": {
+    "x": 618.125,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 804.266,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "w": 362.984,
+    "glyph_top": 914,
+    "glyph_h": 30,
+    "top": 909,
+    "h": 40,
+    "baseline": 938,
+    "width": 362.984,
+    "lines": 1
+   },
+   "diagram": {
+    "x": 1214,
+    "y": 28,
+    "w": 162,
+    "h": 122
+   },
+   "diagram window": {
+    "x": 1241,
+    "y": 48.5,
+    "w": 108,
+    "h": 81
+   },
+   "hint 0": {
+    "x": 150.25,
+    "y": 982,
+    "w": 267.094,
+    "h": 90
+   },
+   "hint 1": {
+    "x": 433.344,
+    "y": 982,
+    "w": 292.297,
+    "h": 90
+   },
+   "hint 2": {
+    "x": 741.641,
+    "y": 982,
+    "w": 289.547,
+    "h": 90
+   },
+   "hint 3": {
+    "x": 1047.188,
+    "y": 982,
+    "w": 242.563,
+    "h": 90
+   },
+   "hint 0 key": {
+    "x": 170.25,
+    "y": 1008,
+    "w": 151.609,
+    "h": 38
+   },
+   "hint 1 key": {
+    "x": 453.344,
+    "y": 1008,
+    "w": 151.609,
+    "h": 38
+   },
+   "hint 2 key": {
+    "x": 761.641,
+    "y": 1008,
+    "w": 167.797,
+    "h": 38
+   },
+   "hint 3 key": {
+    "x": 1067.188,
+    "y": 1008,
+    "w": 135.391,
+    "h": 38
+   },
+   "hint 0 key text": {
+    "x": 181.25,
+    "w": 129.609,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 129.609,
+    "lines": 1
+   },
+   "hint 1 key text": {
+    "x": 464.344,
+    "w": 129.609,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 129.609,
+    "lines": 1
+   },
+   "hint 2 key text": {
+    "x": 837.438,
+    "w": 16.203,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 16.203,
+    "lines": 1
+   },
+   "hint 3 key text": {
+    "x": 1126.781,
+    "w": 16.203,
+    "glyph_top": 1009,
+    "glyph_h": 36,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1037,
+    "width": 16.203,
+    "lines": 1
+   },
+   "hint 0 label": {
+    "x": 333.859,
+    "w": 63.484,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 63.484,
+    "lines": 1
+   },
+   "hint 1 label": {
+    "x": 616.953,
+    "w": 88.688,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 88.688,
+    "lines": 1
+   },
+   "hint 2 label": {
+    "x": 941.438,
+    "w": 69.75,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 69.75,
+    "lines": 1
+   },
+   "hint 3 label": {
+    "x": 1214.578,
+    "w": 55.172,
+    "glyph_top": 1012,
+    "glyph_h": 30,
+    "top": 1009,
+    "h": 36,
+    "baseline": 1036,
+    "width": 55.172,
+    "lines": 1
+   }
+  },
+  "23b": {
+   "section": {
+    "x": 64,
+    "w": 147.172,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 147.172,
+    "lines": 1
+   },
+   "title": {
+    "x": 64,
+    "w": 399.734,
+    "glyph_top": 63,
+    "glyph_h": 75,
+    "top": 69,
+    "h": 63,
+    "baseline": 121,
+    "width": 399.734,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "profile Enhanced": {
+    "x": 585.531,
+    "y": 213,
+    "w": 205.031,
+    "h": 90
+   },
+   "Window row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "one size": {
+    "x": 408,
+    "w": 602.406,
+    "glyph_top": 455,
+    "glyph_h": 30,
+    "top": 452,
+    "h": 36,
+    "baseline": 479,
+    "width": 602.406,
+    "lines": 1
+   },
+   "one size box": {
+    "x": 408,
+    "y": 425,
+    "w": 948,
+    "h": 90
+   },
+   "View": {
+    "x": 84,
+    "w": 89.641,
+    "glyph_top": 557.5,
+    "glyph_h": 37,
+    "top": 557.5,
+    "h": 37,
+    "baseline": 586.5,
+    "width": 89.641,
+    "lines": 1
+   },
+   "View row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "view 0": {
+    "x": 449.281,
+    "w": 78.844,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 78.844,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 605.406,
+    "w": 138.859,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 138.859,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 836.938,
+    "w": 48.063,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 48.063,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 408,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "view Medium": {
+    "x": 581.406,
+    "y": 531,
+    "w": 186.859,
+    "h": 90
+   },
+   "view Far": {
+    "x": 780.266,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "hud row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "Color row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "Advanced": {
+    "x": 964.438,
+    "w": 192.563,
+    "glyph_top": 54.5,
+    "glyph_h": 37,
+    "top": 54.5,
+    "h": 37,
+    "baseline": 83.5,
+    "width": 192.563,
+    "lines": 1
+   },
+   "advanced": {
+    "x": 938.438,
+    "y": 28,
+    "w": 273.563,
+    "h": 90
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 680.547,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 680.547,
+    "lines": 1
+   },
+   "help note box": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "profile 1 size": {
+    "x": 631.344,
+    "w": 113.406,
+    "glyph_top": 260.5,
+    "glyph_h": 36,
+    "top": 262.5,
+    "h": 32.391,
+    "baseline": 288.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 0 size": {
+    "x": 432,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 1 size": {
+    "x": 618.125,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 804.266,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "w": 359.641,
+    "glyph_top": 914,
+    "glyph_h": 30,
+    "top": 909,
+    "h": 40,
+    "baseline": 938,
+    "width": 359.641,
+    "lines": 1
+   },
+   "diagram": {
+    "x": 1236,
+    "y": 28,
+    "w": 140,
+    "h": 122
+   },
+   "diagram window": {
+    "x": 1259.5,
+    "y": 48.5,
+    "w": 93,
+    "h": 81
+   }
+  },
+  "23c": {
+   "section": {
+    "x": 64,
+    "w": 147.172,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 147.172,
+    "lines": 1
+   },
+   "title": {
+    "x": 64,
+    "w": 399.734,
+    "glyph_top": 63,
+    "glyph_h": 75,
+    "top": 69,
+    "h": 63,
+    "baseline": 121,
+    "width": 399.734,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "profile Enhanced": {
+    "x": 585.531,
+    "y": 213,
+    "w": 205.031,
+    "h": 90
+   },
+   "Window row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "one size": {
+    "x": 408,
+    "w": 602.406,
+    "glyph_top": 455,
+    "glyph_h": 30,
+    "top": 452,
+    "h": 36,
+    "baseline": 479,
+    "width": 602.406,
+    "lines": 1
+   },
+   "one size box": {
+    "x": 408,
+    "y": 425,
+    "w": 948,
+    "h": 90
+   },
+   "View": {
+    "x": 84,
+    "w": 89.641,
+    "glyph_top": 557.5,
+    "glyph_h": 37,
+    "top": 557.5,
+    "h": 37,
+    "baseline": 586.5,
+    "width": 89.641,
+    "lines": 1
+   },
+   "View row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "view 0": {
+    "x": 449.281,
+    "w": 78.844,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 78.844,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 605.406,
+    "w": 138.859,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 138.859,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 836.938,
+    "w": 48.063,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 48.063,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 408,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "view Medium": {
+    "x": 581.406,
+    "y": 531,
+    "w": 186.859,
+    "h": 90
+   },
+   "view Far": {
+    "x": 780.266,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "hud row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "Color row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "Advanced": {
+    "x": 942.438,
+    "w": 192.563,
+    "glyph_top": 54.5,
+    "glyph_h": 37,
+    "top": 54.5,
+    "h": 37,
+    "baseline": 83.5,
+    "width": 192.563,
+    "lines": 1
+   },
+   "advanced": {
+    "x": 916.438,
+    "y": 28,
+    "w": 273.563,
+    "h": 90
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 680.547,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 680.547,
+    "lines": 1
+   },
+   "help note box": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "profile 1 size": {
+    "x": 631.344,
+    "w": 113.406,
+    "glyph_top": 260.5,
+    "glyph_h": 36,
+    "top": 262.5,
+    "h": 32.391,
+    "baseline": 288.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 0 size": {
+    "x": 432,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 1 size": {
+    "x": 618.125,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 804.266,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "w": 362.984,
+    "glyph_top": 914,
+    "glyph_h": 30,
+    "top": 909,
+    "h": 40,
+    "baseline": 938,
+    "width": 362.984,
+    "lines": 1
+   },
+   "diagram": {
+    "x": 1214,
+    "y": 28,
+    "w": 162,
+    "h": 122
+   },
+   "diagram window": {
+    "x": 1254.5,
+    "y": 58.5,
+    "w": 81,
+    "h": 61
+   }
+  },
+  "23d": {
+   "section": {
+    "x": 64,
+    "w": 147.172,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 147.172,
+    "lines": 1
+   },
+   "title": {
+    "x": 64,
+    "w": 399.734,
+    "glyph_top": 63,
+    "glyph_h": 75,
+    "top": 69,
+    "h": 63,
+    "baseline": 121,
+    "width": 399.734,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "profile Enhanced": {
+    "x": 585.531,
+    "y": 213,
+    "w": 205.031,
+    "h": 90
+   },
+   "Window row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "one size": {
+    "x": 408,
+    "w": 602.406,
+    "glyph_top": 455,
+    "glyph_h": 30,
+    "top": 452,
+    "h": 36,
+    "baseline": 479,
+    "width": 602.406,
+    "lines": 1
+   },
+   "one size box": {
+    "x": 408,
+    "y": 425,
+    "w": 948,
+    "h": 90
+   },
+   "View": {
+    "x": 84,
+    "w": 89.641,
+    "glyph_top": 557.5,
+    "glyph_h": 37,
+    "top": 557.5,
+    "h": 37,
+    "baseline": 586.5,
+    "width": 89.641,
+    "lines": 1
+   },
+   "View row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "view 0": {
+    "x": 449.281,
+    "w": 78.844,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 78.844,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 605.406,
+    "w": 138.859,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 138.859,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 836.938,
+    "w": 48.063,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 48.063,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 408,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "view Medium": {
+    "x": 581.406,
+    "y": 531,
+    "w": 186.859,
+    "h": 90
+   },
+   "view Far": {
+    "x": 780.266,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "hud row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "Color row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "Advanced": {
+    "x": 942.438,
+    "w": 192.563,
+    "glyph_top": 54.5,
+    "glyph_h": 37,
+    "top": 54.5,
+    "h": 37,
+    "baseline": 83.5,
+    "width": 192.563,
+    "lines": 1
+   },
+   "advanced": {
+    "x": 916.438,
+    "y": 28,
+    "w": 273.563,
+    "h": 90
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 680.547,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 680.547,
+    "lines": 1
+   },
+   "help note box": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "profile 1 size": {
+    "x": 631.344,
+    "w": 113.406,
+    "glyph_top": 260.5,
+    "glyph_h": 36,
+    "top": 262.5,
+    "h": 32.391,
+    "baseline": 288.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 804.266,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   }
+  },
+  "23e": {
+   "section": {
+    "x": 64,
+    "w": 147.172,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 147.172,
+    "lines": 1
+   },
+   "title": {
+    "x": 64,
+    "w": 399.734,
+    "glyph_top": 63,
+    "glyph_h": 75,
+    "top": 69,
+    "h": 63,
+    "baseline": 121,
+    "width": 399.734,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "profile Enhanced": {
+    "x": 585.531,
+    "y": 213,
+    "w": 205.031,
+    "h": 90
+   },
+   "Window row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "one size": {
+    "x": 408,
+    "w": 602.406,
+    "glyph_top": 455,
+    "glyph_h": 30,
+    "top": 452,
+    "h": 36,
+    "baseline": 479,
+    "width": 602.406,
+    "lines": 1
+   },
+   "one size box": {
+    "x": 408,
+    "y": 425,
+    "w": 948,
+    "h": 90
+   },
+   "View": {
+    "x": 84,
+    "w": 89.641,
+    "glyph_top": 557.5,
+    "glyph_h": 37,
+    "top": 557.5,
+    "h": 37,
+    "baseline": 586.5,
+    "width": 89.641,
+    "lines": 1
+   },
+   "View row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "view 0": {
+    "x": 449.281,
+    "w": 78.844,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 78.844,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 605.406,
+    "w": 138.859,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 138.859,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 836.938,
+    "w": 48.063,
+    "glyph_top": 537.109,
+    "glyph_h": 45,
+    "top": 539.109,
+    "h": 41.391,
+    "baseline": 572.109,
+    "width": 48.063,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 408,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "view Medium": {
+    "x": 581.406,
+    "y": 531,
+    "w": 186.859,
+    "h": 90
+   },
+   "view Far": {
+    "x": 780.266,
+    "y": 531,
+    "w": 161.406,
+    "h": 90
+   },
+   "hud row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "Color row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "Advanced": {
+    "x": 942.438,
+    "w": 192.563,
+    "glyph_top": 54.5,
+    "glyph_h": 37,
+    "top": 54.5,
+    "h": 37,
+    "baseline": 83.5,
+    "width": 192.563,
+    "lines": 1
+   },
+   "advanced": {
+    "x": 916.438,
+    "y": 28,
+    "w": 273.563,
+    "h": 90
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 680.547,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 680.547,
+    "lines": 1
+   },
+   "help note box": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "profile 1 size": {
+    "x": 631.344,
+    "w": 113.406,
+    "glyph_top": 260.5,
+    "glyph_h": 36,
+    "top": 262.5,
+    "h": 32.391,
+    "baseline": 288.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 0 size": {
+    "x": 432,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 1 size": {
+    "x": 618.125,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 804.266,
+    "w": 113.406,
+    "glyph_top": 578.5,
+    "glyph_h": 36,
+    "top": 580.5,
+    "h": 32.391,
+    "baseline": 606.5,
+    "width": 113.406,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "w": 362.984,
+    "glyph_top": 914,
+    "glyph_h": 30,
+    "top": 909,
+    "h": 40,
+    "baseline": 938,
+    "width": 362.984,
+    "lines": 1
+   },
+   "page note": {
+    "x": 64,
+    "w": 668.578,
+    "glyph_top": 139,
+    "glyph_h": 27,
+    "top": 136,
+    "h": 33,
+    "baseline": 161,
+    "width": 668.578,
+    "lines": 1
+   }
+  },
+  "23f": {
+   "section": {
+    "x": 96,
+    "w": 131.188,
+    "glyph_top": 88,
+    "glyph_h": 32,
+    "top": 88,
+    "h": 32,
+    "baseline": 113,
+    "width": 131.188,
+    "lines": 1
+   },
+   "diagram": {
+    "x": 96,
+    "y": 363,
+    "w": 432,
+    "h": 243
+   },
+   "diagram window": {
+    "x": 150,
+    "y": 393.5,
+    "w": 324,
+    "h": 182
+   },
+   "diagram label": {
+    "x": 96,
+    "w": 273.594,
+    "glyph_top": 620,
+    "glyph_h": 22,
+    "top": 618,
+    "h": 26,
+    "baseline": 638,
+    "width": 273.594,
+    "lines": 1
+   },
+   "Profile": {
+    "x": 689,
+    "w": 106.719,
+    "glyph_top": 99,
+    "glyph_h": 27,
+    "top": 99,
+    "h": 27,
+    "baseline": 120,
+    "width": 106.719,
+    "lines": 1
+   },
+   "profile 0": {
+    "x": 948,
+    "w": 88.156,
+    "glyph_top": 104,
+    "glyph_h": 34,
+    "top": 104,
+    "h": 34,
+    "baseline": 130,
+    "width": 88.156,
+    "lines": 1
+   },
+   "profile 0 size": {
+    "x": 948,
+    "w": 84,
+    "glyph_top": 140,
+    "glyph_h": 26,
+    "top": 140,
+    "h": 26,
+    "baseline": 160,
+    "width": 84,
+    "lines": 1
+   },
+   "profile 1": {
+    "x": 1086.156,
+    "w": 117.781,
+    "glyph_top": 104,
+    "glyph_h": 34,
+    "top": 104,
+    "h": 34,
+    "baseline": 130,
+    "width": 117.781,
+    "lines": 1
+   },
+   "profile 1 size": {
+    "x": 1086.156,
+    "w": 84,
+    "glyph_top": 140,
+    "glyph_h": 26,
+    "top": 140,
+    "h": 26,
+    "baseline": 160,
+    "width": 84,
+    "lines": 1
+   },
+   "profile note": {
+    "x": 929,
+    "w": 749.953,
+    "glyph_top": 189,
+    "glyph_h": 24,
+    "top": 185,
+    "h": 32,
+    "baseline": 208,
+    "width": 749.953,
+    "lines": 1
+   },
+   "Profile row": {
+    "x": 909,
+    "y": 81,
+    "w": 922,
+    "h": 182
+   },
+   "Window": {
+    "x": 689,
+    "w": 123.922,
+    "glyph_top": 478,
+    "glyph_h": 27,
+    "top": 478,
+    "h": 27,
+    "baseline": 499,
+    "width": 123.922,
+    "lines": 1
+   },
+   "window 0": {
+    "x": 948,
+    "w": 31.922,
+    "glyph_top": 483,
+    "glyph_h": 34,
+    "top": 483,
+    "h": 34,
+    "baseline": 509,
+    "width": 31.922,
+    "lines": 1
+   },
+   "window 1": {
+    "x": 1082,
+    "w": 31.156,
+    "glyph_top": 483,
+    "glyph_h": 34,
+    "top": 483,
+    "h": 34,
+    "baseline": 509,
+    "width": 31.156,
+    "lines": 1
+   },
+   "window 2": {
+    "x": 1228,
+    "w": 33.031,
+    "glyph_top": 483,
+    "glyph_h": 34,
+    "top": 483,
+    "h": 34,
+    "baseline": 509,
+    "width": 33.031,
+    "lines": 1
+   },
+   "window 3": {
+    "x": 1386,
+    "w": 119.313,
+    "glyph_top": 483,
+    "glyph_h": 34,
+    "top": 483,
+    "h": 34,
+    "baseline": 509,
+    "width": 119.313,
+    "lines": 1
+   },
+   "window 0 size": {
+    "x": 948,
+    "w": 84,
+    "glyph_top": 519,
+    "glyph_h": 26,
+    "top": 519,
+    "h": 26,
+    "baseline": 539,
+    "width": 84,
+    "lines": 1
+   },
+   "window 1 size": {
+    "x": 1082,
+    "w": 96,
+    "glyph_top": 519,
+    "glyph_h": 26,
+    "top": 519,
+    "h": 26,
+    "baseline": 539,
+    "width": 96,
+    "lines": 1
+   },
+   "window 2 size": {
+    "x": 1228,
+    "w": 108,
+    "glyph_top": 519,
+    "glyph_h": 26,
+    "top": 519,
+    "h": 26,
+    "baseline": 539,
+    "width": 108,
+    "lines": 1
+   },
+   "window 3 size": {
+    "x": 1386,
+    "w": 168,
+    "glyph_top": 519,
+    "glyph_h": 26,
+    "top": 519,
+    "h": 26,
+    "baseline": 539,
+    "width": 168,
+    "lines": 1
+   },
+   "window note": {
+    "x": 929,
+    "w": 651.828,
+    "glyph_top": 568,
+    "glyph_h": 24,
+    "top": 566,
+    "h": 29,
+    "baseline": 587,
+    "width": 651.828,
+    "lines": 1
+   },
+   "reduced": {
+    "x": 929,
+    "w": 236.656,
+    "glyph_top": 612,
+    "glyph_h": 22,
+    "top": 607,
+    "h": 32,
+    "baseline": 630,
+    "width": 236.656,
+    "lines": 1
+   },
+   "Window row": {
+    "x": 909,
+    "y": 460,
+    "w": 922,
+    "h": 193
+   },
+   "View": {
+    "x": 689,
+    "w": 69.266,
+    "glyph_top": 685,
+    "glyph_h": 27,
+    "top": 685,
+    "h": 27,
+    "baseline": 706,
+    "width": 69.266,
+    "lines": 1
+   },
+   "view explanation": {
+    "x": 929,
+    "w": 461.594,
+    "glyph_top": 688.5,
+    "glyph_h": 24,
+    "top": 686.5,
+    "h": 29,
+    "baseline": 707.5,
+    "width": 461.594,
+    "lines": 2
+   },
+   "View row": {
+    "x": 909,
+    "y": 667,
+    "w": 922,
+    "h": 97
+   },
+   "view 0": {
+    "x": 1460.188,
+    "w": 54.75,
+    "glyph_top": 686,
+    "glyph_h": 31,
+    "top": 686,
+    "h": 31,
+    "baseline": 710,
+    "width": 54.75,
+    "lines": 1
+   },
+   "view 1": {
+    "x": 1571.563,
+    "w": 96.438,
+    "glyph_top": 686,
+    "glyph_h": 31,
+    "top": 686,
+    "h": 31,
+    "baseline": 710,
+    "width": 96.438,
+    "lines": 1
+   },
+   "view 2": {
+    "x": 1735.313,
+    "w": 33.375,
+    "glyph_top": 686,
+    "glyph_h": 31,
+    "top": 686,
+    "h": 31,
+    "baseline": 710,
+    "width": 33.375,
+    "lines": 1
+   },
+   "view 0 size": {
+    "x": 1445.563,
+    "w": 84,
+    "glyph_top": 719,
+    "glyph_h": 26,
+    "top": 719,
+    "h": 26,
+    "baseline": 739,
+    "width": 84,
+    "lines": 1
+   },
+   "view 1 size": {
+    "x": 1577.781,
+    "w": 84,
+    "glyph_top": 719,
+    "glyph_h": 26,
+    "top": 719,
+    "h": 26,
+    "baseline": 739,
+    "width": 84,
+    "lines": 1
+   },
+   "view 2 size": {
+    "x": 1710,
+    "w": 84,
+    "glyph_top": 719,
+    "glyph_h": 26,
+    "top": 719,
+    "h": 26,
+    "baseline": 739,
+    "width": 84,
+    "lines": 1
+   },
+   "view Near": {
+    "x": 1428.563,
+    "y": 681,
+    "w": 118,
+    "h": 69
+   },
+   "view Medium": {
+    "x": 1554.563,
+    "y": 681,
+    "w": 130.438,
+    "h": 69
+   },
+   "view Far": {
+    "x": 1693,
+    "y": 681,
+    "w": 118,
+    "h": 69
+   },
+   "Color correction": {
+    "x": 689,
+    "w": 93.281,
+    "glyph_top": 896,
+    "glyph_h": 27,
+    "top": 896,
+    "h": 27,
+    "baseline": 917,
+    "width": 176.859,
+    "lines": 2
+   },
+   "color explanation": {
+    "x": 929,
+    "w": 689.719,
+    "glyph_top": 894,
+    "glyph_h": 24,
+    "top": 892,
+    "h": 29,
+    "baseline": 913,
+    "width": 689.719,
+    "lines": 2
+   },
+   "color Off": {
+    "x": 1664.484,
+    "y": 900.5,
+    "w": 70.156,
+    "h": 41
+   },
+   "color On": {
+    "x": 1742.641,
+    "y": 900.5,
+    "w": 68.359,
+    "h": 41
+   },
+   "HUD": {
+    "x": 689,
+    "w": 59.203,
+    "glyph_top": 796,
+    "glyph_h": 27,
+    "top": 796,
+    "h": 27,
+    "baseline": 817,
+    "width": 59.203,
+    "lines": 1
+   },
+   "hud explanation": {
+    "x": 929,
+    "w": 513.938,
+    "glyph_top": 794,
+    "glyph_h": 24,
+    "top": 792,
+    "h": 29,
+    "baseline": 813,
+    "width": 513.938,
+    "lines": 2
+   },
+   "hud grid": {
+    "x": 689,
+    "y": 778,
+    "w": 1142,
+    "h": 86
+   },
+   "hud Original": {
+    "x": 1536.109,
+    "y": 800.5,
+    "w": 123.781,
+    "h": 41
+   },
+   "hud Full": {
+    "x": 1667.891,
+    "y": 800.5,
+    "w": 143.109,
+    "h": 41
+   },
+   "hud Original text": {
+    "x": 1553.109,
+    "w": 89.781,
+    "glyph_top": 805.5,
+    "glyph_h": 31,
+    "top": 805.5,
+    "h": 31,
+    "baseline": 829.5,
+    "width": 89.781,
+    "lines": 1
+   },
+   "hud Full text": {
+    "x": 1684.891,
+    "w": 109.109,
+    "glyph_top": 805.5,
+    "glyph_h": 31,
+    "top": 805.5,
+    "h": 31,
+    "baseline": 829.5,
+    "width": 109.109,
+    "lines": 1
+   },
+   "hud row": {
+    "x": 909,
+    "y": 778,
+    "w": 922,
+    "h": 86
+   },
+   "Color row": {
+    "x": 909,
+    "y": 878,
+    "w": 922,
+    "h": 86
+   },
+   "advanced": {
+    "x": 84,
+    "y": 684,
+    "w": 195.25,
+    "h": 43
+   },
+   "Advanced": {
+    "x": 96,
+    "w": 148.25,
+    "glyph_top": 692,
+    "glyph_h": 27,
+    "top": 692,
+    "h": 27,
+    "baseline": 713,
+    "width": 148.25,
+    "lines": 1
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 933
+   },
+   "Quality": {
+    "x": 689,
+    "w": 118.75,
+    "glyph_top": 295,
+    "glyph_h": 27,
+    "top": 295,
+    "h": 27,
+    "baseline": 316,
+    "width": 118.75,
+    "lines": 1
+   },
+   "quality row": {
+    "x": 909,
+    "y": 277,
+    "w": 922,
+    "h": 169
+   },
+   "quality grid": {
+    "x": 689,
+    "y": 277,
+    "w": 1142,
+    "h": 169
+   },
+   "quality low": {
+    "x": 929,
+    "y": 291,
+    "w": 166,
+    "h": 69
+   },
+   "quality medium": {
+    "x": 1103,
+    "y": 291,
+    "w": 190,
+    "h": 69
+   },
+   "quality high": {
+    "x": 1301,
+    "y": 291,
+    "w": 154,
+    "h": 69
+   },
+   "quality max": {
+    "x": 1463,
+    "y": 291,
+    "w": 202,
+    "h": 69
+   },
+   "quality custom": {
+    "x": 1673,
+    "y": 291,
+    "w": 120.688,
+    "h": 69
+   },
+   "quality low name": {
+    "x": 989.344,
+    "w": 45.313,
+    "glyph_top": 296,
+    "glyph_h": 31,
+    "top": 296,
+    "h": 31,
+    "baseline": 320,
+    "width": 45.313,
+    "lines": 1
+   },
+   "quality medium name": {
+    "x": 1149.781,
+    "w": 96.438,
+    "glyph_top": 296,
+    "glyph_h": 31,
+    "top": 296,
+    "h": 31,
+    "baseline": 320,
+    "width": 96.438,
+    "lines": 1
+   },
+   "quality high name": {
+    "x": 1351.484,
+    "w": 53.016,
+    "glyph_top": 296,
+    "glyph_h": 31,
+    "top": 296,
+    "h": 31,
+    "baseline": 320,
+    "width": 53.016,
+    "lines": 1
+   },
+   "quality max name": {
+    "x": 1538.266,
+    "w": 51.453,
+    "glyph_top": 296,
+    "glyph_h": 31,
+    "top": 296,
+    "h": 31,
+    "baseline": 320,
+    "width": 51.453,
+    "lines": 1
+   },
+   "quality custom name": {
+    "x": 1690,
+    "w": 86.688,
+    "glyph_top": 296,
+    "glyph_h": 31,
+    "top": 296,
+    "h": 31,
+    "baseline": 320,
+    "width": 86.688,
+    "lines": 1
+   },
+   "quality low sets": {
+    "x": 946,
+    "w": 132,
+    "glyph_top": 329,
+    "glyph_h": 26,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 132,
+    "lines": 1
+   },
+   "quality medium sets": {
+    "x": 1120,
+    "w": 156,
+    "glyph_top": 329,
+    "glyph_h": 26,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 156,
+    "lines": 1
+   },
+   "quality high sets": {
+    "x": 1318,
+    "w": 120,
+    "glyph_top": 329,
+    "glyph_h": 26,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 120,
+    "lines": 1
+   },
+   "quality max sets": {
+    "x": 1480,
+    "w": 168,
+    "glyph_top": 329,
+    "glyph_h": 26,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 168,
+    "lines": 1
+   },
+   "quality custom sets": {
+    "x": 1691.344,
+    "w": 84,
+    "glyph_top": 329,
+    "glyph_h": 26,
+    "top": 329,
+    "h": 26,
+    "baseline": 349,
+    "width": 84,
+    "lines": 1
+   },
+   "fit": {
+    "x": 929,
+    "y": 607,
+    "w": 882,
+    "h": 32
+   }
   }
  },
  "texts": {

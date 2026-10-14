@@ -537,8 +537,15 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
         if (!s->view) return failed(result, "cannot start the Enhanced view");
-        oracles_enhanced_view_set_size(s->view, oracles_enhanced_view_size((OraclesEnhancedLevel)s->view_level,
-                                                                           s->view_4_3 ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9));
+        oracles_enhanced_view_set_size(s->view, oracles_session_view_size(o, s->view_level));
+        if (s->view_level == ORACLES_ENHANCED_FAR) {   /* the far view's size, and why */
+            char far[192];
+            if (o->screen_w) oracles_enhanced_far_fitting_words(o->screen_w, o->screen_h, far, sizeof far);
+            else snprintf(far, sizeof far, "the far view at %ux%u, %s", oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view),
+                          s->settings->far_fixed ? "far=fixed in the settings" : o->aspect || s->settings->aspect ? "the shape --aspect or aspect= names"
+                                                                                                  : "no screen to fit it to");
+            fprintf(stderr, "oracles: %s\n", far);
+        }
         const int camera = o->camera_profile ? o->camera_profile : s->settings->camera;
         oracles_enhanced_view_set_camera_profile(s->view, (unsigned)camera);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
@@ -781,10 +788,9 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->swim_hold = o->swim_hold;
     s->cheats = o->cheats;
     s->cheats_game = -1;
-    /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near), and its shape: the screen's,
-     * a window taking the surface's (docs/PLAYING.md). */
+    /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near); its size is the options'
+     * shape, the screen's, a window taking the surface's, and far fitted to the screen (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;
-    s->view_4_3 = o->screen_4_3;
     s->zoom_out = s->view_level != ORACLES_ENHANCED_NEAR;
     s->hotkeys_mode = oracles_settings_hotkeys_mode(o->hotkeys_option);   /* for this run alone; the slots and the keys are remembered */
     /* The profile's refusals come before the recording opens: a refused session writes no route. */

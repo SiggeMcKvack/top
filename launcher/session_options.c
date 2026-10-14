@@ -2,6 +2,8 @@
  * pause changes of the settings, its save, and the mods of the Mods page. */
 #include "session.h"
 
+#include "compositor.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -17,6 +19,21 @@ int oracles_session_screen_margin(int option, const oracles_settings *settings)
 {
     if (option > 0 && option <= ORACLES_SCREEN_MARGINS) return option - 1;
     return settings->screen_margin >= 0 && settings->screen_margin < ORACLES_SCREEN_MARGINS ? settings->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
+}
+
+void oracles_session_far_screen(const OraclesSessionOptions *o, const oracles_settings *settings, struct SDL_Window *window, unsigned *width, unsigned *height)
+{
+    *width = *height = 0;
+    const int aspect = o->aspect ? o->aspect - 1 : settings->aspect;
+    if (settings->far_fixed || aspect != ORACLES_ASPECT_AUTO) return;
+    oracles_sdl_screen_size(window, width, height);
+}
+
+OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions *o, int level)
+{
+    /* A screen given is one far fits to, its shape the view's; else the options' shape. */
+    const OraclesEnhancedAspect aspect = o->screen_w && o->screen_h ? ORACLES_ENHANCED_ASPECTS : o->screen_4_3 ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9;
+    return oracles_enhanced_screen_view_size((OraclesEnhancedLevel)level, aspect, 0, o->screen_w, o->screen_h);
 }
 
 unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied)

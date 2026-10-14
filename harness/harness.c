@@ -373,7 +373,13 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
         int slots = 0;
         for (unsigned n = 0; n < 4u; n++) slots |= o->hotkeys_live.slots[n] != NULL;
         if (slots && !o->hotkeys_live.mode && !oracles_hotkeys_slots_hotbar(&o->hotkeys_live, oracles_enhanced_check_view(r->enhanced))) { fprintf(stderr, "harness: a --hotkey-slot is not <b|a>:<item>:<variant or -->\n"); return 1; }
-        oracles_enhanced_check_set_size(r->enhanced, oracles_enhanced_view_size((OraclesEnhancedLevel)o->enhanced_level, (OraclesEnhancedAspect)o->enhanced_aspect));
+        oracles_enhanced_check_set_size(r->enhanced, harness_view_size(o));
+        if (o->screen_w && o->enhanced_level == ORACLES_ENHANCED_FAR) {
+            char fitting[160];
+            if (o->aspect_given) snprintf(fitting, sizeof fitting, "the far view at its size in the shape --aspect names");
+            else oracles_enhanced_far_fitting_words(o->screen_w, o->screen_h, fitting, sizeof fitting);
+            fprintf(stderr, "harness: %s\n", fitting);
+        }
         oracles_enhanced_check_set_camera_profile(r->enhanced, o->enhanced_camera);
         oracles_enhanced_view_set_hud(oracles_enhanced_check_view(r->enhanced), o->enhanced_hud_full);
         if (o->enhanced_ghosts > 1u) oracles_enhanced_view_set_ghosts(oracles_enhanced_check_view(r->enhanced), o->enhanced_ghosts);
@@ -671,7 +677,7 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         return 1;
     }
     /* A view that draws back (medium or far) asks what --zoom-out asked of the game's profile. */
-    if (r->profile && oracles_enhanced_view_size((OraclesEnhancedLevel)o->enhanced_level, (OraclesEnhancedAspect)o->enhanced_aspect).width > ORACLES_ENHANCED_NARROW_WIDTH
+    if (r->profile && harness_view_size(o).width > ORACLES_ENHANCED_NARROW_WIDTH
         && !oracles_compat_zoom_out(r->profile)) {
         fprintf(stderr, "harness: %s does not support a view drawn back (--view medium or far, --zoom-out) yet\n", oracles_compat_name(r->profile));
         return 1;

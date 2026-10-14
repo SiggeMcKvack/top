@@ -517,6 +517,10 @@ static void devices(void)
     hints_of("21g", &nav, ORACLES_UI_LAYOUT_16_9, 4);
     oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
     hints_of("21h", &nav, ORACLES_UI_LAYOUT_4_3, 4);
+    /* 23a: the same in 4:3 on Android with a controller. */
+    nav.android = 1;
+    oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+    hints_of("23a", &nav, ORACLES_UI_LAYOUT_4_3, 4);
 }
 
 /* The menu's items of `frame`: their boxes and labels, and their dots when `dots`. */

@@ -68,6 +68,10 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
     OraclesHomeNav nav;
     oracles_home_init(&nav);
     if (host && host->refresh) host->refresh(host->opaque, &nav, NULL);
+    /* The capture stands for a screen of its size: Display's sizes are those of that screen. */
+    nav.display.screen_w = nav.display.room_w = width;
+    nav.display.screen_h = height;
+    nav.display.room_h = height - 64;
     /* Over a game's frame, the pause's layout, as the game shows it. */
     nav.layout = frame ? oracles_ui_layout_pause(width, height, nav.display.aspect) : oracles_ui_layout_choose(width, height, nav.display.aspect);
     if (frame) {
@@ -84,7 +88,7 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
         if (length == 4 && !strncmp(p, "slow", 4)) nav.slow = 1;
         else if (length == 3 && !strncmp(p, "key", 3)) oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
         else if (length == 3 && !strncmp(p, "pad", 3)) oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
-        else if (length == 7 && !strncmp(p, "android", 7)) nav.android = 1;
+        else if (length == 7 && !strncmp(p, "android", 7)) nav.android = nav.display.fullscreen_only = 1;
         else if (!parse_action(p, length, &action)) {
             snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android)", (int)length, p);
             return 1;

@@ -111,7 +111,7 @@ int oracles_session_save_state(session *s, char *message, size_t capacity)
 /* F7: the savestate loaded, as save_state says. */
 int oracles_session_load_state(session *s, char *message, size_t capacity)
 {
-    char error[256];
+    char error[320];   /* the refusal of another surface names two and a setting */
     uint8_t *data = NULL, *host_state = NULL;
     size_t size = 0, host_state_size = 0;
     if (!oracles_session_read_file(s->state_path, &data, &size)) {

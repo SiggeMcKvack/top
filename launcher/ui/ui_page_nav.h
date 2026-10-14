@@ -156,9 +156,13 @@ int oracles_display_transitions_apply(const OraclesHomeNav *nav);
 int oracles_display_hud_applies(const OraclesHomeNav *nav);
 /* The screen is nearer 4:3 than 16:9: the Enhanced view takes the 4:3 sizes (docs/PLAYING.md). */
 int oracles_display_screen_4_3(const OraclesHomeNav *nav);
-/* View's choices and the size of each, the view's level in the screen's shape. */
+/* View's choices and the size of each, the view's level in the screen's shape, far fitted to the screen as a game
+ * started from here takes it (oracles_enhanced_screen_view_size). */
 extern const char *const oracles_display_view_names[3];
 void oracles_display_view_size(const OraclesHomeNav *nav, int view, char *out, size_t capacity);
+/* Where a game started from here fits far to the screen (oracles_enhanced_far_fitting, far=screen, aspect=auto), the
+ * note under View's help in 4:3, "Far fits this screen: 426x320 at 3x."; else empty. */
+void oracles_display_far_note(const OraclesHomeNav *nav, char *out, size_t capacity);
 /* Quality's choices, Low, Medium, High and Max, then Custom, which is never chosen: the view, the core and the workers
  * make it when they make no quality.  Each sets View, and Core and Neighbour workers in Advanced, as settings.c's
  * oracles_settings_apply_quality does: Low near, Medium medium, High far, all three on the Fast core with the workers

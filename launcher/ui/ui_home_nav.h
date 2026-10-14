@@ -214,6 +214,7 @@ typedef struct OraclesHomeDisplay {
     int cores;                  /* the device's logical processor cores, which Auto's count follows */
     int screen_w, screen_h;     /* the display's size, for the sizes the page shows */
     int aspect;                 /* the settings' aspect= (an OraclesAspect): the shape of those sizes, the screen's when auto */
+    int far_fixed;              /* the settings' far=fixed: far keeps its size, else fitted to the screen where it fills it badly */
     int room_w, room_h;         /* the room a window has there: the usable area, less the title bar */
     int fullscreen_only;        /* the platform plays every game fullscreen (Android): one size whatever Window says */
 } OraclesHomeDisplay;

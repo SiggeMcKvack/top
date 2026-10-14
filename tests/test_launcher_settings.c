@@ -4,6 +4,7 @@
  * leaves its key alone, and names that were never the launcher's (zoom-out as
  * a profile, per-game profile and transitions keys) are neither read nor
  * written; menu_pad= is taken as the session plays it. */
+#include "compositor.h"
 #include "home_choices.h"
 #include "session.h"
 #include "settings.h"
@@ -396,6 +397,43 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.aspect == ORACLES_ASPECT_AUTO);
+    /* The far view: fitted to the screen at the first opening, fixed written and read back, an unknown value screen. */
+    oracles_settings_defaults(&read_back);
+    CHECK(read_back.far_fixed == 0);
+    write_text(path, "far=fixed\n");
+    oracles_settings_load(&read_back);
+    CHECK(read_back.far_fixed == 1);
+    oracles_settings_store(&read_back);
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.far_fixed == 1);
+    write_text(path, "far=wide\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.far_fixed == 0);
+    /* Fitted only where the view takes the screen's shape and far= is screen. */
+    {
+        OraclesSessionOptions options;
+        oracles_session_defaults(&options);
+        unsigned w = 1, h = 1;
+        read_back.far_fixed = 1;
+        oracles_session_far_screen(&options, &read_back, NULL, &w, &h);
+        CHECK(w == 0 && h == 0);
+        read_back.far_fixed = 0;
+        options.aspect = 1 + ORACLES_ASPECT_4_3;
+        w = h = 1;
+        oracles_session_far_screen(&options, &read_back, NULL, &w, &h);
+        CHECK(w == 0 && h == 0);
+        options.aspect = 0;
+        options.screen_w = 1280; options.screen_h = 960;   /* its shape the view's, whatever screen_4_3 says */
+        const OraclesEnhancedSize far = oracles_session_view_size(&options, ORACLES_ENHANCED_FAR), medium = oracles_session_view_size(&options, ORACLES_ENHANCED_MEDIUM);
+        CHECK(far.width == 426 && far.height == 320 && medium.width == 320 && medium.height == 240);
+        options.screen_w = 1920; options.screen_h = 1080;
+        CHECK(oracles_session_view_size(&options, ORACLES_ENHANCED_FAR).height == 270);
+        options.screen_w = options.screen_h = 0;   /* far=fixed or a shape named: the options' shape */
+        options.screen_4_3 = 1;
+        CHECK(oracles_session_view_size(&options, ORACLES_ENHANCED_FAR).width == 480 && oracles_session_view_size(&options, ORACLES_ENHANCED_FAR).height == 360);
+    }
     /* The ghosts: auto at the first opening, a count written and read back, an unknown value auto. */
     oracles_settings_defaults(&read_back);
     CHECK(read_back.ghosts == 0);

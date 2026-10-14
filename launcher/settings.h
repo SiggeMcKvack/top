@@ -110,6 +110,8 @@ typedef struct oracles_settings {
                                    * default) two on a device of four processor threads or more, else one; Display's Neighbour
                                    * workers, in its Advanced rows */
     int aspect;                   /* an OraclesAspect: aspect=auto|16:9|4:3, the view's shape: the screen's (auto, the default), or the one named; not in Display */
+    int far_fixed;                /* far=screen|fixed: the far view fitted to the screen where its size fills it badly (screen, the default;
+                                   * compositor.h, oracles_enhanced_far_fitting), or at its size whatever the screen (fixed); not in Display */
     OraclesHotkeysMode item_hotkeys[ORACLES_SETTINGS_GAMES];   /* item_hotkeys_<game>=off|use (equip reads too) */
     /* mods_ages=, mods_seasons=: the mods the game's Mods page made active, their names in order and separated by
      * commas, eight at most; empty: none.  The Mods page's Play starts the game with them. */

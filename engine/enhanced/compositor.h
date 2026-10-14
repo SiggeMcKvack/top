@@ -4,7 +4,8 @@
  * camera.  The surface's size is the view's level and the screen's shape
  * (docs/PLAYING.md): near, 256x144 or 213x160 in 4:3; medium,
  * 384x216 or 320x240; far, the drawn-back view, 480x270 (`--zoom-out`: four
- * times 1920x1080, three rooms across and two down outdoors) or 480x360.  It is a HUD band of sixteen lines at the top, the status bar
+ * times 1920x1080, three rooms across and two down outdoors) or 480x360, or fitted to a screen those fill badly
+ * (426x320, 412x360).  It is a HUD band of sixteen lines at the top, the status bar
  * copied from the core's top sixteen lines and centred, and a world band
  * below it (the rest of the surface), the game area placed by the camera in world
  * coordinates.  Columns the active room does not cover are neighbours,
@@ -20,6 +21,7 @@
 #ifndef ORACLES_ENHANCED_COMPOSITOR_H
 #define ORACLES_ENHANCED_COMPOSITOR_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -70,8 +72,93 @@ static inline OraclesEnhancedSize oracles_enhanced_size(int zoom_out)
 {
     return oracles_enhanced_view_size(zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR, ORACLES_ENHANCED_16_9);
 }
-static inline unsigned oracles_enhanced_band_height(OraclesEnhancedSize size) { return size.height - ORACLES_ENHANCED_HUD_HEIGHT; }   /* 128, 144, 200, 224, 254 or 344 */
-static inline unsigned oracles_enhanced_hud_x(OraclesEnhancedSize size) { return (size.width - ORACLES_ENHANCED_CORE_WIDTH) / 2u; }   /* 48, 26, 112, 80 or 160 */
+static inline unsigned oracles_enhanced_band_height(OraclesEnhancedSize size) { return size.height - ORACLES_ENHANCED_HUD_HEIGHT; }   /* 128, 144, 200, 224, 254, 304 or 344 */
+static inline unsigned oracles_enhanced_hud_x(OraclesEnhancedSize size) { return (size.width - ORACLES_ENHANCED_CORE_WIDTH) / 2u; }   /* 48, 26, 112, 80, 133, 126 or 160 */
+
+/* A screen's shape: its long side over its short one (a screen held upright counts as turned) below the middle of
+ * 4:3 and 16:9, 1.56, is 4:3; 3:2 and a square screen are 4:3, 16:10 and 5:3 are 16:9. */
+static inline OraclesEnhancedAspect oracles_enhanced_screen_aspect(unsigned screen_w, unsigned screen_h)
+{
+    const unsigned long_side = screen_w > screen_h ? screen_w : screen_h, short_side = screen_w > screen_h ? screen_h : screen_w;
+    if (!short_side) return ORACLES_ENHANCED_16_9;
+    return (float)long_side / (float)short_side < (4.0f / 3.0f + 16.0f / 9.0f) / 2.0f ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9;
+}
+
+/* The far view fitted to the screen.  Where far's size in the screen's shape covers less than four fifths of the
+ * screen at its largest whole scale, the smallest whole scale k of 2 or more whose screen/k, each side made even,
+ * fits in 480x360 gives the surface, kept if at least 400x224 and as wide as its band is tall (the camera's
+ * vertical margin), and if it is one of the sizes the view takes: 426x320 (1280x960 at three times), 412x360
+ * (1240x1080).  Else far keeps its size.  The screen counts by its long side across.  None is larger than far in
+ * 4:3: the rooms the band can reach, the compositor's bound and the cost stay far's. */
+#define ORACLES_ENHANCED_FITTED_SIZES 2u
+static inline OraclesEnhancedSize oracles_enhanced_fitted_size(unsigned i)
+{
+    static const OraclesEnhancedSize sizes[ORACLES_ENHANCED_FITTED_SIZES] = { { 426u, 320u }, { 412u, 360u } };
+    return sizes[i < ORACLES_ENHANCED_FITTED_SIZES ? i : 0u];
+}
+typedef enum OraclesEnhancedFit {
+    ORACLES_ENHANCED_FIT_FITTED = 0,   /* the surface is fitted to the screen */
+    ORACLES_ENHANCED_FIT_FILLS,        /* far's size covers four fifths of the screen or more */
+    ORACLES_ENHANCED_FIT_SMALL,        /* the scale's size is under 400x224, or its band taller than it is wide */
+    ORACLES_ENHANCED_FIT_UNLISTED      /* the scale's size is not one the view takes */
+} OraclesEnhancedFit;
+typedef struct OraclesEnhancedFitting {
+    OraclesEnhancedFit fit;
+    OraclesEnhancedSize size;          /* the far view's surface on this screen */
+    OraclesEnhancedSize computed;      /* the size the scale gives, kept or not ({0, 0} where far's size fills the screen) */
+    unsigned scale;                    /* the scale it fills the screen at */
+    OraclesEnhancedAspect aspect;      /* the screen's shape */
+    unsigned far_scale, far_percent;   /* far's size in that shape: the whole scale the screen holds it at, the part of the screen it covers */
+} OraclesEnhancedFitting;
+static inline OraclesEnhancedFitting oracles_enhanced_far_fitting(unsigned screen_w, unsigned screen_h)
+{
+    OraclesEnhancedFitting f = { ORACLES_ENHANCED_FIT_FILLS, { 0u, 0u }, { 0u, 0u }, 0u, oracles_enhanced_screen_aspect(screen_w, screen_h), 0u, 0u };
+    const unsigned long long w = screen_w > screen_h ? screen_w : screen_h, h = screen_w > screen_h ? screen_h : screen_w;
+    f.size = oracles_enhanced_view_size(ORACLES_ENHANCED_FAR, f.aspect);
+    if (!h) return f;
+    const unsigned long long across = w / f.size.width, down = h / f.size.height;
+    f.far_scale = (unsigned)(across < down ? across : down);
+    f.far_percent = (unsigned)(100ull * f.far_scale * f.size.width * f.far_scale * f.size.height / (w * h));
+    if (5ull * f.far_scale * f.size.width * f.far_scale * f.size.height >= 4ull * w * h) return f;
+    unsigned k = 2u;
+    while ((w / k & ~1ull) > ORACLES_ENHANCED_MAX_WIDTH || (h / k & ~1ull) > 360u) k++;
+    f.computed = (OraclesEnhancedSize){ (unsigned)(w / k & ~1ull), (unsigned)(h / k & ~1ull) };
+    f.scale = k;
+    f.fit = ORACLES_ENHANCED_FIT_SMALL;
+    if (f.computed.width < 400u || f.computed.height < 224u || f.computed.width < oracles_enhanced_band_height(f.computed)) return f;
+    f.fit = ORACLES_ENHANCED_FIT_UNLISTED;
+    for (unsigned i = 0; i < ORACLES_ENHANCED_FITTED_SIZES; i++)
+        if (oracles_enhanced_fitted_size(i).width == f.computed.width && oracles_enhanced_fitted_size(i).height == f.computed.height) {
+            f.fit = ORACLES_ENHANCED_FIT_FITTED;
+            f.size = f.computed;
+        }
+    return f;
+}
+/* The view's surface at `level` on a screen of screen_w x screen_h, as a game started there takes it: the level's
+ * size in the shape `aspect` names, or for ORACLES_ENHANCED_ASPECTS in the screen's, far then fitted to the screen
+ * unless `far_fixed` (aspect= and far= in the settings, docs/PLAYING.md).  The session, the harness and Display's
+ * sizes all take it from here. */
+static inline OraclesEnhancedSize oracles_enhanced_screen_view_size(OraclesEnhancedLevel level, OraclesEnhancedAspect aspect, int far_fixed,
+                                                                    unsigned screen_w, unsigned screen_h)
+{
+    if ((unsigned)aspect < ORACLES_ENHANCED_ASPECTS) return oracles_enhanced_view_size(level, aspect);
+    if (level == ORACLES_ENHANCED_FAR && !far_fixed) return oracles_enhanced_far_fitting(screen_w, screen_h).size;
+    return oracles_enhanced_view_size(level, oracles_enhanced_screen_aspect(screen_w, screen_h));
+}
+/* What the far view takes on a screen and why, for a log. */
+void oracles_enhanced_far_fitting_words(unsigned screen_w, unsigned screen_h, char *out, size_t capacity);
+/* A size the view takes: a level's in a shape, or the far view fitted to a screen; `fitted` says which. */
+static inline int oracles_enhanced_size_known(OraclesEnhancedSize size, int *fitted)
+{
+    for (unsigned i = 0; i < ORACLES_ENHANCED_FITTED_SIZES; i++)
+        if (oracles_enhanced_fitted_size(i).width == size.width && oracles_enhanced_fitted_size(i).height == size.height) { if (fitted) *fitted = 1; return 1; }
+    for (unsigned l = 0; l < ORACLES_ENHANCED_LEVELS; l++)
+        for (unsigned a = 0; a < ORACLES_ENHANCED_ASPECTS; a++) {
+            const OraclesEnhancedSize s = oracles_enhanced_view_size((OraclesEnhancedLevel)l, (OraclesEnhancedAspect)a);
+            if (s.width == size.width && s.height == size.height) { if (fitted) *fitted = 0; return 1; }
+        }
+    return 0;
+}
 
 typedef enum OraclesEnhancedMode {
     ORACLES_ENHANCED_WORLD = 0,   /* the wide world band, HUD centred, neighbours black */

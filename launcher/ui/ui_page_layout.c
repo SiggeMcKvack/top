@@ -1440,8 +1440,14 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
     for (int p = 0; p < ORACLES_PROFILES; p++) oracles_profile_size(nav, p, t->profile_sizes[p], sizeof t->profile_sizes[p]);
     for (int v = 0; v < 3; v++) oracles_display_view_size(nav, v, t->view_sizes[v], sizeof t->view_sizes[v]);
     /* The diagram's box has the screen's shape at its height, as the sizes take it: 432 wide for 16:9 (and any wider
-     * screen, which the view takes as 16:9), 324 for 4:3. */
-    t->diagram_box_w = oracles_display_screen_4_3(nav) ? 324.0f : ORACLES_UI_DIAGRAM_W;
+     * screen, which the view takes as 16:9), 324 for 4:3, less for a screen narrower than 4:3 (279 for 1240x1080), a
+     * screen held upright counting as turned. */
+    t->diagram_box_w = ORACLES_UI_DIAGRAM_W;
+    if (oracles_display_screen_4_3(nav)) {
+        const int w = nav->display.screen_w, h = nav->display.screen_h, across = w > h ? w : h, down = w > h ? h : w;
+        const float narrower = down > 0 ? floorf(ORACLES_UI_DIAGRAM_H * (float)across / (float)down + 0.5f) : 324.0f;
+        t->diagram_box_w = narrower < 324.0f ? narrower : 324.0f;
+    }
     oracles_display_diagram(nav, t->diagram_box_w, ORACLES_UI_DIAGRAM_H, &t->diagram_w, &t->diagram_h, t->diagram_label, sizeof t->diagram_label);
     /* 4:3's help, one line and a note line, its own short texts so that neither wraps: the profile chosen (or that the
      * game plays in Faithful), Window's with the line on its size or the diagram's, the quality in effect. */
@@ -1470,6 +1476,11 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
                 snprintf(t->help_note_text, sizeof t->help_note_text, "%s.", t->diagram_label);
                 t->help_note = t->help_note_text;
             }
+            break;
+        case ORACLES_DISPLAY_VIEW:
+            /* On a screen far is fitted to, whichever view is chosen. */
+            oracles_display_far_note(nav, t->help_note_text, sizeof t->help_note_text);
+            if (t->help_note_text[0]) t->help_note = t->help_note_text;
             break;
         case ORACLES_DISPLAY_TRANSITIONS: t->help_note = "Savestates with it on need it on."; break;
         case ORACLES_DISPLAY_CORE: t->help_note = oracles_ui_core_note; break;

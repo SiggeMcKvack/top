@@ -423,28 +423,54 @@ static OraclesHomeCommand quality_step(OraclesHomeNav *nav, int by)
     return quality_set(nav, next < 0 ? 0 : next >= ORACLES_DISPLAY_QUALITIES ? ORACLES_DISPLAY_QUALITIES - 1 : next);
 }
 
-int oracles_display_screen_4_3(const OraclesHomeNav *nav)
+/* The shape the settings' aspect= names (an OraclesAspect: 1 16:9, 2 4:3), ORACLES_ENHANCED_ASPECTS for auto. */
+static OraclesEnhancedAspect named_aspect(const OraclesHomeNav *nav)
 {
-    /* As the session decides it (oracles_session_view_4_3): the settings' shape, else the screen's, the long side over
-     * the short one below the middle of 4:3 and 16:9 (oracles_sdl_screen_4_3). */
-    if (nav->display.aspect == 2) return 1;   /* ORACLES_ASPECT_4_3 */
-    if (nav->display.aspect == 1) return 0;   /* ORACLES_ASPECT_16_9 */
-    const int w = nav->display.screen_w, h = nav->display.screen_h;
-    if (w <= 0 || h <= 0) return 0;
-    const int long_side = w > h ? w : h, short_side = w > h ? h : w;
-    return (float)long_side / (float)short_side < (4.0f / 3.0f + 16.0f / 9.0f) / 2.0f;
+    return nav->display.aspect == 2 ? ORACLES_ENHANCED_4_3 : nav->display.aspect == 1 ? ORACLES_ENHANCED_16_9 : ORACLES_ENHANCED_ASPECTS;
 }
 
+/* The display's size, 0x0 when unknown. */
+static void screen_size(const OraclesHomeNav *nav, unsigned *w, unsigned *h)
+{
+    const int known = nav->display.screen_w > 0 && nav->display.screen_h > 0;
+    *w = known ? (unsigned)nav->display.screen_w : 0u;
+    *h = known ? (unsigned)nav->display.screen_h : 0u;
+}
+
+int oracles_display_screen_4_3(const OraclesHomeNav *nav)
+{
+    /* As the session decides it (oracles_session_view_4_3): the settings' shape, else the screen's. */
+    const OraclesEnhancedAspect named = named_aspect(nav);
+    if (named != ORACLES_ENHANCED_ASPECTS) return named == ORACLES_ENHANCED_4_3;
+    unsigned w, h;
+    screen_size(nav, &w, &h);
+    return oracles_enhanced_screen_aspect(w, h) == ORACLES_ENHANCED_4_3;
+}
+
+/* The view's surface as a game started from here takes it (oracles_session_view_size): far fitted to the screen unless
+ * far=fixed or aspect= names a shape. */
 static OraclesEnhancedSize view_surface(const OraclesHomeNav *nav, int view)
 {
     const int level = view >= 0 && view < ORACLES_ENHANCED_LEVELS ? view : ORACLES_ENHANCED_FAR;
-    return oracles_enhanced_view_size((OraclesEnhancedLevel)level, oracles_display_screen_4_3(nav) ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9);
+    unsigned w, h;
+    screen_size(nav, &w, &h);
+    return oracles_enhanced_screen_view_size((OraclesEnhancedLevel)level, named_aspect(nav), nav->display.far_fixed, w, h);
 }
 
 void oracles_display_view_size(const OraclesHomeNav *nav, int view, char *out, size_t capacity)
 {
     const OraclesEnhancedSize s = view_surface(nav, view);
     snprintf(out, capacity, "%u\xc3\x97%u", s.width, s.height);
+}
+
+void oracles_display_far_note(const OraclesHomeNav *nav, char *out, size_t capacity)
+{
+    unsigned w, h;
+    screen_size(nav, &w, &h);
+    const OraclesEnhancedFitting f = oracles_enhanced_far_fitting(w, h);
+    if (named_aspect(nav) == ORACLES_ENHANCED_ASPECTS && !nav->display.far_fixed && f.fit == ORACLES_ENHANCED_FIT_FITTED)
+        snprintf(out, capacity, "Far fits this screen: %u\xc3\x97%u at %u\xc3\x97.", f.size.width, f.size.height, f.scale);
+    else if (capacity) out[0] = 0;
 }
 
 OraclesProfile oracles_display_played_profile(const OraclesHomeNav *nav)

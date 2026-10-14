@@ -669,11 +669,11 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
         if (games->settings->window_scale) o.sdl.scale = (unsigned)games->settings->window_scale;
     }
     if (oracles_sdl_fullscreen_only()) o.sdl.fullscreen = 1;   /* Android: the whole screen, whatever Display says */
-    /* The view's surface: its level in the screen's shape (as the session takes it). */
+    /* The view's surface: its level in the screen's shape, far fitted to the screen (as the session takes it). */
     o.screen_4_3 = oracles_session_view_4_3(&o, games->settings, window);
+    oracles_session_far_screen(&o, games->settings, window, &o.screen_w, &o.screen_h);
     const OraclesEnhancedLevel level = o.view ? (OraclesEnhancedLevel)(o.view - 1) : o.zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;
-    const OraclesEnhancedSize surface = !o.enhanced ? (OraclesEnhancedSize){ 160u, 144u }
-                                      : oracles_enhanced_view_size(level, o.screen_4_3 ? ORACLES_ENHANCED_4_3 : ORACLES_ENHANCED_16_9);
+    const OraclesEnhancedSize surface = !o.enhanced ? (OraclesEnhancedSize){ 160u, 144u } : oracles_session_view_size(&o, (int)level);
     o.sdl.scale = oracles_home_fitting_scale(window, o.sdl.scale, surface);
     /* Fill at one size, where every window comes to the one size the screen holds: fullscreen, as Display's diagram
      * shows it (oracles_display_fullscreen); Sharp there keeps the window, as large. */

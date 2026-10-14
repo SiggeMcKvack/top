@@ -19,6 +19,7 @@ int harness_usage(void)
                     "                       [--enhanced-check DIR] [--enhanced-ghost-budget FRAMES] [--enhanced-threaded] [--enhanced-ghosts 1|2 (with --enhanced-threaded)] [--enhanced-paced] [--enhanced-reload-at FRAME] [--enhanced-camera 1|2] [--enhanced-neighbours off|static (static)]   (the Enhanced surface of every frame composed and hashed)\n"
                     "                       [--zoom-out]   (with --enhanced-check: the drawn-back view's 480x270 surface, 480x360 with --aspect 4:3, as the launcher's --zoom-out; --view far)\n"
                     "                       [--view near|medium|far] [--aspect 16:9|4:3]   (with --enhanced-check: the view's level and the screen's shape, docs/PLAYING.md)\n"
+                    "                       [--screen WxH]   (with --enhanced-check: the screen's shape, unless --aspect names one, and the far view fitted to that screen, as the launcher's far=screen)\n"
                     "                       [--hud original|full]   (with --enhanced-check: the gutters beside the status bar dark, or the bar's own background, as the launcher's hud=; original by default)\n"
                     "                       [--mods DIR]... [--mod-trace FILE]   (the mods the route was recorded with, and their state after every frame, to --compare with the session's ROUTE.mod.tsv)\n"
                     "                       [--language en|en-eu|fr|de|it|es [--eu-rom FILE|DIR] [--language-pack FILE]]   (the European ROM's English or a translation, from that ROM or its pack, served at getTextAddress; a fan game's too, with --patch)\n"
@@ -108,6 +109,15 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
             if (!strcmp(name, "16:9")) o->enhanced_aspect = 0;
             else if (!strcmp(name, "4:3")) o->enhanced_aspect = 1;
             else { fprintf(stderr, "harness: --aspect is 16:9 or 4:3, not %s\n", name); return -1; }
+            o->aspect_given = 1;
+        }
+        else if (!strcmp(argv[i], "--screen") && i + 1 < argc) {
+            const char *size = argv[++i];
+            char x = 0, rest = 0;
+            if (sscanf(size, "%u%c%u%c", &o->screen_w, &x, &o->screen_h, &rest) != 3 || x != 'x' || !o->screen_w || !o->screen_h) {
+                fprintf(stderr, "harness: --screen is a size, 1280x960, not %s\n", size);
+                return -1;
+            }
         }
         else if (!strcmp(argv[i], "--hud") && i + 1 < argc) {
             const char *name = argv[++i];
@@ -141,5 +151,12 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         }
         else return -1;
     }
+    if (o->screen_w && !o->aspect_given) o->enhanced_aspect = (int)oracles_enhanced_screen_aspect(o->screen_w, o->screen_h);
     return 0;
+}
+
+OraclesEnhancedSize harness_view_size(const harness_options *o)
+{
+    const OraclesEnhancedAspect aspect = o->screen_w && !o->aspect_given ? ORACLES_ENHANCED_ASPECTS : (OraclesEnhancedAspect)o->enhanced_aspect;
+    return oracles_enhanced_screen_view_size((OraclesEnhancedLevel)o->enhanced_level, aspect, 0, o->screen_w, o->screen_h);
 }

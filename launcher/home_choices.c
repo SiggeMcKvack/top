@@ -21,6 +21,7 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->hud = settings->hud_full;
     display->view = settings->view;
     display->aspect = settings->aspect;
+    display->far_fixed = settings->far_fixed;
     display->core = oracles_settings_core(settings);
     display->window = settings->window_scale ? settings->window_scale - 2 : 3;
     display->colour = settings->colour_correction;

@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 struct OraclesPause;
+struct OraclesEnhancedSize;
 
 typedef struct OraclesSessionOptions {
     const char *rom_path;
@@ -36,6 +37,7 @@ typedef struct OraclesSessionOptions {
     int enhanced, zoom_out, continuous_transitions;
     int view;                        /* the Enhanced view's level plus one (an OraclesEnhancedLevel; --view, Display's View); 0: far with zoom_out, else near */
     int screen_4_3;                  /* the view takes the 4:3 shape (oracles_session_view_4_3) */
+    unsigned screen_w, screen_h;     /* the screen the far view fits to (oracles_session_far_screen); 0: far at its size */
     int aspect;                      /* --aspect: an OraclesAspect plus one, for the run, never stored; 0: the settings' */
     int ghosts;                      /* --ghosts: auto, 1 or 2 as 1, 2 or 3, for the run, never stored; 0: the settings' ghosts= */
     int core;                        /* --core: an OraclesCoreKind plus one, for the run, never stored; 0: the settings' core= */
@@ -76,6 +78,13 @@ int oracles_session_run(const OraclesSessionOptions *options, oracles_settings *
 /* Whether the view takes the 4:3 shape: the command line's --aspect, else the settings' aspect=, auto deciding by the
  * screen of `window` (the primary display without one). */
 int oracles_session_view_4_3(const OraclesSessionOptions *options, const oracles_settings *settings, struct SDL_Window *window);
+/* The screen the far view fits to: that of `window` (the primary display without one) where the settings' far= is
+ * screen and the view takes the screen's shape (no --aspect, aspect=auto); 0x0 otherwise. */
+void oracles_session_far_screen(const OraclesSessionOptions *options, const oracles_settings *settings, struct SDL_Window *window,
+                                unsigned *width, unsigned *height);
+/* The surface of the view's level (an OraclesEnhancedLevel): the far view fitted to the options' screen
+ * (oracles_enhanced_far_fitting), else the level's size in the options' shape. */
+struct OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions *options, int level);
 
 /* The screen margin the games play with, an OraclesScreenMargin: the command line's (`option`, --screen-margin's as
  * OraclesSessionOptions holds it, 0 for none), else the settings' screen_margin=. */

@@ -243,6 +243,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->swim_hold = 0;   /* the game's own taps */
     s->view = 2;   /* far: the view drawn back, as Enhanced was before the levels */
     s->aspect = ORACLES_ASPECT_AUTO;
+    s->far_fixed = 0;   /* fitted to the screen */
     s->ghosts = 0;   /* auto */
     s->hud_full = 1;   /* the bar across the whole view, not a strip between two dark bands */
 #ifdef __ANDROID__
@@ -264,7 +265,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -306,6 +307,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "aspect")) {
         for (int a = 0; a < 3; a++) if (!strcmp(value, oracles_settings_aspect_names[a])) s->aspect = a;
+        return 1;
+    }
+    if (!strcmp(name, "far")) {
+        if (!strcmp(value, "screen") || !strcmp(value, "fixed")) s->far_fixed = !strcmp(value, "fixed");
         return 1;
     }
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
@@ -484,6 +489,9 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "hud=%s\n", s->hud_full ? "full" : "original");
     fprintf(f, "# The view's shape: auto (the screen's, nearer 4:3 or 16:9), 16:9 or 4:3, whatever the screen.\n");
     fprintf(f, "aspect=%s\n", oracles_settings_aspect_names[s->aspect >= 0 && s->aspect < 3 ? s->aspect : 0]);
+    fprintf(f, "# The far view: screen (fitted to a screen its size fills badly, 426x320 on 1280x960 and 412x360 on 1240x1080,\n"
+               "# three times, with aspect=auto) or fixed (480x270 or 480x360, whatever the screen).\n");
+    fprintf(f, "far=%s\n", s->far_fixed ? "fixed" : "screen");
     fprintf(f, "# The ghosts that prepare the rooms around in Enhanced, each on its own processor core: auto (two on a device of\n"
                "# four processor threads or more), 1 or 2. Two fill the view faster after a warp or a load.\n");
     if (s->ghosts == 1 || s->ghosts == 2) fprintf(f, "ghosts=%d\n", s->ghosts); else fprintf(f, "ghosts=auto\n");

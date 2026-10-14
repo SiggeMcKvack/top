@@ -150,7 +150,7 @@ typedef struct OraclesUiDisplayTexts {
     int window_one;                       /* every window comes to one size here: the Window row dimmed and inert */
     const char *help, *help_note;         /* 4:3: the highlighted row's explanation and its note (NULL: none), short */
     char help_text[ORACLES_HOME_TEXT_LENGTH];              /* `help` when made: Quality's */
-    char help_note_text[ORACLES_HOME_TEXT_LENGTH + 1];     /* `help_note` when made: the diagram's line and a period */
+    char help_note_text[ORACLES_HOME_TEXT_LENGTH + 1];     /* `help_note` when made: the diagram's line and a period, View's far note */
 } OraclesUiDisplayTexts;
 
 /* Display's texts for the state of `nav`. */

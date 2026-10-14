@@ -106,14 +106,8 @@ void oracles_enhanced_view_set_size(OraclesEnhancedView *v, OraclesEnhancedSize 
 {
     /* Before the first composition: the cache is empty, the surface unwritten.  A band wider than the normal one
      * draws back, and shows more rooms at once. */
-    /* Only the sizes of the levels (compositor.h): the view, the camera and the hotbar are made for those. */
-    int known = 0;
-    for (unsigned l = 0; l < ORACLES_ENHANCED_LEVELS; l++)
-        for (unsigned a = 0; a < ORACLES_ENHANCED_ASPECTS; a++) {
-            const OraclesEnhancedSize s = oracles_enhanced_view_size((OraclesEnhancedLevel)l, (OraclesEnhancedAspect)a);
-            known |= s.width == size.width && s.height == size.height;
-        }
-    if (!known) return;
+    /* Only the levels' sizes and the far view's fitted to a screen (compositor.h): the view, the camera and the hotbar are made for those. */
+    if (!oracles_enhanced_size_known(size, NULL)) return;
     const unsigned slots = size.width > ORACLES_ENHANCED_NARROW_WIDTH ? SLOTS : NORMAL_SLOTS;
     entry *fresh = calloc(slots, sizeof *fresh);
     uint32_t *surface = calloc((size_t)size.width * size.height, sizeof *surface);
@@ -660,9 +654,11 @@ static int32_t get32(const uint8_t *in) { uint32_t value = 0; for (unsigned b = 
 
 static const char *const surface_aspects[ORACLES_ENHANCED_ASPECTS] = { "16:9", "4:3" };
 
-/* The view's level and the screen's shape that give a surface; 0 for a size of no level. */
-static int surface_of(OraclesEnhancedSize size, unsigned *level, unsigned *aspect)
+/* The view's level and the screen's shape that give a surface, `fitted` the far view fitted to a screen; 0 for none. */
+static int surface_of(OraclesEnhancedSize size, unsigned *level, unsigned *aspect, int *fitted)
 {
+    if (!oracles_enhanced_size_known(size, fitted)) return 0;
+    if (*fitted) { *level = ORACLES_ENHANCED_FAR; *aspect = oracles_enhanced_screen_aspect(size.width, size.height); return 1; }
     for (unsigned l = ORACLES_ENHANCED_LEVELS; l-- > 0;)
         for (unsigned a = 0; a < ORACLES_ENHANCED_ASPECTS; a++) {
             const OraclesEnhancedSize s = oracles_enhanced_view_size((OraclesEnhancedLevel)l, (OraclesEnhancedAspect)a);
@@ -675,9 +671,10 @@ static int surface_of(OraclesEnhancedSize size, unsigned *level, unsigned *aspec
 static void surface_words(OraclesEnhancedSize size, char *out, size_t capacity)
 {
     static const char *const levels[ORACLES_ENHANCED_LEVELS] = { "near", "medium", "far" };
-    unsigned l, a;
-    if (surface_of(size, &l, &a)) snprintf(out, capacity, "the %s view, %ux%u in %s", levels[l], size.width, size.height, surface_aspects[a]);
-    else snprintf(out, capacity, "a surface of %ux%u", size.width, size.height);
+    unsigned l, a; int fitted;
+    if (!surface_of(size, &l, &a, &fitted)) snprintf(out, capacity, "a surface of %ux%u", size.width, size.height);
+    else if (fitted) snprintf(out, capacity, "the far view fitted to the screen, %ux%u", size.width, size.height);
+    else snprintf(out, capacity, "the %s view, %ux%u in %s", levels[l], size.width, size.height, surface_aspects[a]);
 }
 
 int oracles_enhanced_view_check_state(const OraclesEnhancedView *v, const uint8_t *data, size_t size, char *why, size_t capacity)
@@ -693,12 +690,15 @@ int oracles_enhanced_view_check_state(const OraclesEnhancedView *v, const uint8_
         char taken[96], shown[96];
         surface_words(saved, taken, sizeof taken);
         surface_words(v->size, shown, sizeof shown);
-        /* The same level in the other shape (a far savestate of a 4:3 screen taken before far had its 4:3 size): the
-         * setting that shows the surface it was taken on. */
-        unsigned saved_level, saved_aspect, level, aspect;
-        char hint[64] = "";
-        if (surface_of(saved, &saved_level, &saved_aspect) && surface_of(v->size, &level, &aspect) && saved_level == level)
-            snprintf(hint, sizeof hint, "; aspect=%s in the settings shows that surface", surface_aspects[saved_aspect]);
+        /* The far view at another of its sizes, the settings that show the one it was taken on: its fixed size in the other
+         * shape (a far savestate of a 4:3 screen taken before far had its 4:3 size), aspect=; its fixed 4:3 size where it
+         * is fitted, far=fixed; its fitted size, far=screen on that screen.  Two fitted sizes are two screens. */
+        unsigned saved_level, saved_aspect, level, aspect; int saved_fitted, fitted;
+        const int same = surface_of(saved, &saved_level, &saved_aspect, &saved_fitted) && surface_of(v->size, &level, &aspect, &fitted) && saved_level == level;
+        char hint[128] = "";
+        if (same && saved_fitted && !fitted) snprintf(hint, sizeof hint, "; far=screen and aspect=auto in the settings show that surface on the screen it was taken on");
+        else if (same && !saved_fitted && (!fitted || saved_aspect == ORACLES_ENHANCED_16_9)) snprintf(hint, sizeof hint, "; aspect=%s in the settings shows that surface", surface_aspects[saved_aspect]);
+        else if (same && !saved_fitted) snprintf(hint, sizeof hint, "; far=fixed in the settings shows that surface");
         snprintf(why, capacity, "the savestate was taken on %s, and this session shows %s: it loads only on its own surface%s", taken, shown, hint);
     }
     return -1;
