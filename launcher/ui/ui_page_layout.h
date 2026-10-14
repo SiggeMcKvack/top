@@ -138,7 +138,7 @@ typedef struct OraclesUiDisplayTexts {
     char quality_text[ORACLES_HOME_TEXT_LENGTH];             /* the quality in effect, said in full */
     const char *quality_note;
     int later;                            /* opened from a game: the note under the title says what the next Play takes */
-    const char *explanations[6];          /* color correction, continuous transitions, vsync, core, the workers, the scaling */
+    const char *explanations[7];          /* color correction, continuous transitions, vsync, core, the workers, the scaling, the HUD */
     const char *view_explanation;
     char workers_names[3][16];            /* "Auto · 2", "1", "2" */
     char scaling_sizes[2][24];            /* the image's size in fullscreen with Sharp, with Fill */
@@ -160,7 +160,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiBox diagram, diagram_window;
     OraclesUiLine diagram_label;
     OraclesUiBox panel;
-    /* Profile, Quality, Window, View, Color correction, Continuous transitions, or Core, Vsync, Neighbour workers,
+    /* Profile, Quality, Window, View, HUD, Color correction, or Core, Continuous transitions, Vsync, Neighbour workers,
      * Scaling; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
      * framed button beside it in 4:3. */
     OraclesUiWrapped labels[ORACLES_DISPLAY_ROWS];
@@ -181,8 +181,9 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiOptionLayout views[3];
     OraclesUiWrapped view_explanation;
     OraclesUiOptionLayout transitions[2];
-    OraclesUiWrapped explanations[6];
+    OraclesUiWrapped explanations[7];
     OraclesUiOptionLayout colour[2], vsync[3], core[2], workers[3], scaling[2];   /* each scaling with its size */
+    OraclesUiOptionLayout hud[2];
     OraclesUiLine help, help_note;                   /* 4:3: under the rows, the highlighted row's explanation and its note */
 } OraclesUiDisplayLayout;
 

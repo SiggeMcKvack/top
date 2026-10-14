@@ -494,6 +494,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
             in.counted_height = LARGE_ROOM_H * (ob->in_scroll && !(d & 1u) ? 2u : 1u);
         }
     } else v->large_was_in_scroll = 0;
+    in.hud_fill = ev_hud_fill(v, in.mode);
     v->uncovered = oracles_enhanced_compose(ev_scroll_window(v), &in, v->surface);
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {

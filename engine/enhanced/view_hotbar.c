@@ -8,7 +8,10 @@
  * their object palette, and keeps the opaque pixels, centred in 16 x 16, as
  * the icon of that item and variant.  None of the game's display logic is
  * redone (treasureDisplayData and its level tables stay the game's), so an
- * item that changes level, or a modified ROM, is followed by itself. */
+ * item that changes level, or a modified ROM, is followed by itself.
+ *
+ * The same gutters take the status bar's own background with the bar drawn
+ * full width (hud=full), read from the bar as the game keeps it. */
 #include "view_internal.h"
 
 #include "hotbar.h"
@@ -115,25 +118,53 @@ static int capture_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, u
 
 static uint32_t screen_colour(void *opaque, uint16_t rgb555);
 
-/* The status bar's own pixel on its sixteen lines, from the maps the game keeps of its bar and the LCDC it gives those
- * lines, and whether it hides a sprite there: the tile's priority bit set and its colour not 0, as the hardware
- * decides it.  The bar writes an item's count over its icon this way. */
-static int bar_pixel(OraclesEnhancedView *v, unsigned x, unsigned y, uint16_t *rgb555, int *hides_sprite)
+/* The status bar as the game keeps it: the maps of its bar, the LCDC it gives those lines, the VRAM and the palettes on
+ * screen (oracles_enhanced_bar_pixel). */
+static int status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar)
 {
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
-    const uint8_t *tiles = oracles_guest_ptr(v->guest, t->status_bar_tile_map, 0x40u), *attrs = oracles_guest_ptr(v->guest, t->status_bar_attribute_map, 0x40u);
-    const uint8_t *regs = oracles_guest_ptr(v->guest, t->gfx_regs1, 1u), *palettes = oracles_guest_bg_palettes(v->guest);
-    if (!tiles || !attrs || !regs || !palettes) return 0;
-    const unsigned cell = (y / 8u) * 32u + x / 8u;
-    const uint8_t attr = attrs[cell];
-    const unsigned tile = (regs[0] & 0x10u) ? tiles[cell] : 256u + (uint8_t)(tiles[cell] + 128u) - 128u;
-    const unsigned line = (attr & 0x40u) ? 7u - y % 8u : y % 8u, bit = (attr & 0x20u) ? x % 8u : 7u - x % 8u;
-    const uint8_t *data = oracles_guest_vram(v->guest, (attr & 0x08u) ? 1 : 0) + tile * 16u + line * 2u;
-    const unsigned index = ((data[0] >> bit) & 1u) | (((data[1] >> bit) & 1u) << 1);
-    const uint8_t *colour = palettes + ((attr & 7u) * 4u + index) * 2u;
-    *rgb555 = (uint16_t)((colour[0] | (colour[1] << 8)) & 0x7fffu);
-    *hides_sprite = (regs[0] & 0x01u) && (attr & 0x80u) && index;
+    const uint8_t *regs = oracles_guest_ptr(v->guest, t->gfx_regs1, 1u);
+    bar->tiles = oracles_guest_ptr(v->guest, t->status_bar_tile_map, 0x40u);
+    bar->attributes = oracles_guest_ptr(v->guest, t->status_bar_attribute_map, 0x40u);
+    bar->vram0 = oracles_guest_vram(v->guest, 0);
+    bar->vram1 = oracles_guest_vram(v->guest, 1);
+    bar->palettes = oracles_guest_bg_palettes(v->guest);
+    bar->lcdc = regs ? regs[0] : 0u;
+    return regs && bar->tiles && bar->attributes && bar->vram0 && bar->vram1 && bar->palettes;
+}
+
+/* The status bar's own pixel on its sixteen lines, and whether it hides a sprite there: the tile's priority bit set and
+ * its colour not 0, as the hardware decides it.  The bar writes an item's count over its icon this way. */
+static int bar_pixel(OraclesEnhancedView *v, unsigned x, unsigned y, uint16_t *rgb555, int *hides_sprite)
+{
+    OraclesEnhancedBar bar;
+    if (!status_bar(v, &bar)) return 0;
+    *rgb555 = oracles_enhanced_bar_pixel(&bar, x, y, hides_sprite);
     return 1;
+}
+
+static uint32_t core_colour(void *opaque, uint16_t rgb555) { return oracles_core_convert_rgb555(((OraclesEnhancedView *)opaque)->core, rgb555); }
+
+/* The gutters beside the status bar with the bar drawn full width: in the world band alone, the framed core's bar
+ * standing in the middle of the drawn-back surface, or being no bar at all (a menu, a cutscene). */
+const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode)
+{
+    OraclesEnhancedBar bar;
+    const uint32_t *core = oracles_core_pixels(v->core);   /* the bar's lines, which a scroll's redrawn window copies as they are */
+    if (!v->hud_full || mode != ORACLES_ENHANCED_WORLD || !core || !status_bar(v, &bar)) return NULL;
+    const unsigned filled = oracles_enhanced_hud_fill(&bar, core_colour, v, core, v->hud_fill);
+    if (filled) v->hud_frames++;
+    v->hud_lines_kept += 2u * ORACLES_ENHANCED_HUD_HEIGHT - filled;
+    return filled ? v->hud_fill : NULL;
+}
+
+void oracles_enhanced_view_set_hud(OraclesEnhancedView *v, int full) { v->hud_full = full != 0; }
+int oracles_enhanced_view_hud(const OraclesEnhancedView *v) { return v->hud_full; }
+
+void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *v, unsigned *frames, unsigned *lines_kept)
+{
+    if (frames) *frames = v->hud_frames;
+    if (lines_kept) *lines_kept = v->hud_lines_kept;
 }
 
 /* The icon kept for the item on `button` against the core's own image, both ways, over the whole box of the icon where

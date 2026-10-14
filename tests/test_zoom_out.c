@@ -103,6 +103,95 @@ static void compositor(void)
     free(core); free(surface);
 }
 
+/* The status bar drawn full width: the colour beside each of its lines is the
+ * bar's own at its edge, its tile's palette and colour index as the game
+ * keeps them (bank, flip, palette), wherever the core's image shows it; a
+ * line where the image shows something else keeps the border, but a blank
+ * line, which extends as it is.  The fill changes the gutters of the HUD
+ * band and nothing else. */
+static uint32_t expand(uint16_t rgb555)   /* the compositor's plain expansion, without a pipeline */
+{
+    uint32_t out = 0xff000000u;
+    for (unsigned shift = 0; shift < 15u; shift += 5u) out |= (uint32_t)(((rgb555 >> shift) & 31u) * 255u / 31u) << (shift / 5u * 8u);
+    return out;
+}
+
+static void hud_full_width(void)
+{
+    static uint8_t tiles[64], attributes[64], vram0[0x2000], vram1[0x2000], palettes[64];
+    const OraclesEnhancedBar bar = { tiles, attributes, vram0, vram1, palettes, 0x10u };
+    #define RGB555(r, g, b) ((uint16_t)((r) | ((g) << 5) | ((b) << 10)))
+    const uint16_t beige = RGB555(31, 26, 17), brown = RGB555(12, 8, 2), blue = RGB555(2, 4, 28);
+    palettes[(7u * 4u + 1u) * 2u] = (uint8_t)beige; palettes[(7u * 4u + 1u) * 2u + 1u] = (uint8_t)(beige >> 8);
+    palettes[(7u * 4u + 2u) * 2u] = (uint8_t)brown; palettes[(7u * 4u + 2u) * 2u + 1u] = (uint8_t)(brown >> 8);
+    palettes[(6u * 4u + 3u) * 2u] = (uint8_t)blue; palettes[(6u * 4u + 3u) * 2u + 1u] = (uint8_t)(blue >> 8);
+    /* Left: tile 1, colour 1 in its first column, palette 7, over the top eight lines; below, tile 1 of the second
+     * bank, colour 2.  Right: tile 2 flipped across, its first column colour 3, palette 6, on all sixteen lines. */
+    tiles[0] = 1; attributes[0] = 7u;
+    tiles[32] = 1; attributes[32] = 7u | 0x08u;
+    tiles[19] = 2; attributes[19] = 6u | 0x20u;
+    tiles[32 + 19] = 2; attributes[32 + 19] = 6u | 0x20u;
+    for (unsigned line = 0; line < 8u; line++) {
+        vram0[16u + line * 2u] = 0x80u;                                 /* colour 1 */
+        vram1[16u + line * 2u + 1u] = 0x80u;                            /* colour 2 */
+        vram0[32u + line * 2u] = 0x80u; vram0[32u + line * 2u + 1u] = 0x80u;   /* colour 3 */
+    }
+    int hides = 1;
+    CHECK(oracles_enhanced_bar_pixel(&bar, 0, 3, &hides) == beige && hides == 0);
+    CHECK(oracles_enhanced_bar_pixel(&bar, 0, 12, NULL) == brown && oracles_enhanced_bar_pixel(&bar, 159, 12, NULL) == blue);
+    CHECK(oracles_enhanced_bar_pixel(&bar, 158, 12, NULL) == 0u);   /* the flipped tile's other columns: colour 0, black here */
+
+    uint32_t *core = malloc(160u * 144u * sizeof *core), fill[32];
+    for (unsigned i = 0; i < 160u * 144u; i++) core[i] = 0xff000000u | (i * 2654435761u >> 8);
+    uint32_t expect[32];
+    for (unsigned y = 0; y < 16u; y++) {
+        expect[y] = expand(y < 8u ? beige : brown);
+        expect[16u + y] = expand(blue);
+        core[y * 160u] = expect[y];
+        core[y * 160u + 159u] = expect[16u + y];
+    }
+    core[5u * 160u] = 0xff00ff00u;   /* something else than the bar there: a sprite on its edge */
+    CHECK(oracles_enhanced_hud_fill(&bar, NULL, NULL, core, fill) == 31u);
+    unsigned wrong = 0;
+    for (unsigned i = 0; i < 32u; i++) wrong += fill[i] != (i == 5u ? 0u : expect[i]);
+    CHECK(wrong == 0);
+    /* A line the image shows blank, white across with the LCD off: both sides take it, whatever the bar's map says. */
+    {
+        uint32_t saved[160], blank_fill[32];
+        memcpy(saved, core + 9u * 160u, sizeof saved);
+        for (unsigned x = 0; x < 160u; x++) core[9u * 160u + x] = 0xffffffffu;
+        CHECK(oracles_enhanced_hud_fill(&bar, NULL, NULL, core, blank_fill) == 31u);
+        CHECK(blank_fill[9] == 0xffffffffu && blank_fill[16u + 9u] == 0xffffffffu && blank_fill[5] == 0u);
+        memcpy(core + 9u * 160u, saved, sizeof saved);
+    }
+
+    /* Composed: the gutters of each line take the fill, or the border on line 5; nothing else moves. */
+    uint32_t *plain = malloc(W * H * sizeof *plain), *full = malloc(W * H * sizeof *full);
+    OraclesEnhancedCompose in;
+    memset(&in, 0, sizeof in);
+    in.mode = ORACLES_ENHANCED_WORLD;
+    in.border = 0xff101010u;
+    in.size = oracles_enhanced_size(1);
+    in.window_world_left = 1000; in.window_world_top = 500;
+    in.world_left = 1000 - 160; in.world_top = 500 - 63;
+    const unsigned uncovered = oracles_enhanced_compose(core, &in, plain);
+    in.hud_fill = fill;
+    CHECK(oracles_enhanced_compose(core, &in, full) == uncovered);
+    unsigned changed = 0, outside = 0;
+    for (unsigned y = 0; y < H; y++)
+        for (unsigned x = 0; x < W; x++) {
+            if (plain[y * W + x] == full[y * W + x]) continue;
+            changed++;
+            if (y >= 16u || (x >= HUD_X && x < HUD_X + 160u)) outside++;
+        }
+    CHECK(outside == 0 && changed == 2u * HUD_X * 16u - HUD_X);
+    CHECK(full[0] == expect[0] && full[HUD_X - 1u] == expect[0] && full[15u * W] == expect[15] && full[5u * W] == 0xff101010u);
+    CHECK(full[W - 1u] == expect[16] && full[HUD_X + 160u] == expect[16] && full[5u * W + W - 1u] == expect[21]);
+    CHECK(full[HUD_X] == core[0] && full[16u * W] == plain[16u * W]);
+    #undef RGB555
+    free(plain); free(full); free(core);
+}
+
 /* The game's underwater ripple over the whole 254-line band.  The game reads
  * a table of 128 steps modulo 128, one step a line from a phase
  * (checkUpdateUnderwaterWaves): the window's 128 lines are one period, and a
@@ -212,6 +301,22 @@ static void view_and_savestate(void)
     oracles_enhanced_view_shown(zoom, &shown_w, &shown_h);
     CHECK(mode == ORACLES_ENHANCED_WORLD && shown_w == W && shown_h == BAND_H);
     CHECK(cam == 5 * 160 + 80 - 240 && cam_y == 4 * 128 + 64 - 127);
+    /* The status bar drawn full width from one composition to the next, and back: the gutters take the bar's edge,
+     * then the border again. */
+    {
+        const uint32_t *shown = oracles_enhanced_view_surface(zoom);
+        const uint32_t border = shown[0];
+        unsigned hud_frames = 0, kept = 0;
+        oracles_enhanced_view_set_hud(zoom, 1);
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
+        oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
+        CHECK(oracles_enhanced_view_hud(zoom) == 1 && mode == ORACLES_ENHANCED_WORLD && hud_frames == 1u && kept == 0u);
+        CHECK(shown[0] != border && shown[0] == shown[HUD_X] && shown[15u * W + W - 1u] == shown[15u * W + HUD_X + 159u]);
+        oracles_enhanced_view_set_hud(zoom, 0);
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
+        oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
+        CHECK(hud_frames == 1u && shown[0] == border && shown[W - 1u] == border);
+    }
 
     /* The state names its size; the other size refuses it, and says why. */
     uint8_t wire[1024];
@@ -676,6 +781,7 @@ int main(void)
 {
     world_math();
     compositor();
+    hud_full_width();
     ripple();
     view_and_savestate();
     isolated_room_edges();

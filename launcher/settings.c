@@ -242,6 +242,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->view = 2;   /* far: the view drawn back, as Enhanced was before the levels */
     s->aspect = ORACLES_ASPECT_AUTO;
     s->ghosts = 0;   /* auto */
+    s->hud_full = 1;   /* the bar across the whole view, not a strip between two dark bands */
 #ifdef __ANDROID__
     s->menus_large = 1;   /* a small screen: the framed core at the view's scale, often 1 or 2, is hard to read */
 #else
@@ -259,7 +260,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `quality_hint=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `quality_hint=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -285,6 +286,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "menus")) {
         if (!strcmp(value, "large") || !strcmp(value, "view")) s->menus_large = !strcmp(value, "large");
+        return 1;
+    }
+    if (!strcmp(name, "hud")) {
+        if (!strcmp(value, "original") || !strcmp(value, "full")) s->hud_full = !strcmp(value, "full");
         return 1;
     }
     if (!strcmp(name, "ghosts")) {
@@ -446,6 +451,9 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# The game's menus, its map and its cutscenes in Enhanced: large (at their own largest whole scale, as Faithful\n"
                "# shows them) or view (framed at the view's scale).\n");
     fprintf(f, "menus=%s\n", s->menus_large ? "large" : "view");
+    fprintf(f, "# The status bar in Enhanced: original (as the game draws it, dark beside it) or full (across the whole view,\n"
+               "# beside it its own background, which follows the game's colours).\n");
+    fprintf(f, "hud=%s\n", s->hud_full ? "full" : "original");
     fprintf(f, "# The view's shape: auto (the screen's, nearer 4:3 or 16:9), 16:9 or 4:3, whatever the screen.\n");
     fprintf(f, "aspect=%s\n", oracles_settings_aspect_names[s->aspect >= 0 && s->aspect < 3 ? s->aspect : 0]);
     fprintf(f, "# The ghosts that prepare the rooms around in Enhanced, each on its own processor core: auto (two on a device of\n"

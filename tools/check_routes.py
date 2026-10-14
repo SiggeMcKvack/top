@@ -376,13 +376,13 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_d
 
 
 def view_free(options: list) -> list:
-    """The options less the view's level and shape (--view, --aspect), which do not change the game: a row of a size
-    is compared with the faithful row of its route."""
+    """The options less the view's level and shape (--view, --aspect) and the status bar's width (--hud), which do not
+    change the game: a row of a size, or of the bar drawn full width, is compared with the faithful row of its route."""
     out, skip = [], False
     for option in options:
         if skip:
             skip = False
-        elif option in ("--view", "--aspect"):
+        elif option in ("--view", "--aspect", "--hud"):
             skip = True
         else:
             out.append(option)

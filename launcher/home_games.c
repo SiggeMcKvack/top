@@ -309,6 +309,7 @@ static void store(void *opaque, const OraclesHomeNav *nav)
     const int view = prefs->view, core = oracles_settings_core(prefs), ghosts = prefs->ghosts;
     prefs->profile = nav->display.profile;
     prefs->transitions = nav->display.transitions;
+    prefs->hud_full = nav->display.hud;   /* a running game takes it at once (the pause's settings_changed) */
     prefs->view = nav->display.view;
     /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
      * --core's, never stored. */

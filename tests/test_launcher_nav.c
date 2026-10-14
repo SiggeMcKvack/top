@@ -1,5 +1,5 @@
 /* The home screen's navigation (ui_home_nav.h): entries, the list of fan
- * games, disabled items and their reasons, going back, the pointer. */
+ * games, disabled items and their reasons, going back, the pointer; Display's rows from the pause. */
 #include "ui_home_nav.h"
 #include "ui_page_nav.h"
 
@@ -390,6 +390,28 @@ static void slow_toast(void)
     CHECK(nav.screen == ORACLES_SCREEN_DISPLAY && nav.row == ORACLES_DISPLAY_VIEW);
 }
 
+/* Display from the pause: the HUD applies at once to the running game, so its row follows that game's profile, not
+ * the one chosen for the next Play. */
+static void display_in_game(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_HUD;
+    CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 1);
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_HUD;
+    CHECK(oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.hud == 0);
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_FAITHFUL, 0);
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_HUD;
+    CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 0);
+    CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
+}
+
 int main(void)
 {
     entries();
@@ -399,6 +421,7 @@ int main(void)
     mods();
     pointer();
     slow_toast();
+    display_in_game();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("launcher navigation: entries, fan games, disabled items and going back behave as expected\n");
     return 0;

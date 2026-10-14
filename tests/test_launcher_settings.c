@@ -34,6 +34,16 @@ static void write_text(const char *path, const char *text)
     fclose(f);
 }
 
+static int file_has_line(const char *path, const char *wanted)
+{
+    char line[1200];
+    int found = 0;
+    FILE *f = fopen(path, "r");
+    while (f && fgets(line, sizeof line, f)) found |= !strcmp(line, wanted);
+    if (f) fclose(f);
+    return found;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) { fprintf(stderr, "usage: oracles-test-launcher-settings TEMPORARY_FILE\n"); return 2; }
@@ -343,6 +353,24 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.menus_large == 0);
+    /* The status bar: full width at the first opening, written; original written and read back; an unknown value
+     * leaves the default. */
+    oracles_settings_defaults(&read_back);
+    CHECK(read_back.hud_full == 1);
+    oracles_settings_store(&read_back);
+    CHECK(file_has_line(path, "hud=full\n"));
+    write_text(path, "hud=original\n");
+    oracles_settings_load(&read_back);
+    CHECK(read_back.hud_full == 0);
+    oracles_settings_store(&read_back);
+    CHECK(file_has_line(path, "hud=original\n"));
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.hud_full == 0);
+    write_text(path, "hud=wide\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.hud_full == 1);
     /* The core: none chosen at the first opening, the build's default playing (SameBoy in the tests' build) and no core=
      * line written, so that another build's default plays its own; a core chosen is written and read by its name; an
      * unknown name leaves none chosen. */

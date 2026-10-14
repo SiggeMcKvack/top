@@ -24,10 +24,11 @@
  * Enhanced), the quality (Low to Max: the view, the core and the neighbour
  * workers set at once; Custom when they make none, which is shown and never
  * chosen; dimmed and inert in Faithful and from a game), the window (the profile's surface at 2x, 3x, 4x, or fullscreen
- * at the largest whole scale of the display), the view, color correction,
- * continuous transitions (on by default, dimmed in Faithful), then Advanced
+ * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, or its colour
+ * across the whole view; dimmed and inert in Faithful), color correction, then Advanced
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
- * the core, vsync, the neighbour workers, the scaling (Sharp, the whole scales; Fill, the whole screen in the image's
+ * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
+ * (Sharp, the whole scales; Fill, the whole screen in the image's
  * proportions, in fullscreen only).  No camera: Enhanced takes the
  * smooth one.  Left and right change the option of the row, OK takes its
  * next one (Quality stops at Low and at Max; from Custom, right takes Low and
@@ -37,7 +38,7 @@
  * more, and says so; it keeps the highlight.  The choices apply at the
  * next Play; Back returns from the Advanced rows to Advanced, from Display
  * to Display in the menu.  From a game the core and the workers are the
- * game's, dimmed and inert, and so is the quality; color correction and the
+ * game's, dimmed and inert, and so is the quality; color correction, the HUD and the
  * scaling apply at once there. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
@@ -131,10 +132,11 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_QUALITY,
     ORACLES_DISPLAY_WINDOW,
     ORACLES_DISPLAY_VIEW,
+    ORACLES_DISPLAY_HUD,
     ORACLES_DISPLAY_COLOUR,
-    ORACLES_DISPLAY_TRANSITIONS,
     ORACLES_DISPLAY_ADVANCED,
     ORACLES_DISPLAY_CORE,
+    ORACLES_DISPLAY_TRANSITIONS,
     ORACLES_DISPLAY_VSYNC,
     ORACLES_DISPLAY_WORKERS,
     ORACLES_DISPLAY_SCALING,
@@ -146,8 +148,10 @@ int oracles_display_row_shown(const OraclesHomeNav *nav, unsigned row);
 /* The workers Auto takes: two on a device of four processor cores or more, one otherwise, as the session counts them. */
 int oracles_display_auto_workers(const OraclesHomeNav *nav);
 
-/* Continuous transitions carry the Enhanced view: they apply in Enhanced only, as View does. */
+/* Continuous transitions carry the Enhanced view: they apply in Enhanced only, as View and the HUD do. */
 int oracles_display_transitions_apply(const OraclesHomeNav *nav);
+/* The HUD applies in Enhanced: the profile chosen, or from the pause the running game's, which takes it at once. */
+int oracles_display_hud_applies(const OraclesHomeNav *nav);
 /* The screen is nearer 4:3 than 16:9: the Enhanced view takes the 4:3 sizes (docs/PLAYING.md). */
 int oracles_display_screen_4_3(const OraclesHomeNav *nav);
 /* View's choices and the size of each, the view's level in the screen's shape. */
@@ -209,6 +213,7 @@ void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h
 const char *oracles_display_profile_note(const OraclesHomeNav *nav);
 extern const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS];
 extern const char *const oracles_display_colour_choices[2];
+extern const char *const oracles_display_hud_choices[2];    /* "Original", "Full width": settings.txt's hud= original, full */
 extern const char *const oracles_display_vsync_choices[3];
 extern const char *const oracles_display_core_choices[2];   /* "Accurate (SameBoy)", "Fast (mGBA)": an OraclesCoreKind */
 extern const char *const oracles_display_core_names[2];     /* "Accurate", "Fast" */

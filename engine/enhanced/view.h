@@ -109,6 +109,15 @@ void oracles_enhanced_view_hotbar_counts(const OraclesEnhancedView *view, unsign
  * the drawing touched anything else. */
 void oracles_enhanced_view_hotbar_verify(OraclesEnhancedView *view, int enabled);
 void oracles_enhanced_view_hotbar_proof(const OraclesEnhancedView *view, unsigned *checked, unsigned *wrong, unsigned *outside);
+/* The status bar drawn full width (`hud=full`): the gutters beside it, on its sixteen lines, take the bar's own
+ * background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour correction
+ * follow), in the world band; the framed core keeps the border.  Off by default (`hud=original`, the border).  It may
+ * change between two compositions: it is presentation alone.  The counts: world frames that filled a line at least, and
+ * the gutters' lines that kept the border in every world frame with the bar, filled or not, the left's and the right's
+ * sixteen each (32 a frame at most), the core's image showing there something else than the bar. */
+void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int full);
+int oracles_enhanced_view_hud(const OraclesEnhancedView *view);
+void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *lines_kept);
 /* Frames that drew the fade of objects appearing on entry, and objects that started one. */
 void oracles_enhanced_view_fade_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *objects);
 /* The hand-off of the objects a capture showed, on the data: objects followed,

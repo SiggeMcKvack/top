@@ -8,7 +8,9 @@
  * copied from the core's top sixteen lines and centred, and a world band
  * below it (the rest of the surface), the game area placed by the camera in world
  * coordinates.  Columns the active room does not cover are neighbours,
- * black until the ghost instance fills them (a declared fallback).
+ * black until the ghost instance fills them (a declared fallback).  The
+ * gutters beside the status bar are the border, or with the bar drawn full
+ * width (`hud=full`) the bar's own background, line by line.
  *
  * Frames the software PPU does not reconstruct, the ring menu and cutscenes
  * (LCD behaviours 2 to 6) and frames where the window is scanned, use the
@@ -98,7 +100,28 @@ typedef struct OraclesEnhancedCompose {
     unsigned shown_width, shown_height;                          /* world mode: the part of the band shown, centred, the rest black; 0: all of it */
     int32_t counted_left, counted_top;                           /* world mode: the world rectangle whose uncovered pixels are counted (a large room and the one a scroll enters, */
     unsigned counted_width, counted_height;                      /* the black around them decided); width 0: all of the part shown */
+    const uint32_t *hud_fill;                                    /* world mode: the HUD band's gutters line by line (oracles_enhanced_hud_fill), 0 where a line keeps the border; NULL: the border */
 } OraclesEnhancedCompose;
+
+/* The game's status bar as it keeps it: its map (two rows of 32 cells, tiles and attributes), the LCDC of its lines
+ * (the tile data's addressing, the background's priority), the VRAM's two banks, and the background palettes on
+ * screen, the game's fade in them. */
+typedef struct OraclesEnhancedBar {
+    const uint8_t *tiles, *attributes, *vram0, *vram1, *palettes;
+    uint8_t lcdc;
+} OraclesEnhancedBar;
+/* The bar's pixel at (x, y) of its 160x16, as the hardware draws its background: the RGB555 colour of its tile's
+ * palette and colour index there, and, when `hides_sprite` is not NULL, whether it hides a sprite (the tile's priority
+ * bit and the LCDC's set, its colour index not 0). */
+uint16_t oracles_enhanced_bar_pixel(const OraclesEnhancedBar *bar, unsigned x, unsigned y, int *hides_sprite);
+/* What the gutters beside the status bar take with the bar drawn full width (`fill`: its sixteen lines on the left,
+ * then on the right): on each line the bar's own pixel at its edge, column 0 or 159, its palette's colour on screen
+ * (`pixel`, the core's conversion of an RGB555 colour, colour correction included; NULL: a plain expansion), where
+ * the core's image (`core`, 160x144) shows that colour there, and 0 where it does not (a sprite on the edge, the top
+ * lines not the bar as the game keeps it): that line keeps the border.  A line the image shows in one colour across
+ * (the LCD off, a blank bar) extends as it is.  Returns the lines filled, 32 at most. */
+unsigned oracles_enhanced_hud_fill(const OraclesEnhancedBar *bar, uint32_t (*pixel)(void *opaque, uint16_t rgb555), void *opaque,
+                                   const uint32_t *core, uint32_t fill[2u * ORACLES_ENHANCED_HUD_HEIGHT]);
 
 /* Writes size.width * size.height pixels of 0xffRRGGBB. `core` is the 160x144 image
  * of the core (or the software PPU): its top sixteen lines are the status

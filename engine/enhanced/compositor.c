@@ -13,6 +13,14 @@
  * not carry it, as the palette thread does it (updateFadingPalettes): the
  * offset added to each five-bit channel, clamped; then the pixel of that
  * colour in the live pipeline, the one the core's window went through. */
+static uint32_t pixel_of(const uint32_t *colours, unsigned colour)
+{
+    if (colours) return colours[colour & (ORACLES_PPU_COLOURS - 1u)];
+    uint32_t out = 0xff000000u;
+    for (unsigned shift = 0; shift < 15u; shift += 5u) out |= (uint32_t)(((colour >> shift) & 31u) * 255u / 31u) << (shift / 5u * 8u);
+    return out;
+}
+
 static uint32_t faded(const OraclesEnhancedCompose *in, uint32_t rgb555, int fade)
 {
     unsigned colour = 0;
@@ -20,10 +28,40 @@ static uint32_t faded(const OraclesEnhancedCompose *in, uint32_t rgb555, int fad
         const int v = (int)((rgb555 >> shift) & 31u) + fade;
         colour |= (unsigned)(v < 0 ? 0 : v > 31 ? 31 : v) << shift;
     }
-    if (in->colours) return in->colours[colour & (ORACLES_PPU_COLOURS - 1u)];
-    uint32_t out = 0xff000000u;
-    for (unsigned shift = 0; shift < 15u; shift += 5u) out |= (uint32_t)(((colour >> shift) & 31u) * 255u / 31u) << (shift / 5u * 8u);
-    return out;
+    return pixel_of(in->colours, colour);
+}
+
+uint16_t oracles_enhanced_bar_pixel(const OraclesEnhancedBar *bar, unsigned x, unsigned y, int *hides_sprite)
+{
+    const unsigned cell = (y / 8u) * 32u + x / 8u;
+    const uint8_t attr = bar->attributes[cell];
+    const unsigned tile = (bar->lcdc & 0x10u) ? bar->tiles[cell] : 256u + (uint8_t)(bar->tiles[cell] + 128u) - 128u;
+    const unsigned line = (attr & 0x40u) ? 7u - y % 8u : y % 8u, bit = (attr & 0x20u) ? x % 8u : 7u - x % 8u;
+    const uint8_t *data = ((attr & 0x08u) ? bar->vram1 : bar->vram0) + tile * 16u + line * 2u;
+    const unsigned index = ((data[0] >> bit) & 1u) | (((data[1] >> bit) & 1u) << 1);
+    const uint8_t *colour = bar->palettes + ((attr & 7u) * 4u + index) * 2u;
+    if (hides_sprite) *hides_sprite = (bar->lcdc & 0x01u) && (attr & 0x80u) && index;
+    return (uint16_t)((colour[0] | (colour[1] << 8)) & 0x7fffu);
+}
+
+unsigned oracles_enhanced_hud_fill(const OraclesEnhancedBar *bar, uint32_t (*pixel)(void *opaque, uint16_t rgb555), void *opaque,
+                                   const uint32_t *core, uint32_t fill[2u * HUD])
+{
+    unsigned filled = 0;
+    for (unsigned y = 0; y < HUD; y++) {
+        const uint32_t *line = core + y * CORE_W;
+        unsigned x = 1;
+        while (x < CORE_W && line[x] == line[0]) x++;
+        const int blank = x == CORE_W;
+        for (unsigned side = 0; side < 2u; side++) {
+            const unsigned edge = side ? CORE_W - 1u : 0u;
+            const uint16_t rgb555 = oracles_enhanced_bar_pixel(bar, edge, y, NULL);
+            const uint32_t colour = pixel ? pixel(opaque, rgb555) : pixel_of(NULL, rgb555);
+            fill[side * HUD + y] = line[edge] == colour || blank ? line[edge] : 0u;
+            filled += fill[side * HUD + y] != 0u;
+        }
+    }
+    return filled;
 }
 
 /* The gutters and what no source covers: black, faded with the game (the
@@ -103,11 +141,15 @@ static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose
 {
     unsigned uncovered = 0;
     const unsigned W = size.width, HUD_X = oracles_enhanced_hud_x(size), band_h = oracles_enhanced_band_height(size);
-    /* HUD band: the status bar, centred, gutters in the border colour (faded with the game). */
+    /* HUD band: the status bar, centred, gutters in the border colour (faded with the game), or the bar's own
+     * background on the lines it is given. */
     const uint32_t gutter = gutter_pixel(in, in->border);
-    for (unsigned y = 0; y < HUD; y++)
+    for (unsigned y = 0; y < HUD; y++) {
+        const uint32_t left = in->hud_fill && in->hud_fill[y] ? in->hud_fill[y] : gutter;
+        const uint32_t right = in->hud_fill && in->hud_fill[HUD + y] ? in->hud_fill[HUD + y] : gutter;
         for (unsigned x = 0; x < W; x++)
-            out[y * W + x] = (x >= HUD_X && x < HUD_X + CORE_W) ? core[y * CORE_W + (x - HUD_X)] : gutter;
+            out[y * W + x] = x < HUD_X ? left : x < HUD_X + CORE_W ? core[y * CORE_W + (x - HUD_X)] : right;
+    }
     /* World band: the game area placed by the camera; uncovered pixels black.
      * A band row shows the LCD line of the window that stands there, and that
      * line's own scroll: the shifts are read by line, not by band row, or the

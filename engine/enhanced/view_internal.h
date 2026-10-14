@@ -381,6 +381,11 @@ struct OraclesEnhancedView {
     int hotbar_verify;
     int8_t hotbar_icon_origin[ORACLES_GUEST_ITEM_LABELS][HOTBAR_ICON_VARIANTS][2];   /* where the icon's corner stands from the sprites' left edge, and from the top line */
     unsigned hotbar_icons_checked, hotbar_icon_wrong, hotbar_outside_gutters;
+    /* The status bar drawn full width (hud=full): the gutters' colours of the last composition, line by line, the world
+     * frames that filled a line at least, and the lines of those frames left to the border. */
+    int hud_full;
+    uint32_t hud_fill[2u * ORACLES_ENHANCED_HUD_HEIGHT];
+    unsigned hud_frames, hud_lines_kept;
     /* The Maku tree stands in the reference room (an INTERAC_MAKU_TREE, $87, both games), sampled in normal play. */
     int ref_maku;
     uint8_t ref_maku_group, ref_maku_room;
@@ -637,6 +642,8 @@ void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camer
 /* view_hotbar.c: the hotbar of the item hotkeys, drawn last in the HUD band's gutters, in every mode of the surface. */
 void ev_draw_hotbar(OraclesEnhancedView *v);
 void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);
+/* The gutters beside the status bar this frame (OraclesEnhancedCompose.hud_fill), counted; NULL: the border. */
+const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode);
 /* view_mode.c: the frame's mode, and the ripple the band follows (v->have_wave, v->line_shift). */
 OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking);
 /* view_black.c: the black of the composed frame counted, once a frame. */

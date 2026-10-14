@@ -155,8 +155,9 @@ static void pause_state_time(void *opaque, char *out, size_t capacity)
     if (!local || !strftime(out, capacity, "%H:%M", local)) { if (capacity) out[0] = 0; }
 }
 
-/* Controls or Display changed the settings: the keys, the colour correction and the scaling apply at once, the rest at
- * the next Play.  The colour correction applies when Display changed it: --colour-correction holds until then. */
+/* Controls or Display changed the settings: the keys, the colour correction, the scaling and the status bar's width
+ * apply at once, the rest at the next Play.  The colour correction applies when Display changed it:
+ * --colour-correction holds until then. */
 static void pause_settings_changed(void *opaque)
 {
     session *s = opaque;
@@ -169,6 +170,10 @@ static void pause_settings_changed(void *opaque)
         s->sdl.fill = s->settings->scaling_fill;
         oracles_sdl_backend_set_fill(&s->backend, s->sdl.fill);
         fprintf(stderr, "oracles: scaling %s\n", s->sdl.fill ? "fill" : "sharp");
+    }
+    if (s->view && s->settings->hud_full != oracles_enhanced_view_hud(s->view)) {
+        oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
+        fprintf(stderr, "oracles: status bar %s\n", s->settings->hud_full ? "full width" : "original");
     }
     oracles_sdl_backend_rebind(&s->backend, &s->sdl);   /* s->sdl's names are the settings' own */
 }
@@ -446,6 +451,7 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         const int camera = o->camera_profile ? o->camera_profile : s->settings->camera;
         oracles_enhanced_view_set_camera_profile(s->view, (unsigned)camera);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
+        oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
         /* The ghosts: the command line's, else the settings'; auto, two where four cores leave one to each besides the
          * game's own threads (the sound, the display). */
         const int ghosts = s->ghosts;

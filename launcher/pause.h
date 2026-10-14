@@ -26,7 +26,7 @@ typedef struct OraclesPauseSession {
     int (*load_state)(void *opaque, char *message, size_t capacity);
     /* The time of the savestate, "22:14", or empty when there is none. */
     void (*state_time)(void *opaque, char *out, size_t capacity);
-    /* The settings changed: the keys and the colour correction apply at once. */
+    /* The settings changed: the keys, the colour correction and the HUD apply at once. */
     void (*settings_changed)(void *opaque);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */

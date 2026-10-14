@@ -17,6 +17,7 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
 {
     display->profile = settings->profile;
     display->transitions = settings->transitions;
+    display->hud = settings->hud_full;
     display->view = settings->view;
     display->aspect = settings->aspect;
     display->core = oracles_settings_core(settings);
