@@ -152,6 +152,7 @@ typedef struct OraclesGuestTransitionMutation {
     uint8_t refresh_bg_palettes;           /* BG palettes (bits 2-7) marked dirty in hDirtyBgPalettes, out of a transition, the palette thread stopped and the room's palettes loaded */
     uint8_t force_transition;              /* --continuous-swim, in normal play: 1 raise wScreenTransitionDirection's bit 7 to `forced_direction`, 2 lower it */
     uint8_t forced_direction;              /* 0 up, 1 right, 2 down, 3 left */
+    uint8_t carried;                       /* the delta across the transition's axis is a carry (--continuous-diagonal): counted when applied */
 } OraclesGuestTransitionMutation;
 
 typedef void (*OraclesGuestTransitionFn)(void *opaque, const OraclesGuestTransitionState *state, OraclesGuestTransitionMutation *mutation);
@@ -172,6 +173,8 @@ uint32_t oracles_guest_frame(const OraclesGuest *guest);
 void oracles_guest_vblank_write_counts(const OraclesGuest *guest, unsigned out[8]);
 /* Vblanks of a frame the game did not finish, outside a room load, where the policy was not asked. */
 unsigned oracles_guest_vblank_policy_skipped(const OraclesGuest *guest);
+/* The carries across a transition's axis the transaction applied (OraclesGuestTransitionMutation.carried). */
+unsigned oracles_guest_transition_carried(const OraclesGuest *guest);
 
 /* The inventory transaction (item hotkeys): the second closed
  * write path.  At the return of checkReloadStatusBarGraphics from its one
@@ -413,6 +416,10 @@ int oracles_guest_add_hook(OraclesGuest *guest, OraclesGuestSym entry, OraclesGu
 const uint8_t *oracles_guest_wram(OraclesGuest *guest, unsigned bank);   /* 4 KiB; bank 0 is $c000, banks 1-7 are $d000 */
 const uint8_t *oracles_guest_vram(OraclesGuest *guest, unsigned bank);   /* 8 KiB */
 const uint8_t *oracles_guest_oam(OraclesGuest *guest);                   /* 160 bytes: the OAM the last scanned frame used (the core's OAM before any frame ran) */
+/* Link's position (8.8) as the OAM the last scanned frame used drew him: the one he had when the game's vblank handler
+ * last copied wOam, which it does only with the main loop waiting for it (wVBlankChecker), moved by the transition
+ * transaction's writes to the core's OAM since; 0 until two vblanks have run since the start or a load. */
+int oracles_guest_link_shown(const OraclesGuest *guest, uint16_t *x, uint16_t *y);
 const uint8_t *oracles_guest_hram(OraclesGuest *guest);                  /* 127 bytes from $ff80 */
 const uint8_t *oracles_guest_io(OraclesGuest *guest);                    /* 128 bytes from $ff00 */
 /* A symbol's bytes: $c000-$cfff in WRAM bank 0, $d000-$dfff in the symbol's bank, $ff80+ in HRAM.

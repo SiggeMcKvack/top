@@ -13,6 +13,7 @@
 #define ORACLES_ROUTE_FORMAT_MODS 3     /* written with a `mods` line: a reader of format 2 would ignore the line and replay without the mods */
 #define ORACLES_ROUTE_FORMAT_LANGUAGE 4 /* written with a language among the options: a reader before it would replay in English */
 #define ORACLES_ROUTE_FORMAT_SWIM_HOLD 5   /* written with the swim's hold among the options: a reader before it would replay without */
+#define ORACLES_ROUTE_FORMAT_DIAGONAL 6    /* written with the transitions' diagonal among the options: the same */
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
@@ -29,6 +30,7 @@ typedef struct OraclesRouteHeader {
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM "continuous-swim"   /* with the transitions: Link swimming at the surface too */
 #define ORACLES_ROUTE_OPTION_LANGUAGE "language-"   /* and the language's code ("language-fr"): the texts the route was played in */
 #define ORACLES_ROUTE_OPTION_SWIM_HOLD "swim-hold"   /* the swim's strokes started by a held button */
+#define ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL "continuous-diagonal"   /* with the transitions: a diagonal held carries Link across their axis too */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);
 /* The language the route was played in ("fr"), "" for the game's own English. */

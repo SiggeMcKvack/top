@@ -112,7 +112,7 @@ static int transition_floor_safe(const OraclesGuest *guest, const OraclesGuestTr
         && s->link_anim_mode == ORACLES_LINK_ANIM_MODE_WALK && !s->link_swimming_state;
 }
 
-static void read_transition_state(OraclesGuest *guest, OraclesGuestTransitionState *s)
+static void read_transition_state(OraclesGuest *guest, OraclesGuestTransitionState *s, int at_vblank)
 {
     const OraclesGuestTables *t = guest->tables;
     const uint8_t *link = oracles_guest_object(guest, 0, 0);
@@ -166,8 +166,12 @@ static void read_transition_state(OraclesGuest *guest, OraclesGuestTransitionSta
     s->link_y = link ? (uint16_t)(link[ORACLES_OBJ_Y] | (link[ORACLES_OBJ_YH] << 8)) : 0;
     s->room_width = oracles_guest_read8(guest, t->room_width);
     s->room_height = oracles_guest_read8(guest, t->room_height);
-    s->room_collisions = s->scroll_mode == SCROLL_MODE_TRANSITION_LOADED ? oracles_guest_ptr(guest, t->room_collisions, 176) : NULL;
-    s->room_layout = s->scroll_mode == SCROLL_MODE_TRANSITION_LOADED ? oracles_guest_ptr(guest, t->room_layout, 176) : NULL;
+    /* The room entered's collisions and layout: loaded once wScrollMode is 8, but the transition's state 3 writes 8
+     * before it loads them (loadTilesetAndRoomLayout, loadRoomCollisions): at the vblank of an unfinished state-3
+     * frame they may still be the room left's, and count as not loaded. */
+    const int loaded = s->scroll_mode == SCROLL_MODE_TRANSITION_LOADED && !(at_vblank && s->transition_state == TRANSITION_STATE_PREPARE);
+    s->room_collisions = loaded ? oracles_guest_ptr(guest, t->room_collisions, 176) : NULL;
+    s->room_layout = loaded ? oracles_guest_ptr(guest, t->room_layout, 176) : NULL;
     s->active_collisions = oracles_guest_read8(guest, t->active_collisions);
     s->tile_types_bank = t->tile_types_table.bank == ORACLES_GUEST_ABSENT ? 0xffu : (uint8_t)t->tile_types_table.bank;
     s->tile_types_table = t->tile_types_table.addr;
@@ -268,6 +272,7 @@ static void apply_transition_mutation(OraclesGuest *guest, const OraclesGuestTra
         int dx = 0, dy = 0;
         if (x && m->link_x_delta) { const uint16_t v = (uint16_t)((x[0] | (x[1] << 8)) + m->link_x_delta); dx = (int8_t)((v >> 8) - x[1]); x[0] = (uint8_t)v; x[1] = (uint8_t)(v >> 8); }
         if (y && m->link_y_delta) { const uint16_t v = (uint16_t)((y[0] | (y[1] << 8)) + m->link_y_delta); dy = (int8_t)((v >> 8) - y[1]); y[0] = (uint8_t)v; y[1] = (uint8_t)(v >> 8); }
+        if (m->carried && x && y) guest->transition_carried++;
         /* His sprite follows: in wOam, drawn this frame before the move and
          * copied at the coming vblank; in the core's OAM as well when the
          * game did not draw this frame (no copy comes, the LCD shows the OAM). */
@@ -300,6 +305,7 @@ static void apply_transition_mutation(OraclesGuest *guest, const OraclesGuestTra
 }
 
 unsigned oracles_guest_vblank_policy_skipped(const OraclesGuest *guest) { return guest->vblank_policy_skipped; }
+unsigned oracles_guest_transition_carried(const OraclesGuest *guest) { return guest->transition_carried; }
 
 void oracles_guest_vblank_write_counts(const OraclesGuest *guest, unsigned out[8])
 {
@@ -311,7 +317,7 @@ void oracles_guest_apply_transition_policy(OraclesGuest *guest, int at_vblank)
     if (!guest->transition_policy) return;
     OraclesGuestTransitionState state;
     OraclesGuestTransitionMutation mutation;
-    read_transition_state(guest, &state);
+    read_transition_state(guest, &state, at_vblank);
     /* At the vblank of a frame the main loop did not finish, the only writes
      * are those of a room load in progress (the transition's states 3 and 4:
      * the layout, the collisions, the unique graphics), whose code does not

@@ -60,6 +60,14 @@ struct OraclesEnhancedCheck {
     int32_t transition_last_x, transition_last_y;
     char transition_frozen_at[64];
     unsigned transitions_seen, transition_frames_total, transition_frozen_total, transition_frames_max, transition_arrivals_solid;
+    /* Link's world place over the last frames, to tell a scroll entered walking diagonally; in such a scroll, the
+     * frames his place stood across the scroll's axis two frames running (ec_measure_scroll) */
+    int32_t recent_x[8], recent_y[8];
+    unsigned recent_count;
+    uint64_t recent_epoch;
+    int scroll_diagonal;
+    int32_t scroll_across_last, scroll_across_step;
+    unsigned scrolls_diagonal, scroll_across_stalled;
     char transition_list[512];
     /* the window against the drawn registers */
     unsigned window_checked, window_misplaced;

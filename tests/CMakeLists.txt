@@ -91,6 +91,13 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-room-transition PRIVATE oracles_gameplay)
     oracles_set_warnings(oracles-test-room-transition)
     add_test(NAME oracles-room-transition COMMAND oracles-test-room-transition)
+    # The policy built alone, the guest's few calls answered by the test.
+    set(ORACLES_ENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../engine)
+    add_executable(oracles-test-room-transition-policy test_room_transition_policy.c ${ORACLES_ENGINE_DIR}/gameplay/room_transition.c)
+    target_include_directories(oracles-test-room-transition-policy PRIVATE ${ORACLES_ENGINE_DIR}/gameplay ${ORACLES_ENGINE_DIR}/game/guest
+                               ${ORACLES_ENGINE_DIR}/game/profiles ${ORACLES_ENGINE_DIR}/game/data ${ORACLES_ENGINE_DIR}/core ${ORACLES_ENGINE_DIR}/rom)
+    oracles_set_warnings(oracles-test-room-transition-policy)
+    add_test(NAME oracles-room-transition-policy COMMAND oracles-test-room-transition-policy)
 
     add_executable(oracles-test-item-hotkeys test_item_hotkeys.c)
     target_link_libraries(oracles-test-item-hotkeys PRIVATE oracles_gameplay)

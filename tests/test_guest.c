@@ -277,6 +277,29 @@ int main(void)
         oracles_guest_set_transition_policy(guest, NULL, NULL, NULL);
     }
 
+    /* Where the next scan draws Link after a savestate load: where the loaded state has him, whatever the execution it
+     * replaced last drew.  The OAM copied at a vblank (wVBlankChecker $ff) follows his position; after the load, two
+     * vblanks without a copy show where the reset put him. */
+    {
+        const OraclesGuestTables *t = oracles_guest_tables(guest);
+        uint8_t *objects = oracles_guest_wram_writable(guest, 1);
+        CHECK(objects != NULL);
+        if (objects) {
+            objects[ORACLES_OBJ_X] = 0; objects[ORACLES_OBJ_XH] = 40; objects[ORACLES_OBJ_Y] = 0; objects[ORACLES_OBJ_YH] = 50;
+            put8(guest, t->vblank_checker, 0xff);
+            oracles_core_run_frame(core);
+            oracles_core_run_frame(core);
+            uint16_t x = 0, y = 0;
+            CHECK(oracles_guest_link_shown(guest, &x, &y) && x == 40u << 8 && y == 50u << 8);
+            objects[ORACLES_OBJ_XH] = 90; objects[ORACLES_OBJ_YH] = 70;
+            oracles_guest_reset_execution_state(guest);
+            put8(guest, t->vblank_checker, 0);
+            oracles_core_run_frame(core);
+            oracles_core_run_frame(core);
+            CHECK(oracles_guest_link_shown(guest, &x, &y) && x == 90u << 8 && y == 70u << 8);
+        }
+    }
+
     oracles_guest_detach(guest);
     oracles_core_destroy(core);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

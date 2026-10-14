@@ -24,6 +24,7 @@ int harness_usage(void)
                     "                       (--enhanced-paced holds each frame to the Game Boy's period by a busy wait: a core a replay, as in play)\n"
                     "                       [--continuous-transitions]   (the gameplay policy of the continuous transitions, both games; on by itself for a route recorded with it)\n"
                     "                       [--continuous-swim]   (the same with Link swimming at the surface too, implies --continuous-transitions; on by itself for a route recorded with it)\n"
+                    "                       [--continuous-diagonal]   (a diagonal held carries Link across the transitions' axis too, implies --continuous-transitions; on by itself for a route recorded with it)\n"
                     "                       [--swim-hold]   (the swim's strokes from a held button: the mermaid suit's direction, the flippers' A; on by itself for a route recorded with it)\n");
     fprintf(stderr,
                     "                       [--neighbour-objects-check DIR] [--neighbour-objects-lead FRAMES] [--neighbour-capture]   (the objects of every neighbour, ghost against the real entry)\n"
@@ -113,6 +114,7 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         else if (!strcmp(argv[i], "--enhanced-camera") && i + 1 < argc) o->enhanced_camera = (unsigned)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(argv[i], "--continuous-transitions")) o->continuous_transitions = 1;
         else if (!strcmp(argv[i], "--continuous-swim")) o->continuous_transitions = o->continuous_swim = 1;
+        else if (!strcmp(argv[i], "--continuous-diagonal")) o->continuous_transitions = o->continuous_diagonal = 1;
         else if (!strcmp(argv[i], "--swim-hold")) o->swim_hold = 1;
         else if (!strcmp(argv[i], "--hotkeys-check") && i + 1 < argc) o->hotkeys_dir = argv[++i];
         else if (!strcmp(argv[i], "--hotkeys-live") && i + 1 < argc) { o->hotkeys_live.mode = argv[++i]; if (strcmp(o->hotkeys_live.mode, "use") != 0 && strcmp(o->hotkeys_live.mode, "equip") != 0) return -1; }

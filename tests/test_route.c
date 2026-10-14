@@ -63,8 +63,8 @@ int main(int argc, char **argv)
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 4"));
     }
     {
-        /* The mermaid suit's hold, the longest options a session writes: format 5, which a reader of format 4 refuses
-         * rather than replay it without; an older format naming it is refused. */
+        /* The swim's hold, with the options a session wrote before the transitions' diagonal: format 5, which a reader
+         * of format 4 refuses rather than replay it without; an older format naming it is refused. */
         OraclesRouteHeader held = route.header;
         snprintf(held.options, sizeof held.options, "%s", "continuous-transitions,continuous-swim," ORACLES_ROUTE_OPTION_LANGUAGE "en-eu," ORACLES_ROUTE_OPTION_SWIM_HOLD);
         OraclesRouteWriter writer_held;
@@ -80,8 +80,26 @@ int main(int argc, char **argv)
         if (older) { fprintf(older, "oracles-route 4\ngame ages\noptions swim-hold\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 5"));
         older = fopen(path, "w");
-        if (older) { fprintf(older, "oracles-route 6\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
+        if (older) { fprintf(older, "oracles-route 7\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);   /* a later format */
+    }
+    {
+        /* The transitions' diagonal, with every other option a session writes: format 6, which a reader of format 5
+         * refuses rather than replay it without; an older format naming it is refused. */
+        OraclesRouteHeader diagonal = route.header;
+        snprintf(diagonal.options, sizeof diagonal.options, "%s", "continuous-transitions,continuous-swim," ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL ","
+                 ORACLES_ROUTE_OPTION_LANGUAGE "en-eu," ORACLES_ROUTE_OPTION_SWIM_HOLD);
+        OraclesRouteWriter writer_diagonal;
+        CHECK(oracles_route_writer_open(&writer_diagonal, path, &diagonal) == 0);
+        oracles_route_writer_record(&writer_diagonal, 0, 0x00);
+        CHECK(oracles_route_writer_close(&writer_diagonal) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_DIAGONAL);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) && !strcmp(back.header.options, diagonal.options));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 5\ngame ages\noptions continuous-transitions,continuous-diagonal\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 6"));
     }
 
     unsigned mask = 99;
@@ -101,7 +119,7 @@ int main(int argc, char **argv)
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     CHECK(strstr(error, "line 5") != NULL);
     f = fopen(path, "w");
-    fprintf(f, "oracles-route 6\ninputs\n");
+    fprintf(f, "oracles-route 7\ninputs\n");
     fclose(f);
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     /* Format 2: the verbs that change the game's state, written and read back.  Two verbs may share a
@@ -145,7 +163,7 @@ int main(int argc, char **argv)
         "oracles-route 2\ninputs\n10 equip\n",
         "oracles-route 2\ninputs\n10 use s3 0a\n",                               /* a use is carried by a button */
         "oracles-route 2\nmods claw-game@2fd4e1c67a2d28fced849ee1bb76e7391b93eb12\ninputs\n0 keys 00\n",   /* mods need format 3 */
-        "oracles-route 6\ninputs\n0 keys 00\n",                                /* a format to come */
+        "oracles-route 7\ninputs\n0 keys 00\n",                                /* a format to come */
     };
     for (unsigned i = 0; i < sizeof refused / sizeof refused[0]; i++) {
         f = fopen(path, "w"); fputs(refused[i], f); fclose(f);

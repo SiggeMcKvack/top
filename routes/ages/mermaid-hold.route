@@ -6,7 +6,7 @@ options continuous-transitions,swim-hold
 core joypad-bouncing-off
 # underwater.route's inputs to frame 2930, replayed with the swim's hold (the strokes of its surface swim
 # held as well), Link then standing on the sea floor; then directions held: left across the room's edge, up,
-# up and right, and nothing.
+# up and right, nothing, down and left across the bottom edge, let go while it scrolls, and nothing.
 inputs
 0 keys 00
 330 keys 80
@@ -197,4 +197,6 @@ inputs
 3060 keys 04
 3140 keys 05
 3220 keys 00
-3300 keys 00
+3240 keys 0a
+3288 keys 00
+3380 keys 00

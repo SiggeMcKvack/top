@@ -176,6 +176,30 @@ void ec_measure_scroll(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
      * so does a band narrower than the room (the near view in 4:3, 213 wide), which has no gutter. */
     const unsigned decided = shown_w > 256u || shown_w <= 240u ? 0u : (shown_w - 240u) * shown_h;
     if (scrolling && ob->large_grid && mode == ORACLES_ENHANCED_WORLD && uncovered > decided) c->large_scroll_black++;
+    /* Walking diagonally into a scroll: his place moved 3 px or more both ways over the 8 frames before it.  The
+     * scroll's frames where it stands across the axis two frames running are the view sliding along it alone. */
+    const int across_x = !(ob->scroll_direction & 1u);
+    if (scrolling && !c->in_transition) {
+        const unsigned back = c->recent_count < 8u ? c->recent_count : 8u;
+        const unsigned oldest = (c->recent_count - back) % 8u;
+        const int32_t dx = back ? ob->world.link_x - c->recent_x[oldest] : 0, dy = back ? ob->world.link_y - c->recent_y[oldest] : 0;
+        c->scroll_diagonal = back == 8u && c->recent_epoch == ob->epoch && (dx >= 3 || dx <= -3) && (dy >= 3 || dy <= -3);
+        if (c->scroll_diagonal) c->scrolls_diagonal++;
+        c->scroll_across_last = across_x ? ob->world.link_x : ob->world.link_y;
+        c->scroll_across_step = 1;
+    } else if (scrolling && c->scroll_diagonal) {
+        const int32_t across = across_x ? ob->world.link_x : ob->world.link_y;
+        const int32_t step = across - c->scroll_across_last;
+        if (!step && !c->scroll_across_step) c->scroll_across_stalled++;
+        c->scroll_across_step = step;
+        c->scroll_across_last = across;
+    }
+    if (!ob->in_transition) {
+        if (c->recent_epoch != ob->epoch) c->recent_count = 0;
+        c->recent_epoch = ob->epoch;
+        c->recent_x[c->recent_count % 8u] = ob->world.link_x; c->recent_y[c->recent_count % 8u] = ob->world.link_y;
+        c->recent_count++;
+    }
     if (scrolling && !c->in_transition) { c->in_transition = 1; c->transition_frames = 0; c->transition_frozen = 0; c->transition_last_x = ob->world.link_x; c->transition_last_y = ob->world.link_y; c->transition_frozen_at[0] = 0; }
     else if (scrolling) {
         c->transition_frames++;
@@ -231,12 +255,14 @@ void ec_measure_seams(OraclesEnhancedCheck *c, const OraclesEnhancedObservation 
  * A frame where it goes back against the step it made the frame before, on
  * either axis, while his place in the world does not turn: Link shaking on
  * the screen, which a camera stepping on frames his sprite does not makes.
- * A camera catching up moves him one way at a time and is not counted. */
+ * A camera catching up moves him one way at a time and is not counted.  In a
+ * scroll, across its axis alone, where a carry moves him (--continuous-diagonal);
+ * along it the band follows the game's own move. */
 void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_x, int32_t camera_y)
 {
     int found = 0, left = 255, top = 255;
     const uint8_t *oam = oracles_guest_oam(c->guest);
-    if (c->link_sprites && oam && mode == ORACLES_ENHANCED_WORLD && ob->playing && !ob->in_transition && !ob->cutscene) {
+    if (c->link_sprites && oam && mode == ORACLES_ENHANCED_WORLD && ob->playing && (!ob->in_transition || ob->in_scroll) && !ob->cutscene) {
         OraclesSpriteTag tags[ORACLES_SPRITE_TAGS];
         const unsigned count = oracles_sprites_tags_for_oam(c->link_sprites, oam, tags, ORACLES_SPRITE_TAGS);
         for (unsigned i = 0; i < count; i++) {
@@ -259,6 +285,7 @@ void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const Or
             const int32_t step = screen[a] - c->drawn_screen[a], world_step = world[a] - c->drawn_world[a];
             const int back = step && c->drawn_screen_step[a] && (step > 0) != (c->drawn_screen_step[a] > 0);
             const int turned = world_step && c->drawn_world_step[a] && (world_step > 0) != (c->drawn_world_step[a] > 0);
+            if (ob->in_scroll && a != ((ob->scroll_direction & 1u) ? 1u : 0u)) { c->drawn_screen_step[a] = 0; c->drawn_world_step[a] = 0; continue; }
             if (back && !turned) {
                 if (a) c->link_backsteps_y++; else c->link_backsteps++;
                 const size_t used = strlen(c->link_backsteps_list);

@@ -18,11 +18,11 @@
 #define ONE_PIXEL 0x100
 #define NATIVE_TOTAL_X (15 * 0x100)     /* what the game moves Link over a native transition */
 #define NATIVE_TOTAL_Y (16 * 0x100)
+#define DIAGONAL_STEP 0xb5             /* SPEED_100 at 45 degrees, along each axis (objectSpeedTable) */
 #define SMALL_ROOM_W 160
 #define SMALL_ROOM_H 128
 #define LARGE_ROOM_W 240
 #define LARGE_ROOM_H 176
-#define LINK_HALF_WIDTH 4               /* the leading edge of his collision box */
 #define SPECIALCOLLISION_HOLE 0x10u     /* specialCollisionValues.s: holes, water and lava alike */
 #define SPECIALCOLLISION_VERTICAL_BRIDGE 0x11u   /* $11 to $13: a bridge crossed up and down, and its two sides */
 #define SPECIALCOLLISION_VERTICAL_BRIDGE_RIGHT 0x13u
@@ -34,6 +34,7 @@
 #define TILETYPE_LEFTCURRENT 0x15u
 #define TILETYPE_SEAWATER 0x17u         /* Ages: drowns Link without the mermaid suit (checkSwimmingOverSeawater) */
 #define VAR2F_MERMAID_SUIT 0x40u
+#define REFUSAL_RESUMED 10              /* OraclesRoomTransitionStats.refused_by */
 
 struct OraclesRoomTransition {
     OraclesGuest *guest;
@@ -45,10 +46,13 @@ struct OraclesRoomTransition {
     uint16_t last_camera;               /* hCamera along the axis at the last frame: the machine's own move shows in it */
     int in_transition;
     int start_pos;                      /* Link's position along the axis when the transition began, 8.8 */
+    int start_cross;                    /* and across it: where the straight path runs */
     int doubled;                        /* the transition in progress (or the last one) had its step doubled */
     int palette_pending;                /* a palette transition's mix outlived a doubled scroll: refresh the palettes when it stops */
     int swim;                           /* --continuous-swim: Link swimming at the surface too */
     int forced;                         /* the policy raised the forced transition's bit, not yet taken */
+    int resumed;                        /* a savestate loaded: the transition it was in, if any, is the game's to its end */
+    int diagonal;                       /* --continuous-diagonal: a diagonal held carries Link across the axis too */
     OraclesRoomTransitionStats stats;
 };
 
@@ -278,56 +282,249 @@ static int tile_allowed(const OraclesGuestTransitionState *s, const tile_rule *r
         || (type == (int)TILETYPE_SEAWATER && (s->link_var2f & VAR2F_MERMAID_SUIT));
 }
 
+/* checkTileCollisionAt_allowHoles (bank0.s) on the room entered's collisions, x and y in its coordinates: a value
+ * under $10 blocks the quarter of the tile the point falls in (bit 3 the top left, 2 the top right, 1 the bottom left,
+ * 0 the bottom right); a special one blocks the columns (values $10 to $17) or the rows ($18 to $1f) its byte in
+ * @specialCollisions marks, two pixels a bit from bit 0 (bitTable). */
+static int game_wall(const OraclesGuestTransitionState *s, int x, int y)
+{
+    static const uint8_t special[16] = { 0x00, 0xc3, 0x03, 0xc0, 0x00, 0xc3, 0xc3, 0x00, 0x00, 0xc3, 0x03, 0xc0, 0xc0, 0xc1, 0xff, 0x00 };
+    const uint8_t v = s->room_collisions[(y >> 4) * 16 + (x >> 4)];
+    if (v < 0x10u) return (v >> (((y & 8) ? 0 : 2) + ((x & 8) ? 0 : 1))) & 1;
+    const unsigned index = v & 0x0fu;
+    const unsigned coordinate = (unsigned)(index < 8u ? x : y);
+    return (special[index] >> ((coordinate >> 1) & 7u)) & 1u;
+}
+
 /* Link's coordinates during the transition are those of the room he leaves;
  * finishScrollingTransition rebases them by the room's size along the axis
  * (160x128, or 240x176 for a large room). */
-static int tile_free(const OraclesGuestTransitionState *s, const tile_rule *r, int xh, int yh)
+static int entered_pixel(const OraclesGuestTransitionState *s, int xh, int yh, int *ex, int *ey)
 {
     const unsigned dir = s->transition_direction;
     const int w = s->room_is_large ? LARGE_ROOM_W : SMALL_ROOM_W, h = s->room_is_large ? LARGE_ROOM_H : SMALL_ROOM_H;
     int dx = 0, dy = 0;
     if (dir == 1u) dx = -w; else if (dir == 3u) dx = w;
     else if (dir == 2u) dy = -h; else dy = h;
-    const int ex = (xh + dx) & 0xff, ey = (yh + dy) & 0xff;
+    *ex = (xh + dx) & 0xff; *ey = (yh + dy) & 0xff;
     /* Not yet in the room entered along the axis: the room he leaves, walkable where he walked. */
-    if ((dir & 1u) ? (ex < 0 || ex >= w) : (ey < 0 || ey >= h)) return 1;
-    if (ex >= w || ey >= h) return 1;
-    return tile_allowed(s, r, (unsigned)((ey >> 4) * 16 + (ex >> 4)));
+    return *ex < w && *ey < h;
 }
 
-static int reachable(const OraclesGuestTransitionState *s, const tile_rule *r, int extra)
+static int tile_free(const OraclesGuestTransitionState *s, const tile_rule *r, int xh, int yh)
+{
+    int ex = 0, ey = 0;
+    return !entered_pixel(s, xh, yh, &ex, &ey) || tile_allowed(s, r, (unsigned)((ey >> 4) * 16 + (ex >> 4)));
+}
+
+static int tile_wall(const OraclesGuestTransitionState *s, int xh, int yh)
+{
+    int ex = 0, ey = 0;
+    return entered_pixel(s, xh, yh, &ex, &ey) && game_wall(s, ex, ey);
+}
+
+/* The two points calculateAdjacentWallsBitset (link.s) tests on each side of Link, by direction: up y-3 at x-3 and
+ * x+2, right x+4 at y and y+5, down y+7, left x-5. */
+static const int WALL_POINTS[4][2][2] = { { { -3, -3 }, { 2, -3 } }, { { 4, 0 }, { 4, 5 } }, { { -3, 7 }, { 2, 7 } }, { { -5, 0 }, { -5, 5 } } };
+#define HAZARD_DY 5                     /* the tile the game takes as Link's own (linkApplyTileTypes, objectCheckIsOverHazard: ld bc,$0500) */
+
+static void along_pixel(const OraclesGuestTransitionState *s, int along, int *xh, int *yh)
 {
     const unsigned dir = s->transition_direction;
     int x = s->link_x, y = s->link_y;
-    if (dir == 1u) x += extra; else if (dir == 3u) x -= extra; else if (dir == 2u) y += extra; else y -= extra;
-    const int xh = (x >> 8) & 0xff, yh = (y >> 8) & 0xff;
-    /* The tile under him and the one his leading edge reaches. */
-    if (!tile_free(s, r, xh, yh)) return 0;
-    if (dir == 1u) return tile_free(s, r, xh + LINK_HALF_WIDTH, yh);
-    if (dir == 3u) return tile_free(s, r, xh - LINK_HALF_WIDTH, yh);
-    if (dir == 2u) return tile_free(s, r, xh, yh + LINK_HALF_WIDTH);
-    return tile_free(s, r, xh, yh - LINK_HALF_WIDTH);
+    if (dir == 1u) x += along; else if (dir == 3u) x -= along; else if (dir == 2u) y += along; else y -= along;
+    *xh = (x >> 8) & 0xff; *yh = (y >> 8) & 0xff;
 }
 
-int oracles_room_transition_walkable(const OraclesGuestTransitionState *s, int extra)
+/* His leading edge by direction, on his middle: y-3 up, x+4 right, y+7 down, x-5 left (calculateAdjacentWallsBitset's). */
+static const int LEAD_POINT[4][2] = { { 0, -3 }, { 4, 0 }, { 0, 7 }, { -5, 0 } };
+
+/* Link moved `extra` (8.8) along the axis: the tile the game takes as his own and the one his leading edge reaches
+ * allowed, and none of his points in a wall that it is not in where he stands `from` along (the rails of a bridge he
+ * walks on hold his sides all the way). */
+static int reachable(const OraclesGuestTransitionState *s, const tile_rule *r, int from, int extra)
+{
+    const unsigned dir = s->transition_direction;
+    int xh = 0, yh = 0, fx = 0, fy = 0;
+    along_pixel(s, extra, &xh, &yh);
+    along_pixel(s, from, &fx, &fy);
+    if (!tile_free(s, r, xh, yh + HAZARD_DY) || !tile_free(s, r, xh + LEAD_POINT[dir][0], yh + LEAD_POINT[dir][1])) return 0;
+    for (unsigned side = 0; side < 4u; side++)
+        for (unsigned i = 0; i < 2u; i++) {
+            const int ox = WALL_POINTS[side][i][0], oy = WALL_POINTS[side][i][1];
+            if (tile_wall(s, xh + ox, yh + oy) && !tile_wall(s, fx + ox, fy + oy)) return 0;
+        }
+    return 1;
+}
+
+/* The cap of the routes recorded with --continuous-transitions alone: the tile under him and the one his leading edge
+ * (4 px off his middle) reaches, on tiles without a collision. */
+static int legacy_walkable(const OraclesGuestTransitionState *s, int extra)
+{
+    if (!s->room_collisions) return 1;
+    const tile_rule r = { NULL, 0, 0, 0 };
+    const unsigned dir = s->transition_direction;
+    int xh = 0, yh = 0;
+    along_pixel(s, extra, &xh, &yh);
+    if (!tile_free(s, &r, xh, yh)) return 0;
+    if (dir == 1u) return tile_free(s, &r, xh + 4, yh);
+    if (dir == 3u) return tile_free(s, &r, xh - 4, yh);
+    if (dir == 2u) return tile_free(s, &r, xh, yh + 4);
+    return tile_free(s, &r, xh, yh - 4);
+}
+
+int oracles_room_transition_walkable(const OraclesGuestTransitionState *s, int from, int extra)
 {
     if (!s || !s->room_collisions) return 1;
     const tile_rule r = { NULL, 0, 0, 0 };
-    return reachable(s, &r, extra);
+    return reachable(s, &r, from, extra);
 }
 
-int oracles_room_transition_passable(const OraclesGuestTransitionState *s, int extra)
+int oracles_room_transition_passable(const OraclesGuestTransitionState *s, int from, int extra)
 {
     if (!s || !s->room_collisions) return 1;
     const tile_rule r = { NULL, 0, 0, 1 };
-    return reachable(s, &r, extra);
+    return reachable(s, &r, from, extra);
 }
 
-int oracles_room_transition_swimmable(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *s, int extra)
+int oracles_room_transition_swimmable(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *s, int from, int extra)
 {
     if (!s || !s->room_collisions) return 1;
     const tile_rule r = { rom, rom_size, 1, 0 };
-    return reachable(s, &r, extra);
+    return reachable(s, &r, from, extra);
+}
+
+int oracles_room_transition_held_across(const OraclesGuestTransitionState *s)
+{
+    if (!s || (s->link_input_angle & 0x80u) || s->transition_direction > 3u) return -1;
+    const unsigned off = (unsigned)(s->link_input_angle - s->transition_direction * 8u) & 31u;
+    if (off == 4u) return (int)((s->transition_direction + 1u) & 3u);
+    if (off == 28u) return (int)((s->transition_direction + 3u) & 3u);
+    return -1;
+}
+
+/* round(256 * sin(k * 11.25 degrees)), k = 0 to 8: objectSpeedTable's steps of angle */
+static const int SINE_256[9] = { 0, 50, 98, 142, 181, 213, 237, 251, 256 };
+
+int oracles_room_transition_moving_across(const OraclesGuestTransitionState *s, int step, int *along, int *across_step)
+{
+    if (!s || (s->link_move_angle & 0x80u) || s->transition_direction > 3u) return -1;
+    const unsigned off = (unsigned)(s->link_move_angle - s->transition_direction * 8u) & 31u;
+    const unsigned k = off < 16u ? off : 32u - off;
+    if (k == 0u || k >= 8u) return -1;
+    if (along) *along = step * SINE_256[8u - k] / 256;
+    if (across_step) *across_step = step * SINE_256[k] / 256;
+    return (int)((s->transition_direction + (off < 16u ? 1u : 3u)) & 3u);
+}
+
+/* A point of Link's box in the room's coordinates, the tile it falls in: along the axis, past the room's edge (the
+ * room he leaves, whose collisions are gone, or the one he enters, whose collisions are not loaded yet), its first or
+ * last row or column; out of the room across, -1. */
+static int point_tile(const OraclesGuestTransitionState *s, int w, int h, int *px, int *py)
+{
+    if (s->transition_direction & 1u) { if (*py < 0 || *py >= h) return -1; if (*px < 0) *px = 0; if (*px >= w) *px = w - 1; }
+    else { if (*px < 0 || *px >= w) return -1; if (*py < 0) *py = 0; if (*py >= h) *py = h - 1; }
+    return (*py >> 4) * 16 + (*px >> 4);
+}
+
+/* On foot free where the game finds no wall and no hole or water ($10), swimming on water he can swim in. */
+static int point_free(const OraclesGuestTransitionState *s, const tile_rule *r, int w, int h, int px, int py)
+{
+    const int index = point_tile(s, w, h, &px, &py);
+    if (index < 0) return 0;
+    return r->swimming ? tile_allowed(s, r, (unsigned)index) : !(game_wall(s, px, py) || s->room_collisions[index] == SPECIALCOLLISION_HOLE);
+}
+
+static int point_wall(const OraclesGuestTransitionState *s, int w, int h, int px, int py)
+{
+    const int index = point_tile(s, w, h, &px, &py);
+    return index < 0 || game_wall(s, px, py);
+}
+
+/* What the game would not leave Link on at the point: on foot a hole, water or lava ($10); swimming anything but
+ * water he can swim in, land too, where linkApplyTileTypes takes him out of the water. */
+static int point_hazard(const OraclesGuestTransitionState *s, const tile_rule *r, int w, int h, int px, int py)
+{
+    const int index = point_tile(s, w, h, &px, &py);
+    if (index < 0) return 1;
+    return r->swimming ? !tile_allowed(s, r, (unsigned)index) : s->room_collisions[index] == SPECIALCOLLISION_HOLE;
+}
+
+/* Link's 8.8 coordinates in whole pixels of the room left, signed (leftward and upward his coordinate along the axis
+ * runs from 5 below zero, $ff.., never as far as -128; any other stays above -16), rebased by the room's size along
+ * the axis into the room entered's. */
+static void room_pixel(unsigned dir, int w, int h, int x, int y, int *px, int *py)
+{
+    int cx = (x >> 8) & 0xff, cy = (y >> 8) & 0xff;
+    if (cx >= (dir == 3u ? 0x80 : 0xf0)) cx -= 256;
+    if (cy >= (dir == 0u ? 0x80 : 0xc0)) cy -= 256;
+    if (dir == 1u) cx -= w; else if (dir == 3u) cx += w; else if (dir == 2u) cy -= h; else cy += h;
+    *px = cx; *py = cy;
+}
+
+/* Link at (cx, cy), 8.8 in the room left's coordinates, carried `offset` (8.8, signed along x or y) off the straight
+ * path across the axis, from there to `rest` further along it, a pixel at a time: every point
+ * calculateAdjacentWallsBitset tests, and the tile the game takes as his own, clear on the straight path stay clear
+ * carried, on the room entered's collisions.  The game resumes its wall tests and its tile's effects (a fall, a
+ * drowning) wherever the scroll leaves him, and finishScrollingTransition makes that place his respawn. */
+static int carry_keeps_clear(const OraclesGuestTransitionState *s, const tile_rule *r, int cx, int cy, int offset, int rest)
+{
+    const unsigned dir = s->transition_direction;
+    const int w = s->room_is_large ? LARGE_ROOM_W : SMALL_ROOM_W, h = s->room_is_large ? LARGE_ROOM_H : SMALL_ROOM_H;
+    const int sx = (dir & 1u) ? cx : cx - offset, sy = (dir & 1u) ? cy - offset : cy;
+    const int dx = dir == 1u ? 1 : dir == 3u ? -1 : 0, dy = dir == 2u ? 1 : dir == 0u ? -1 : 0;
+    for (int d = 0, last = 0; !last; d += ONE_PIXEL) {
+        if (d >= rest) { d = rest; last = 1; }
+        int px = 0, py = 0, qx = 0, qy = 0;
+        room_pixel(dir, w, h, cx + dx * d, cy + dy * d, &px, &py);
+        room_pixel(dir, w, h, sx + dx * d, sy + dy * d, &qx, &qy);
+        for (unsigned side = 0; side < 4u; side++)
+            for (unsigned i = 0; i < 2u; i++) {
+                const int ox = WALL_POINTS[side][i][0], oy = WALL_POINTS[side][i][1];
+                if (point_wall(s, w, h, px + ox, py + oy) && !point_wall(s, w, h, qx + ox, qy + oy)) return 0;
+            }
+        if (point_hazard(s, r, w, h, px, py + HAZARD_DY) && !point_hazard(s, r, w, h, qx, qy + HAZARD_DY)) return 0;
+    }
+    return 1;
+}
+
+/* Where the carry may take Link: his position moved `along` (8.8) in the transition's direction and `delta` in the
+ * direction `across`, tested at the two points calculateAdjacentWallsBitset tests on that side.  The two of the side
+ * he goes along the axis too, so that the carry never takes his leading corner into a wall the game's own move would
+ * then walk him into: a point there free without the carry must stay free with it.  Then over the rest of the game's
+ * own distance as well (`rest`, 8.8), all his points against the straight path, `offset` (8.8, signed along x or y)
+ * across the axis from where he stands before this carry.  Against the room entered's collisions: none while the
+ * transition loads them, where nothing would say where the carry leaves him. */
+static int across_allowed(const OraclesGuestTransitionState *s, const tile_rule *r, unsigned across, int delta, int along, int offset, int rest)
+{
+    if (!s || !s->room_collisions || across > 3u || s->transition_direction > 3u) return 0;
+    const unsigned dir = s->transition_direction;
+    const int w = s->room_is_large ? LARGE_ROOM_W : SMALL_ROOM_W, h = s->room_is_large ? LARGE_ROOM_H : SMALL_ROOM_H;
+    int x = s->link_x, y = s->link_y;
+    if (dir == 1u) x += along; else if (dir == 3u) x -= along; else if (dir == 2u) y += along; else y -= along;
+    int ax = 0, ay = 0, cx = 0, cy = 0;
+    room_pixel(dir, w, h, x, y, &ax, &ay);
+    if (across == 1u) x += delta; else if (across == 3u) x -= delta; else if (across == 2u) y += delta; else y -= delta;
+    room_pixel(dir, w, h, x, y, &cx, &cy);
+    for (unsigned i = 0; i < 2u; i++) {
+        if (!point_free(s, r, w, h, cx + WALL_POINTS[across][i][0], cy + WALL_POINTS[across][i][1])) return 0;
+        if (!point_free(s, r, w, h, cx + WALL_POINTS[dir][i][0], cy + WALL_POINTS[dir][i][1])
+            && point_free(s, r, w, h, ax + WALL_POINTS[dir][i][0], ay + WALL_POINTS[dir][i][1])) return 0;
+    }
+    return carry_keeps_clear(s, r, x, y, offset + (across == 1u || across == 2u ? delta : -delta), rest > 0 ? rest : 0);
+}
+
+int oracles_room_transition_across_free(const OraclesGuestTransitionState *s, unsigned across, int delta, int along, int offset, int rest)
+{
+    const tile_rule r = { NULL, 0, 0, 0 };
+    return across_allowed(s, &r, across, delta, along, offset, rest);
+}
+
+int oracles_room_transition_across_swimmable(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *s, unsigned across, int delta,
+                                             int along, int offset, int rest)
+{
+    const tile_rule r = { rom, rom_size, 1, 0 };
+    return across_allowed(s, &r, across, delta, along, offset, rest);
 }
 
 /* ---- the policy ----------------------------------------------------------------------- */
@@ -342,6 +539,25 @@ static int in_scroll_substate(const OraclesGuestTransitionState *s)
 }
 
 static void move_link(OraclesRoomTransition *tr, const OraclesGuestTransitionState *s, OraclesGuestTransitionMutation *m, int machine_moved);
+
+/* transitionUpdateScrollAndLinkPosition and screenTransitionState5's scroll: a step a frame, which draws a row or a
+ * column when the camera lands on a multiple of 8 and decrements the counter, the step after it reaches zero ending
+ * the scroll; the counter whole until phase 1 draws the first. */
+int oracles_room_transition_machine_rest(const OraclesGuestTransitionState *s, int doubled)
+{
+    if (!s || s->transition_direction > 3u) return 0;
+    const int horizontal = s->transition_direction & 1u;
+    const int per_step = horizontal ? NATIVE_STEP_X : NATIVE_STEP_Y;
+    const int rows = (int)(horizontal ? COUNTER_HORIZONTAL : COUNTER_VERTICAL);
+    if (s->transition_state < STATE_SCROLL || !in_scroll_substate(s)) return rows * per_step * (doubled ? 1 : 2);
+    if (s->transition_phase > PHASE_SCROLLING) return 0;
+    const int counter = s->screen_scroll_counter;
+    if (s->transition_phase < PHASE_SCROLLING) return counter * per_step * (doubled ? 1 : 2);
+    if (doubled) return (counter + 1) * per_step;
+    /* Steps of 4 px: two a row, the one that lands on a multiple of 8 drawing it. */
+    const int aligned = ((horizontal ? s->camera_x : s->camera_y) & 7u) == 0;
+    return (2 * counter + (aligned ? 2 : 1)) * per_step;
+}
 
 static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGuestTransitionMutation *m)
 {
@@ -363,7 +579,11 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
     tr->last_camera = camera;
 
     const int in_transition = s->transition_state >= STATE_PREPARE && s->transition_state <= STATE_SCROLL;
-    if (in_transition && !tr->in_transition) { tr->start_pos = horizontal ? s->link_x : s->link_y; tr->doubled = 0; }
+    if (in_transition && !tr->in_transition) {
+        tr->start_pos = horizontal ? s->link_x : s->link_y;
+        tr->start_cross = horizontal ? s->link_y : s->link_x;
+        tr->doubled = 0;
+    }
     /* A smooth palette transition (paletteTransitions.s) mixes BG2-7 from the
      * palette left to the one entered over about thirty frames, the loaded
      * palette header forgotten ($ff) meanwhile.  The game loads the room's
@@ -386,6 +606,7 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
         tr->stats.palette_refreshes++;
     }
     tr->in_transition = in_transition;
+    if (!in_transition) tr->resumed = 0;
 
     /* --continuous-swim: the transition a swim's momentum takes him to, the game asking the direction held. */
     if (tr->swim && !in_transition) {
@@ -401,7 +622,9 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
         }
     }
     if (in_transition) tr->forced = 0;
-    const int refusal = oracles_room_transition_refusal(s, tr->swim);
+    /* A state loaded in a transition: where it began, and what the policy moved Link by then, are not known; the game
+     * takes the rest of it as it is. */
+    const int refusal = tr->resumed ? REFUSAL_RESUMED : oracles_room_transition_refusal(s, tr->swim);
     if (refusal >= 0) {
         /* Hands off; a doubled step is given back to the game before the scroll goes on. */
         if (tr->armed && in_scroll_substate(s) && s->transition_phase <= PHASE_SCROLLING) {
@@ -434,28 +657,71 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
 static void move_link(OraclesRoomTransition *tr, const OraclesGuestTransitionState *s, OraclesGuestTransitionMutation *m, int machine_moved)
 {
     const int horizontal = s->transition_direction & 1u, swimming = oracles_room_transition_swimming(s), in_water = oracles_room_transition_in_water(s);
-    int extra = oracles_room_transition_step(s) - (machine_moved ? (horizontal ? NATIVE_STEP_X : NATIVE_STEP_Y) : 0);
+    /* With --continuous-diagonal Link goes on across the axis too, where the game would hold him for the whole
+     * scroll and the view would slide along the axis alone: on foot a diagonal held, as the game walks it, 0xb5 a
+     * frame along each axis; in the water his motion, its angle and speed frozen by the game through the scroll
+     * and taken up again after it, split along and across as objectSpeedTable splits it. */
+    int step = oracles_room_transition_step(s), across_step = 0;
+    int across = -1;
+    if (tr->diagonal && !in_water) { across = oracles_room_transition_held_across(s); if (across >= 0) step = across_step = DIAGONAL_STEP; }
+    /* On the sea floor as at the surface he goes on with no direction held, gliding at his speed and angle
+     * (linkState01 moves him either way). */
+    else if (tr->diagonal) across = oracles_room_transition_moving_across(s, step, &step, &across_step);
+    int extra = step - (machine_moved ? (horizontal ? NATIVE_STEP_X : NATIVE_STEP_Y) : 0);
     /* Up to the distance the game itself moves him (15 px across, 16 px up
      * or down) the tiles are the game's own choice; beyond it, only onto
-     * tiles without a collision on foot, onto water swimming. */
+     * tiles without a collision on foot, onto water swimming, where the
+     * machine's own steps still to come leave him, whatever the policy adds
+     * later. */
     const int pos = horizontal ? s->link_x : s->link_y;
     const int ahead = (s->transition_direction == 1u || s->transition_direction == 2u) ? pos - tr->start_pos : tr->start_pos - pos;
     /* Leftward or upward his coordinate runs below zero ($00c2 to $ffc2) before the rebase: the difference is signed
      * over 16 bits.  Without --continuous-swim it is taken as it always was, so that the routes recorded with
      * --continuous-transitions alone replay as they were played: there the distance runs negative and the cap never
-     * holds Link back, leftward or upward. */
-    const int travelled = tr->swim ? (int16_t)(uint16_t)ahead : ahead;
+     * holds Link back, leftward or upward; and the cap is the one they were played with, his middle and his leading
+     * edge on the tiles reached, with no regard for the machine's steps to come. */
+    const int legacy = !tr->swim && !tr->diagonal;
+    const int travelled = legacy ? ahead : (int16_t)(uint16_t)ahead;
     const int native_total = horizontal ? NATIVE_TOTAL_X : NATIVE_TOTAL_Y;
-    if (extra > 0 && travelled + extra > native_total
-        && !(swimming ? oracles_room_transition_swimmable(tr->rom, tr->rom_size, s, extra)
-             : tr->swim ? oracles_room_transition_passable(s, extra) : oracles_room_transition_walkable(s, extra))) {
+    /* What the machine still moves him after this frame, the scroll doubled from its first frame unless the policy
+     * found it under way (the step it arms the scroll with at its start, or hands back with control). */
+    const int machine_rest = oracles_room_transition_machine_rest(s, in_scroll_substate(s) ? tr->armed : 1);
+    /* Carried off the straight path across the axis (`offset`), only where the carry keeps every point of his as
+     * clear as the straight path does. */
+    const int offset = (int16_t)(uint16_t)((horizontal ? s->link_y : s->link_x) - tr->start_cross);
+    const tile_rule rule = { tr->rom, tr->rom_size, swimming, 0 };
+    const int reach = extra + machine_rest;
+    const int reach_x = s->link_x + (s->transition_direction == 1u ? reach : s->transition_direction == 3u ? -reach : 0);
+    const int reach_y = s->link_y + (s->transition_direction == 2u ? reach : s->transition_direction == 0u ? -reach : 0);
+    /* Beyond it in whole pixels: the pixel the game's own distance ends on is its own place, a fraction short or over;
+     * never while the room entered's collisions are not loaded, which would say nothing of it. */
+    const int forward = s->transition_direction == 1u || s->transition_direction == 2u;
+    const int beyond = forward ? ((tr->start_pos + travelled + reach) >> 8) > ((tr->start_pos + native_total) >> 8)
+                               : ((tr->start_pos - travelled - reach) >> 8) < ((tr->start_pos - native_total) >> 8);
+    if (legacy ? extra > 0 && travelled + extra > native_total && !legacy_walkable(s, extra)
+        : extra > 0 && beyond
+        && (!s->room_collisions
+            || !(swimming ? oracles_room_transition_swimmable(tr->rom, tr->rom_size, s, machine_rest, reach)
+                 : tr->swim ? oracles_room_transition_passable(s, machine_rest, reach) : oracles_room_transition_walkable(s, machine_rest, reach))
+            || (offset && !carry_keeps_clear(s, &rule, reach_x, reach_y, offset, 0)))) {
         extra = 0;
         tr->stats.capped_frames++;
     }
     /* On foot he stops when he may not go on; swimming, his animation runs on
      * whether he moves or not, as linkUpdateDiving animates it every frame. */
     if (extra < 0) extra = 0;
-    if (!extra && !swimming) return;
+    /* Across, onto what he may stand on in the room entered: on foot and on the sea floor a tile without a collision,
+     * swimming water. */
+    int carried = 0;
+    if (across >= 0 && across_step > 0) {
+        /* The scroll may leave him anywhere up to the game's own distance, or the machine's steps still to come
+         * beyond it; the cap holds him further on. */
+        const int rest = native_total - travelled - extra > machine_rest ? native_total - travelled - extra : machine_rest;
+        if (swimming ? oracles_room_transition_across_swimmable(tr->rom, tr->rom_size, s, (unsigned)across, across_step, extra, offset, rest)
+                     : oracles_room_transition_across_free(s, (unsigned)across, across_step, extra, offset, rest)) carried = across_step;
+        else tr->stats.carry_withheld_frames++;
+    }
+    if (!extra && !carried && !swimming) return;
     OraclesGuestTransitionMutation walk;
     memset(&walk, 0, sizeof walk);
     if (!oracles_room_transition_next_walk_frame(tr->rom, tr->rom_size, s, &walk)) { tr->stats.unanimated_frames++; return; }   /* no animation, no move */
@@ -469,6 +735,16 @@ static void move_link(OraclesRoomTransition *tr, const OraclesGuestTransitionSta
     case 3u: m->link_x_delta = (int16_t)-extra; break;
     case 2u: m->link_y_delta = (int16_t)extra; break;
     default: m->link_y_delta = (int16_t)-extra; break;
+    }
+    if (carried) {
+        m->carried = 1;
+        switch (across) {
+        case 1: m->link_x_delta = (int16_t)carried; break;
+        case 3: m->link_x_delta = (int16_t)-carried; break;
+        case 2: m->link_y_delta = (int16_t)carried; break;
+        default: m->link_y_delta = (int16_t)-carried; break;
+        }
+        tr->stats.carry_asked_frames++;
     }
     if (!extra) return;
     tr->stats.walked_frames++;
@@ -484,6 +760,7 @@ static void reset(void *opaque)
     tr->doubled = 0;
     tr->palette_pending = 0;
     tr->forced = 0;
+    tr->resumed = 1;
 }
 
 OraclesRoomTransition *oracles_room_transition_start(OraclesGuest *guest, const uint8_t *rom, size_t rom_size, int swim)
@@ -499,6 +776,13 @@ OraclesRoomTransition *oracles_room_transition_start(OraclesGuest *guest, const 
     oracles_guest_set_transition_swim(guest, tr->swim);
     oracles_guest_set_transition_policy(guest, policy, reset, tr);
     return tr;
+}
+
+int oracles_room_transition_set_diagonal(OraclesRoomTransition *tr, int on)
+{
+    if (!tr) return 0;
+    tr->diagonal = on && oracles_compat_continuous_diagonal(oracles_guest_profile(tr->guest));
+    return tr->diagonal;
 }
 
 void oracles_room_transition_stop(OraclesRoomTransition *tr)

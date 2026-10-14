@@ -159,38 +159,54 @@ int main(void)
     memset(collisions, 0, sizeof collisions);
     s = eligible();
     s.room_collisions = NULL;
-    CHECK(oracles_room_transition_walkable(&s, 0x100));         /* not loaded yet: nothing to check */
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));         /* not loaded yet: nothing to check */
     s.room_collisions = collisions;
-    CHECK(oracles_room_transition_walkable(&s, 0x100));
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));
     collisions[5 * 16 + 0] = 0x0f;                              /* a wall at the entry tile */
-    CHECK(!oracles_room_transition_walkable(&s, 0x100));
+    CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
     collisions[5 * 16 + 0] = 0;
     s.link_x = 170 << 8;                                        /* already 10 px into the room entered: tile column 0 */
-    CHECK(oracles_room_transition_walkable(&s, 0x100));
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));
     collisions[5 * 16 + 1] = 0x0f;                              /* the next tile column is a wall: his edge at 15 is still in column 0 */
-    CHECK(oracles_room_transition_walkable(&s, 0x100));
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));
     s.link_x = 172 << 8;                                        /* his edge would reach column 1 */
-    CHECK(!oracles_room_transition_walkable(&s, 0x100));
+    CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
     /* Leftward: the room entered is to the left, Link's x runs below zero. */
     s = eligible(); s.transition_direction = 3; s.link_x = (uint16_t)(2 << 8); s.room_collisions = collisions;
     memset(collisions, 0, sizeof collisions);
-    CHECK(oracles_room_transition_walkable(&s, 0x100));          /* 1 - 4 = -3 -> 157 of the room entered, column 9 */
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));          /* 1 - 4 = -3 -> 157 of the room entered, column 9 */
     collisions[5 * 16 + 9] = 0x0f;
-    CHECK(!oracles_room_transition_walkable(&s, 0x100));
+    CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
     /* Downward. */
     s = eligible(); s.transition_direction = 2; s.link_y = (uint16_t)(124 << 8); s.link_x = 80 << 8; s.room_collisions = collisions;
     memset(collisions, 0, sizeof collisions);
-    CHECK(oracles_room_transition_walkable(&s, 0x100));          /* 125 + 4 = 129 -> 1 in the room entered: row 0, column 5 */
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));          /* 125 + 7 = 132 -> 4 in the room entered: row 0, column 5 */
     collisions[0 * 16 + 5] = 0x0f;
-    CHECK(!oracles_room_transition_walkable(&s, 0x100));
+    CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
+    /* The game's own points: his tile at y+5 and his feet at y+7 (x-3 and x+2), not y+4.  From y=120, a pixel down,
+     * his feet reach row 0 of the room entered (128) while y+4 is still in the room left; from 122, his tile does. */
+    s.link_y = (uint16_t)(120 << 8); CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
+    collisions[0 * 16 + 5] = 0x10; s.link_y = (uint16_t)(122 << 8); CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));   /* a hole under y+5 = 128 */
+    s.link_y = (uint16_t)(119 << 8); CHECK(oracles_room_transition_walkable(&s, 0, 0x100));                                       /* y+7 = 127: not yet */
+    /* And no point of his in a wall at his sides it is not in where he stands `from`: at x=84 and y=125, x-5 = 79 at
+     * y+5 = 130 falls in column 4's top right quarter; from y=120 it was in the room left. */
+    collisions[0 * 16 + 5] = 0; s.link_x = 84 << 8; s.link_y = (uint16_t)(120 << 8); CHECK(oracles_room_transition_walkable(&s, 0, 0x500));
+    collisions[0 * 16 + 4] = 0x04; CHECK(!oracles_room_transition_walkable(&s, 0, 0x500));
+    CHECK(oracles_room_transition_walkable(&s, 0x400, 0x500));   /* from y=124: there already (y+5 = 129) */
+    collisions[0 * 16 + 4] = 0x08; CHECK(oracles_room_transition_walkable(&s, 0, 0x500));    /* its top left quarter */
+    collisions[0 * 16 + 4] = 0; s.link_x = 80 << 8; s.link_y = (uint16_t)(124 << 8);
     /* With --continuous-swim, stairs and a bridge along the way are walked on; a bridge across it is not. */
-    collisions[0 * 16 + 5] = 0x18; CHECK(!oracles_room_transition_walkable(&s, 0x100) && oracles_room_transition_passable(&s, 0x100));
-    collisions[0 * 16 + 5] = 0x12; CHECK(oracles_room_transition_passable(&s, 0x100));    /* a vertical bridge, downward */
-    collisions[0 * 16 + 5] = 0x1a; CHECK(!oracles_room_transition_passable(&s, 0x100));   /* a horizontal one */
-    collisions[0 * 16 + 5] = 0x0f; CHECK(!oracles_room_transition_passable(&s, 0x100));
+    collisions[0 * 16 + 5] = 0x18; CHECK(!oracles_room_transition_walkable(&s, 0, 0x100) && oracles_room_transition_passable(&s, 0, 0x100));
+    collisions[0 * 16 + 5] = 0x12; CHECK(oracles_room_transition_passable(&s, 0, 0x100));    /* a vertical bridge, downward */
+    /* His feet reaching its rail (x 80 to 83: x+2 = 82) from the room left, not along it. */
+    s.link_y = (uint16_t)(118 << 8); CHECK(!oracles_room_transition_passable(&s, 0, 0x600));
+    s.link_x = 89 << 8; CHECK(oracles_room_transition_passable(&s, 0, 0x600));               /* x-5 = 84: past it */
+    s.link_x = 80 << 8; s.link_y = (uint16_t)(124 << 8);
+    collisions[0 * 16 + 5] = 0x1a; CHECK(!oracles_room_transition_passable(&s, 0, 0x100));   /* a horizontal one */
+    collisions[0 * 16 + 5] = 0x0f; CHECK(!oracles_room_transition_passable(&s, 0, 0x100));
     s.transition_direction = 1; s.link_x = 156 << 8; s.link_y = 80 << 8; memset(collisions, 0, sizeof collisions);
-    collisions[5 * 16 + 0] = 0x1b; CHECK(!oracles_room_transition_walkable(&s, 0x100) && oracles_room_transition_passable(&s, 0x100));   /* rightward, a bridge's end */
-    collisions[5 * 16 + 0] = 0x11; CHECK(!oracles_room_transition_passable(&s, 0x100));
+    collisions[5 * 16 + 0] = 0x1b; CHECK(!oracles_room_transition_walkable(&s, 0, 0x100) && oracles_room_transition_passable(&s, 0, 0x100));   /* rightward, a bridge's end */
+    collisions[5 * 16 + 0] = 0x11; CHECK(!oracles_room_transition_passable(&s, 0, 0x100));
 
     /* Swimming beyond the game's own distance: water only, told by the tile
      * types of the room's collision list (tileTypesTable, bank 5 here). */
@@ -213,17 +229,174 @@ int main(void)
     s.tile_types_bank = 0xff; CHECK(oracles_room_transition_tile_type(types_rom, rom_size, &s, 0xfd) < 0);
     s.tile_types_bank = 5;
     collisions[5 * 16 + 0] = 0x10;                              /* the entry tile: holes', water's and lava's collision */
-    layout[5 * 16 + 0] = 0xfd; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));
-    collisions[5 * 16 + 0] = 0x0f; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));   /* a water tile index with a wall's collision */
+    layout[5 * 16 + 0] = 0xfd; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
+    collisions[5 * 16 + 0] = 0x0f; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* a water tile index with a wall's collision */
     collisions[5 * 16 + 0] = 0x10;
-    layout[5 * 16 + 0] = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));   /* a current */
-    layout[5 * 16 + 0] = 0xf3; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));  /* a hole */
-    layout[5 * 16 + 0] = 0xfc; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));  /* the sea, no mermaid suit */
-    s.link_var2f = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));
+    layout[5 * 16 + 0] = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* a current */
+    layout[5 * 16 + 0] = 0xf3; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));  /* a hole */
+    layout[5 * 16 + 0] = 0xfc; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));  /* the sea, no mermaid suit */
+    s.link_var2f = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
     collisions[5 * 16 + 0] = 0; layout[5 * 16 + 0] = 0x01;       /* land: walkable, not swimmable */
-    CHECK(oracles_room_transition_walkable(&s, 0x120) && !oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));
-    s.room_collisions = NULL; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0x120));    /* not loaded yet */
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x120) && !oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
+    s.room_collisions = NULL; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));    /* not loaded yet */
+    /* In the water his motion goes on across the axis: its angle (32 steps) off the transition's direction, the speed
+     * split as objectSpeedTable splits it; straight, along the edge or away, nothing. */
+    {
+        OraclesGuestTransitionState w = s;
+        int along = 0, across_step = 0;
+        w.transition_direction = 3; w.link_move_angle = 20;                    /* left, moving down-left */
+        CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == 2 && along == 0x120 * 181 / 256 && across_step == 0x120 * 181 / 256);
+        w.link_move_angle = 25;                                                 /* left, a step up */
+        CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == 0 && along == 0x120 * 251 / 256 && across_step == 0x120 * 50 / 256);
+        w.link_move_angle = 24; CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == -1);   /* straight */
+        w.link_move_angle = 16; CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == -1);   /* along the edge */
+        w.link_move_angle = 8; CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == -1);    /* away */
+        w.link_move_angle = 0x80; CHECK(oracles_room_transition_moving_across(&w, 0x120, &along, &across_step) == -1); /* not moving */
+        w.transition_direction = 0; w.link_move_angle = 4;                      /* up, moving up-right */
+        CHECK(oracles_room_transition_moving_across(&w, 0x100, &along, &across_step) == 1);
+        /* Across, into water only, at the game's two points below him (y+7, x-3 and x+2): Link swimming right at x=170
+         * (column 0 of the room entered), going down. */
+        memset(collisions, 0, sizeof collisions); memset(layout, 0, sizeof layout);
+        w = s; w.transition_direction = 1; w.link_x = 170 << 8; w.link_y = 59 << 8; w.room_collisions = collisions; w.room_layout = layout;
+        CHECK(!oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 2, 0x80, 0, 0, 0));   /* land */
+        collisions[4 * 16 + 0] = 0x10; layout[4 * 16 + 0] = 0xfd;
+        CHECK(oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 2, 0x80, 0, 0, 0));    /* 59.5 + 7 in row 4: water */
+        w.link_y = 40 << 8; CHECK(!oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 2, 0x80, 0, 0, 0));   /* 47.5: row 2, land */
+    }
+    /* Swimming down from y=121 in open water, carried right from x=45.5 (x 46, then 48 in column 3): a tile of land in
+     * row 1, column 3, which his own tile (y+5) reaches at y=11, out of the water where the straight path stays in it. */
+    {
+        OraclesGuestTransitionState w = s;
+        memset(collisions, 0x10, sizeof collisions); memset(layout, 0xfd, sizeof layout);
+        w.transition_direction = 2; w.link_x = (47 << 8) + 0x80; w.link_y = 121 << 8; w.room_collisions = collisions; w.room_layout = layout;
+        w.link_var2f = 0;
+        CHECK(oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 1, 0x80, 0, 0, 18 << 8));
+        collisions[1 * 16 + 3] = 0; layout[1 * 16 + 3] = 0x01;
+        CHECK(oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 1, 0x80, 0, 0, 16 << 8));   /* y=9: his tile at 14, row 0 */
+        CHECK(!oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 1, 0x80, 0, 0, 18 << 8));
+        collisions[1 * 16 + 2] = 0; layout[1 * 16 + 2] = 0x01;
+        CHECK(oracles_room_transition_across_swimmable(types_rom, rom_size, &w, 1, 0x80, 0, 0, 18 << 8));    /* the straight path's on land too */
+    }
     free(types_rom);
+
+    /* A diagonal held toward the edge (wLinkAngle, 32 steps, 0 up) goes on across the axis: up-left adds left. */
+    s = eligible(); s.transition_direction = 0;
+    s.link_input_angle = 28; CHECK(oracles_room_transition_held_across(&s) == 3);
+    s.link_input_angle = 4; CHECK(oracles_room_transition_held_across(&s) == 1);
+    s.link_input_angle = 0; CHECK(oracles_room_transition_held_across(&s) == -1);      /* straight */
+    s.link_input_angle = 8; CHECK(oracles_room_transition_held_across(&s) == -1);      /* across alone */
+    s.link_input_angle = 20; CHECK(oracles_room_transition_held_across(&s) == -1);     /* away from the edge */
+    s.link_input_angle = 0x80; CHECK(oracles_room_transition_held_across(&s) == -1);   /* none */
+    s.transition_direction = 1; s.link_input_angle = 12; CHECK(oracles_room_transition_held_across(&s) == 2);
+    s.transition_direction = 3; s.link_input_angle = 28; CHECK(oracles_room_transition_held_across(&s) == 0);
+    s.transition_direction = 2; s.link_input_angle = 20; CHECK(oracles_room_transition_held_across(&s) == 3);
+    /* Across, at the two points the game tests for walls on that side (right: x+4 at y and y+5), on the room entered's
+     * collisions as the game reads them (a quarter of a tile under $10, columns or rows of a special value): Link up
+     * at y=2 of the room he leaves is tested on the room entered's bottom row; nothing before its collisions are
+     * loaded, nor out of the room across, nor onto a hole or water on foot. */
+    memset(collisions, 0, sizeof collisions);
+    s = eligible(); s.transition_direction = 0; s.link_x = 90 << 8; s.link_y = 2 << 8; s.room_collisions = collisions;
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+    collisions[7 * 16 + 6] = 0x0f;                              /* column 6 of the bottom row */
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));   /* 90.7 + 4: column 5 still */
+    s.link_x = 92 << 8; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+    CHECK(oracles_room_transition_across_free(&s, 3, 0xb5, 0, 0, 0));   /* leftward, away from it */
+    collisions[7 * 16 + 6] = 0x05; CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));   /* its right half alone */
+    collisions[7 * 16 + 6] = 0x0a; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));  /* its left half */
+    collisions[7 * 16 + 6] = 0x18; CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));   /* stairs */
+    collisions[7 * 16 + 6] = 0x19; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));  /* a horizontal bridge's bottom rail */
+    collisions[7 * 16 + 6] = 0x10; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));  /* water or a hole */
+    /* A vertical bridge's left end ($12): its columns 0 to 3 alone, bit 0 the first two (bitTable). */
+    collisions[7 * 16 + 6] = 0x12;
+    s.link_x = (92 << 8) + 0x60; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));   /* x+4 = 97 */
+    s.link_x = (103 << 8) + 0x60; CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));   /* x+4 = 108 */
+    collisions[7 * 16 + 6] = 0;
+    s.link_x = 156 << 8; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));            /* x+4 out of the room */
+    s.link_x = 80 << 8; s.room_collisions = NULL; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+    /* Rightward, in the room entered already (x=170: 10 there), carried down: tested at y+7, row 4. */
+    memset(collisions, 0, sizeof collisions);
+    s = eligible(); s.transition_direction = 1; s.link_x = 170 << 8; s.link_y = 59 << 8; s.room_collisions = collisions;
+    CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+    collisions[3 * 16 + 0] = 0x0f; CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));   /* row 3: not reached */
+    collisions[4 * 16 + 0] = 0x0f; CHECK(!oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));  /* row 4 */
+    /* At the position the move along the axis takes him to as well: from x=150 of the room left, 12 px along reach
+     * column 0 of the room entered, whose wall below holds him; without them, its first column is tested too. */
+    s.link_x = 150 << 8; CHECK(!oracles_room_transition_across_free(&s, 2, 0xb5, 12 << 8, 0, 0));
+    collisions[4 * 16 + 0] = 0; collisions[4 * 16 + 9] = 0x0f; CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 12 << 8, 0, 0));
+    /* His leading corner along the axis: at x=12 of the room entered, carried from y=58.5 to 59.2, his right point
+     * (x+4, y+5) reaches row 4 of column 1, a wall in its top left quarter, which the game's move would walk him into;
+     * already a wall without the carry (row 3 too), it holds nothing. */
+    memset(collisions, 0, sizeof collisions);
+    s.link_x = 172 << 8; s.link_y = (58 << 8) + 0x80; CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+    collisions[4 * 16 + 1] = 0x08; CHECK(!oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+    collisions[3 * 16 + 1] = 0x0f; CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+
+    /* Over the rest of the game's own distance as well: Link going down from y=121 of the room left, carried right,
+     * keeps every point the game tests for walls, and the tile it takes as his (y+5), as clear as the straight path
+     * wherever the scroll may leave him.  From x=45.5, 0xb5 to the right puts x+2 at 48, column 3; straight at 47. */
+    memset(collisions, 0, sizeof collisions);
+    s = eligible(); s.transition_direction = 2; s.link_x = (45 << 8) + 0x80; s.link_y = 121 << 8; s.room_collisions = collisions;
+    collisions[1 * 16 + 3] = 0x08;                                   /* row 1's top left quarter: his feet (y+7 = 16) at 9 */
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+    CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 16 << 8));
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 8 << 8));    /* the scroll leaves him at 1 at the furthest: y+7 = 8 */
+    CHECK(oracles_room_transition_across_free(&s, 3, 0xb5, 0, 0, 16 << 8));   /* leftward, away from it */
+    /* The carries before this one count: from x=46 one pixel off the straight path, this one takes x+2 into column 3
+     * where the straight path's stays in column 2; taken alone, it moves nothing that the straight path would not. */
+    s.link_x = 46 << 8;
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 16 << 8));
+    CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0x100, 16 << 8));
+    /* The tile under him: a hole in row 1, column 3, which the carried path's y+5 reaches at y=11 and the straight
+     * path's (x=47) never does; not a wall, so only its own point tells. */
+    collisions[1 * 16 + 3] = 0x10; s.link_x = (47 << 8) + 0x80;
+    CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 16 << 8));
+    CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 18 << 8));
+    collisions[1 * 16 + 2] = 0x10; CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 18 << 8));   /* the straight path over a hole too: the game's own */
+    /* No carry while the room entered's collisions are not loaded (the vblanks of the transition's state 3), whatever
+     * collisions the room left had. */
+    s.room_collisions = NULL; CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 18 << 8));
+    memset(collisions, 0, sizeof collisions); s.link_x = 40 << 8; s.link_y = 100 << 8;
+    CHECK(!oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+    s.room_collisions = collisions; CHECK(oracles_room_transition_across_free(&s, 1, 0xb5, 0, 0, 0));
+
+    /* Leftward his x runs below zero as far as the transition takes him: at $ea (-22, 138 in the room entered, column
+     * 8) and beyond -16, carried down, his feet (y+7 = 57) are tested in column 8, not the room's last. */
+    memset(collisions, 0, sizeof collisions);
+    s = eligible(); s.transition_direction = 3; s.link_y = 50 << 8; s.room_collisions = collisions;
+    for (int xh = 0xf4; xh >= 0xe0; xh--) {
+        const int column = (xh - 256 + 160) >> 4;
+        memset(collisions, 0, sizeof collisions);
+        s.link_x = (uint16_t)(xh << 8);
+        CHECK(oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+        collisions[3 * 16 + column] = 0x0f;
+        CHECK(!oracles_room_transition_across_free(&s, 2, 0xb5, 0, 0, 0));
+    }
+
+    /* Rightward, his own tile (y+5) in another row than his middle: at x=170 (10 in the room entered) and y=60, a hole
+     * under y+5 = 65, row 4, holds him; at y=58, y+5 = 63 is in row 3 with him. */
+    memset(collisions, 0, sizeof collisions);
+    s = eligible(); s.transition_direction = 1; s.link_x = 170 << 8; s.link_y = 60 << 8; s.room_collisions = collisions;
+    CHECK(oracles_room_transition_walkable(&s, 0, 0x100));
+    collisions[4 * 16 + 0] = 0x10; CHECK(!oracles_room_transition_walkable(&s, 0, 0x100));
+    s.link_y = 58 << 8; CHECK(oracles_room_transition_walkable(&s, 0, 0x100));
+
+    /* What the machine still moves Link (8.8): a step a row, $80 down; 16 rows before the scroll, 32 steps of 4 px
+     * when it is not doubled; the counter whole in phase 1, then the step after it reaches zero the last; two native
+     * steps a row, the one landing the camera on a multiple of 8 drawing it. */
+    s = eligible(); s.transition_direction = 2; s.transition_state = 3; s.transition_substate = 0;
+    CHECK(oracles_room_transition_machine_rest(&s, 1) == 16 * 0x80 && oracles_room_transition_machine_rest(&s, 0) == 32 * 0x80);
+    s.transition_state = 5; s.transition_substate = 1; s.transition_phase = 1; s.screen_scroll_counter = 16;
+    CHECK(oracles_room_transition_machine_rest(&s, 1) == 16 * 0x80 && oracles_room_transition_machine_rest(&s, 0) == 32 * 0x80);
+    s.transition_phase = 2; s.screen_scroll_counter = 10; s.camera_y = 6 * 8;
+    CHECK(oracles_room_transition_machine_rest(&s, 1) == 11 * 0x80);
+    CHECK(oracles_room_transition_machine_rest(&s, 0) == 22 * 0x80);
+    s.camera_y = 6 * 8 + 4; CHECK(oracles_room_transition_machine_rest(&s, 0) == 21 * 0x80);   /* between two rows */
+    s.screen_scroll_counter = 0; s.camera_y = 31 * 4; CHECK(oracles_room_transition_machine_rest(&s, 0) == 1 * 0x80);
+    s.transition_phase = 3; CHECK(oracles_room_transition_machine_rest(&s, 1) == 0 && oracles_room_transition_machine_rest(&s, 0) == 0);
+    /* Leftward, $60 a step, 20 columns, the camera running below zero. */
+    s = eligible(); s.transition_direction = 3; s.transition_substate = 2; s.transition_phase = 2; s.screen_scroll_counter = 5;
+    s.camera_x = (uint16_t)-12; CHECK(oracles_room_transition_machine_rest(&s, 0) == 11 * 0x60);
+    s.camera_x = (uint16_t)-16; CHECK(oracles_room_transition_machine_rest(&s, 0) == 12 * 0x60 && oracles_room_transition_machine_rest(&s, 1) == 6 * 0x60);
 
     if (failures) return 1;
     puts("test_room_transition: ok");

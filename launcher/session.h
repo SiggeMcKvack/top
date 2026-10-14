@@ -41,6 +41,7 @@ typedef struct OraclesSessionOptions {
     int core;                        /* --core: an OraclesCoreKind plus one, for the run, never stored; 0: the settings' core= */
     int screen_margin;               /* --screen-margin: an OraclesScreenMargin plus one, for the run, never stored; 0: the settings' screen_margin= */
     int continuous_swim;             /* --continuous-swim: the transitions with Link swimming at the surface too (implies them) */
+    int continuous_diagonal;         /* --continuous-diagonal: a diagonal held carries Link across the transitions' axis too (implies them) */
     int swim_hold;                   /* --swim-hold, or settings.txt's swim_hold=on for a game the home screen starts: a direction held
                                       * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */

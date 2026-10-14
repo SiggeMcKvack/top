@@ -396,20 +396,27 @@ static void drop_hotkeys(session *s, OraclesSessionResult *result, const char *w
  * not allow; --rom refuses them, with the reason. */
 static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
 {
-    /* The swim's hold, a setting of every game: one where it is not qualified plays without it. */
+    const int from_home = o->sdl.window != NULL;
+    /* The swim's hold, a setting of every game: one the home screen started where it is not qualified plays without
+     * it; --rom refuses it, as the other options. */
     if (s->swim_hold && !oracles_compat_swim_hold(s->profile)) {
+        if (!from_home) return failed(result, "%s does not support --swim-hold", s->profile ? oracles_compat_name(s->profile) : "this image");
         fprintf(stderr, "oracles: the swim's hold is not qualified for %s; this game plays without it\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->swim_hold = 0;
     }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
-    const int from_home = o->sdl.window != NULL;
     if (s->continuous_transitions && !oracles_compat_continuous_transitions(s->profile))
         return failed(result, "%s does not support --continuous-transitions", name);
     if (s->continuous_swim && !oracles_compat_continuous_swim(s->profile)) {
         if (!from_home) return failed(result, "%s does not support --continuous-swim", name);
         fprintf(stderr, "oracles: %s does not support the continuous transitions when swimming; they stay on foot\n", name);
         s->continuous_swim = 0;
+    }
+    if (s->continuous_diagonal && !oracles_compat_continuous_diagonal(s->profile)) {
+        if (!from_home) return failed(result, "%s does not support --continuous-diagonal", name);
+        fprintf(stderr, "oracles: %s does not support the continuous transitions' diagonal; they stay along their axis\n", name);
+        s->continuous_diagonal = 0;
     }
     if (s->zoom_out && !oracles_compat_zoom_out(s->profile)) {
         if (!from_home) return failed(result, "%s does not support a view drawn back (--view medium or far, --zoom-out) yet", name);
@@ -479,6 +486,7 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     }
     if (s->continuous_transitions && s->guest) {
         s->transition = oracles_room_transition_start(s->guest, s->rom, s->rom_size, s->continuous_swim);
+        oracles_room_transition_set_diagonal(s->transition, s->continuous_diagonal);
         if (s->transition) fprintf(stderr, "oracles: continuous transitions on%s: Link keeps walking through scrolling transitions; the game's state differs from a native session's\n", s->continuous_swim ? ", swimming too" : "");
         else fprintf(stderr, "oracles: continuous transitions need the hooks of a recognised game; the native transitions stay\n");
     }
@@ -690,9 +698,10 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->vsync = o->vsync_option ? o->vsync_option : settings->vsync;
     s->ghosts = o->ghosts ? o->ghosts - 1 : settings->ghosts;
     s->record_path = o->record_path;
-    s->enhanced = o->enhanced || o->zoom_out || o->view || o->continuous_transitions || o->continuous_swim;
-    s->continuous_transitions = o->continuous_transitions || o->continuous_swim;
+    s->enhanced = o->enhanced || o->zoom_out || o->view || o->continuous_transitions || o->continuous_swim || o->continuous_diagonal;
+    s->continuous_transitions = o->continuous_transitions || o->continuous_swim || o->continuous_diagonal;
     s->continuous_swim = o->continuous_swim;
+    s->continuous_diagonal = o->continuous_diagonal;
     s->swim_hold = o->swim_hold;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near), and its shape: the screen's,
      * a window taking the surface's (docs/PLAYING.md). */

@@ -59,6 +59,7 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
     fprintf(out, "enhanced.transitions=%u\nenhanced.transitions_vertical=%u\nenhanced.transitions_shown=%u\nenhanced.transitions_black=%u\nenhanced.transitions_other_room=%u\nenhanced.transitions_large=%u\nenhanced.large_scroll_black=%u\nenhanced.terrains_equal=%u\nenhanced.terrains_different=%u\n",
             c->transitions, c->transitions_vertical, c->transitions_with_terrain, c->transitions_black, c->transitions_other_room, c->transitions_large, c->large_scroll_black, c->terrains_equal, c->terrains_different);
     fprintf(out, "enhanced.terrains_old=%u\n", c->terrains_old);
+    fprintf(out, "enhanced.scrolls_diagonal=%u\nenhanced.scroll_across_stalled=%u\n", c->scrolls_diagonal, c->scroll_across_stalled);
     fprintf(out, "enhanced.scrolls=%u\nenhanced.scroll_frames=%u\nenhanced.scroll_frozen_frames=%u\nenhanced.scroll_solid_arrivals=%u\nenhanced.window_checked=%u\nenhanced.window_misplaced=%u\nenhanced.off_camera_frames=%u\nenhanced.wave_frames=%u\nenhanced.shake_frames=%u\nenhanced.window_lines_checked=%u\nenhanced.window_lines_wrong=%u\n",
             c->transitions_seen, c->transition_frames_total, c->transition_frozen_total, c->transition_arrivals_solid, c->window_checked, c->window_misplaced, oracles_enhanced_view_off_camera_frames(c->view), oracles_enhanced_view_wave_frames(c->view), oracles_enhanced_view_shake_frames(c->view), c->window_lines_checked, c->window_lines_wrong);
     fprintf(out, "enhanced.curtain_frames=%u\nenhanced.curtain_frames_wrong=%u\nenhanced.curtain_frames_unchecked=%u\nenhanced.curtain_pixels_wrong=%u\n",
@@ -178,6 +179,7 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
  * the runs chained ahead and the savestate reload. */
 static void report_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
 {
+    fprintf(out, "  scrolls entered walking diagonally: %u; their frames with Link standing across the axis two frames running: %u\n", c->scrolls_diagonal, c->scroll_across_stalled);
     fprintf(out, "  horizontal transitions in large rooms (the room entered shown during the scroll): %u; frames of a large room's scroll with the room entered missing: %u\n", c->transitions_large, c->large_scroll_black);
     fprintf(out, "  scrolling transitions of the grid %u (%u vertical): the room entered was shown as a neighbour before %u times, black %u times%s%s, another room shown %u times%s%s\n",
             c->transitions, c->transitions_vertical, c->transitions_with_terrain, c->transitions_black, c->transitions_black ? ": " : "", c->black_list,

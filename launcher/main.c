@@ -5,6 +5,7 @@
  *                       [--colour-correction on|off] [--vsync auto|on|off] [--camera 1|2]
  *                       [--mute] [--frames N] [--no-window]
  *                       [--screenshot PATH.ppm] [--record ROUTE] [--play ROUTE] [--continuous-transitions] [--continuous-swim] [--item-hotkeys=off|use|equip]
+ *                       [--continuous-diagonal]
  *                       [--swim-hold]
  *                       [--zoom-out]
  *   the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,...]
@@ -107,6 +108,7 @@ static int usage(void)
                     "                           [--vsync auto|on|off] [--camera 1|2] [--mute] [--frames N] [--no-window] [--screenshot PATH.ppm]\n"
                     "                           [--record ROUTE] [--play ROUTE] [--diagnostics] [--native-renderer] [--enhanced] [--neighbours off|static (static)] [--continuous-transitions]\n"
                     "                           [--continuous-swim]   (the continuous transitions with Link swimming at the surface too; implies --continuous-transitions)\n"
+                    "                           [--continuous-diagonal]   (the continuous transitions with a diagonal held carrying Link across their axis too; implies --continuous-transitions)\n"
                     "                           [--swim-hold]   (swimming, a direction held swims at full speed where the game wants A tapped with the flippers, the direction with Ages' mermaid suit)\n"
                     "                           [--zoom-out]   (Enhanced drawn back, 480x270 or 480x360 in 4:3, three rooms across outdoors; --fullscreen --scale 4 fills 1920x1080; --view far)\n"
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
@@ -176,6 +178,7 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
         }
         else if (!strcmp(argv[i], "--continuous-transitions")) { o->continuous_transitions = 1; o->enhanced = 1; }
         else if (!strcmp(argv[i], "--continuous-swim")) { o->continuous_swim = o->continuous_transitions = 1; o->enhanced = 1; }
+        else if (!strcmp(argv[i], "--continuous-diagonal")) { o->continuous_diagonal = o->continuous_transitions = 1; o->enhanced = 1; }
         else if (!strcmp(argv[i], "--swim-hold")) o->swim_hold = 1;
         else if (!strcmp(argv[i], "--zoom-out")) { o->zoom_out = 1; o->enhanced = 1; o->view = 3; }
         else if (!strcmp(argv[i], "--view") && more) {

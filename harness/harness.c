@@ -74,6 +74,8 @@ typedef struct run {
     uint32_t colour_toggle_at; /* --colour-toggle-at, F2 in the launcher; 0: never */
     unsigned events;
     size_t journal_writes;
+    int swam_before;          /* Link swimming at the last frame of normal play, with the continuous transitions */
+    unsigned swim_dropped;    /* frames of a transition he was not swimming in after it */
 } run;
 
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
@@ -125,6 +127,15 @@ static void on_frame_end(void *opaque, uint32_t frame)
         if (byte) *byte ^= 0x01;
     }
     if (r->out) oracles_guest_write_fingerprint(bus, r->core, frame, r->out);
+    if (r->transition) {
+        /* Link swimming into a transition swims through it: the game freezes him, and the tile it takes as his own is
+         * read again only once it ends. */
+        const OraclesGuestTables *t = oracles_guest_tables(bus);
+        const unsigned state = oracles_guest_read8(bus, t->screen_transition_state), mode = oracles_guest_read8(bus, t->link_anim_mode);
+        const int swimming = oracles_guest_read8(bus, t->link_swimming_state) != 0u && (mode == ORACLES_LINK_ANIM_MODE_SWIM || mode == ORACLES_LINK_ANIM_MODE_DIVE);
+        if (state == 2u) r->swam_before = swimming;
+        else if (state >= 3u && state <= 5u && r->swam_before && !swimming) r->swim_dropped++;
+    }
     if (r->positions) {
         /* What the game is at, whatever the core: the fingerprints, hashes of the memory, differ from one core to the other. */
         const OraclesGuestTables *t = oracles_guest_tables(bus);
@@ -378,6 +389,10 @@ static void report_transitions(run *r, FILE *summary, uint8_t *rom)
                 by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
         if (summary) fprintf(summary, "transitions.vblank_policy_skipped=%u\n", oracles_guest_vblank_policy_skipped(r->guest));
         if (summary) fprintf(summary, "transitions.swim_taken=%u\ntransitions.swum_frames=%u\ntransitions.swim_forced=%u\n", stats.swim_transitions, stats.swum_frames, stats.forced_transitions);
+        fprintf(stderr, "continuous transitions: frames of a transition Link swam into and was not swimming in: %u\n", r->swim_dropped);
+        if (summary) fprintf(summary, "transitions.swim_dropped=%u\n", r->swim_dropped);
+        fprintf(stderr, "continuous transitions: a diagonal held (--continuous-diagonal) carried Link across the axis on %u frames, withheld on %u (a collision across, the room's collisions not loaded)\n", oracles_guest_transition_carried(r->guest), stats.carry_withheld_frames);
+        if (summary) fprintf(summary, "transitions.carried_frames=%u\ntransitions.carry_asked_frames=%u\ntransitions.carry_withheld_frames=%u\n", oracles_guest_transition_carried(r->guest), stats.carry_asked_frames, stats.carry_withheld_frames);
         if (summary) fprintf(summary, "transitions.taken=%u\ntransitions.walked_frames=%u\ntransitions.refused_frames=%u\ntransitions.unanimated_frames=%u\ntransitions.palette_refreshes=%u\ntransitions.vblank_load_writes=%u\ntransitions.vblank_scroll_writes=%u\ntransitions.vblank_other_writes=%u\n",
                              stats.transitions, stats.walked_frames, stats.refused_frames, stats.unanimated_frames, stats.palette_refreshes,
                              by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
@@ -556,6 +571,15 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         o->continuous_transitions = o->continuous_swim = 1;
         fprintf(stderr, "harness: the route was recorded with --continuous-swim: the option is on\n");
     }
+    const int route_diagonal = oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL);
+    if ((o->continuous_diagonal || route_diagonal) && r->profile && !oracles_compat_continuous_diagonal(r->profile)) {
+        fprintf(stderr, "harness: %s does not support --continuous-diagonal; refusing the request and route option\n", oracles_compat_name(r->profile));
+        return 1;
+    }
+    if (route_diagonal && !o->continuous_diagonal) {
+        o->continuous_transitions = o->continuous_diagonal = 1;
+        fprintf(stderr, "harness: the route was recorded with --continuous-diagonal: the option is on\n");
+    }
     const int route_swim_hold = oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_SWIM_HOLD);
     if (route_swim_hold && !oracles_compat_swim_hold(r->profile)) {
         fprintf(stderr, "harness: the route was recorded with --swim-hold, which %s does not support\n", r->profile ? oracles_compat_name(r->profile) : "this image");
@@ -605,6 +629,7 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     if (o->continuous_transitions && r->guest) {
         r->transition = oracles_room_transition_start(r->guest, rom, rom_size, o->continuous_swim);
         if (!r->transition) { fprintf(stderr, "harness: --continuous-transitions needs the hooks on\n"); return 1; }
+        oracles_room_transition_set_diagonal(r->transition, o->continuous_diagonal);
     }
     if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
         fprintf(stderr, "harness: --swim-hold needs the hooks on, and the swim's strokes found in the ROM\n");

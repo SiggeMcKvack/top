@@ -112,6 +112,7 @@ typedef struct OraclesEnhancedObserver {
      * with it (the game copies its camera into the display registers at the
      * vblank that starts the frame, after the logic that moved it). */
     int was_in_scroll;                       /* the previous observation was inside a scroll */
+    unsigned carried_before_scroll;          /* the guest's carries across a transition's axis before the scroll in progress */
     int32_t scroll_start_left, scroll_start_top;   /* the game's window at the scroll's first frame: a large room's camera slides from it */
     int have_last_window;
     int32_t last_window_left, last_window_top;

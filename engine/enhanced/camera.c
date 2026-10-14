@@ -330,12 +330,23 @@ void oracles_enhanced_observe(OraclesGuest *guest, OraclesEnhancedObserver *o, O
     shift_by_loops(o, &out->world);
     out->epoch = o->epoch * 8u + (uint64_t)out->world.domain;
     place_window(guest, t, o, out);
+    /* The carries across a transition's axis the transaction applied before this scroll (--continuous-diagonal). */
+    const unsigned carried = oracles_guest_transition_carried(guest);
+    if (!out->in_scroll) o->carried_before_scroll = carried;
     /* In the same room by his room's coordinates; across the end of a scroll,
      * where the reference changes, by the world's, continuous there. */
     if (o->have_last_link && o->last_link_epoch == out->epoch) {
         const int same_room = o->last_link_group == o->ref_group && o->last_link_room == o->ref_room;
         out->link_step_x = same_room ? link_x - o->last_link_x : out->world.link_x - o->last_world_link_x;
         out->link_step_y = same_room ? link_y - o->last_link_y : out->world.link_y - o->last_world_link_y;
+        /* Across the axis of a scroll the transaction carried Link across, at drawAllSprites' return: the frame on
+         * screen draws him where the OAM it scanned had him, which a frame whose logic ended past the vblank left
+         * uncopied (oracles_guest_link_shown), not always where the previous observation had him. */
+        uint16_t shown_x = 0, shown_y = 0;
+        if (out->in_scroll && carried != o->carried_before_scroll && !warping && oracles_guest_link_shown(guest, &shown_x, &shown_y)) {
+            if (direction & 1u) out->link_step_y = (int8_t)(uint8_t)(raw_y - (shown_y >> 8));
+            else out->link_step_x = (int8_t)(uint8_t)(raw_x - (shown_x >> 8));
+        }
     }
     o->have_last_link = 1;
     o->last_link_x = link_x; o->last_link_y = link_y;

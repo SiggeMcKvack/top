@@ -47,6 +47,12 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
         return refuse(error, capacity, "the route was recorded with --continuous-swim, which %s does not support", oracles_compat_name(s->profile));
     if (route_swim && !s->continuous_swim) { s->continuous_swim = s->continuous_transitions = 1; s->enhanced = 1; fprintf(stderr, "oracles: the route was recorded with --continuous-swim: the option is on for the replay\n"); }
     else if (!route_swim && s->continuous_swim) fprintf(stderr, "oracles: the route was recorded without --continuous-swim: the replay diverges after its first transition swum\n");
+    /* The transitions' diagonal, which the home screen's Continuous transitions take: the route's, whatever it is. */
+    const int route_diagonal = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL);
+    if (route_diagonal && s->profile && !oracles_compat_continuous_diagonal(s->profile))
+        return refuse(error, capacity, "the route was recorded with --continuous-diagonal, which %s does not support", oracles_compat_name(s->profile));
+    if (route_diagonal && !s->continuous_diagonal) { s->continuous_diagonal = s->continuous_transitions = 1; s->enhanced = 1; fprintf(stderr, "oracles: the route was recorded with --continuous-diagonal: the option is on for the replay\n"); }
+    else if (!route_diagonal && s->continuous_diagonal) { s->continuous_diagonal = 0; fprintf(stderr, "oracles: the route was recorded without --continuous-diagonal: the option is off for the replay\n"); }
     /* The swim's hold, a setting the player may have on for every game: the route's, whatever it is. */
     const int route_swim_hold = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_SWIM_HOLD);
     if (route_swim_hold && !oracles_compat_swim_hold(s->profile))
@@ -93,6 +99,10 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
     snprintf(header.sram_sha1, sizeof header.sram_sha1, "%s", s->save.sha1);
     snprintf(header.options, sizeof header.options, "%s", s->continuous_swim ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS "," ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM
                                                           : s->continuous_transitions ? ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS : "");
+    if (s->continuous_diagonal) {   /* a diagonal crossing carries Link elsewhere without it */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL, used ? "," : "");
+    }
     if (s->language) {   /* the texts' lengths pace the dialogues: a replay plays in the same language */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_LANGUAGE "%s", used ? "," : "", o->language);

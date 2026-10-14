@@ -56,6 +56,7 @@ struct OraclesGuest {
     unsigned inventory_applied, inventory_violations;
     unsigned vblank_writes[8];                       /* transaction writes made at a vblank, by wScreenTransitionState */
     unsigned vblank_policy_skipped;                  /* vblanks of an unfinished frame outside a load, where the policy was not asked */
+    unsigned transition_carried;                     /* carries across a transition's axis applied */
     uint32_t policy_not_asked;                       /* such vblanks since the policy was last asked */
     hook hooks[32];                                  /* the table of section 15 plus the hooks a consumer adds (tags, object updates) */
     unsigned hook_count;
@@ -91,6 +92,9 @@ struct OraclesGuest {
     unsigned mermaid_strokes, flippers_strokes;      /* the swim's hold (guest_swim.c): strokes it started */
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
+    uint16_t link_shown_x, link_shown_y;             /* Link (8.8) where the OAM the frame just scanned drew him (oracles_guest_link_shown) */
+    uint16_t link_next_x, link_next_y;               /* and where the OAM the next scan reads does */
+    unsigned link_shown_vblanks;                     /* vblanks since a load: both are known from the second */
 };
 
 /* guest_transaction.c */
