@@ -84,6 +84,10 @@ int oracles_session_save_state(session *s, char *message, size_t capacity)
     }
     s->state_info.mods_storage = storage;
     s->state_info.mods_storage_size = storage_size;
+    /* The transitions' progress through the transition in progress, which the game's state alone does not say. */
+    uint8_t transition[ORACLES_ROOM_TRANSITION_STATE_SIZE];
+    s->state_info.transition_state = transition;
+    s->state_info.transition_state_size = oracles_room_transition_save_state(s->transition, transition, sizeof transition);
     int ok = 0;
     if (oracles_state_serialize(s->core, &s->state_info, &data, &size, error, sizeof error) != 0) {
         fprintf(stderr, "oracles: %s\n", error);
@@ -97,6 +101,8 @@ int oracles_session_save_state(session *s, char *message, size_t capacity)
     }
     s->state_info.mods_storage = NULL;
     s->state_info.mods_storage_size = 0;
+    s->state_info.transition_state = NULL;
+    s->state_info.transition_state_size = 0;
     free(storage);
     free(data);
     return ok;
@@ -146,6 +152,11 @@ int oracles_session_load_state(session *s, char *message, size_t capacity)
     if (oracles_state_deserialize(s->core, &s->state_info, data, size, &host_state, &host_state_size, error, sizeof error) == 0) {
         fprintf(stderr, "oracles: state loaded from %s\n", s->state_path);
         if (s->guest) oracles_guest_reset_execution_state(s->guest);
+        const uint8_t *transition = NULL;
+        size_t transition_size = 0;
+        if (s->transition && oracles_state_transition_state(data, size, &transition, &transition_size) == 0 && transition_size
+            && oracles_room_transition_load_state(s->transition, transition, transition_size) != 0)
+            fprintf(stderr, "oracles: the savestate's transitions' state is refused: a transition it was saved in is left to the game's scroll\n");
         oracles_mod_session_reset(s->mod);   /* no conversation survives a load */
         const uint8_t *storage = NULL;
         size_t storage_size = 0;

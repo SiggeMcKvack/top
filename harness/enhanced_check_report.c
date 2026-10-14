@@ -117,9 +117,9 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
     fprintf(out, "enhanced.beside_refused=%u\n", oracles_enhanced_view_beside_refused(c->view));
     fprintf(out, "enhanced.render_wait_max=%u\nenhanced.renders_forced=%u\n", oracles_enhanced_view_render_wait_max(c->view), oracles_enhanced_view_renders_forced(c->view));   /* a neighbour's own-animation render: the most frames it waited for the frame's budget, and those made past it */
     if (c->reload_at)
-        fprintf(out, "enhanced.reload=%s\nenhanced.reload_camera_delta=%" PRId32 "\nenhanced.reload_camera_frozen=%u\n",
+        fprintf(out, "enhanced.reload=%s\nenhanced.reload_camera_delta=%" PRId32 "\nenhanced.reload_camera_frozen=%u\nenhanced.reload_transition_frames=%u\nenhanced.reload_transition_differing=%u\n",
                 !c->reload_done ? "not-performed" : c->reload_settled == 1 ? "neighbours-back" : "neighbours-not-back", c->reload_camera_delta,
-                c->reload_done && c->reload_link_travel > 16 && c->reload_camera_travel == 0 ? 1u : 0u);
+                c->reload_done && c->reload_link_travel > 16 && c->reload_camera_travel == 0 ? 1u : 0u, c->reload_track_compared, c->reload_track_differing);
 }
 
 void oracles_enhanced_check_summary(OraclesEnhancedCheck *c, FILE *out)
@@ -197,6 +197,9 @@ static void report_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
             oracles_enhanced_view_live_renders(c->view), oracles_enhanced_view_live_renders_kept(c->view), oracles_enhanced_view_render_wait_max(c->view), oracles_enhanced_view_renders_forced(c->view), oracles_enhanced_view_live_lines_kept(c->view), oracles_enhanced_view_live_diff_max(c->view), oracles_enhanced_view_plain_renders(c->view), oracles_enhanced_view_plain_renders(c->view) ? " " : "", oracles_enhanced_view_plain_log(c->view),
             dropped, dropped ? " " : "", drops);
     if (c->reload_at) {
+        if (c->reload_track_compared)
+            fprintf(out, "  reload in a transition: Link's place on the %u frames after the load to its end, against the run before the load: %u different\n",
+                    c->reload_track_compared, c->reload_track_differing);
         if (!c->reload_done) fprintf(out, "  reload at frame %u: not performed (the route is shorter, or the state could not be saved)\n", c->reload_at);
         else if (!c->reload_saved_in_scroll)
             fprintf(out, "  reload at frame %u, loaded back at %u: camera %" PRId32 " px from the saved point on the next frame; neighbours %s after %u frames (saved %s%02x %s%02x); over the 300 frames after: Link moved %" PRId32 " px, the camera %" PRId32 " px%s\n",

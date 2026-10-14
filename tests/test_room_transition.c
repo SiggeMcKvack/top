@@ -215,7 +215,7 @@ int main(void)
     if (!types_rom) return 1;
     const size_t types = 5u * 0x4000u;
     types_rom[types + 0] = 0x10; types_rom[types + 1] = 0x40;          /* list 0 at $4010 */
-    const uint8_t list[] = { 0xfd, 0x07, 0xf3, 0x01, 0xfc, 0x17, 0x40, 0x13, 0x00 };   /* water, hole, sea, a current */
+    const uint8_t list[] = { 0xfd, 0x07, 0xf3, 0x01, 0xfc, 0x17, 0x40, 0x13, 0xe9, 0x18, 0x00 };   /* water, hole, sea, a current, a whirlpool */
     memcpy(types_rom + types + 0x10, list, sizeof list);
     uint8_t layout[176];
     memset(collisions, 0, sizeof collisions);
@@ -231,11 +231,17 @@ int main(void)
     collisions[5 * 16 + 0] = 0x10;                              /* the entry tile: holes', water's and lava's collision */
     layout[5 * 16 + 0] = 0xfd; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
     collisions[5 * 16 + 0] = 0x0f; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* a water tile index with a wall's collision */
-    collisions[5 * 16 + 0] = 0x10;
+    collisions[5 * 16 + 0] = 0;                                 /* the type alone says water (Ages' currents have no collision) */
     layout[5 * 16 + 0] = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* a current */
+    layout[5 * 16 + 0] = 0xe9; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* a whirlpool */
+    s.game = ORACLES_GAME_SEASONS; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));   /* Seasons has no such type */
+    s.game = ORACLES_GAME_AGES;
+    collisions[5 * 16 + 0] = 0x10;
     layout[5 * 16 + 0] = 0xf3; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));  /* a hole */
     layout[5 * 16 + 0] = 0xfc; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));  /* the sea, no mermaid suit */
     s.link_var2f = 0x40; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
+    s.game = ORACLES_GAME_SEASONS; CHECK(!oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
+    s.game = ORACLES_GAME_AGES;
     collisions[5 * 16 + 0] = 0; layout[5 * 16 + 0] = 0x01;       /* land: walkable, not swimmable */
     CHECK(oracles_room_transition_walkable(&s, 0, 0x120) && !oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));
     s.room_collisions = NULL; CHECK(oracles_room_transition_swimmable(types_rom, rom_size, &s, 0, 0x120));    /* not loaded yet */

@@ -29,8 +29,6 @@ int oracles_guest_has_transition_policy(const OraclesGuest *guest)
 #define SCROLL_MODE_TRANSITION_DECIDED 4u
 #define SCROLL_MODE_TRANSITION_LOADED 8u
 #define LINK_STATE_NORMAL 1u
-#define WALK_STEP_MAX 0x100              /* a pixel a frame */
-#define SWIM_STEP_MAX 0x160              /* SPEED_160 along an axis: the fastest swim, the mermaid suit with the swimmer's ring */
 
 static uint8_t *bank0_field(OraclesGuest *guest, OraclesGuestSym sym, size_t size)
 {
@@ -255,7 +253,7 @@ static void apply_transition_mutation(OraclesGuest *guest, const OraclesGuestTra
     }
     if (!transition_state_safe(s)) { if (wrote && at_vblank) guest->vblank_writes[s->transition_state & 7u]++; return; }
     const int walk_safe = transition_walk_safe(s), swim_safe = transition_swim_safe(guest, s), floor_safe = transition_floor_safe(guest, s);
-    const int step_max = swim_safe || floor_safe ? SWIM_STEP_MAX : WALK_STEP_MAX;
+    const int step_max = swim_safe || floor_safe ? ORACLES_TRANSITION_SWIM_STEP_MAX : ORACLES_TRANSITION_WALK_STEP_MAX;
     /* The scroll step: the game's own value or twice it, while the scroll runs. */
     if (m->set_scroll_delta && s->transition_state == TRANSITION_STATE_SCROLL && (s->transition_substate == 1u || s->transition_substate == 2u)) {
         const uint8_t v = m->scroll_delta;
@@ -275,8 +273,18 @@ static void apply_transition_mutation(OraclesGuest *guest, const OraclesGuestTra
         if (m->carried && x && y) guest->transition_carried++;
         /* His sprite follows: in wOam, drawn this frame before the move and
          * copied at the coming vblank; in the core's OAM as well when the
-         * game did not draw this frame (no copy comes, the LCD shows the OAM). */
+         * game did not draw this frame (no copy comes, the LCD shows the OAM).
+         * There both still draw him where the last frame the game finished
+         * left him, short of its own last step, which no frame draws until the
+         * load is over: they go where he now is. */
         wrote = 1;
+        if (at_vblank && x && y) {
+            const uint16_t nx = (uint16_t)(x[0] | (x[1] << 8)), ny = (uint16_t)(y[0] | (y[1] << 8));
+            dx = (int8_t)((nx >> 8) - (guest->link_next_x >> 8));
+            dy = (int8_t)((ny >> 8) - (guest->link_next_y >> 8));
+            guest->link_next_x = nx;
+            guest->link_next_y = ny;
+        }
         if (dx || dy) {
             const unsigned lower = swim_safe ? ORACLES_LINK_SWIM_LOWER : 0u;
             shift_link_sprites(bank0_field(guest, t->oam, 160), s, dx, dy, lower);

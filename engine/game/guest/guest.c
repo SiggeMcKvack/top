@@ -397,8 +397,6 @@ static void on_vblank(void *opaque, OraclesVblankType type)
      * (vblankInterrupt, hOamFunc) only when the main loop waits for it, wVBlankChecker $ff; a frame whose logic ends
      * past the vblank leaves the OAM as it was, but for the transaction's moves at the vblank. */
     const uint8_t *link = oracles_guest_object(guest, 0, 0);
-    const uint16_t before_x = link ? (uint16_t)(link[ORACLES_OBJ_X] | (link[ORACLES_OBJ_XH] << 8)) : 0;
-    const uint16_t before_y = link ? (uint16_t)(link[ORACLES_OBJ_Y] | (link[ORACLES_OBJ_YH] << 8)) : 0;
     const int copies = oracles_guest_read8(guest, guest->tables->vblank_checker) == 0xffu;
     guest->link_shown_x = guest->link_next_x; guest->link_shown_y = guest->link_next_y;
     if (guest->link_shown_vblanks < 2u) guest->link_shown_vblanks++;
@@ -412,11 +410,8 @@ static void on_vblank(void *opaque, OraclesVblankType type)
     guest->drawn_this_frame = 0;
     const uint16_t after_x = link ? (uint16_t)(link[ORACLES_OBJ_X] | (link[ORACLES_OBJ_XH] << 8)) : 0;
     const uint16_t after_y = link ? (uint16_t)(link[ORACLES_OBJ_Y] | (link[ORACLES_OBJ_YH] << 8)) : 0;
+    /* Without a copy, the transaction moves the OAM to where it moves him, and says so. */
     if (copies) { guest->link_next_x = after_x; guest->link_next_y = after_y; }
-    else {   /* the transaction shifts the OAM by the whole pixels his coordinates crossed */
-        guest->link_next_x = (uint16_t)(guest->link_next_x + (((after_x >> 8) - (before_x >> 8)) << 8));
-        guest->link_next_y = (uint16_t)(guest->link_next_y + (((after_y >> 8) - (before_y >> 8)) << 8));
-    }
     emit(guest, ORACLES_EVENT_VBLANK, 0, 0, (uint8_t)type);
 }
 

@@ -71,6 +71,7 @@ int oracles_state_serialize(OraclesCore *core, const OraclesStateInfo *info,
     put_field(&w, guest, guest_size);
     put_field(&w, info->host_state, info->host_state_size);
     put_field(&w, info->mods_storage, info->mods_storage_size);
+    put_field(&w, info->transition_state, info->transition_state_size);
     free(guest);
     if (w.failed) { free(w.data); set_error(error, error_capacity, "out of memory"); return -1; }
     *out = w.data;
@@ -121,7 +122,8 @@ static int check_field(reader *r, const char *expected, const char *what, char *
     return match;
 }
 
-/* Field `wanted` of a savestate (0 core version, 1 game, 2 ROM, 3 mods, 4 guest state, 5 host state, 6 mods' storage), read in place. */
+/* Field `wanted` of a savestate (0 core version, 1 game, 2 ROM, 3 mods, 4 guest state, 5 host state, 6 mods' storage, 7 the
+ * transitions' state), read in place. */
 static int peek_field(const uint8_t *data, size_t size, unsigned wanted, const uint8_t **field_data, size_t *field_size)
 {
     reader r = { data, size, MAGIC_LENGTH };
@@ -150,6 +152,17 @@ int oracles_state_mods_storage(const uint8_t *data, size_t size, const uint8_t *
     size_t host_size = 0;
     if (peek_field(data, size, 5u, &host, &host_size) != 0) return -1;
     if (peek_field(data, size, 6u, storage, storage_size) != 0) { *storage = NULL; *storage_size = 0; }   /* a state from before the field */
+    return 0;
+}
+
+int oracles_state_transition_state(const uint8_t *data, size_t size, const uint8_t **transition_state, size_t *transition_state_size)
+{
+    *transition_state = NULL;
+    *transition_state_size = 0;
+    const uint8_t *host = NULL;
+    size_t host_size = 0;
+    if (peek_field(data, size, 5u, &host, &host_size) != 0) return -1;
+    if (peek_field(data, size, 7u, transition_state, transition_state_size) != 0) { *transition_state = NULL; *transition_state_size = 0; }   /* a state from before the field */
     return 0;
 }
 

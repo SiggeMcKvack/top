@@ -15,6 +15,10 @@
  *   mods' storage: u32 length, bytes           the mods' tables saved with the game's files and the live ones
  *                                              (engine/mods, oracles_mod_set_storage_save); absent from the
  *                                              states written before it, which read as empty
+ *   transitions' state: u32 length, bytes      the continuous transitions' progress through the transition in
+ *                                              progress (engine/gameplay, oracles_room_transition_save_state),
+ *                                              empty without them; absent from the states written before it, which
+ *                                              read as empty
  */
 #ifndef ORACLES_STATE_H
 #define ORACLES_STATE_H
@@ -38,6 +42,8 @@ typedef struct OraclesStateInfo {
     size_t host_state_size;
     const uint8_t *mods_storage;   /* written only: read back by oracles_state_mods_storage */
     size_t mods_storage_size;
+    const uint8_t *transition_state;   /* written only: read back by oracles_state_transition_state */
+    size_t transition_state_size;
 } OraclesStateInfo;
 
 /* Serialises a composite savestate into a buffer the caller frees. Returns 0, or -1 with a message. */
@@ -69,6 +75,8 @@ int oracles_state_core_version(const uint8_t *data, size_t size, char *version, 
 /* The mods' storage of a composite savestate, read in place: 0 with `storage` pointing into `data` (NULL and 0 when
  * empty or absent), or -1 for a state that is not one of this format. */
 int oracles_state_mods_storage(const uint8_t *data, size_t size, const uint8_t **storage, size_t *storage_size);
+/* The transitions' state of a composite savestate, read in place the same way. */
+int oracles_state_transition_state(const uint8_t *data, size_t size, const uint8_t **transition_state, size_t *transition_state_size);
 
 #ifdef __cplusplus
 }

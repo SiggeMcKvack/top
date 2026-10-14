@@ -7,6 +7,7 @@
 #ifndef ORACLES_ENHANCED_CHECK_H
 #define ORACLES_ENHANCED_CHECK_H
 
+#include "room_transition.h"
 #include "view.h"
 
 #include <stdio.h>
@@ -30,6 +31,8 @@ OraclesEnhancedCheck *oracles_enhanced_check_start(OraclesCore *core, OraclesGue
  * wait is 300 frames (the route diverges after the load, so the run hash is
  * not the plain one). */
 void oracles_enhanced_check_reload_at(OraclesEnhancedCheck *check, uint32_t frame);
+/* The continuous transitions, whose progress the reload saves and loads back with the rest, as the launcher does. */
+void oracles_enhanced_check_set_transition(OraclesEnhancedCheck *check, OraclesRoomTransition *transition);
 /* Writes the surface composed at `frame` to `path` as a PPM, sixteen at most: to look at what a figure says. */
 void oracles_enhanced_check_surface_at(OraclesEnhancedCheck *check, uint32_t frame, const char *path);
 /* The view under check, for what feeds it from outside the check (the hotbar's model). */

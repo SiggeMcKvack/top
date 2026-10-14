@@ -33,10 +33,12 @@ static uint16_t last_return_pc;
  * frame returns from the hooked subroutine hundreds of times, and Link
  * walking round the whole byte would meet any sprite entry on his way. */
 static unsigned policy_calls, link_moves_left;
+static int collisions_given;     /* the room entered's collisions, at the last call */
 static void transaction_policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGuestTransitionMutation *m)
 {
     (void)opaque;
     policy_calls++;
+    collisions_given = s->room_collisions != NULL;
     m->set_scroll_delta = 1; m->scroll_delta = s->transition_direction == 1u ? 8u : 0xf8u;
     if (link_moves_left) { m->link_x_delta = 0x100; link_moves_left--; }
     m->update_walk_animation = 1; m->link_anim_counter = 2; m->link_anim_parameter = 7; m->link_anim_pointer = 0x4200; m->link_animation_frame = 0x66;
@@ -224,6 +226,7 @@ int main(void)
         policy_calls = 0; link_moves_left = 20;
         oracles_core_run_frame(core);
         CHECK(policy_calls > 50);
+        CHECK(collisions_given);                                                                /* scroll mode 8, the frame drawn */
         const uint8_t *w1 = oracles_guest_wram(guest, 1);
         const uint8_t *w0 = oracles_guest_wram(guest, 0);
         CHECK(oracles_guest_read8(guest, t->screen_scroll_delta) == 8);
@@ -249,17 +252,28 @@ int main(void)
         CHECK(oracles_guest_wram(guest, 1)[0x0d] == 100);
         /* A frame the game does not draw (no hooked return) while the
          * transition loads the room (state 3): the transaction runs once at
-         * the vblank, Link and his sprite entries move a pixel. */
+         * the vblank, Link moves a pixel, and his sprite entries go where he
+         * now is, the game's own last step with it (226 drawn, the OAM copied
+         * at the vblank before; 227 when the load began, 228 after). */
         oracles_guest_clear_hooks(guest);
         put8(guest, t->weapon_item_enabled, 0);
-        put8(guest, t->screen_transition_state, 3);
+        put8(guest, t->screen_transition_state, 2); put8(guest, t->vblank_checker, 0xff);
+        put8(guest, (OraclesGuestSym){ 1, 0xd00d }, 226);
+        oracles_core_run_frame(core);
+        put8(guest, t->screen_transition_state, 3); put8(guest, t->vblank_checker, 0);
         put8(guest, (OraclesGuestSym){ 1, 0xd00d }, 227);
-        put8(guest, (OraclesGuestSym){ 0, 0xcb11 }, oam_x); put8(guest, (OraclesGuestSym){ 0, 0xcb15 }, (uint8_t)(oam_x + 8));
+        put8(guest, (OraclesGuestSym){ 0, 0xcb11 }, (uint8_t)(oam_x - 1)); put8(guest, (OraclesGuestSym){ 0, 0xcb15 }, (uint8_t)(oam_x + 7));
         link_moves_left = 20; policy_calls = 0;
         oracles_core_run_frame(core);
         CHECK(policy_calls == 1);
+        CHECK(!collisions_given);       /* scroll mode 8 is written before the load: at its vblanks they may be the room left's */
         CHECK(oracles_guest_wram(guest, 1)[0x0d] == 228);
         CHECK(w0[0xb11] == (uint8_t)(oam_x + 1) && w0[0xb15] == (uint8_t)(oam_x + 9) && w0[0xb19] == (uint8_t)(oam_x - 40));
+        {
+            uint16_t shown_x = 0;
+            oracles_core_run_frame(core);   /* the scan of the next frame draws him there */
+            CHECK(oracles_guest_link_shown(guest, &shown_x, NULL) && shown_x >> 8 == 228u);
+        }
         /* The same unfinished frame during the scroll itself (state 5): the
          * vblank is not a write point there; the policy is not even asked,
          * so that it does not take for done what would not be written. */
@@ -273,7 +287,7 @@ int main(void)
         CHECK(oracles_guest_wram(guest, 1)[0x0d] == 227);
         unsigned by_state[8];
         oracles_guest_vblank_write_counts(guest, by_state);
-        CHECK(by_state[3] == 1 && by_state[5] == 0 && by_state[2] == 0);
+        CHECK(by_state[3] == 2 && by_state[5] == 0 && by_state[2] == 0);
         oracles_guest_set_transition_policy(guest, NULL, NULL, NULL);
     }
 

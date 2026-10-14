@@ -102,6 +102,8 @@ typedef void (*OraclesGuestEventFn)(void *opaque, const OraclesGuestEvent *event
 #define ORACLES_LINK_ANIM_MODE_WALK 0x10u
 #define ORACLES_SWIMMING_NORMAL 0x03u           /* wLinkSwimmingState's bits 0-3 in linkUpdateSwimming's state 3, bit 6 (lava) clear; bit 7 (diving) free */
 #define ORACLES_LINK_SWIM_LOWER 6u              /* px: the lowest of Link's swimming poses below the walk's line, measured against the OAM */
+#define ORACLES_TRANSITION_WALK_STEP_MAX 0x100  /* 8.8: the most the transition transaction moves Link along an axis in a frame on foot, a pixel */
+#define ORACLES_TRANSITION_SWIM_STEP_MAX 0x160  /* in the water: SPEED_160 along an axis, the fastest swim (the mermaid suit with the swimmer's ring) */
 
 /* The transition transaction.  The state is a snapshot of the
  * scroll machine and of Link's gait at the return of drawAllSprites; the

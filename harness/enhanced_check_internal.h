@@ -149,6 +149,11 @@ struct OraclesEnhancedCheck {
     size_t saved_core_size;
     uint8_t saved_view[1024];   /* two camera records (both axes), 306 bytes each; the launcher keeps 1024 too */
     size_t saved_view_size;
+    OraclesRoomTransition *transition;
+    uint8_t saved_transition[ORACLES_ROOM_TRANSITION_STATE_SIZE];
+    size_t saved_transition_size;
+    uint32_t reload_track[64];              /* Link's place (y, x, 8.8) at each frame after the save to the end of the transition it was in */
+    unsigned reload_tracked, reload_track_open, reload_track_compared, reload_track_differing;
     int32_t saved_camera;
     int saved_shown[4];
     uint8_t saved_room[4];

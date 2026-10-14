@@ -42,6 +42,7 @@ OraclesEnhancedCheck *oracles_enhanced_check_start(OraclesCore *core, OraclesGue
 }
 
 void oracles_enhanced_check_reload_at(OraclesEnhancedCheck *c, uint32_t frame) { c->reload_at = frame; }
+void oracles_enhanced_check_set_transition(OraclesEnhancedCheck *c, OraclesRoomTransition *transition) { c->transition = transition; }
 void oracles_enhanced_check_set_paced(OraclesEnhancedCheck *c, int paced) { c->paced = paced; }
 
 void oracles_enhanced_check_set_zoom_out(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_check_set_size(c, oracles_enhanced_size(enabled)); }

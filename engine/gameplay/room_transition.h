@@ -25,7 +25,8 @@
  * game's own distance only into water (the ROM's tile types); a current's
  * push is not reproduced.  On Ages' sea floor, where the game has him walk in
  * his mermaid suit's gait, he goes on at his own speed too, his walking
- * animation advanced, onto tiles without a collision beyond the game's
+ * animation advanced while a direction is held (standing without one, as the
+ * game moves him there), onto tiles without a collision beyond the game's
  * distance, as on foot.  With it, the cap beyond the game's distance holds
  * leftward and upward too, on foot as swimming; without it, the distance
  * wraps there below zero and the cap never holds, as the routes recorded
@@ -44,8 +45,11 @@
  * him;
  * swimming, or on Ages' sea floor, his motion goes on at its own angle and
  * speed, which the game freezes through the scroll and takes up after it,
- * across the axis only into water swimming; a route recorded without it
- * replays without it, its diagonal crossings elsewhere otherwise. */
+ * across the axis only into water swimming; the carry the room's load
+ * withholds, its collisions not known yet, is caught up once they are, at
+ * his own ratio across and along, within the bus's bound a frame; a route
+ * recorded without it replays without it, its diagonal crossings elsewhere
+ * otherwise. */
 #ifndef ORACLES_GAMEPLAY_ROOM_TRANSITION_H
 #define ORACLES_GAMEPLAY_ROOM_TRANSITION_H
 
@@ -76,12 +80,24 @@ typedef struct OraclesRoomTransitionStats {
     unsigned forced_transitions; /* transitions a swim's momentum took Link to at an edge, the direction not held (--continuous-swim) */
     unsigned capped_frames;      /* frames the extra move was withheld: a collision ahead in the room entered */
     unsigned refused_frames;     /* frames in a transition the policy left alone (Link not on foot, an item out) */
-    unsigned refused_by[11];     /* by reason: 0 game/room, 1 state, 2 Link's state, 3 not walking, 4 airborne, 5 holding/pushing, 6 item, shield, seeds, knocked or stunned, 7 animation data, 8 swimming, 9 under water, 10 a savestate loaded in the transition */
+    unsigned refused_by[11];     /* by reason: 0 game/room, 1 state, 2 Link's state, 3 not walking, 4 airborne, 5 holding/pushing, 6 item, shield, seeds, knocked or stunned, 7 animation data, 8 swimming, 9 under water, 10 a savestate loaded in the transition without the policy's progress */
     unsigned unanimated_frames;  /* frames Link was not moved because his animation stream could not be read */
     unsigned palette_refreshes;  /* palettes refreshed after a palette transition's fade outlived the doubled scroll */
     unsigned carry_asked_frames; /* frames the policy asked to move Link across the axis too (--continuous-diagonal): a diagonal held on foot, his motion in the water; those the bus applied are oracles_guest_transition_carried */
     unsigned carry_withheld_frames; /* frames it did not: a collision across in the room entered, or its collisions not loaded */
 } OraclesRoomTransitionStats;
+/* The policy's progress through the transition in progress, for a savestate: ORACLES_ROOM_TRANSITION_STATE_SIZE bytes
+ * written into `out`, their count returned; 0 when `capacity` is short. */
+#define ORACLES_ROOM_TRANSITION_STATE_SIZE 53u
+size_t oracles_room_transition_save_state(const OraclesRoomTransition *transition, uint8_t *out, size_t capacity);
+/* That progress given back after a savestate's load reset the guest (oracles_guest_reset_execution_state): the policy
+ * goes on with the transition the state was saved in as if no load had come between.  0, or -1 for data of another
+ * size or version, which leaves that transition to the machine alone, its step as the policy had it. */
+int oracles_room_transition_load_state(OraclesRoomTransition *transition, const uint8_t *data, size_t size);
+/* Where the straight path of the transition in progress, or of the last one, runs across its axis (8.8: x for a
+ * vertical transition, y for a horizontal one; Link's own less this, what the diagonal carried him off it) and its
+ * direction; 0 when none was seen since the start or a savestate's load. */
+int oracles_room_transition_straight_cross(const OraclesRoomTransition *transition, unsigned *direction, uint16_t *cross);
 /* The first reason a state is not eligible (the index of refused_by), -1 when eligible; `swim` as at the start. */
 int oracles_room_transition_refusal(const OraclesGuestTransitionState *state, int swim);
 void oracles_room_transition_stats(const OraclesRoomTransition *transition, OraclesRoomTransitionStats *out);
@@ -128,6 +144,9 @@ int oracles_room_transition_step(const OraclesGuestTransitionState *state);
 /* The tile type of `tile` in the list the room's collisions select (lookupCollisionTable over tileTypesTable), -1
  * when the table cannot be read. */
 int oracles_room_transition_tile_type(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *state, uint8_t tile);
+/* Whether the tile at `index` (16 a row) of the room's layout is water Link swims in, by its type alone, as
+ * linkApplyTileTypes reads the one under him: the rule of oracles_room_transition_swimmable. */
+int oracles_room_transition_water_tile(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *state, unsigned index);
 /* The next frame of Link's walking animation from the ROM's animation data
  * (specialObjectNextAnimationFrame: duration, base frame, parameter, `$ff`
  * then a signed offset to loop).  Fills the animation fields of `mutation`;
@@ -143,8 +162,8 @@ int oracles_room_transition_next_walk_frame(const uint8_t *rom, size_t rom_size,
 int oracles_room_transition_walkable(const OraclesGuestTransitionState *state, int from, int extra);
 /* The same with --continuous-swim: stairs, and a bridge crossed along the transition's axis, are walked on too. */
 int oracles_room_transition_passable(const OraclesGuestTransitionState *state, int from, int extra);
-/* The same for Link swimming: onto water he can swim in (the collision of holes, water and lava, and the tile type of
- * water, a current, or the sea with the mermaid suit). */
+/* The same for Link swimming: onto water he can swim in, by its tile type alone as linkApplyTileTypes takes it (water, a
+ * current; in Ages the sea with the mermaid suit, and a whirlpool). */
 int oracles_room_transition_swimmable(const uint8_t *rom, size_t rom_size, const OraclesGuestTransitionState *state, int from, int extra);
 
 #ifdef __cplusplus

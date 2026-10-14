@@ -74,8 +74,14 @@ typedef struct run {
     uint32_t colour_toggle_at; /* --colour-toggle-at, F2 in the launcher; 0: never */
     unsigned events;
     size_t journal_writes;
+    const uint8_t *rom;       /* the ROM the transitions read, with them */
+    size_t rom_size;
     int swam_before;          /* Link swimming at the last frame of normal play, with the continuous transitions */
-    unsigned swim_dropped;    /* frames of a transition he was not swimming in after it */
+    int swam_into;            /* and at the start of the transition in progress */
+    int in_transition, landing;   /* a transition seen in progress; Link swam into the one that just ended */
+    int carried_off;          /* 8.8: what the last transition carried him off its straight path, across its axis */
+    unsigned landing_direction;
+    unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
 } run;
 
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
@@ -128,13 +134,40 @@ static void on_frame_end(void *opaque, uint32_t frame)
     }
     if (r->out) oracles_guest_write_fingerprint(bus, r->core, frame, r->out);
     if (r->transition) {
-        /* Link swimming into a transition swims through it: the game freezes him, and the tile it takes as his own is
-         * read again only once it ends. */
+        /* Link swimming into a transition swims through it: the game freezes him, and reads the tile it takes as his own
+         * (y+5) again at the first frame it runs after the one the transition ends on.  Out of the water there, where
+         * the straight path, off which the diagonal carried him, stays in it: a carry that landed him. */
         const OraclesGuestTables *t = oracles_guest_tables(bus);
         const unsigned state = oracles_guest_read8(bus, t->screen_transition_state), mode = oracles_guest_read8(bus, t->link_anim_mode);
         const int swimming = oracles_guest_read8(bus, t->link_swimming_state) != 0u && (mode == ORACLES_LINK_ANIM_MODE_SWIM || mode == ORACLES_LINK_ANIM_MODE_DIVE);
+        const uint8_t *link = oracles_guest_object(bus, 0, 0);
+        const uint16_t x = link ? (uint16_t)(link[ORACLES_OBJ_X] | (link[ORACLES_OBJ_XH] << 8)) : 0, y = link ? (uint16_t)(link[ORACLES_OBJ_Y] | (link[ORACLES_OBJ_YH] << 8)) : 0;
+        if (state >= 3u && state <= 5u) {
+            if (!r->in_transition) r->swam_into = r->swam_before;
+            r->in_transition = 1;
+            r->landing = 0;
+        } else if (state == 2u && r->in_transition) {
+            unsigned direction = 0;
+            uint16_t straight = 0;
+            r->in_transition = 0;
+            r->landing = r->swam_into && link && oracles_room_transition_straight_cross(r->transition, &direction, &straight);
+            r->carried_off = (int16_t)(uint16_t)(((direction & 1u) ? y : x) - straight);
+            r->landing_direction = direction;
+        } else if (state == 2u && r->landing) {
+            r->landing = 0;
+            const int sx = (r->landing_direction & 1u) ? x : x - r->carried_off, sy = (r->landing_direction & 1u) ? y - r->carried_off : y;
+            const int column = ((sx >> 8) & 0xff) >> 4, row = (((sy >> 8) & 0xff) + 5) >> 4;
+            OraclesGuestTransitionState under;
+            memset(&under, 0, sizeof under);
+            under.game = oracles_compat_family(r->profile);
+            under.room_layout = oracles_guest_ptr(bus, t->room_layout, 176);
+            under.active_collisions = oracles_guest_read8(bus, t->active_collisions);
+            under.tile_types_bank = t->tile_types_table.bank == ORACLES_GUEST_ABSENT ? 0xffu : (uint8_t)t->tile_types_table.bank;
+            under.tile_types_table = t->tile_types_table.addr;
+            under.link_var2f = link[ORACLES_OBJ_VAR2F];
+            if (!swimming && r->carried_off && oracles_room_transition_water_tile(r->rom, r->rom_size, &under, (unsigned)(row * 16 + column))) r->swim_dropped++;
+        }
         if (state == 2u) r->swam_before = swimming;
-        else if (state >= 3u && state <= 5u && r->swam_before && !swimming) r->swim_dropped++;
     }
     if (r->positions) {
         /* What the game is at, whatever the core: the fingerprints, hashes of the memory, differ from one core to the other. */
@@ -378,9 +411,10 @@ static void report_transitions(run *r, FILE *summary, uint8_t *rom)
     if (r->transition) {
         OraclesRoomTransitionStats stats;
         oracles_room_transition_stats(r->transition, &stats);
-        fprintf(stderr, "continuous transitions: %u taken over, Link moved on %u frames, held back by a wall ahead on %u, left alone on %u (game/room %u, state %u, Link's state %u, not walking %u, airborne %u, swimming %u, under water %u, holding %u, item or hurt %u, animation data %u), no animation %u\n",
+        fprintf(stderr, "continuous transitions: %u taken over, Link moved on %u frames, held back by a wall ahead on %u, left alone on %u (game/room %u, state %u, Link's state %u, not walking %u, airborne %u, swimming %u, under water %u, holding %u, item or hurt %u, animation data %u, a savestate loaded without the policy's progress %u), no animation %u\n",
                 stats.transitions, stats.walked_frames, stats.capped_frames, stats.refused_frames, stats.refused_by[0], stats.refused_by[1], stats.refused_by[2],
-                stats.refused_by[3], stats.refused_by[4], stats.refused_by[8], stats.refused_by[9], stats.refused_by[5], stats.refused_by[6], stats.refused_by[7], stats.unanimated_frames);
+                stats.refused_by[3], stats.refused_by[4], stats.refused_by[8], stats.refused_by[9], stats.refused_by[5], stats.refused_by[6], stats.refused_by[7], stats.refused_by[10],
+                stats.unanimated_frames);
         fprintf(stderr, "continuous transitions: palettes refreshed after a palette transition on %u\n", stats.palette_refreshes);
         fprintf(stderr, "continuous transitions: swimming (--continuous-swim): %u taken over, Link moved on %u frames; %u started by his momentum at an edge, the direction not held\n", stats.swim_transitions, stats.swum_frames, stats.forced_transitions);
         unsigned by_state[8];
@@ -389,10 +423,11 @@ static void report_transitions(run *r, FILE *summary, uint8_t *rom)
                 by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
         if (summary) fprintf(summary, "transitions.vblank_policy_skipped=%u\n", oracles_guest_vblank_policy_skipped(r->guest));
         if (summary) fprintf(summary, "transitions.swim_taken=%u\ntransitions.swum_frames=%u\ntransitions.swim_forced=%u\n", stats.swim_transitions, stats.swum_frames, stats.forced_transitions);
-        fprintf(stderr, "continuous transitions: frames of a transition Link swam into and was not swimming in: %u\n", r->swim_dropped);
+        fprintf(stderr, "continuous transitions: transitions Link swam into and came out of on land where the straight path stays in water: %u\n", r->swim_dropped);
         if (summary) fprintf(summary, "transitions.swim_dropped=%u\n", r->swim_dropped);
         fprintf(stderr, "continuous transitions: a diagonal held (--continuous-diagonal) carried Link across the axis on %u frames, withheld on %u (a collision across, the room's collisions not loaded)\n", oracles_guest_transition_carried(r->guest), stats.carry_withheld_frames);
         if (summary) fprintf(summary, "transitions.carried_frames=%u\ntransitions.carry_asked_frames=%u\ntransitions.carry_withheld_frames=%u\n", oracles_guest_transition_carried(r->guest), stats.carry_asked_frames, stats.carry_withheld_frames);
+        if (summary) fprintf(summary, "transitions.resumed_frames=%u\n", stats.refused_by[10]);
         if (summary) fprintf(summary, "transitions.taken=%u\ntransitions.walked_frames=%u\ntransitions.refused_frames=%u\ntransitions.unanimated_frames=%u\ntransitions.palette_refreshes=%u\ntransitions.vblank_load_writes=%u\ntransitions.vblank_scroll_writes=%u\ntransitions.vblank_other_writes=%u\n",
                              stats.transitions, stats.walked_frames, stats.refused_frames, stats.unanimated_frames, stats.palette_refreshes,
                              by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
@@ -629,6 +664,9 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     if (o->continuous_transitions && r->guest) {
         r->transition = oracles_room_transition_start(r->guest, rom, rom_size, o->continuous_swim);
         if (!r->transition) { fprintf(stderr, "harness: --continuous-transitions needs the hooks on\n"); return 1; }
+        r->rom = rom;
+        r->rom_size = rom_size;
+        if (r->enhanced) oracles_enhanced_check_set_transition(r->enhanced, r->transition);
         oracles_room_transition_set_diagonal(r->transition, o->continuous_diagonal);
     }
     if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
