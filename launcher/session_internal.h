@@ -71,6 +71,7 @@ typedef struct session {
     int colour_applied;      /* the colour correction the core has: the option's, or the settings' */
     int colour_setting;      /* the settings' as the session last saw it: a change in the pause's Display applies */
     const char *vsync;       /* the vsync asked for: the option's, or the settings' */
+    int screen_margin_option;   /* --screen-margin's, an OraclesScreenMargin plus one, which holds for the run; 0: the settings' */
 } session;
 
 /* Writes a file through a temporary name (1 when done); reads a whole file into a buffer the caller frees (1, or 0

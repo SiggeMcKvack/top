@@ -1,5 +1,5 @@
-/* What a session plays with, from its options and the settings (session.h): its defaults, its save, and the mods of
- * the Mods page. */
+/* What a session plays with, from its options and the settings (session.h): its defaults, its screen margin, what the
+ * pause changes of the settings, its save, and the mods of the Mods page. */
 #include "session.h"
 
 #include <stdio.h>
@@ -11,6 +11,23 @@ void oracles_session_defaults(OraclesSessionOptions *options)
     memset(options, 0, sizeof *options);
     options->neighbour_objects = 1;
     options->sdl.scale = 4;
+}
+
+int oracles_session_screen_margin(int option, const oracles_settings *settings)
+{
+    if (option > 0 && option <= ORACLES_SCREEN_MARGINS) return option - 1;
+    return settings->screen_margin >= 0 && settings->screen_margin < ORACLES_SCREEN_MARGINS ? settings->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
+}
+
+unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied)
+{
+    unsigned changed = 0;
+    if (settings->colour_correction != applied->colour) { applied->colour = settings->colour_correction; changed |= ORACLES_SESSION_CHANGED_COLOUR; }
+    if (settings->scaling_fill != applied->fill) { applied->fill = settings->scaling_fill; changed |= ORACLES_SESSION_CHANGED_FILL; }
+    if (applied->hud >= 0 && settings->hud_full != applied->hud) { applied->hud = settings->hud_full; changed |= ORACLES_SESSION_CHANGED_HUD; }
+    const int margin = oracles_session_screen_margin(margin_option, settings);
+    if (margin != applied->margin) { applied->margin = margin; changed |= ORACLES_SESSION_CHANGED_MARGIN; }
+    return changed;
 }
 
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity)

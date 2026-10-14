@@ -2,7 +2,9 @@
  * one scale by one drawing, as the home screen and the pause menu share it
  * when the game's window has the home screen's scale: all fit in the
  * drawing's atlases, and none of their text would be left undrawn.  The list
- * is generated from the sources at configure (launcher_styles.h). */
+ * is generated from the sources at configure (launcher_styles.h).  And a
+ * drawing over a game larger than its output is clipped to the output's band,
+ * never in the margin above or below it. */
 #include "launcher_styles.h"
 
 #include <SDL3/SDL.h>
@@ -23,6 +25,20 @@ int main(void)
     for (int s = 0; s < 3; s++) {
         const int glyphs = oracles_ui_draw_prepare(draw, sizes[s][0], sizes[s][1], 0.0f, all, count, "Ag");
         if (glyphs < 0) { fprintf(stderr, "FAIL: %d styles do not fit the atlases at %dx%d\n", count, sizes[s][0], sizes[s][1]); failures++; }
+    }
+    oracles_ui_draw_band(draw, 100, 600);
+    SDL_Rect clip = { 0, 0, 0, 0 };
+    oracles_ui_draw_begin_over(draw, 960, 800, 2.0f, 0.0);
+    SDL_GetRenderClipRect(renderer, &clip);
+    if (!oracles_ui_draw_overflows(draw) || clip.x != 0 || clip.y != 100 || clip.w != 960 || clip.h != 600) {
+        fprintf(stderr, "FAIL: a scene larger than its output clipped to %d,%d %dx%d, not its band 0,100 960x600\n", clip.x, clip.y, clip.w, clip.h);
+        failures++;
+    }
+    oracles_ui_draw_begin_over(draw, 960, 800, 0.0f, 0.0);
+    SDL_GetRenderClipRect(renderer, &clip);
+    if (oracles_ui_draw_overflows(draw) || clip.y < 100 || clip.y + clip.h > 700) {
+        fprintf(stderr, "FAIL: a scene that fits clipped to %d,%d %dx%d, out of its band\n", clip.x, clip.y, clip.w, clip.h);
+        failures++;
     }
     oracles_ui_draw_destroy(draw);
     SDL_DestroyRenderer(renderer);

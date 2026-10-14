@@ -282,6 +282,8 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
     OraclesHomeGames *games = opaque;
     nav->fan_languages = games->fan_languages;
     oracles_home_inspect_display(games->settings, &nav->display, window);
+    nav->display.margin = oracles_session_screen_margin(games->options ? games->options->screen_margin : 0, games->settings);   /* --screen-margin's, for the run */
+    nav->display.margin_fixed = games->options && games->options->screen_margin;
     oracles_home_inspect_controls(games->settings, &nav->controls);
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         inspect(games, (OraclesSettingsGame)g, &nav->games[g]);
@@ -306,22 +308,7 @@ static void store(void *opaque, const OraclesHomeNav *nav)
     oracles_settings *prefs = games->settings;
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) prefs->item_hotkeys[g] = (OraclesHotkeysMode)nav->games[g].hotkeys;
     oracles_home_store_controls(&nav->controls, prefs);
-    const int view = prefs->view, core = oracles_settings_core(prefs), ghosts = prefs->ghosts;
-    prefs->profile = nav->display.profile;
-    prefs->transitions = nav->display.transitions;
-    prefs->hud_full = nav->display.hud;   /* a running game takes it at once (the pause's settings_changed) */
-    prefs->view = nav->display.view;
-    /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
-     * --core's, never stored. */
-    if (!nav->in_game && (prefs->core >= 0 || nav->display.core != oracles_settings_core(prefs))) prefs->core = nav->display.core;
-    /* So are the workers: a game's are perhaps --ghosts', for its run alone. */
-    if (!nav->in_game) prefs->ghosts = nav->display.workers;
-    oracles_settings_quality_changed(prefs, view, core, ghosts);
-    static const char *const vsync_names[3] = { "auto", "on", "off" };
-    prefs->window_scale = nav->display.window < 3 ? nav->display.window + 2 : 0;
-    prefs->colour_correction = nav->display.colour;
-    prefs->scaling_fill = nav->display.scaling;
-    snprintf(prefs->vsync, sizeof prefs->vsync, "%s", vsync_names[nav->display.vsync]);
+    oracles_home_store_display(&nav->display, nav->in_game, prefs);
     /* Each Oracle's active mods, those its Mods page switched on. */
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         prefs->mods[g][0] = 0;
@@ -691,7 +678,8 @@ static int start(void *opaque, OraclesHomeCommand game, struct SDL_Window *windo
     OraclesHomeHost pause_host;
     oracles_home_games_host(games, &pause_host);
     const int home_game = fan ? fan->game : g == ORACLES_SETTINGS_AGES ? ORACLES_HOME_GAME_AGES : ORACLES_HOME_GAME_SEASONS;
-    OraclesPause *pause = draw ? oracles_pause_create(draw, &pause_host, home_game, profile, games->settings->aspect) : NULL;
+    OraclesPause *pause = draw ? oracles_pause_create(draw, &pause_host, home_game, profile, games->settings->aspect,
+                                                                oracles_session_screen_margin(o.screen_margin, games->settings)) : NULL;
     o.pause = pause;
     OraclesSessionResult result;
     oracles_session_run(&o, games->settings, &result);

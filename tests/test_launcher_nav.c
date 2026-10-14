@@ -410,6 +410,17 @@ static void display_in_game(void)
     nav.row = ORACLES_DISPLAY_HUD;
     CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 0);
     CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
+    nav.in_game = 0;
+    nav.row = ORACLES_DISPLAY_ADVANCED;
+    oracles_display_act(&nav, ORACLES_HOME_OK);
+    /* The margin --screen-margin gives for the run is shown and does not change, on the home screen as from a game. */
+    nav.display.margin = 2;
+    nav.display.margin_fixed = 1;
+    CHECK(oracles_display_row_fixed(&nav, ORACLES_DISPLAY_MARGIN) && oracles_display_click(&nav, ORACLES_DISPLAY_MARGIN, 3) == ORACLES_HOME_STAY);
+    nav.row = ORACLES_DISPLAY_MARGIN;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.margin == 2);
+    nav.display.margin_fixed = 0;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.margin == 3);
 }
 
 int main(void)

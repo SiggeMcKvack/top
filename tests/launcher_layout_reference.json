@@ -2944,13 +2944,13 @@
   "2g": {
    "page note": {
     "x": 96,
-    "w": 480.484,
+    "w": 544.781,
     "glyph_top": 329,
     "glyph_h": 22,
     "top": 327,
     "h": 26,
     "baseline": 347,
-    "width": 480.484,
+    "width": 544.781,
     "lines": 1
    },
    "Window row": {
@@ -3640,13 +3640,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 570
+    "h": 705
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 620
+    "h": 755
    },
    "Core": {
     "x": 689,
@@ -3949,13 +3949,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 570
+    "h": 705
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 620
+    "h": 755
    },
    "Core": {
     "x": 689,
@@ -4226,13 +4226,13 @@
    },
    "page note": {
     "x": 96,
-    "w": 480.484,
+    "w": 544.781,
     "glyph_top": 329,
     "glyph_h": 22,
     "top": 327,
     "h": 26,
     "baseline": 347,
-    "width": 480.484,
+    "width": 544.781,
     "lines": 1
    },
    "diagram": {
@@ -8112,7 +8112,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 524
+    "h": 630
    },
    "Core": {
     "x": 84,
@@ -8293,29 +8293,29 @@
    },
    "help": {
     "x": 84,
-    "y": 752,
+    "y": 858,
     "w": 1272,
     "h": 47
    },
    "help text": {
     "x": 84,
     "w": 502.094,
-    "glyph_top": 757,
+    "glyph_top": 863,
     "glyph_h": 36,
-    "top": 752,
+    "top": 858,
     "h": 47,
-    "baseline": 786,
+    "baseline": 892,
     "width": 502.094,
     "lines": 1
    },
    "help note": {
     "x": 84,
     "w": 279.375,
-    "glyph_top": 808,
+    "glyph_top": 914,
     "glyph_h": 30,
-    "top": 803,
+    "top": 909,
     "h": 40,
-    "baseline": 832,
+    "baseline": 938,
     "width": 279.375,
     "lines": 1
    }
@@ -8323,13 +8323,13 @@
   "10o": {
    "page note": {
     "x": 64,
-    "w": 589.688,
+    "w": 668.578,
     "glyph_top": 138,
     "glyph_h": 27,
     "top": 136,
     "h": 32,
     "baseline": 160,
-    "width": 589.688,
+    "width": 668.578,
     "lines": 1
    },
    "Window row": {
@@ -8354,13 +8354,13 @@
   "10p": {
    "page note": {
     "x": 64,
-    "w": 589.688,
+    "w": 668.578,
     "glyph_top": 138,
     "glyph_h": 27,
     "top": 136,
     "h": 32,
     "baseline": 160,
-    "width": 589.688,
+    "width": 668.578,
     "lines": 1
    },
    "core row": {
@@ -8377,18 +8377,18 @@
    },
    "help": {
     "x": 84,
-    "y": 752,
+    "y": 858,
     "w": 1272,
     "h": 47
    },
    "help note": {
     "x": 84,
     "w": 279.375,
-    "glyph_top": 808,
+    "glyph_top": 914,
     "glyph_h": 30,
-    "top": 803,
+    "top": 909,
     "h": 40,
-    "baseline": 832,
+    "baseline": 938,
     "width": 279.375,
     "lines": 1
    }
@@ -13606,13 +13606,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 570
+    "h": 705
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 620
+    "h": 755
    },
    "Core": {
     "x": 689,
@@ -14196,7 +14196,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 524
+    "h": 630
    },
    "Core": {
     "x": 84,
@@ -14377,29 +14377,29 @@
    },
    "help": {
     "x": 84,
-    "y": 752,
+    "y": 858,
     "w": 1272,
     "h": 47
    },
    "help text": {
     "x": 84,
     "w": 569.313,
-    "glyph_top": 757,
+    "glyph_top": 863,
     "glyph_h": 36,
-    "top": 752,
+    "top": 858,
     "h": 47,
-    "baseline": 786,
+    "baseline": 892,
     "width": 569.313,
     "lines": 1
    },
    "help note": {
     "x": 84,
     "w": 252,
-    "glyph_top": 808,
+    "glyph_top": 914,
     "glyph_h": 30,
-    "top": 803,
+    "top": 909,
     "h": 40,
-    "baseline": 832,
+    "baseline": 938,
     "width": 252,
     "lines": 1
    },
@@ -14621,29 +14621,29 @@
    },
    "help": {
     "x": 84,
-    "y": 752,
+    "y": 858,
     "w": 1272,
     "h": 47
    },
    "help text": {
     "x": 84,
     "w": 569.313,
-    "glyph_top": 757,
+    "glyph_top": 863,
     "glyph_h": 36,
-    "top": 752,
+    "top": 858,
     "h": 47,
-    "baseline": 786,
+    "baseline": 892,
     "width": 569.313,
     "lines": 1
    },
    "help note": {
     "x": 84,
     "w": 252,
-    "glyph_top": 808,
+    "glyph_top": 914,
     "glyph_h": 30,
-    "top": 803,
+    "top": 909,
     "h": 40,
-    "baseline": 832,
+    "baseline": 938,
     "width": 252,
     "lines": 1
    },
@@ -14661,13 +14661,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 589.688,
+    "w": 668.578,
     "glyph_top": 138,
     "glyph_h": 27,
     "top": 136,
     "h": 32,
     "baseline": 160,
-    "width": 589.688,
+    "width": 668.578,
     "lines": 1
    },
    "core row": {
@@ -14692,7 +14692,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 524
+    "h": 630
    },
    "transitions row": {
     "x": 64,
@@ -19094,13 +19094,13 @@
    },
    "page note": {
     "x": 96,
-    "w": 480.484,
+    "w": 544.781,
     "glyph_top": 329,
     "glyph_h": 22,
     "top": 327,
     "h": 26,
     "baseline": 347,
-    "width": 480.484,
+    "width": 544.781,
     "lines": 1
    },
    "Color row": {
@@ -19199,13 +19199,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 589.688,
+    "w": 668.578,
     "glyph_top": 138,
     "glyph_h": 27,
     "top": 136,
     "h": 32,
     "baseline": 160,
-    "width": 589.688,
+    "width": 668.578,
     "lines": 1
    }
   },
@@ -19289,6 +19289,664 @@
     "y": 56,
     "w": 1208,
     "h": 933
+   }
+  },
+  "margin": {
+   "Screen margin": {
+    "x": 689,
+    "w": 99.484,
+    "glyph_top": 683,
+    "glyph_h": 27,
+    "top": 683,
+    "h": 27,
+    "baseline": 704,
+    "width": 112.5,
+    "lines": 2
+   },
+   "margin grid": {
+    "x": 689,
+    "y": 665,
+    "w": 1142,
+    "h": 121
+   },
+   "margin row": {
+    "x": 909,
+    "y": 665,
+    "w": 922,
+    "h": 121
+   },
+   "margin off": {
+    "x": 929,
+    "y": 673,
+    "w": 70.156,
+    "h": 41
+   },
+   "margin auto": {
+    "x": 1007.156,
+    "y": 673,
+    "w": 89.781,
+    "h": 41
+   },
+   "margin small": {
+    "x": 1104.938,
+    "y": 673,
+    "w": 92.469,
+    "h": 41
+   },
+   "margin large": {
+    "x": 1205.406,
+    "y": 673,
+    "w": 96.391,
+    "h": 41
+   },
+   "margin Small text": {
+    "x": 1121.938,
+    "w": 58.469,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 58.469,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 1222.406,
+    "w": 62.391,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 62.391,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 705
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 537,
+    "w": 922,
+    "h": 114
+   },
+   "margin explanation": {
+    "x": 929,
+    "w": 845.672,
+    "glyph_top": 722,
+    "glyph_h": 24,
+    "top": 720,
+    "h": 29,
+    "baseline": 741,
+    "width": 845.672,
+    "lines": 2
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 755
+   }
+  },
+  "margin 4:3": {
+   "Screen margin": {
+    "x": 84,
+    "w": 287.859,
+    "glyph_top": 769.5,
+    "glyph_h": 37,
+    "top": 769.5,
+    "h": 37,
+    "baseline": 798.5,
+    "width": 287.859,
+    "lines": 1
+   },
+   "margin grid": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin off": {
+    "x": 408,
+    "y": 743,
+    "w": 110,
+    "h": 90
+   },
+   "margin auto": {
+    "x": 530,
+    "y": 743,
+    "w": 128.328,
+    "h": 90
+   },
+   "margin small": {
+    "x": 670.328,
+    "y": 743,
+    "w": 132.188,
+    "h": 90
+   },
+   "margin large": {
+    "x": 814.516,
+    "y": 743,
+    "w": 137.828,
+    "h": 90
+   },
+   "margin Small text": {
+    "x": 694.328,
+    "w": 84.188,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 84.188,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 838.516,
+    "w": 89.828,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 89.828,
+    "lines": 1
+   },
+   "rows": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 630
+   },
+   "scaling row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 646.25,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 646.25,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "core row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   }
+  },
+  "margin 640x480": {
+   "Screen margin": {
+    "x": 84,
+    "w": 287.859,
+    "glyph_top": 769.5,
+    "glyph_h": 37,
+    "top": 769.5,
+    "h": 37,
+    "baseline": 798.5,
+    "width": 287.859,
+    "lines": 1
+   },
+   "margin grid": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin off": {
+    "x": 408,
+    "y": 743,
+    "w": 110,
+    "h": 90
+   },
+   "margin auto": {
+    "x": 530,
+    "y": 743,
+    "w": 128.328,
+    "h": 90
+   },
+   "margin small": {
+    "x": 670.328,
+    "y": 743,
+    "w": 132.188,
+    "h": 90
+   },
+   "margin large": {
+    "x": 814.516,
+    "y": 743,
+    "w": 137.828,
+    "h": 90
+   },
+   "margin Small text": {
+    "x": 694.328,
+    "w": 84.188,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 84.188,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 838.516,
+    "w": 89.828,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 89.828,
+    "lines": 1
+   },
+   "rows": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 630
+   },
+   "scaling row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 646.25,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 646.25,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "core row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   }
+  },
+  "margin pause": {
+   "Screen margin": {
+    "x": 689,
+    "w": 99.484,
+    "glyph_top": 683,
+    "glyph_h": 27,
+    "top": 683,
+    "h": 27,
+    "baseline": 704,
+    "width": 112.5,
+    "lines": 2
+   },
+   "margin grid": {
+    "x": 689,
+    "y": 665,
+    "w": 1142,
+    "h": 121
+   },
+   "margin row": {
+    "x": 909,
+    "y": 665,
+    "w": 922,
+    "h": 121
+   },
+   "margin off": {
+    "x": 929,
+    "y": 673,
+    "w": 70.156,
+    "h": 41
+   },
+   "margin auto": {
+    "x": 1007.156,
+    "y": 673,
+    "w": 89.781,
+    "h": 41
+   },
+   "margin small": {
+    "x": 1104.938,
+    "y": 673,
+    "w": 92.469,
+    "h": 41
+   },
+   "margin large": {
+    "x": 1205.406,
+    "y": 673,
+    "w": 96.391,
+    "h": 41
+   },
+   "margin Small text": {
+    "x": 1121.938,
+    "w": 58.469,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 58.469,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 1222.406,
+    "w": 62.391,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 62.391,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 705
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 537,
+    "w": 922,
+    "h": 114
+   },
+   "margin explanation": {
+    "x": 929,
+    "w": 845.672,
+    "glyph_top": 722,
+    "glyph_h": 24,
+    "top": 720,
+    "h": 29,
+    "baseline": 741,
+    "width": 845.672,
+    "lines": 2
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 755
+   },
+   "page note": {
+    "x": 96,
+    "w": 544.781,
+    "glyph_top": 329,
+    "glyph_h": 22,
+    "top": 327,
+    "h": 26,
+    "baseline": 347,
+    "width": 544.781,
+    "lines": 1
+   }
+  },
+  "margin pause 4:3": {
+   "Screen margin": {
+    "x": 84,
+    "w": 287.859,
+    "glyph_top": 769.5,
+    "glyph_h": 37,
+    "top": 769.5,
+    "h": 37,
+    "baseline": 798.5,
+    "width": 287.859,
+    "lines": 1
+   },
+   "margin grid": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "margin off": {
+    "x": 408,
+    "y": 743,
+    "w": 110,
+    "h": 90
+   },
+   "margin auto": {
+    "x": 530,
+    "y": 743,
+    "w": 128.328,
+    "h": 90
+   },
+   "margin small": {
+    "x": 670.328,
+    "y": 743,
+    "w": 132.188,
+    "h": 90
+   },
+   "margin large": {
+    "x": 814.516,
+    "y": 743,
+    "w": 137.828,
+    "h": 90
+   },
+   "margin Small text": {
+    "x": 694.328,
+    "w": 84.188,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 84.188,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 838.516,
+    "w": 89.828,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 89.828,
+    "lines": 1
+   },
+   "rows": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 630
+   },
+   "scaling row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "help": {
+    "x": 84,
+    "y": 858,
+    "w": 1272,
+    "h": 47
+   },
+   "help text": {
+    "x": 84,
+    "w": 646.25,
+    "glyph_top": 863,
+    "glyph_h": 36,
+    "top": 858,
+    "h": 47,
+    "baseline": 892,
+    "width": 646.25,
+    "lines": 1
+   },
+   "help note": {
+    "x": 84,
+    "y": 909,
+    "w": 1272,
+    "h": 40
+   },
+   "core row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "page note": {
+    "x": 64,
+    "w": 668.578,
+    "glyph_top": 138,
+    "glyph_h": 27,
+    "top": 136,
+    "h": 32,
+    "baseline": 160,
+    "width": 668.578,
+    "lines": 1
+   }
+  },
+  "margin faithful": {
+   "Screen margin": {
+    "x": 689,
+    "w": 99.484,
+    "glyph_top": 683,
+    "glyph_h": 27,
+    "top": 683,
+    "h": 27,
+    "baseline": 704,
+    "width": 112.5,
+    "lines": 2
+   },
+   "margin grid": {
+    "x": 689,
+    "y": 665,
+    "w": 1142,
+    "h": 121
+   },
+   "margin row": {
+    "x": 909,
+    "y": 665,
+    "w": 922,
+    "h": 121
+   },
+   "margin off": {
+    "x": 929,
+    "y": 673,
+    "w": 70.156,
+    "h": 41
+   },
+   "margin auto": {
+    "x": 1007.156,
+    "y": 673,
+    "w": 89.781,
+    "h": 41
+   },
+   "margin small": {
+    "x": 1104.938,
+    "y": 673,
+    "w": 92.469,
+    "h": 41
+   },
+   "margin large": {
+    "x": 1205.406,
+    "y": 673,
+    "w": 96.391,
+    "h": 41
+   },
+   "margin Small text": {
+    "x": 1121.938,
+    "w": 58.469,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 58.469,
+    "lines": 1
+   },
+   "margin Large text": {
+    "x": 1222.406,
+    "w": 62.391,
+    "glyph_top": 678,
+    "glyph_h": 31,
+    "top": 678,
+    "h": 31,
+    "baseline": 702,
+    "width": 62.391,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 705
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 537,
+    "w": 922,
+    "h": 114
+   },
+   "margin explanation": {
+    "x": 929,
+    "w": 845.672,
+    "glyph_top": 722,
+    "glyph_h": 24,
+    "top": 720,
+    "h": 29,
+    "baseline": 741,
+    "width": 845.672,
+    "lines": 2
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 755
    }
   }
  },

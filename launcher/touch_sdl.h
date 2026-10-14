@@ -19,6 +19,10 @@ typedef struct OraclesTouchScreen {
     int direct;
     int logical_w, logical_h;
     int fill;   /* Scaling's Fill in fullscreen, which the backend sets */
+    /* The screen margin and what it was read from (oracles_safe_area_edges), which the backend sets: the frame and the
+     * controls keep to its band (oracles_touch_band), drawn straight to the screen from the first frame when the band
+     * is not the whole screen. */
+    OraclesTouchEdges edges;
 } OraclesTouchScreen;
 
 /* 1 when `event` is a finger's, in the renderer's output: *buttons the game's buttons all fingers press now, *pause
@@ -26,7 +30,7 @@ typedef struct OraclesTouchScreen {
 int oracles_touch_sdl_event(OraclesTouchScreen *screen, struct SDL_Renderer *renderer, const union SDL_Event *event,
                             unsigned *buttons, int *pause);
 /* The game's frame, `frame`, drawn to the whole screen with the controls over it when they show: 1, from the first
- * touch of the session on.  0 before it, the caller drawing the frame through the logical presentation. */
+ * touch of the session on, or with a band less than the whole screen.  0 before it, the caller drawing the frame through the logical presentation. */
 int oracles_touch_sdl_frame(OraclesTouchScreen *screen, struct SDL_Renderer *renderer, struct SDL_Texture *frame, const struct SDL_FRect *part);
 
 #endif

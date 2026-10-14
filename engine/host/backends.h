@@ -41,6 +41,7 @@ typedef struct oracles_sdl_options {
     int pause_menu;
     int touch_controls;   /* the game's buttons on a touch screen: always on Android, where the tests ask elsewhere */
     int fill;             /* Scaling's Fill: in fullscreen the image fills the screen in its proportions; a window keeps whole scales */
+    int screen_margin;    /* screen_margin=, an OraclesScreenMargin: the band of the screen the image and the touch controls keep to */
 } oracles_sdl_options;
 
 /* Default names, in the order above, for the settings file. */
@@ -111,6 +112,9 @@ void oracles_sdl_place_window(struct SDL_Window *window, int centre_x, int centr
 void oracles_sdl_presentation(int fullscreen, int fill, int *presentation, int *scale_mode);
 /* Scaling changed during the pause: the frame's sampling at once, the presentation from the next frame. */
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill);
+/* The screen margin changed during the pause: its band read again, the image and the touch controls in it from the
+ * next frame. */
+void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin);
 /* Scaling's Fill chosen, and in effect at the last frame (the window fullscreen then). */
 void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chosen, int *in_effect);
 /* 1 when the session ended because the window was closed, not by Escape. */
@@ -132,7 +136,8 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
 void oracles_sdl_backend_suspend_audio(const oracles_host_backend *backend);
 /* The pause menu holds the session from a call with 1 to a call with 0, at its resume: that time is no
  * presentation's, and the rate of oracles_sdl_backend_present_report leaves it out; a suspension seen during it (Android's
- * background) brings no second pause. */
+ * background) brings no second pause; the screen margin's band is read again at the resume, for a safe area or a display
+ * that changed meanwhile. */
 void oracles_sdl_backend_hold(const oracles_host_backend *backend, int held);
 /* The keys and the buttons of `options` from now on (Controls changed them during the pause). */
 void oracles_sdl_backend_rebind(const oracles_host_backend *backend, const oracles_sdl_options *options);

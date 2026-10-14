@@ -98,6 +98,8 @@ static int usage(void)
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
                     "                           [--core sameboy|mgba]   (the core: Accurate, the reference, or Fast, lighter)\n"
                     "                           [--aspect auto|16:9|4:3]   (the view's shape: the screen's, or the one named)\n"
+                    "                           [--screen-margin off|auto|small|large]   (the band of the screen kept to, for this run: the whole screen,\n"
+                    "                           clear of a cutout Android reports above or below, or 24 or 48 dp clear at the top and the bottom)\n"
                     "                           [--ghosts auto|1|2]   (Enhanced: the ghosts preparing the rooms around at once, for this run; auto: two on four processor threads or more)\n"
                     "                           [--mods DIR]...   (a mod in Lua, run during the game, --mods repeated for up to 8; its conversations hold the keys and draw over the screen)\n"
                     "                           [--start-at-house NAME]   (with --mods: every file of the save starts in front of the house NAME, or MOD/NAME)\n"
@@ -183,6 +185,12 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
             o->aspect = 0;
             for (int a = 0; a < 3; a++) if (!strcmp(name, oracles_settings_aspect_names[a])) o->aspect = a + 1;
             if (!o->aspect) return 1;
+        }
+        else if (!strcmp(argv[i], "--screen-margin") && more) {
+            const char *name = argv[++i];
+            o->screen_margin = 0;
+            for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) if (!strcmp(name, oracles_screen_margin_names[m])) o->screen_margin = m + 1;
+            if (!o->screen_margin) return 1;
         }
         else if (!strcmp(argv[i], "--mods") && i + 1 < argc) { if (o->mods_count == 8u) return 1; o->mods_dirs[o->mods_count++] = argv[++i]; }
         else if (!strcmp(argv[i], "--start-at-house") && more) o->start_house = argv[++i];

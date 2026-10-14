@@ -77,7 +77,7 @@ const char oracles_ui_transitions_note[] = "A savestate taken with this on is re
 const char oracles_ui_core_note[] = "Save states keep their core.";
 const char oracles_ui_scaling_note[] = "Fill applies in fullscreen.";
 const char oracles_ui_window_fit_note[] = "Window sizes follow the view: a farther view makes a larger window.";
-const char oracles_ui_display_later[] = "Color, scaling and HUD apply at once; the rest at the next Play.";
+const char oracles_ui_display_later[] = "Color, HUD, scaling and margin apply at once; the rest at the next Play.";
 const char oracles_ui_later[] = "Applies at the next Play.";
 const char *const oracles_ui_transition_choices[2] = { "Off", "On" };
 
@@ -131,6 +131,8 @@ const char *const oracles_ui_transition_choices[2] = { "Off", "On" };
 #define BORDER 1.0f
 #define NOTE_GAP 2.0f          /* between an explanation and its italic note */
 #define ADVANCED_EXPLANATION_H 58.0f   /* two lines of 29 kept for each Advanced row's explanation */
+#define MARGIN_ROW_PAD_Y 8.0f          /* Screen margin's row, its choices above its explanation */
+#define MARGIN_ROW_GAP 6.0f
 #define PLAY_GAP 24.0f
 #define DISPLAY_ROW_GAP 14.0f
 #define DISPLAY_LABEL_W 200.0f
@@ -684,7 +686,21 @@ static void display_16_9(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout 
                          &out->rows[ORACLES_DISPLAY_WORKERS]) + DISPLAY_ROW_GAP;
         y += display_row(value_x, y, value_w, oracles_display_labels[ORACLES_DISPLAY_SCALING], left, t->explanations[5], ADVANCED_EXPLANATION_H,
                          scaling_notes, 1, oracles_display_scaling_choices, scaling_sizes, 2, &out->labels[ORACLES_DISPLAY_SCALING], &out->explanations[5],
-                         scaling_out, out->scaling, &out->rows[ORACLES_DISPLAY_SCALING]);
+                         scaling_out, out->scaling, &out->rows[ORACLES_DISPLAY_SCALING]) + DISPLAY_ROW_GAP;
+        /* Screen margin: its explanation too long beside four choices, they stand above it from the row's left, as
+         * Quality's do, the explanation under them on the row's width, two lines kept. */
+        oracles_ui_wrap(&oracles_ui_row_label, oracles_display_labels[ORACLES_DISPLAY_MARGIN], DISPLAY_LABEL_W, left, y + LABEL_PAD_TOP,
+                        &out->labels[ORACLES_DISPLAY_MARGIN]);
+        const float right = value_x + value_w - ROW_PAD_X, inner_y = y + MARGIN_ROW_PAD_Y;
+        choices(oracles_display_margin_choices, NULL, ORACLES_DISPLAY_MARGINS, right, inner_y, out->margin);
+        const float from_left = inner_x - out->margin[0].box.x;
+        for (int m = 0; m < ORACLES_DISPLAY_MARGINS; m++) shift_option(&out->margin[m], from_left, 0.0f);
+        oracles_ui_wrap(&oracles_ui_row_text, t->explanations[7], right - inner_x, inner_x, inner_y + out->margin[0].box.h + MARGIN_ROW_GAP,
+                        &out->explanations[7]);
+        const float explanation_h = out->explanations[7].h > ADVANCED_EXPLANATION_H ? out->explanations[7].h : ADVANCED_EXPLANATION_H;
+        out->rows[ORACLES_DISPLAY_MARGIN] = box(value_x, y, value_w, out->margin[0].box.h + MARGIN_ROW_GAP + explanation_h + 2.0f * MARGIN_ROW_PAD_Y);
+        const float label_h = LABEL_PAD_TOP + out->labels[ORACLES_DISPLAY_MARGIN].h;
+        y += label_h > out->rows[ORACLES_DISPLAY_MARGIN].h ? label_h : out->rows[ORACLES_DISPLAY_MARGIN].h;
         out->panel = box(PANEL_X, PANEL_Y, PANEL_W, y + PANEL_PAD_Y + PANEL_BORDER - PANEL_Y);
         return;
     }
@@ -1195,7 +1211,8 @@ static void display_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *
         y = options_row_4_3(y, ORACLES_DISPLAY_TRANSITIONS, oracles_ui_transition_choices, NULL, NULL, 2, out->transitions, out) + DISPLAY_ROW_GAP_4_3;
         y = options_row_4_3(y, ORACLES_DISPLAY_VSYNC, oracles_display_vsync_choices, NULL, NULL, 3, out->vsync, out) + DISPLAY_ROW_GAP_4_3;
         y = options_row_4_3(y, ORACLES_DISPLAY_WORKERS, workers, NULL, NULL, 3, out->workers, out) + DISPLAY_ROW_GAP_4_3;
-        y = options_row_4_3(y, ORACLES_DISPLAY_SCALING, oracles_display_scaling_choices, scaling_sizes, NULL, 2, out->scaling, out);
+        y = options_row_4_3(y, ORACLES_DISPLAY_SCALING, oracles_display_scaling_choices, scaling_sizes, NULL, 2, out->scaling, out) + DISPLAY_ROW_GAP_4_3;
+        y = options_row_4_3(y, ORACLES_DISPLAY_MARGIN, oracles_display_margin_choices, NULL, NULL, ORACLES_DISPLAY_MARGINS, out->margin, out);
     } else {
         const char *profile_sizes[ORACLES_PROFILES], *quality_sets[ORACLES_DISPLAY_QUALITIES + 1], *names[4], *sizes[4], *view_sizes[3];
         for (int p = 0; p < ORACLES_PROFILES; p++) profile_sizes[p] = t->profile_sizes[p];
@@ -1403,6 +1420,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
     t->explanations[4] = oracles_display_explanation(ORACLES_DISPLAY_WORKERS);
     t->explanations[5] = oracles_display_explanation(ORACLES_DISPLAY_SCALING);
     t->explanations[6] = oracles_display_explanation(ORACLES_DISPLAY_HUD);
+    t->explanations[7] = oracles_display_explanation(ORACLES_DISPLAY_MARGIN);
     for (int s = 0; s < 2; s++) oracles_display_scaling_size(nav, s, t->scaling_sizes[s], sizeof t->scaling_sizes[s]);
     t->view_explanation = oracles_display_explanation(ORACLES_DISPLAY_VIEW);
     for (int i = 0; i < 3; i++) oracles_display_workers_choice(nav, i, t->workers_names[i], sizeof t->workers_names[i]);
@@ -1418,7 +1436,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
         NULL, NULL, "Whole multiples of the picture: pixels stay sharp.", "How much of the world shows; farther asks more.",
         "Full width: the status bar's color edge to edge.", "On: as the Game Boy Color showed it. Also F2.", "Core, Vsync and neighbor workers.",
         "Accurate: the reference. Fast: lighter.", "Rooms scroll into one another, swimming too.", VSYNC_SHORT, "Two fill the view faster, on one more core.",
-        "Sharp: exact pixels. Fill: the whole screen.",
+        "Sharp: exact pixels. Fill: the whole screen.", "Keeps the picture clear of hidden screen edges.",
     };
     const unsigned row = nav->row < ORACLES_DISPLAY_ROWS ? nav->row : ORACLES_DISPLAY_PROFILE;
     t->help = help_4_3[row];

@@ -1,6 +1,7 @@
 #include "pause.h"
 
 #include "home_input.h"
+#include "safe_area.h"
 #include "touch_controls.h"
 #include "ui_controls.h"
 #include "ui_controls_layout.h"
@@ -35,7 +36,8 @@ struct OraclesPause {
     int game;                   /* ORACLES_HOME_GAME_* */
     OraclesProfile playing;
     int aspect;                 /* the settings' aspect= */
-    int prepared_width, prepared_height;
+    OraclesTouchEdges edges;    /* the screen margin and what it was read from (oracles_safe_area_edges): the menu keeps to its band */
+    int prepared_width, prepared_height, prepared_top, prepared_band;   /* the output and the band the glyphs were rasterised for */
     unsigned late_glyphs;
 };
 
@@ -59,7 +61,7 @@ static void glyph_text(char *out, size_t capacity)
  * about 640x480 only (oracles_ui_layout_pause), fits. */
 static float min_scale(int narrow) { return narrow ? NARROW_MIN_SCALE : 0.0f; }
 
-OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect)
+OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin)
 {
     OraclesPause *pause = calloc(1, sizeof *pause);
     if (!pause) return NULL;
@@ -68,6 +70,7 @@ OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *h
     pause->game = game;
     pause->playing = playing;
     pause->aspect = aspect;
+    pause->edges.margin = margin;
     return pause;
 }
 
@@ -97,8 +100,17 @@ static int styles(OraclesUiLayout layout, const OraclesUiTextStyle **out)
     return count;
 }
 
+/* The drawing's band in an output of width x height: the screen margin's (oracles_touch_band). */
+static OraclesTouchBox band(const OraclesPause *pause, int width, int height)
+{
+    const OraclesTouchBox safe = oracles_touch_band(width, height, &pause->edges);
+    oracles_ui_draw_band(pause->draw, (int)safe.y, (int)safe.h);
+    return safe;
+}
+
 static void prepare(OraclesPause *pause, int width, int height, const char *when)
 {
+    const OraclesTouchBox safe = band(pause, width, height);
     const OraclesUiLayout layout = oracles_ui_layout_pause(width, height, pause->aspect);
     const OraclesUiTextStyle *list[64];
     const int count = styles(layout, list);
@@ -110,6 +122,8 @@ static void prepare(OraclesPause *pause, int width, int height, const char *when
     oracles_ui_draw_freeze(pause->draw, 1);
     pause->prepared_width = width;
     pause->prepared_height = height;
+    pause->prepared_top = (int)safe.y;
+    pause->prepared_band = (int)safe.h;
     fprintf(stderr, "oracles: pause menu ready for %dx%d in %s %s: %d glyphs in %.1f ms\n", width, height,
             layout == ORACLES_UI_LAYOUT_4_3 ? "4:3" : "16:9", when, glyphs, now_ms() - started);
 }
@@ -118,6 +132,7 @@ void oracles_pause_prepare(OraclesPause *pause, SDL_Renderer *renderer)
 {
     int w = 0, h = 0;
     if (!pause || !SDL_GetRenderOutputSize(renderer, &w, &h)) return;
+    oracles_safe_area_edges(SDL_GetRenderWindow(renderer), pause->edges.margin, &pause->edges);
     prepare(pause, w, h, "before the first frame");
 }
 
@@ -128,10 +143,12 @@ int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
-    /* The game's image as the session shows it: its whole scale, or Fill's size, centred. */
+    /* The game's image as the session shows it: its whole scale, or Fill's size, centred in the drawing's band. */
     if (frame && width > 0 && height > 0) {
-        const OraclesTouchBox box = oracles_touch_frame(out_width, out_height, width, height, fill);
-        const SDL_FRect image = { box.x, box.y, box.w, box.h };
+        int band_top, band_height;
+        oracles_ui_draw_band_of(draw, out_height, &band_top, &band_height);
+        const OraclesTouchBox box = oracles_touch_frame(out_width, band_height, width, height, fill);
+        const SDL_FRect image = { box.x, (float)band_top + box.y, box.w, box.h };
         SDL_RenderTexture(renderer, frame, NULL, &image);
     }
     /* Darkened, more on the right where the menu is. */
@@ -165,6 +182,7 @@ typedef struct pause_loop {
     OraclesUiHome view;
     int dirty, moving, done;
     int redraws;   /* frames still to draw whatever changed (ANDROID_REDRAWS) */
+    unsigned glyphs_before;   /* the glyphs rasterised when the pause began, those the margin's change prepared added */
     OraclesPauseResult result;
 } pause_loop;
 
@@ -180,6 +198,18 @@ static void load_note(pause_loop *p)
     if (p->session && p->session->state_time) p->session->state_time(p->session->opaque, time, sizeof time);
     if (time[0]) snprintf(p->nav.load_note, sizeof p->nav.load_note, "F7 \xc2\xb7 from %s", time);
     else snprintf(p->nav.load_note, sizeof p->nav.load_note, "F7");
+}
+
+/* Display changed the screen margin: the menu takes its band at once, its glyphs rasterised for it (none counted late). */
+static void margin_changed(pause_loop *p, int margin)
+{
+    int w = 0, h = 0;
+    oracles_safe_area_edges(p->window, margin, &p->pause->edges);
+    if (!SDL_GetRenderOutputSize(p->renderer, &w, &h)) return;
+    const unsigned before = oracles_ui_draw_glyphs_rasterised(p->pause->draw);
+    prepare(p->pause, w, h, "at the pause (the screen margin changed)");
+    p->glyphs_before += oracles_ui_draw_glyphs_rasterised(p->pause->draw) - before;
+    p->dirty = 1;
 }
 
 static void command(pause_loop *p, OraclesHomeCommand c)
@@ -198,7 +228,10 @@ static void command(pause_loop *p, OraclesHomeCommand c)
             break;
         case ORACLES_HOME_STORE:
             if (p->pause->host && p->pause->host->store) p->pause->host->store(p->pause->host->opaque, &p->nav);
-            if (p->session->settings_changed) p->session->settings_changed(p->session->opaque);
+            if (p->session->settings_changed) {
+                const int margin = p->session->settings_changed(p->session->opaque);
+                if (margin != p->pause->edges.margin) margin_changed(p, margin);
+            }
             return;
         default: return;
     }
@@ -270,6 +303,8 @@ static void handle(pause_loop *p, const SDL_Event *e)
         case SDL_EVENT_MOUSE_MOTION: pointer(p, e->motion.x, e->motion.y, 0); break;
         case SDL_EVENT_MOUSE_BUTTON_UP: if (e->button.button == SDL_BUTTON_LEFT) pointer(p, e->button.x, e->button.y, 1); break;
         default:   /* a drop is not taken in the pause */
+            if (e->type == SDL_EVENT_WINDOW_SAFE_AREA_CHANGED || e->type == SDL_EVENT_WINDOW_DISPLAY_CHANGED)
+                oracles_safe_area_edges(p->window, p->pause->edges.margin, &p->pause->edges);
             if (e->type >= SDL_EVENT_WINDOW_FIRST && e->type <= SDL_EVENT_WINDOW_LAST) { p->dirty = 1; p->redraws = ANDROID_REDRAWS; }
             break;
     }
@@ -291,8 +326,11 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
     SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
     SDL_GetRenderOutputSize(renderer, &out_w, &out_h);
-    if (out_w != pause->prepared_width || out_h != pause->prepared_height) prepare(pause, out_w, out_h, "at the pause (the window's size changed)");
-    const unsigned glyphs_before = oracles_ui_draw_glyphs_rasterised(pause->draw);
+    oracles_safe_area_edges(window, pause->edges.margin, &pause->edges);
+    const OraclesTouchBox safe = oracles_touch_band(out_w, out_h, &pause->edges);
+    if (out_w != pause->prepared_width || out_h != pause->prepared_height || (int)safe.y != pause->prepared_top || (int)safe.h != pause->prepared_band)
+        prepare(pause, out_w, out_h, "at the pause (the window's size or its band changed)");
+    p.glyphs_before = oracles_ui_draw_glyphs_rasterised(pause->draw);
 
     oracles_home_init(&p.nav);
     if (pause->host && pause->host->refresh) pause->host->refresh(pause->host->opaque, &p.nav, window);
@@ -312,6 +350,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
             p.nav.narrow = oracles_ui_layout_narrow(p.nav.layout, out_w);
             /* Fill as the session presents it (oracles_sdl_presentation): Scaling, which Display changes here, in fullscreen. */
             const int fill = p.nav.display.scaling && window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
+            band(pause, out_w, out_h);
             p.moving = oracles_pause_paint(pause->draw, renderer, frame, width, height, fill, out_w, out_h, &p.view, &p.nav, now);
             SDL_RenderPresent(renderer);
             presented = now;
@@ -328,7 +367,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
             while (!p.done && SDL_PollEvent(&e)) handle(&p, &e);
         }
     }
-    pause->late_glyphs += oracles_ui_draw_glyphs_rasterised(pause->draw) - glyphs_before;
+    pause->late_glyphs += oracles_ui_draw_glyphs_rasterised(pause->draw) - p.glyphs_before;
     /* Back to the game's own drawing; what the menu left in the queue is not the game's. */
     SDL_SetRenderClipRect(renderer, NULL);
     SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);

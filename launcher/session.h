@@ -39,6 +39,7 @@ typedef struct OraclesSessionOptions {
     int aspect;                      /* --aspect: an OraclesAspect plus one, for the run, never stored; 0: the settings' */
     int ghosts;                      /* --ghosts: auto, 1 or 2 as 1, 2 or 3, for the run, never stored; 0: the settings' ghosts= */
     int core;                        /* --core: an OraclesCoreKind plus one, for the run, never stored; 0: the settings' core= */
+    int screen_margin;               /* --screen-margin: an OraclesScreenMargin plus one, for the run, never stored; 0: the settings' screen_margin= */
     int continuous_swim;             /* --continuous-swim: the transitions with Link swimming at the surface too (implies them) */
     int swim_hold;                   /* --swim-hold, or settings.txt's swim_hold=on for a game the home screen starts: a direction held
                                       * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
@@ -72,6 +73,25 @@ int oracles_session_run(const OraclesSessionOptions *options, oracles_settings *
 /* Whether the view takes the 4:3 shape: the command line's --aspect, else the settings' aspect=, auto deciding by the
  * screen of `window` (the primary display without one). */
 int oracles_session_view_4_3(const OraclesSessionOptions *options, const oracles_settings *settings, struct SDL_Window *window);
+
+/* The screen margin the games play with, an OraclesScreenMargin: the command line's (`option`, --screen-margin's as
+ * OraclesSessionOptions holds it, 0 for none), else the settings' screen_margin=. */
+int oracles_session_screen_margin(int option, const oracles_settings *settings);
+
+/* What a running game shows of the settings the pause applies at once: the colour correction as the settings had it
+ * when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws it),
+ * the screen margin (an OraclesScreenMargin). */
+typedef struct OraclesSessionApplied {
+    int colour, fill, hud, margin;
+} OraclesSessionApplied;
+#define ORACLES_SESSION_CHANGED_COLOUR 1u
+#define ORACLES_SESSION_CHANGED_FILL 2u
+#define ORACLES_SESSION_CHANGED_HUD 4u
+#define ORACLES_SESSION_CHANGED_MARGIN 8u
+/* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
+ * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
+ * gives one (oracles_session_screen_margin), whatever the settings say. */
+unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied);
 
 /* The save file of a ROM: its path with the extension .sav. */
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity);

@@ -26,6 +26,8 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->vsync = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     display->workers = settings->ghosts;
     display->scaling = settings->scaling_fill;
+    display->margin = settings->screen_margin;
+    display->margin_fixed = 0;
     display->cores = SDL_GetNumLogicalCPUCores();   /* as the session counts them for Auto */
     display->fullscreen_only = oracles_sdl_fullscreen_only();
     /* Without a window (a capture drawn offscreen), a 1080p screen. */
@@ -81,6 +83,27 @@ void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings 
     snprintf(settings->hotkey_bind_b, sizeof settings->hotkey_bind_b, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS]);
     snprintf(settings->hotkey_bind_a, sizeof settings->hotkey_bind_a, "%s", c->hotkey_keys[ORACLES_HOME_SLOTS + 1]);
     settings->swim_hold = c->swim_hold;   /* a game started next takes it; a running one keeps its own */
+}
+
+void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, oracles_settings *prefs)
+{
+    const int view = prefs->view, core = oracles_settings_core(prefs), ghosts = prefs->ghosts;
+    prefs->profile = display->profile;
+    prefs->transitions = display->transitions;
+    prefs->hud_full = display->hud;   /* a running game takes it at once (the pause's settings_changed) */
+    prefs->view = display->view;
+    /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
+     * --core's, never stored. */
+    if (!in_game && (prefs->core >= 0 || display->core != oracles_settings_core(prefs))) prefs->core = display->core;
+    /* So are the workers: a game's are perhaps --ghosts', for its run alone. */
+    if (!in_game) prefs->ghosts = display->workers;
+    oracles_settings_quality_changed(prefs, view, core, ghosts);
+    static const char *const vsync_names[3] = { "auto", "on", "off" };
+    prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
+    prefs->colour_correction = display->colour;
+    prefs->scaling_fill = display->scaling;
+    if (!display->margin_fixed) prefs->screen_margin = display->margin;   /* never --screen-margin's */
+    snprintf(prefs->vsync, sizeof prefs->vsync, "%s", vsync_names[display->vsync]);
 }
 
 /* The largest whole scale, up to the one asked for, at which the surface's window fits the display. */

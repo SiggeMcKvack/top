@@ -162,6 +162,21 @@ OraclesTouchBox oracles_touch_frame(int width, int height, int frame_w, int fram
                               (float)(frame_w * scale), (float)(frame_h * scale) };
 }
 
+const char *const oracles_screen_margin_names[ORACLES_SCREEN_MARGINS] = { "off", "auto", "small", "large" };
+
+OraclesTouchBox oracles_touch_band(int width, int height, const OraclesTouchEdges *edges)
+{
+    static const float dp[ORACLES_SCREEN_MARGINS] = { 0.0f, 0.0f, 24.0f, 48.0f };
+    int top = 0, bottom = 0;
+    if (edges->margin > ORACLES_SCREEN_MARGIN_OFF && edges->margin < ORACLES_SCREEN_MARGINS) {
+        const int fixed = (int)(dp[edges->margin] * (edges->density > 0.0f ? edges->density : 1.0f) + 0.5f);
+        top = edges->inset_top > fixed ? edges->inset_top : fixed;
+        bottom = edges->inset_bottom > fixed ? edges->inset_bottom : fixed;
+    }
+    if (top < 0 || bottom < 0 || (top + bottom) * 2 > height) top = bottom = 0;
+    return (OraclesTouchBox){ 0.0f, (float)top, (float)width, (float)(height - top - bottom) };
+}
+
 void oracles_touch_release(OraclesTouch *touch)
 {
     for (int i = 0; i < ORACLES_TOUCH_FINGERS; i++) { touch->fingers[i].used = 0; touch->fingers[i].buttons = 0; }

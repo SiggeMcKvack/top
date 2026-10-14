@@ -155,27 +155,35 @@ static void pause_state_time(void *opaque, char *out, size_t capacity)
     if (!local || !strftime(out, capacity, "%H:%M", local)) { if (capacity) out[0] = 0; }
 }
 
-/* Controls or Display changed the settings: the keys, the colour correction, the scaling and the status bar's width
- * apply at once, the rest at the next Play.  The colour correction applies when Display changed it:
- * --colour-correction holds until then. */
-static void pause_settings_changed(void *opaque)
+/* Controls or Display changed the settings: the keys, the colour correction, the scaling, the status bar's width and
+ * the screen margin apply at once, the rest at the next Play.  The colour correction applies when Display changed
+ * it: --colour-correction holds until then; --screen-margin holds for the run. */
+static int pause_settings_changed(void *opaque)
 {
     session *s = opaque;
-    if (s->settings->colour_correction != s->colour_setting) {
-        s->colour_applied = s->colour_setting = s->settings->colour_correction;
+    OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin };
+    const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, &applied);
+    if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
+        s->colour_applied = s->colour_setting = applied.colour;
         oracles_core_set_colour_correction(s->core, s->colour_applied);
         fprintf(stderr, "oracles: colour correction %s\n", s->colour_applied ? "on" : "off");
     }
-    if (s->settings->scaling_fill != s->sdl.fill) {
-        s->sdl.fill = s->settings->scaling_fill;
+    if (changed & ORACLES_SESSION_CHANGED_FILL) {
+        s->sdl.fill = applied.fill;
         oracles_sdl_backend_set_fill(&s->backend, s->sdl.fill);
         fprintf(stderr, "oracles: scaling %s\n", s->sdl.fill ? "fill" : "sharp");
     }
-    if (s->view && s->settings->hud_full != oracles_enhanced_view_hud(s->view)) {
-        oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
-        fprintf(stderr, "oracles: status bar %s\n", s->settings->hud_full ? "full width" : "original");
+    if (changed & ORACLES_SESSION_CHANGED_HUD) {
+        oracles_enhanced_view_set_hud(s->view, applied.hud);
+        fprintf(stderr, "oracles: status bar %s\n", applied.hud ? "full width" : "original");
+    }
+    if (changed & ORACLES_SESSION_CHANGED_MARGIN) {
+        s->sdl.screen_margin = applied.margin;
+        fprintf(stderr, "oracles: screen margin %s\n", oracles_screen_margin_names[applied.margin]);
+        oracles_sdl_backend_set_screen_margin(&s->backend, applied.margin);
     }
     oracles_sdl_backend_rebind(&s->backend, &s->sdl);   /* s->sdl's names are the settings' own */
+    return s->sdl.screen_margin;
 }
 
 static void session_started(void *opaque)
@@ -357,6 +365,7 @@ static void window_options(session *s, const OraclesSessionOptions *o)
     }
     s->sdl.pause_menu = s->pause != NULL && !o->no_window;
     s->sdl.fill = prefs->scaling_fill;
+    s->sdl.screen_margin = oracles_session_screen_margin(o->screen_margin, prefs);
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) s->sdl.key_names[i] = prefs->key_names[i];
     for (unsigned i = 0; i < 4; i++) s->sdl.pad_names[i] = prefs->pad_names[i];
     if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) {
@@ -668,6 +677,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     if (!s) { snprintf(result->error, sizeof result->error, "out of memory"); return 1; }
     s->settings = settings;
     s->pause = o->pause;
+    s->screen_margin_option = o->screen_margin;
     /* --colour-correction and --vsync hold for this session and are never stored, as camera_profile. */
     s->colour_setting = settings->colour_correction;
     s->colour_applied = o->colour_option ? !strcmp(o->colour_option, "on") : settings->colour_correction;

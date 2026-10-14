@@ -3,7 +3,9 @@
  * d-pad gives eight directions and none at its centre; A, B, Select, Start and the pause are found where they are drawn
  * and a little beyond; fingers press together, a finger held by the d-pad keeps its direction when it slides off it,
  * one sliding from A to B moves the press, a finger going up releases, one held through a pause presses again as it
- * moves; the frame goes where SDL's integer-scaled logical presentation puts it. */
+ * moves; the frame goes where SDL's integer-scaled logical presentation puts it; the screen margin's band is the whole
+ * screen off, whatever the insets, keeps clear of the insets at the screen's top and bottom with auto, and of 24 or 48
+ * dp with small and large, an inset there where it is larger; the frame and the controls lie in it. */
 #include "touch_controls.h"
 
 #include "core.h"
@@ -78,6 +80,75 @@ int main(void)
     CHECK(f.x == 0 && f.y == 896.5f && f.w == 1080 && f.h == 607);
     f = oracles_touch_frame(640, 480, 480, 360, 1);
     CHECK(f.x == 0 && f.y == 0 && f.w == 640 && f.h == 480);
+
+    /* The band: off, the whole screen whatever the insets, as before the margin; auto, below a top inset and above a
+     * bottom one, the whole screen without them; the whole screen where they are negative or would take half its
+     * height. */
+    const OraclesTouchEdges off = { ORACLES_SCREEN_MARGIN_OFF, 2.625f, 53, 53 };
+    OraclesTouchBox s = oracles_touch_band(2400, 1080, &off);
+    CHECK(s.x == 0 && s.y == 0 && s.w == 2400 && s.h == 1080);
+    OraclesTouchEdges e = { ORACLES_SCREEN_MARGIN_AUTO, 2.625f, 0, 0 };
+    s = oracles_touch_band(2400, 1080, &e);
+    CHECK(s.x == 0 && s.y == 0 && s.w == 2400 && s.h == 1080);
+    e.inset_top = 80;
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.x == 0 && s.y == 80 && s.w == 1920 && s.h == 1000);
+    e.inset_top = 300; e.inset_bottom = 260;
+    CHECK(oracles_touch_band(1920, 1080, &e).h == 1080);
+    e.inset_top = -4; e.inset_bottom = 0;
+    CHECK(oracles_touch_band(1920, 1080, &e).y == 0);
+    /* A curved edge above and below (53 lines each): Medium's 384x216 drops from 5 to 4 times, whole in the band, and
+     * Fill takes the band's height; the controls lie in the band. */
+    e.inset_top = e.inset_bottom = 53;
+    s = oracles_touch_band(2400, 1080, &e);
+    CHECK(s.y == 53 && s.h == 974);
+    f = oracles_touch_frame((int)s.w, (int)s.h, 384, 216, 0);
+    CHECK(f.w == 1536 && f.h == 864 && s.y + f.y >= 53 && s.y + f.y + f.h <= 1080 - 53);
+    f = oracles_touch_frame((int)s.w, (int)s.h, 384, 216, 1);
+    CHECK(f.y == 0 && f.h == 974);
+    screens(s.w, s.h);
+    /* Small and large: 24 and 48 dp at the top and at the bottom in the display's pixels, rounded; a dp a pixel on a
+     * desktop at 100 %, 2.625 pixels on a phone of 420 dpi, 2.25 at 360 dpi. */
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_SMALL, 1.0f, 0, 0 };
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.x == 0 && s.y == 24 && s.w == 1920 && s.h == 1032);
+    e.margin = ORACLES_SCREEN_MARGIN_LARGE;
+    CHECK(oracles_touch_band(1920, 1080, &e).y == 48 && oracles_touch_band(1920, 1080, &e).h == 984);
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_SMALL, 2.625f, 0, 0 };
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.y == 63 && s.h == 954);
+    e.density = 2.25f;
+    CHECK(oracles_touch_band(1920, 1080, &e).y == 54);
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_LARGE, 2.625f, 0, 0 };
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.y == 126 && s.h == 828);
+    e.density = 0.0f;   /* unknown: a dp a pixel */
+    CHECK(oracles_touch_band(1920, 1080, &e).y == 48);
+    /* The larger of the fixed margin and the inset, side by side: a 100-line inset at the top wins over small's 63, small
+     * wins at the bottom over a 10-line one; with large (126) the margin wins at both. */
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_SMALL, 2.625f, 100, 10 };
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.y == 100 && s.h == 1080 - 100 - 63);
+    e.margin = ORACLES_SCREEN_MARGIN_LARGE;
+    s = oracles_touch_band(1920, 1080, &e);
+    CHECK(s.y == 126 && s.h == 1080 - 2 * 126);
+    /* Large where it would take half the screen (a small window at 4 pixels a dp): the whole screen. */
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_LARGE, 4.0f, 0, 0 };
+    CHECK(oracles_touch_band(1280, 720, &e).h == 720);
+    /* The game in small's band on a 1920x1080 screen at 2.625 pixels a dp: Medium's 384x216 from 5 to 4 times, Far's
+     * 480x270 from 4 to 3, Faithful's 160x144 from 7 to 6, each whole in the band; Fill the band's height; the controls
+     * in the band. */
+    e = (OraclesTouchEdges){ ORACLES_SCREEN_MARGIN_SMALL, 2.625f, 0, 0 };
+    s = oracles_touch_band(1920, 1080, &e);
+    static const int sizes[3][3] = { { 384, 216, 4 }, { 480, 270, 3 }, { 160, 144, 6 } };
+    for (int i = 0; i < 3; i++) {
+        CHECK(oracles_touch_frame(1920, 1080, sizes[i][0], sizes[i][1], 0).w == (float)(sizes[i][0] * (sizes[i][2] + 1)));
+        f = oracles_touch_frame((int)s.w, (int)s.h, sizes[i][0], sizes[i][1], 0);
+        CHECK(f.w == (float)(sizes[i][0] * sizes[i][2]) && s.y + f.y >= 63 && s.y + f.y + f.h <= 1080 - 63);
+    }
+    f = oracles_touch_frame((int)s.w, (int)s.h, 480, 270, 1);
+    CHECK(f.y == 0 && f.h == 954);
+    screens(s.w, s.h);
 
     OraclesTouchLayout l;
     oracles_touch_layout(2400, 1080, &l);

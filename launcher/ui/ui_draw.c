@@ -56,7 +56,8 @@ struct OraclesUiDraw {
     float motif_left[ORACLES_UI_MOTIF_COUNT];    /* the motif's column at the texture's left, the scene's left edge: -motif_x */
     int max_texture_side;
     int frozen;                          /* the rasters stay at their scale (a game's pause): stretched, never redone */
-    int out_width, out_height;           /* the output of the frame begun */
+    int out_width, out_height;           /* the output of the frame begun, its band's height */
+    int band_top, band_height;           /* the output's band the scene keeps to (oracles_ui_draw_band); 0 high: the whole output */
     int overflow;                        /* the scene is larger than the output (a minimum scale): its parts are anchored */
     unsigned glyphs_rasterised;          /* since the drawing began, for the pause to say none came during a session */
 };
@@ -195,9 +196,12 @@ void oracles_ui_draw_layout(OraclesUiDraw *draw, OraclesUiLayout layout)
     draw->motif_x = oracles_ui_motif_x(layout);
 }
 
+static int band_top(const OraclesUiDraw *draw) { return draw->band_height > 0 ? draw->band_top : 0; }
+static int band_height(const OraclesUiDraw *draw, int height) { return draw->band_height > 0 ? draw->band_height : height; }
+
 static float scale_of(const OraclesUiDraw *draw, int width, int height)
 {
-    return fminf((float)width / draw->scene_width, (float)height / ORACLES_UI_SCENE_HEIGHT);
+    return fminf((float)width / draw->scene_width, (float)band_height(draw, height) / ORACLES_UI_SCENE_HEIGHT);
 }
 
 /* The scale that fits the output, raised to `min_scale` when it is under it. */
@@ -212,10 +216,10 @@ static SDL_Rect place(OraclesUiDraw *draw, float scale, int width, int height, d
 {
     draw->scale = scale;
     draw->out_width = width;
-    draw->out_height = height;
+    draw->out_height = band_height(draw, height);
     draw->overflow = 0;
     draw->origin_x = ((float)width - draw->scene_width * scale) * 0.5f;
-    draw->origin_y = ((float)height - ORACLES_UI_SCENE_HEIGHT * scale) * 0.5f;
+    draw->origin_y = (float)band_top(draw) + ((float)draw->out_height - ORACLES_UI_SCENE_HEIGHT * scale) * 0.5f;
     if (scale != draw->wanted_scale) { draw->wanted_scale = scale; draw->wanted_since_ms = now_ms; }
     if (!draw->frozen && draw->raster_scale != scale && (draw->raster_scale == 0.0f || now_ms - draw->wanted_since_ms >= RASTER_SETTLE_MS)) {
         release_atlases(draw);
@@ -252,8 +256,10 @@ int oracles_ui_draw_begin_over(OraclesUiDraw *draw, int width, int height, float
     if (scale <= 0.0f) return 1;
     const SDL_Rect scene = place(draw, scale, width, height, now_ms);
     draw->overflow = scale > scale_of(draw, width, height);
-    /* A scene larger than the output shows what its anchored parts put inside the output: no clip but the output's. */
-    if (!draw->overflow) SDL_SetRenderClipRect(draw->renderer, &scene);
+    /* A scene larger than the output shows what its anchored parts put inside the output's band, never in the margin
+     * left above or below it. */
+    const SDL_Rect band = { 0, band_top(draw), width, draw->out_height };
+    SDL_SetRenderClipRect(draw->renderer, draw->overflow ? &band : &scene);
     return 1;
 }
 
@@ -263,7 +269,7 @@ void oracles_ui_draw_anchor(OraclesUiDraw *draw, float x, float y)
 {
     if (!draw->overflow) return;
     draw->origin_x = ((float)draw->out_width - draw->scene_width * draw->scale) * x;
-    draw->origin_y = ((float)draw->out_height - ORACLES_UI_SCENE_HEIGHT * draw->scale) * y;
+    draw->origin_y = (float)band_top(draw) + ((float)draw->out_height - ORACLES_UI_SCENE_HEIGHT * draw->scale) * y;
 }
 
 float oracles_ui_draw_anchor_shift(const OraclesUiDraw *draw, float from_x, float to_x)
@@ -273,6 +279,18 @@ float oracles_ui_draw_anchor_shift(const OraclesUiDraw *draw, float from_x, floa
 }
 
 void oracles_ui_draw_freeze(OraclesUiDraw *draw, int frozen) { draw->frozen = frozen; }
+
+void oracles_ui_draw_band(OraclesUiDraw *draw, int top, int height)
+{
+    draw->band_top = top;
+    draw->band_height = height;
+}
+
+void oracles_ui_draw_band_of(const OraclesUiDraw *draw, int height, int *top, int *band)
+{
+    *top = band_top(draw);
+    *band = band_height(draw, height);
+}
 
 unsigned oracles_ui_draw_glyphs_rasterised(const OraclesUiDraw *draw)
 {
@@ -335,7 +353,7 @@ void oracles_ui_draw_to_scene_anchored(const OraclesUiDraw *draw, float x, float
 {
     const float ax = draw->overflow ? anchor_x : 0.5f, ay = draw->overflow ? anchor_y : 0.5f;
     const float origin_x = ((float)draw->out_width - draw->scene_width * draw->scale) * ax;
-    const float origin_y = ((float)draw->out_height - ORACLES_UI_SCENE_HEIGHT * draw->scale) * ay;
+    const float origin_y = (float)band_top(draw) + ((float)draw->out_height - ORACLES_UI_SCENE_HEIGHT * draw->scale) * ay;
     *scene_x = draw->scale > 0.0f ? (x - origin_x) / draw->scale : 0.0f;
     *scene_y = draw->scale > 0.0f ? (y - origin_y) / draw->scale : 0.0f;
 }

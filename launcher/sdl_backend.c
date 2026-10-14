@@ -6,6 +6,7 @@
  * Controller by default: d-pad or left stick, A, B, Start, Back = Select.
  * Both are rebindable through oracles_sdl_options. */
 #include "backends.h"
+#include "safe_area.h"
 #include "touch_sdl.h"
 #include "window_icon.h"
 
@@ -383,7 +384,9 @@ static int sdl_start(void *opaque, uint32_t width, uint32_t height, uint32_t sam
     if (!backend->texture) return 0;
     backend->frame_width = (int)width;
     backend->frame_height = (int)height;
+    oracles_safe_area_edges(backend->window, backend->touch.edges.margin, &backend->touch.edges);
     present_as(backend, (int)width, (int)height);
+    oracles_safe_area_report(backend->window, "game", "started", &backend->touch.edges);
     oracles_sdl_pads_open(&backend->pads);
     {
         char pads[256];
@@ -546,6 +549,7 @@ static void handle_event(sdl_backend *backend, const SDL_Event *e)
     if (touch_event(backend, e)) return;
     /* The window's focus and screen changes, said on the standard error: on a device of two screens, the input follows
      * the screen that has the focus. */
+    oracles_safe_area_event(backend->window, "game", e, &backend->touch.edges);
     if (e->type == SDL_EVENT_WINDOW_FOCUS_GAINED || e->type == SDL_EVENT_WINDOW_FOCUS_LOST || e->type == SDL_EVENT_WINDOW_DISPLAY_CHANGED)
         fprintf(stderr, "oracles: game window: %s\n", e->type == SDL_EVENT_WINDOW_FOCUS_GAINED ? "focus gained"
                 : e->type == SDL_EVENT_WINDOW_FOCUS_LOST ? "focus lost" : "moved to another display");
@@ -644,6 +648,13 @@ void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill)
     int presentation, scale_mode;
     oracles_sdl_presentation(window_fullscreen(state), state->fill, &presentation, &scale_mode);
     if (state->texture) SDL_SetTextureScaleMode(state->texture, (SDL_ScaleMode)scale_mode);   /* the pause's image of the game too */
+}
+
+void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin)
+{
+    sdl_backend *state = backend->opaque;
+    oracles_safe_area_edges(state->window, margin, &state->touch.edges);
+    oracles_safe_area_report(state->window, "game", "screen margin changed", &state->touch.edges);
 }
 
 void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chosen, int *in_effect)
@@ -834,6 +845,7 @@ int oracles_sdl_backend_init(oracles_host_backend *backend, const oracles_sdl_op
     state->borrowed = state->window != NULL;
     state->pause_menu = options ? options->pause_menu : 0;
     state->fill = options && options->fill;
+    state->touch.edges.margin = options ? options->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
 #ifdef __ANDROID__
     state->touch_enabled = 1;
 #else
@@ -895,6 +907,12 @@ void oracles_sdl_backend_hold(const oracles_host_backend *backend, int held)
     if (held) { oracles_touch_release(&state->touch.touch); state->touch_buttons = 0; }   /* the pause's menu takes the fingers */
     /* The pause's menu had the plugs and unplugs, and left none in the queue: those unplugged are let go, those plugged in are taken. */
     if (!held) oracles_sdl_pads_open(&state->pads);
+    /* Nor the safe area's and the display's changes, which the pause's loop took: the margin's band is read again. */
+    if (!held && state->window) {
+        const OraclesTouchEdges before = state->touch.edges;
+        oracles_safe_area_edges(state->window, before.margin, &state->touch.edges);
+        if (memcmp(&before, &state->touch.edges, sizeof before)) oracles_safe_area_report(state->window, "game", "resumed", &state->touch.edges);
+    }
 }
 
 void oracles_sdl_backend_rebind(const oracles_host_backend *backend, const oracles_sdl_options *options)

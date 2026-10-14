@@ -8,6 +8,7 @@
 
 #include "backends.h"
 #include "item_hotkeys.h"
+#include "touch_controls.h"
 #include "ui_controls_nav.h"
 
 #include <stdint.h>
@@ -115,6 +116,9 @@ typedef struct oracles_settings {
     int window_scale;             /* window_scale=2|3|4|full, Display's window for the games the home screen starts: 2 to 4, 0 fullscreen (the default) */
     int scaling_fill;             /* scaling=sharp|fill, Display's Scaling: the game in fullscreen at its largest whole scale (sharp, the
                                    * default), or filling the screen in its proportions (fill); a window keeps its whole scales */
+    int screen_margin;            /* an OraclesScreenMargin: screen_margin=off|auto|small|large, the band of the screen the game, the
+                                   * touch controls and the launcher's pages keep to (oracles_touch_band); off, the whole screen, by
+                                   * default; a value the launcher does not know is off */
     int quality_hint;             /* quality_hint=low|medium|high|max|custom: the quality a game that ran slowly was last suggested to leave,
                                    * -1 none: the suggestion is made once a quality, until the view, the core or the workers change */
     int first_run;                /* no settings.txt was read: the first opening, which takes the device's profile */

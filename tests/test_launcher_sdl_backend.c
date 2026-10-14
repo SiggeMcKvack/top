@@ -298,6 +298,81 @@ static void scaling(SDL_Window *window, SDL_Renderer *renderer)
     SDL_SyncWindow(window);
 }
 
+/* The pixel at (x, y) of the frame last drawn, opaque black 0xff000000. */
+static Uint32 pixel_at(SDL_Renderer *renderer, int x, int y)
+{
+    const SDL_Rect one = { x, y, 1, 1 };
+    SDL_Surface *read = SDL_RenderReadPixels(renderer, &one);
+    Uint32 value = 0;
+    if (read) {
+        Uint8 r = 0, g = 0, b = 0, a = 0;
+        SDL_ReadSurfacePixel(read, 0, 0, &r, &g, &b, &a);
+        value = (Uint32)a << 24 | (Uint32)r << 16 | (Uint32)g << 8 | b;
+        SDL_DestroySurface(read);
+    }
+    return value;
+}
+
+/* The screen margin, in the lent window sized for 160x144 at five times (800x720): off presents through SDL's logical
+ * presentation, as before it, the frame filling the window; small draws the frame itself in the band 24 dp clear at
+ * the top and at the bottom (a dp a pixel on the dummy display), black outside, at the band's whole scale, four times,
+ * the touch controls laid out in the band; off again from the pause takes the next frame, five times again. */
+static void margins(SDL_Window *window, SDL_Renderer *renderer)
+{
+    static uint32_t pixels[160 * 144];
+    for (unsigned i = 0; i < 160u * 144u; i++) pixels[i] = 0xffffffffu;
+    const oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0 };
+    for (int margin = ORACLES_SCREEN_MARGIN_OFF; margin <= ORACLES_SCREEN_MARGIN_SMALL; margin += ORACLES_SCREEN_MARGIN_SMALL) {
+        oracles_sdl_options options = { 0 };
+        options.scale = 5;
+        options.window = window;
+        options.renderer = renderer;
+        options.pause_menu = 1;
+        options.touch_controls = 1;
+        options.screen_margin = margin;
+        oracles_host_backend backend;
+        if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+        if (backend.start(backend.opaque, 160, 144, 48000, 0)) {
+            SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
+            CHECK(SDL_GetRenderOutputSize(renderer, &output_w, &output_h) && output_w == 800 && output_h == 720);
+            CHECK(backend.present_frame(backend.opaque, &image));
+            CHECK(SDL_GetRenderLogicalPresentation(renderer, NULL, NULL, &mode));
+            if (margin == ORACLES_SCREEN_MARGIN_OFF) {
+                CHECK(mode == SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+                CHECK(pixel_at(renderer, 400, 0) == 0xffffffffu && pixel_at(renderer, 400, 719) == 0xffffffffu);
+            } else {
+                /* The band 24..696: 640x576 at 80,72. */
+                CHECK(mode == SDL_LOGICAL_PRESENTATION_DISABLED);
+                CHECK(pixel_at(renderer, 400, 0) == 0xff000000u && pixel_at(renderer, 400, 71) == 0xff000000u);
+                CHECK(pixel_at(renderer, 400, 72) == 0xffffffffu && pixel_at(renderer, 400, 647) == 0xffffffffu);
+                CHECK(pixel_at(renderer, 400, 648) == 0xff000000u && pixel_at(renderer, 79, 300) == 0xff000000u
+                      && pixel_at(renderer, 80, 300) == 0xffffffffu);
+                /* The controls in the band: A pressed where the band's layout puts it. */
+                const OraclesTouchEdges edges = { ORACLES_SCREEN_MARGIN_SMALL, 1.0f, 0, 0 };
+                const OraclesTouchBox band = oracles_touch_band(output_w, output_h, &edges);
+                CHECK(band.y == 24 && band.h == 672);
+                OraclesTouchLayout l;
+                oracles_touch_layout(band.w, band.h, &l);
+                unsigned pressed, released;
+                int pauses;
+                SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+                finger(SDL_EVENT_FINGER_DOWN, 1, l.a.x, band.y + l.a.y);
+                touch_drain(&backend, &pressed, &released, &pauses);
+                CHECK(pressed == ORACLES_KEY_A);
+                finger(SDL_EVENT_FINGER_UP, 1, l.a.x, band.y + l.a.y);
+                touch_drain(&backend, &pressed, &released, &pauses);
+                CHECK(released == ORACLES_KEY_A);
+                /* Off from the pause: the whole window's five times at the next frame, the controls over it. */
+                oracles_sdl_backend_set_screen_margin(&backend, ORACLES_SCREEN_MARGIN_OFF);
+                CHECK(backend.present_frame(backend.opaque, &image));
+                CHECK(pixel_at(renderer, 400, 0) == 0xffffffffu && pixel_at(renderer, 400, 719) == 0xffffffffu);
+            }
+        } else CHECK(0);
+        backend.stop(backend.opaque);
+        oracles_sdl_backend_release(&backend);
+    }
+}
+
 /* A session in the lent window with only a virtual gamepad `vendor`:`product` plugged in, known by `mapping` (a line
  * of SDL's database after its GUID) when given: the game's buttons its joystick buttons 0 and 1 press, with the default
  * names ("a" for A, "b" for B). */
@@ -570,6 +645,7 @@ int main(int argc, char **argv)
     touches(window, renderer);
     enlarged_menus(window, renderer);
     scaling(window, renderer);
+    margins(window, renderer);
     face_buttons(window, renderer, 0, 0, NULL, &south, &east);
     CHECK(south == ORACLES_KEY_A && east == ORACLES_KEY_B);
     /* In play, with two gamepads plugged in, the buttons of the second are the game's too, as the first's: SDL gives a

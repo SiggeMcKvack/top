@@ -29,7 +29,8 @@
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
  * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
  * (Sharp, the whole scales; Fill, the whole screen in the image's
- * proportions, in fullscreen only).  No camera: Enhanced takes the
+ * proportions, in fullscreen only), the screen margin (Off, Auto, Small, Large: the band of the screen the picture keeps
+ * to, in either profile).  No camera: Enhanced takes the
  * smooth one.  Left and right change the option of the row, OK takes its
  * next one (Quality stops at Low and at Max; from Custom, right takes Low and
  * left Max); on Advanced, OK and right open it, on Core, or from a game on
@@ -38,8 +39,8 @@
  * more, and says so; it keeps the highlight.  The choices apply at the
  * next Play; Back returns from the Advanced rows to Advanced, from Display
  * to Display in the menu.  From a game the core and the workers are the
- * game's, dimmed and inert, and so is the quality; color correction, the HUD and the
- * scaling apply at once there. */
+ * game's, dimmed and inert, and so is the quality; color correction, the HUD, the
+ * scaling and the screen margin apply at once there. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
 
@@ -140,6 +141,7 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_VSYNC,
     ORACLES_DISPLAY_WORKERS,
     ORACLES_DISPLAY_SCALING,
+    ORACLES_DISPLAY_MARGIN,
     ORACLES_DISPLAY_ROWS
 } OraclesDisplayRow;
 
@@ -214,6 +216,9 @@ const char *oracles_display_profile_note(const OraclesHomeNav *nav);
 extern const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS];
 extern const char *const oracles_display_colour_choices[2];
 extern const char *const oracles_display_hud_choices[2];    /* "Original", "Full width": settings.txt's hud= original, full */
+/* "Off", "Auto", "Small", "Large": settings.txt's screen_margin=, an OraclesScreenMargin. */
+#define ORACLES_DISPLAY_MARGINS 4
+extern const char *const oracles_display_margin_choices[ORACLES_DISPLAY_MARGINS];
 extern const char *const oracles_display_vsync_choices[3];
 extern const char *const oracles_display_core_choices[2];   /* "Accurate (SameBoy)", "Fast (mGBA)": an OraclesCoreKind */
 extern const char *const oracles_display_core_names[2];     /* "Accurate", "Fast" */
@@ -222,7 +227,7 @@ void oracles_display_workers_choice(const OraclesHomeNav *nav, int choice, char 
 /* Display's section name: "Display", or "Display › Advanced" while the Advanced rows show. */
 const char *oracles_display_section(const OraclesHomeNav *nav);
 /* The core and the workers are fixed for a running game, and so the quality, which sets them: from it their rows are
- * dimmed and inert. */
+ * dimmed and inert; so is the screen margin --screen-margin gives for the run. */
 int oracles_display_row_fixed(const OraclesHomeNav *nav, unsigned row);
 /* A row's explanation beside its choices (16:9; 4:3 says shorter ones under the rows); Advanced's says what it opens. */
 const char *oracles_display_explanation(unsigned row);

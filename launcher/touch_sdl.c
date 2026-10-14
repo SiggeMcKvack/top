@@ -19,9 +19,10 @@ int oracles_touch_sdl_event(OraclesTouchScreen *screen, SDL_Renderer *renderer, 
     }
     int width = 0, height = 0;
     if (!SDL_GetRenderOutputSize(renderer, &width, &height) || width <= 0 || height <= 0) return 0;
-    /* A finger's place is a fraction of the window, whose pixels are the output's. */
-    *buttons = oracles_touch_finger(&screen->touch, (float)width, (float)height, (uint64_t)event->tfinger.fingerID, kind,
-                                    event->tfinger.x * (float)width, event->tfinger.y * (float)height, pause);
+    /* A finger's place is a fraction of the window, whose pixels are the output's; the controls lie in the band. */
+    const OraclesTouchBox safe = oracles_touch_band(width, height, &screen->edges);
+    *buttons = oracles_touch_finger(&screen->touch, safe.w, safe.h, (uint64_t)event->tfinger.fingerID, kind,
+                                    event->tfinger.x * (float)width - safe.x, event->tfinger.y * (float)height - safe.y, pause);
     return 1;
 }
 
@@ -60,31 +61,35 @@ static void strokes(SDL_Renderer *renderer, float cx, float cy, float unit, cons
     }
 }
 
-/* The frame where the logical presentation puts it, centred, black beside it. */
-static void frame_direct(SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part, int width, int height, int fill)
+/* The frame where the logical presentation puts it in the band, centred, black beside it. */
+static void frame_direct(SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part, const OraclesTouchBox *safe, int fill)
 {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     const int w = part ? (int)part->w : frame->w, h = part ? (int)part->h : frame->h;
-    const OraclesTouchBox box = oracles_touch_frame(width, height, w, h, fill);
-    const SDL_FRect to = { box.x, box.y, box.w, box.h };
+    const OraclesTouchBox box = oracles_touch_frame((int)safe->w, (int)safe->h, w, h, fill);
+    const SDL_FRect to = { safe->x + box.x, safe->y + box.y, box.w, box.h };
     SDL_RenderTexture(renderer, frame, part, &to);
 }
 
 int oracles_touch_sdl_frame(OraclesTouchScreen *screen, SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part)
 {
-    if (!screen->touch.shown && !screen->direct) return 0;
+    if (!screen->touch.shown && !screen->direct && screen->edges.margin == ORACLES_SCREEN_MARGIN_OFF) return 0;
+    int width = 0, height = 0;
+    const int sized = SDL_GetRenderOutputSize(renderer, &width, &height) && width > 0 && height > 0;
+    const OraclesTouchBox safe = oracles_touch_band(width, height, &screen->edges);
+    if (!screen->touch.shown && !screen->direct && (!sized || safe.h >= (float)height)) return 0;
     if (!screen->direct) {
         SDL_GetRenderLogicalPresentation(renderer, &screen->logical_w, &screen->logical_h, NULL);
         SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);   /* the screen's pixels */
         screen->direct = 1;
     }
-    int width = 0, height = 0;
-    if (!SDL_GetRenderOutputSize(renderer, &width, &height) || width <= 0 || height <= 0) return 1;
-    frame_direct(renderer, frame, part, width, height, screen->fill);
+    if (!sized) return 1;
+    frame_direct(renderer, frame, part, &safe, screen->fill);
     if (screen->touch.shown) {
         OraclesTouchLayout l;
-        oracles_touch_layout((float)width, (float)height, &l);
+        oracles_touch_layout(safe.w, safe.h, &l);
+        l.dpad.y += safe.y; l.a.y += safe.y; l.b.y += safe.y; l.pause.y += safe.y; l.select.y += safe.y; l.start.y += safe.y;
         const unsigned pressed = oracles_touch_pressed(&screen->touch);
         const SDL_FColor rest = { 1, 1, 1, 0.14f }, arm = { 1, 1, 1, 0.26f }, held = { 1, 1, 1, 0.45f }, mark = { 1, 1, 1, 0.6f };
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

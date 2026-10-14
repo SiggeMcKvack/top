@@ -50,6 +50,32 @@ unsigned oracles_touch_finger(OraclesTouch *touch, float width, float height, ui
  * it: integer-scaled, the largest whole scale, centred; with `fill` (letterboxed), the largest size in the frame's
  * proportions, centred. */
 OraclesTouchBox oracles_touch_frame(int width, int height, int frame_w, int frame_h, int fill);
+/* settings.txt's screen_margin=: what the game's frame, the controls and the launcher's pages keep clear of at the
+ * screen's top and bottom.  Off, the whole screen; auto, the display cutout's insets Android reports there; small and
+ * large, a margin of 24 or 48 dp at the top and at the bottom, or the cutout's inset where it is larger (a screen whose
+ * edges hide part of the picture without Android saying so). */
+typedef enum OraclesScreenMargin {
+    ORACLES_SCREEN_MARGIN_OFF,
+    ORACLES_SCREEN_MARGIN_AUTO,
+    ORACLES_SCREEN_MARGIN_SMALL,
+    ORACLES_SCREEN_MARGIN_LARGE
+} OraclesScreenMargin;
+#define ORACLES_SCREEN_MARGINS 4
+/* Their names in settings.txt and on the command line: "off", "auto", "small", "large". */
+extern const char *const oracles_screen_margin_names[ORACLES_SCREEN_MARGINS];
+/* What the band keeps clear of: the margin, an OraclesScreenMargin; the display's pixels per dp; and the display
+ * cutout's insets at the screen's top and bottom, in pixels (a cutout at a side leaves the frame, centred, clear of
+ * it). */
+typedef struct OraclesTouchEdges {
+    int margin;
+    float density;
+    int inset_top, inset_bottom;
+} OraclesTouchEdges;
+/* The part of a screen of width x height that the game's frame, the controls and the launcher's pages keep to, at the
+ * screen's whole width: below the top margin and above the bottom one, each the larger of the margin's dp and the
+ * cutout's inset (the inset alone with auto).  The whole screen with off whatever the insets, and where the margins
+ * would leave less than half its height. */
+OraclesTouchBox oracles_touch_band(int width, int height, const OraclesTouchEdges *edges);
 /* The game's buttons the fingers press. */
 unsigned oracles_touch_pressed(const OraclesTouch *touch);
 /* The fingers forgotten (a pause, whose menu takes them); hide: a key or a controller was used, the controls go too. */

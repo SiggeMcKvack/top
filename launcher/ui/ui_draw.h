@@ -40,7 +40,8 @@ void oracles_ui_draw_layout(OraclesUiDraw *draw, OraclesUiLayout layout);
  * scene's background, the clip to the scene.  Returns 0 on failure. */
 int oracles_ui_draw_begin(OraclesUiDraw *draw, int width, int height, double now_ms);
 /* The same over what the output already shows (a game's last image): no letterbox, no background, the clip only.  The
- * scale is `min_scale` at least: a scene then larger than the output has its parts anchored (oracles_ui_draw_anchor). */
+ * scale is `min_scale` at least: a scene then larger than the output has its parts anchored (oracles_ui_draw_anchor),
+ * clipped to the output's band (oracles_ui_draw_band). */
 int oracles_ui_draw_begin_over(OraclesUiDraw *draw, int width, int height, float min_scale, double now_ms);
 /* Whether the scene of the frame begun is larger than the output. */
 int oracles_ui_draw_overflows(const OraclesUiDraw *draw);
@@ -53,6 +54,12 @@ void oracles_ui_draw_end(OraclesUiDraw *draw);
 /* Rasterises, for an output of `width` x `height` drawn in the layout set at `min_scale` at least, the glyphs of `text` in each of the `count` styles, and uploads
  * them: what a screen drawn later at that size needs, ready beforehand.  Returns the glyphs rasterised, -1 on failure. */
 int oracles_ui_draw_prepare(OraclesUiDraw *draw, int width, int height, float min_scale, const OraclesUiTextStyle *const *styles, int count, const char *text);
+/* The frames begun from now on keep the scene to the band of the output from line `top`, `height` high (below a display
+ * cutout, above a curved edge), the letterbox filling the rest; the scale is the band's.  Height 0, the default: the
+ * whole output. */
+void oracles_ui_draw_band(OraclesUiDraw *draw, int top, int height);
+/* That band's top and height in an output `height` high. */
+void oracles_ui_draw_band_of(const OraclesUiDraw *draw, int height, int *top, int *band);
 /* Frozen, the rasters keep their scale whatever the output's: stretched, never redone (a game's pause). */
 void oracles_ui_draw_freeze(OraclesUiDraw *draw, int frozen);
 /* The glyphs rasterised since the drawing was created: two readings apart, what was rasterised between them. */

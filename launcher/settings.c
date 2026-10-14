@@ -256,11 +256,12 @@ void oracles_settings_defaults(oracles_settings *s)
     s->launcher_height = LAUNCHER_HEIGHT;
     s->window_scale = 0;   /* fullscreen; --rom keeps its own scale, 4 */
     s->scaling_fill = 0;   /* sharp, Android included */
+    s->screen_margin = ORACLES_SCREEN_MARGIN_OFF;
     s->quality_hint = -1;
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `quality_hint=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -340,6 +341,11 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "scaling")) {
         if (!strcmp(value, "sharp") || !strcmp(value, "fill")) s->scaling_fill = !strcmp(value, "fill");
+        return 1;
+    }
+    if (!strcmp(name, "screen_margin")) {
+        s->screen_margin = ORACLES_SCREEN_MARGIN_OFF;   /* unknown: off, the whole screen */
+        for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) if (!strcmp(value, oracles_screen_margin_names[m])) s->screen_margin = m;
         return 1;
     }
     if (!strcmp(name, "quality_hint")) {
@@ -472,6 +478,10 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
                "# proportions, sampled for pixel art); a window keeps its whole scales.\n");
     fprintf(f, "scaling=%s\n", s->scaling_fill ? "fill" : "sharp");
+    fprintf(f, "# The band of the screen the game and the launcher keep to: off (the whole screen), auto (clear of a notch or a\n"
+               "# curved edge Android reports above or below), small or large (24 or 48 dp clear at the top and at the bottom,\n"
+               "# for a screen whose edges hide part of the picture, auto's too where it is larger).\n");
+    fprintf(f, "screen_margin=%s\n", oracles_screen_margin_names[s->screen_margin >= 0 && s->screen_margin < ORACLES_SCREEN_MARGINS ? s->screen_margin : 0]);
     fprintf(f, "launcher_window=%dx%d\n", s->launcher_width, s->launcher_height);
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) fprintf(f, "key_%s=%s\n", oracles_sdl_binding_names[i], s->key_names[i]);
     for (unsigned i = 0; i < 4; i++) fprintf(f, "pad_%s=%s\n", pad_setting_names[i], s->pad_names[i]);

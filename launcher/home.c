@@ -3,14 +3,13 @@
 #include "backends.h"
 #include "file_dialog.h"
 #include "home_input.h"
+#include "safe_area.h"
+#include "touch_controls.h"
 #include "ui_controls_nav.h"
 #include "ui_home.h"
 #include "ui_page_nav.h"
 
 #include <SDL3/SDL.h>
-#ifdef __ANDROID__
-#include <jni.h>
-#endif
 
 #include <math.h>
 
@@ -43,6 +42,7 @@ typedef struct home_app {
     OraclesUiHome view;
     int width, height;       /* the window's size while windowed, remembered */
     int fullscreen;
+    OraclesTouchEdges edges;  /* the screen margin and what it was read from (oracles_safe_area_edges): the page keeps to its band */
     int dirty, moving, idle_work, running;
     int redraws;             /* frames still to draw whatever changed (Android: see ANDROID_REDRAWS) */
     int dialog_open;         /* the file dialog has not answered yet */
@@ -56,30 +56,6 @@ typedef struct home_app {
     unsigned watch_type_count[6];
     double presented_ms;
 } home_app;
-
-/* Android: what reached the activity since the last call (OraclesActivity.inputState), else nothing. */
-static void android_input_state(char *out, size_t capacity)
-{
-    out[0] = 0;
-#ifdef __ANDROID__
-    JNIEnv *env = SDL_GetAndroidJNIEnv();
-    jobject activity = SDL_GetAndroidActivity();
-    if (!env || !activity) return;
-    jclass class = (*env)->GetObjectClass(env, activity);
-    jmethodID method = (*env)->GetStaticMethodID(env, class, "inputState", "()Ljava/lang/String;");
-    jstring state = method ? (*env)->CallStaticObjectMethod(env, class, method) : NULL;
-    if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
-    if (state) {
-        const char *text = (*env)->GetStringUTFChars(env, state, NULL);
-        if (text) { snprintf(out, capacity, "%s", text); (*env)->ReleaseStringUTFChars(env, state, text); }
-        (*env)->DeleteLocalRef(env, state);
-    }
-    (*env)->DeleteLocalRef(env, class);
-    (*env)->DeleteLocalRef(env, activity);
-#else
-    (void)capacity;
-#endif
-}
 
 static double now_ms(void)
 {
@@ -96,10 +72,18 @@ static void changed(home_app *app)
     app->dirty = 1;
 }
 
+/* The screen margin's edges read again, for the margin Display has: the page re-laid out in its band. */
+static void read_edges(home_app *app)
+{
+    oracles_safe_area_edges(app->window, app->nav.display.margin, &app->edges);
+    app->dirty = 1;
+}
+
 static void refresh(home_app *app)
 {
     if (app->host && app->host->refresh) app->host->refresh(app->host->opaque, &app->nav, app->window);
     oracles_page_keep_row(&app->nav);
+    if (app->nav.display.margin != app->edges.margin) read_edges(app);
 }
 
 /* A size of the launcher, in points (settings.txt's), in the window's coordinates: pixels on Windows. */
@@ -151,6 +135,7 @@ static void start(home_app *app, OraclesHomeCommand game)
     oracles_ui_draw_freeze(app->draw, 0);   /* the pause held the rasters at the game's scale; the home screen redoes its own */
     if (closed) { app->running = 0; return; }
     restore_window(app);
+    read_edges(app);   /* the game may have seen them change */
     /* The session had the controllers' plugs and unplugs: every controller is opened again from scratch, so that one the
      * session's handles left in a state of their own is taken as new. */
     oracles_sdl_pads_close(&app->pads);
@@ -171,7 +156,7 @@ static void start(home_app *app, OraclesHomeCommand game)
     memset(app->watch_type_count, 0, sizeof app->watch_type_count);
     app->watch_present_max_ms = 0.0;
     char platform[256];
-    android_input_state(platform, sizeof platform);   /* its counts start now */
+    oracles_android_activity_text("inputState", platform, sizeof platform);   /* its counts start now */
     refresh(app);
     changed(app);
     if (message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
@@ -184,7 +169,11 @@ static void page_command(home_app *app, OraclesHomeCommand c)
     const int game = oracles_home_game(&app->nav);
     char message[256] = "";
     if (!host || game < 0) return;
-    if (c == ORACLES_HOME_STORE && host->store) { host->store(host->opaque, &app->nav); return; }
+    if (c == ORACLES_HOME_STORE && host->store) {
+        host->store(host->opaque, &app->nav);
+        if (app->nav.display.margin != app->edges.margin) read_edges(app);
+        return;
+    }
     if (host->file_chosen && ((c == ORACLES_HOME_CHOOSE_ROM && host->choose_rom) || (c == ORACLES_HOME_CHOOSE_PATCH && host->choose_patch)
                               || (c == ORACLES_HOME_CHOOSE_EU_ROM && host->choose_eu_rom))) {
         /* The dialog answers later (dialog_answered); until then the home screen draws but takes no input. */
@@ -338,6 +327,7 @@ static void handle(home_app *app, const SDL_Event *e)
         if ((e->type >= SDL_EVENT_TERMINATING && e->type <= SDL_EVENT_DID_ENTER_FOREGROUND) || (e->type >= SDL_EVENT_WINDOW_FIRST && e->type <= SDL_EVENT_WINDOW_LAST))
             fprintf(stderr, "oracles: home screen event 0x%x, %.0f ms after the game\n", (unsigned)e->type, now_ms() - app->watch_since_ms);
     }
+    if (oracles_safe_area_event(app->window, "home screen", e, &app->edges)) app->dirty = 1;
     if (e->type == SDL_EVENT_WINDOW_FOCUS_GAINED || e->type == SDL_EVENT_WINDOW_FOCUS_LOST || e->type == SDL_EVENT_WINDOW_DISPLAY_CHANGED
         || e->type == SDL_EVENT_WINDOW_HIDDEN || e->type == SDL_EVENT_WINDOW_SHOWN)
         fprintf(stderr, "oracles: home screen window: %s\n", e->type == SDL_EVENT_WINDOW_FOCUS_GAINED ? "focus gained" : e->type == SDL_EVENT_WINDOW_FOCUS_LOST ? "focus lost"
@@ -383,6 +373,8 @@ static int render(home_app *app, double now)
      * changes it, and the pointer is then looked for in the new one. */
     app->nav.layout = oracles_ui_layout_choose(w, h, app->nav.display.aspect);
     oracles_ui_draw_layout(app->draw, oracles_ui_home_scene(&app->nav));
+    const OraclesTouchBox safe = oracles_touch_band(w, h, &app->edges);
+    oracles_ui_draw_band(app->draw, (int)safe.y, (int)safe.h);
     if (!oracles_ui_draw_begin(app->draw, w, h, now)) return 0;
     app->moving = oracles_ui_home_draw(app->draw, &app->view, &app->nav, now);
     oracles_ui_draw_end(app->draw);
@@ -460,7 +452,8 @@ int oracles_home_run(const OraclesHomeHost *host, int *width, int *height)
     } else {
         SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
         oracles_home_init(&app.nav);
-        refresh(&app);
+        refresh(&app);   /* the screen margin's edges read with Display's */
+        oracles_safe_area_report(app.window, "home screen", "opened", &app.edges);
         oracles_ui_home_start(&app.view, &app.nav);
         app.dirty = 1;
         app.redraws = ANDROID_REDRAWS;
@@ -479,7 +472,7 @@ int oracles_home_run(const OraclesHomeHost *host, int *width, int *height)
                 char types[128] = "", platform[256] = "";
                 for (unsigned i = 0, used = 0; i < 6u && app.watch_type_count[i] && used < sizeof types; i++)
                     used += (unsigned)snprintf(types + used, sizeof types - used, "%s0x%x x%u", i ? ", " : "; by type ", (unsigned)app.watch_type[i], app.watch_type_count[i]);
-                android_input_state(platform, sizeof platform);
+                oracles_android_activity_text("inputState", platform, sizeof platform);
                 fprintf(stderr, "oracles: home screen, %.0f s after the game: %u events (%u inputs, %u of the window%s), %u frames presented (at most %.1f ms), input focus %s%s%s%s\n",
                         (now - app.watch_since_ms) / 1000.0, app.watch_events, app.watch_inputs, app.watch_window, types, app.watch_frames, app.watch_present_max_ms,
                         (flags & SDL_WINDOW_INPUT_FOCUS) ? "yes" : "no", (flags & SDL_WINDOW_HIDDEN) ? ", hidden" : "", platform[0] ? "; " : "", platform);

@@ -8,8 +8,8 @@
  *
  * Nothing is rasterised during the session: the glyphs of every screen the
  * pause shows are rasterised for the window's size before the first frame
- * (oracles_pause_prepare), again at a pause only if the window's size has
- * changed since, and the rasters stay frozen while the session lasts. */
+ * (oracles_pause_prepare), again at a pause only if the window's size or its
+ * band has changed since, and the rasters stay frozen while the session lasts. */
 #ifndef ORACLES_LAUNCHER_PAUSE_H
 #define ORACLES_LAUNCHER_PAUSE_H
 
@@ -26,8 +26,9 @@ typedef struct OraclesPauseSession {
     int (*load_state)(void *opaque, char *message, size_t capacity);
     /* The time of the savestate, "22:14", or empty when there is none. */
     void (*state_time)(void *opaque, char *out, size_t capacity);
-    /* The settings changed: the keys, the colour correction and the HUD apply at once. */
-    void (*settings_changed)(void *opaque);
+    /* The settings changed: the keys, the colour correction, the HUD, the scaling and the screen margin apply at once.  Returns
+     * the screen margin in effect (an OraclesScreenMargin), which the menu's band follows. */
+    int (*settings_changed)(void *opaque);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */
 } OraclesPauseSession;
@@ -41,8 +42,9 @@ typedef enum OraclesPauseResult {
 typedef struct OraclesPause OraclesPause;
 
 /* A pause for `game`'s session (ORACLES_HOME_GAME_*) running in `playing`, drawn with the home screen's `draw`, its settings read and written
- * through `host` (refresh, store); `aspect`, the settings' aspect=, which the layout follows. */
-OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect);
+ * through `host` (refresh, store); `aspect`, the settings' aspect=, which the layout follows; `margin`, the session's
+ * screen margin (an OraclesScreenMargin), whose band the menu keeps to, which Display changes at once. */
+OraclesPause *oracles_pause_create(OraclesUiDraw *draw, const OraclesHomeHost *host, int game, OraclesProfile playing, int aspect, int margin);
 void oracles_pause_destroy(OraclesPause *pause);
 
 /* Before the session's first frame: the glyphs for the renderer's output, and the rasters frozen.  Says on stderr

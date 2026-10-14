@@ -4,6 +4,7 @@
  * leaves its key alone, and names that were never the launcher's (zoom-out as
  * a profile, per-game profile and transitions keys) are neither read nor
  * written. */
+#include "home_choices.h"
 #include "session.h"
 #include "settings.h"
 #include "core.h"
@@ -42,6 +43,55 @@ static int file_has_line(const char *path, const char *wanted)
     while (f && fgets(line, sizeof line, f)) found |= !strcmp(line, wanted);
     if (f) fclose(f);
     return found;
+}
+
+/* Display's choices written back: from the pause, the running game's core and workers are not; a margin
+ * --screen-margin gave for the run never is, whatever the row holds. */
+static void display_stored(void)
+{
+    oracles_settings s;
+    oracles_settings_defaults(&s);
+    OraclesHomeDisplay display;
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(!display.margin_fixed && display.margin == ORACLES_SCREEN_MARGIN_OFF);
+    display.margin = ORACLES_SCREEN_MARGIN_LARGE;
+    display.margin_fixed = 1;
+    display.hud = 0;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud_full == 0);
+    display.margin_fixed = 0;
+    display.workers = 2;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_LARGE && s.ghosts != 2);
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.ghosts == 2);
+}
+
+/* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the
+ * margin unless --screen-margin holds it for the run. */
+static void pause_changes(void)
+{
+    oracles_settings s;
+    oracles_settings_defaults(&s);
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin };
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    s.hud_full = !s.hud_full;
+    s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
+    CHECK(applied.hud == s.hud_full && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    /* --screen-margin large for the run: the settings' margin changes nothing, the option's is applied once. */
+    s.screen_margin = ORACLES_SCREEN_MARGIN_AUTO;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
+    s.screen_margin = ORACLES_SCREEN_MARGIN_OFF;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == 0);
+    /* Without the Enhanced view (Faithful) there is no HUD to change. */
+    applied.hud = -1;
+    s.hud_full = !s.hud_full;
+    s.colour_correction = !s.colour_correction;
+    s.scaling_fill = !s.scaling_fill;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
+    CHECK(applied.hud == -1 && applied.colour == s.colour_correction && applied.fill == s.scaling_fill);
 }
 
 int main(int argc, char **argv)
@@ -339,6 +389,45 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.scaling_fill == 0);
+    /* The screen margin: off at the first opening, written under its comment; each value written and read back by its
+     * name; an unknown value off, even over another read before; --screen-margin wins for the run, never written. */
+    oracles_settings_defaults(&read_back);
+    CHECK(read_back.screen_margin == ORACLES_SCREEN_MARGIN_OFF);
+    oracles_settings_store(&read_back);
+    {
+        FILE *f = fopen(path, "r");
+        char line[512], previous[512] = "";
+        int found = 0;
+        while (f && fgets(line, sizeof line, f)) {
+            if (!strcmp(line, "screen_margin=off\n")) found = !strncmp(previous, "# for a screen whose edges hide part of the picture", 51);
+            snprintf(previous, sizeof previous, "%s", line);
+        }
+        if (f) fclose(f);
+        CHECK(found);
+    }
+    for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) {
+        char text[64];
+        snprintf(text, sizeof text, "screen_margin=%s\n", oracles_screen_margin_names[m]);
+        write_text(path, text);
+        oracles_settings_defaults(&read_back);
+        oracles_settings_load(&read_back);
+        CHECK(read_back.screen_margin == m);
+        read_back.screen_margin = (m + 1) % ORACLES_SCREEN_MARGINS;
+        oracles_settings_store(&read_back);
+        oracles_settings_defaults(&read_back);
+        oracles_settings_load(&read_back);
+        CHECK(read_back.screen_margin == (m + 1) % ORACLES_SCREEN_MARGINS);
+    }
+    CHECK(!strcmp(oracles_screen_margin_names[ORACLES_SCREEN_MARGIN_AUTO], "auto") && !strcmp(oracles_screen_margin_names[ORACLES_SCREEN_MARGIN_SMALL], "small")
+          && !strcmp(oracles_screen_margin_names[ORACLES_SCREEN_MARGIN_LARGE], "large"));
+    write_text(path, "screen_margin=large\nscreen_margin=huge\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.screen_margin == ORACLES_SCREEN_MARGIN_OFF);
+    read_back.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
+    CHECK(oracles_session_screen_margin(0, &read_back) == ORACLES_SCREEN_MARGIN_SMALL);
+    CHECK(oracles_session_screen_margin(ORACLES_SCREEN_MARGIN_LARGE + 1, &read_back) == ORACLES_SCREEN_MARGIN_LARGE);
+    CHECK(oracles_session_screen_margin(ORACLES_SCREEN_MARGIN_OFF + 1, &read_back) == ORACLES_SCREEN_MARGIN_OFF);
     /* The game's menus: framed at the view's scale on a desktop (the tests' build), large written and read back. */
     oracles_settings_defaults(&read_back);
     CHECK(read_back.menus_large == 0);
@@ -558,6 +647,9 @@ int main(int argc, char **argv)
     CHECK(oracles_settings_lighter(&written, &lighter, &lighter_view) && lighter_view == 0);
     written.view = 0;
     CHECK(!oracles_settings_lighter(&written, &lighter, &lighter_view) && !oracles_settings_slow_hint(&written, 1, 6000, 300));
+
+    display_stored();
+    pause_changes();
 
     remove(path);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
