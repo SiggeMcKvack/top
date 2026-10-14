@@ -77,6 +77,11 @@ FUNCTIONS = [
     # direction (Ages), and the flippers', A (both games).
     ("link_update_velocity_mermaid", "linkUpdateVelocity@mermaidSuit"),
     ("link_update_flippers_state0", "linkUpdateFlippersSpeed@flippersState0"),
+    # The cheats: the routines whose one read of a register each answers (the damage Link takes, the ammunition used up,
+    # the rupees taken away), the routine whose call removeRupeeValue makes with the value to take in a, and the one
+    # scripted loss of ammunition, Ages' bomb-upgrade fairy taking every bomb (scriptHelper.s), which stays the game's.
+    ("link_apply_damage", "linkApplyDamage"), ("dec_num_bombs", "decNumBombs"),
+    ("get_rupee_value", "getRupeeValue"), ("bomb_fairy_lose_all_bombs", "bombUpgradeFairy_loseAllBombs"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -234,6 +239,7 @@ VARIABLES = [
     # The call transaction: what a mod reads before it pays or gives (the counts the game's routines change).
     ("num_rupees", "wNumRupees"), ("link_health", "wLinkHealth"), ("link_max_health", "wLinkMaxHealth"),
     ("num_gasha_seeds", "wNumGashaSeeds"), ("seed_satchel_level", "wSeedSatchelLevel"), ("num_ember_seeds", "wNumEmberSeeds"),
+    ("link_damage_to_apply", "w1Link.damageToApply"),   # the cheats: the damage linkApplyDamage reads
     ("general_purpose_hram", "hFF8A"), ("general_purpose_hram_end", "hRng1"), ("tmp_cec0", "wTmpcec0"), ("tmp_cec0_end", "wRoomLayout"),
 ]
 # Defines of wram.s expressed as symbol + offset.
@@ -243,7 +249,7 @@ DEFINES = [("game_state", "wGameState"), ("cutscene_index", "wCutsceneIndex")]
 # offset; absent from the game that has no such room.
 ROOM_FLAG_BYTES = [("maku_tree_tileset_room_flags", "wGroup1RoomFlags", "ROOM_AGES_148"),   # Ages: bit 0, the Maku Tree saved, 0:38's tileset
                    ("veran_room_flags", "wGroup4RoomFlags", "ROOM_AGES_4fc")]              # Ages: bit 7, Veran beaten, 0:38's staircase
-OPTIONAL = {"linkUpdateVelocity@mermaidSuit", "wPortalGroup", "wPortalRoom", "wLinkTimeWarpTile", "wJabuWaterLevel", "wLinkRaisedFloorOffset", "wSelectedHarpSong",   # Ages only
+OPTIONAL = {"linkUpdateVelocity@mermaidSuit", "bombUpgradeFairy_loseAllBombs", "wPortalGroup", "wPortalRoom", "wLinkTimeWarpTile", "wJabuWaterLevel", "wLinkRaisedFloorOffset", "wSelectedHarpSong",   # Ages only
             "wInBoxingMatch",   # Seasons only
             "wNumPlacedSlates"}   # neither original: a fan game's (Gifts of Kinomi)
 STRUCT_FIELDS = ["enabled", "id", "subid", "var03", "state", "substate", "counter1", "counter2", "direction",
@@ -268,7 +274,8 @@ def find_disasm() -> Path:
 DUPLICATES = {"saveFile": 0,   # the bank-0 wrapper the game calls (bank0.s)
               "checkUseItems": 0,   # the bank-0 entry Link's update calls
               "playSound": 0,   # the bank-0 entry, which calls the sound bank itself (the call transaction)
-              "parseGivenObjectData": "banked"}   # the loop objectLoading.s's opcodes jump back to, not the bank-0 wrapper
+              "parseGivenObjectData": "banked",   # the loop objectLoading.s's opcodes jump back to, not the bank-0 wrapper
+              "linkApplyDamage": "banked"}   # the body Link's update runs (bank 6), not the bank-0 wrapper
 # Sizes the host needs, from the `_sizeof_` entries of the symbol table.
 SIZES = [("global_flags_size", "_sizeof_wGlobalFlags", 1), ("room_flags_size", "_sizeof_wGroup0RoomFlags", 4),
          ("obtained_treasure_flags_size", "_sizeof_wObtainedTreasureFlags", 1), ("gasha_spots_planted_size", "_sizeof_wGashaSpotsPlantedBitset", 1),

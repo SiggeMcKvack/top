@@ -38,19 +38,10 @@ uint8_t oracles_guest_flippers_press(uint8_t just_pressed, uint8_t pressed, uint
 
 uint16_t oracles_guest_find_stroke_test(const uint8_t *rom, size_t size, OraclesGuestSym routine, OraclesGuestSym keys_just_pressed, uint8_t mask)
 {
-    if (!rom || routine.bank == ORACLES_GUEST_ABSENT || keys_just_pressed.bank == ORACLES_GUEST_ABSENT || routine.addr >= 0x8000u) return 0;
-    const size_t base = routine.addr < 0x4000u ? routine.addr : (size_t)routine.bank * 0x4000u + (routine.addr - 0x4000u);
-    const size_t bank_end = routine.addr < 0x4000u ? 0x4000u : base + (0x8000u - routine.addr);
-    uint16_t found = 0;
-    unsigned count = 0;
-    for (size_t i = 0; i < 0x40u && base + i + 5u <= size && base + i + 5u <= bank_end; i++) {
-        const uint8_t *p = rom + base + i;
-        if (p[0] == 0xfau && p[1] == (keys_just_pressed.addr & 0xffu) && p[2] == keys_just_pressed.addr >> 8 && p[3] == 0xe6u && p[4] == mask) {
-            found = (uint16_t)(routine.addr + i + 3u);
-            count++;
-        }
-    }
-    return count == 1u ? found : 0;
+    if (keys_just_pressed.bank == ORACLES_GUEST_ABSENT) return 0;
+    const uint8_t test[] = { 0xfa, (uint8_t)keys_just_pressed.addr, (uint8_t)(keys_just_pressed.addr >> 8), 0xe6, mask };
+    const uint16_t at = oracles_guest_find_in_routine(rom, size, routine, test, sizeof test);
+    return at ? (uint16_t)(at + 3u) : 0;
 }
 
 /* The test of `routine` hooked with `event`; 0, or -1 when the game has the routine and its test is not found once. */

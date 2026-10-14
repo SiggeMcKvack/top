@@ -37,6 +37,8 @@ The routes recorded before SameBoy's joypad bouncing was cut (`ages/advanced`, `
 | `ages/swim-diagonal.route` | the transitions' diagonal swimming with the mermaid suit across the edge between 0:c4 and 0:b4, written by hand | faithful, enhanced, enhanced-threaded, enhanced-zoom |
 | `ages/stairs-diagonal.route` | Link's sprite steady on the screen on stairs and walking diagonally, at every size of the view and with both camera profiles, written by hand | faithful, enhanced, enhanced-threaded, enhanced-zoom |
 | `ages/save.route`, `ages/load.route` | the game's own save, written by hand after `ages/overworld.route`'s keys: the same cartridge RAM on both cores, and the file opened the same on both | faithful |
+| `ages/shop.route` | a purchase: `ages/overworld.route`'s keys into Lynna's shop, then hearts bought for 10 rupees, written by hand; with `--cheats rupees` it costs nothing | faithful |
+| `ages/shop-cheat.route`, `ages/shop-cheat-off.route` | `ages/shop.route`'s keys with `cheat` lines, written by hand: the cheat of the rupees turned on at frame 6228, the frame the purchase is paid at, which costs nothing, then off; on from the start, turned off at that frame, which costs 10 | faithful |
 | `seasons/overworld.route` | Enhanced on Seasons: Holodrum, vertical scrolls, interiors, a dungeon | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/continuous-transitions.route` | continuous transitions, Subrosia, white fades, large rooms | faithful, faithful-cc, enhanced, enhanced-threaded |
 | `seasons/neighbour-objects.route` | the neighbouring rooms' objects handed over to the live room | faithful, enhanced |
@@ -47,6 +49,7 @@ The routes recorded before SameBoy's joypad bouncing was cut (`ages/advanced`, `
 | `seasons/dungeon.route` | a dungeon in the drawn-back view, large rooms whole | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/swim.route` | the continuous transitions through a swim with the flippers, strokes carrying Link across an edge | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `seasons/swim-hold.route` | the swim's hold with the flippers: `seasons/swim.route`'s start, Link entering the water, then a direction held alone, with A, and nothing, written by hand (SameBoy only) | faithful, enhanced-zoom |
+| `seasons/shop.route` | a purchase: `seasons/overworld.route`'s keys to Horon's shop, then a bomb dropped and its blast taken outside, and ten bombs bought for 20 rupees, written by hand; with the cheats the blast costs no heart, the purchase nothing, and the bomb is kept | faithful |
 | `seasons/diagonal-crossings.route` | the transitions' diagonal on foot: the edges of 0:e7, 0:e8, 0:d7 and 0:d8 crossed diagonally in the eight ways, written by hand | faithful, enhanced, enhanced-threaded |
 | `seasons/stairs-diagonal.route` | Link's sprite steady on the screen on stairs and walking diagonally, at every size of the view and with both camera profiles, written by hand | faithful, enhanced, enhanced-threaded, enhanced-zoom |
 | `moonrise-regalia/exploration.route` | a fan game from its BPS patch: a new game, continuous transitions | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded; with `--continuous-diagonal`, faithful and enhanced |

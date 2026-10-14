@@ -44,6 +44,8 @@ typedef struct OraclesSessionOptions {
     int continuous_diagonal;         /* --continuous-diagonal: a diagonal held carries Link across the transitions' axis too (implies them) */
     int swim_hold;                   /* --swim-hold, or settings.txt's swim_hold=on for a game the home screen starts: a direction held
                                       * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
+    unsigned cheats;                 /* --cheats, or settings.txt's cheats_<game>= for a game the home screen starts: a mask of OraclesGuestCheat */
+    int cheats_given;                /* --cheats was given: its list wins over the settings' for the games the home screen starts */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
     int camera_profile;              /* 0: the settings' camera; 1 or 2: this one for the session, not stored */
     int pretend_slow;                /* --pretend-slow: the game counts as one that ran slowly, to try the home screen's suggestion */

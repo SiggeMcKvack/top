@@ -4,6 +4,7 @@
 #include "bps.h"
 #include "compositor.h"
 #include "file_dialog.h"
+#include "guest.h"
 #include "guest_tables.h"
 #include "language.h"
 #include "mod_folder.h"
@@ -109,11 +110,16 @@ static OraclesRomState rom_found(OraclesHomeGames *games, OraclesSettingsGame g,
 }
 
 /* A game as the launcher finds it: its ROM identified, its save, its item hotkeys' mode. */
+/* Cheats' rows are the guest's cheats, bit for bit. */
+_Static_assert(ORACLES_CHEAT_NO_DAMAGE == 1u && ORACLES_CHEAT_AMMO == 2u && ORACLES_CHEAT_RUPEES == 4u && ORACLES_CHEATS == ORACLES_CHEATS_ROWS,
+               "Cheats' rows are the cheats' bits");
+
 static void inspect(OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeGame *state)
 {
     const oracles_settings *settings = games->settings;
     memset(state, 0, sizeof *state);
     state->hotkeys = (int)settings->item_hotkeys[g];
+    state->cheats = settings->cheats[g];
     if (games->refused[g].path[0]) {
         /* A refused choice, shown and not kept: the ROM of settings.txt waits behind it. */
         split_path(games->refused[g].path, state->rom_file, sizeof state->rom_file, state->rom_folder, sizeof state->rom_folder);
@@ -284,6 +290,8 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
     oracles_home_inspect_display(games->settings, &nav->display, window);
     nav->display.margin = oracles_session_screen_margin(games->options ? games->options->screen_margin : 0, games->settings);   /* --screen-margin's, for the run */
     nav->display.margin_fixed = games->options && games->options->screen_margin;
+    nav->cheats_fixed = games->options && games->options->cheats_given;   /* --cheats', for every game it starts */
+    nav->cheats_changed = 0;
     oracles_home_inspect_controls(games->settings, &nav->controls);
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         inspect(games, (OraclesSettingsGame)g, &nav->games[g]);
@@ -299,6 +307,7 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
             fprintf(stderr, "oracles: %s patch %s refused: %s\n", fan_title(fan), games->settings->patch[f], state->patch_reason);
         if (state->image == ORACLES_ROM_REFUSED) fprintf(stderr, "oracles: %s does not build: %s\n", fan_title(fan), state->image_reason);
     }
+    for (int g = 0; nav->cheats_fixed && g < ORACLES_SETTINGS_GAMES; g++) nav->games[g].cheats = games->options->cheats;
     read_mods(opaque, nav);
 }
 
@@ -306,7 +315,10 @@ static void store(void *opaque, const OraclesHomeNav *nav)
 {
     OraclesHomeGames *games = opaque;
     oracles_settings *prefs = games->settings;
-    for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) prefs->item_hotkeys[g] = (OraclesHotkeysMode)nav->games[g].hotkeys;
+    for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
+        prefs->item_hotkeys[g] = (OraclesHotkeysMode)nav->games[g].hotkeys;
+        if (nav->cheats_changed & 1u << g) prefs->cheats[g] = nav->games[g].cheats;   /* the page's, never --cheats' */
+    }
     oracles_home_store_controls(&nav->controls, prefs);
     oracles_home_store_display(&nav->display, nav->in_game, prefs);
     /* Each Oracle's active mods, those its Mods page switched on. */
@@ -637,6 +649,9 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
     o.continuous_transitions = profile != ORACLES_PROFILE_FAITHFUL && (o.continuous_transitions || games->settings->transitions);
     /* The swim's hold, in either profile: the command line's, else settings.txt's swim_hold=. */
     o.swim_hold = o.swim_hold || games->settings->swim_hold;
+    /* The cheats of the game's Oracle: the command line's, else settings.txt's cheats_<game>=; none for a fan game. */
+    if (fan) o.cheats = 0;
+    else if (!o.cheats_given) o.cheats = games->settings->cheats[g];
     /* No fan game's profile allows the item hotkeys yet: off, whatever the command line gave for the Oracles. */
     if (fan) o.hotkeys_option = hotkey_names[0];
     else if (!o.hotkeys_option) o.hotkeys_option = hotkey_names[state.hotkeys];

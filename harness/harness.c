@@ -82,6 +82,7 @@ typedef struct run {
     int carried_off;          /* 8.8: what the last transition carried him off its straight path, across its axis */
     unsigned landing_direction;
     unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
+    unsigned cheats_changed;  /* the cheats the route's `cheat` lines change, their points armed from the start */
 } run;
 
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
@@ -111,6 +112,12 @@ static void on_frame_begin(void *opaque, uint32_t frame)
     if (r->hotkeys_live && r->enhanced) oracles_hotkeys_live_hotbar(r->hotkeys_live, oracles_enhanced_check_view(r->enhanced));
     if (r->guest) oracles_guest_set_frame(r->guest, frame);
     if (r->colour_toggle_at && frame == r->colour_toggle_at) oracles_core_set_colour_correction(r->core, !oracles_core_colour_correction(r->core));
+    size_t first;
+    for (size_t n = oracles_route_cheats_at(&r->route, frame, &first), i = first; i < first + n; i++) {   /* the route's cheats changed at this frame */
+        unsigned bit = 0, cheats = oracles_guest_cheats(r->guest);
+        oracles_cheats_parse(r->route.cheats[i].name, NULL, &bit);
+        oracles_guest_set_cheats(r->guest, r->route.cheats[i].on ? cheats | bit : cheats & ~bit);   /* armed from the start: it cannot fail */
+    }
     if (r->check) oracles_frame_check_frame_begin(r->check, frame);
 }
 
@@ -445,6 +452,14 @@ static void report_checks(run *r, const harness_options *o, FILE *summary, uint8
         fprintf(stderr, "swim's hold: strokes started by a held button: %u with the mermaid suit, %u with the flippers\n", mermaid, flippers);
         if (summary) fprintf(summary, "swim.mermaid_strokes=%u\nswim.flippers_strokes=%u\n", mermaid, flippers);
     }
+    if (o->cheats || r->cheats_changed) {
+        OraclesGuestCheatCounts c;
+        oracles_guest_cheat_counts(r->guest, &c);
+        fprintf(stderr, "cheats: %u hits cost no heart (%u quarters kept), %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
+                c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
+        if (summary) fprintf(summary, "cheats.damage_cancelled=%u\ncheats.health_kept=%u\ncheats.ammo_kept=%u\ncheats.payments_cancelled=%u\ncheats.rupees_kept=%u\ncheats.mod_payments=%u\n",
+                             c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
+    }
     if (r->guest) {
         unsigned overflow = 0, purged = 0;
         oracles_guest_dropped_returns(r->guest, &overflow, &purged);
@@ -628,6 +643,28 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         o->swim_hold = 1;
         fprintf(stderr, "harness: the route was recorded with --swim-hold: the option is on\n");
     }
+    unsigned route_cheats = 0;
+    char cheat_names[64];
+    if (oracles_cheats_parse(r->route.header.options, ORACLES_ROUTE_OPTION_CHEAT, &route_cheats) != 0) {
+        fprintf(stderr, "harness: the route was recorded with a cheat this harness does not know (%s)\n", r->route.header.options);
+        return 1;
+    }
+    for (size_t i = 0; i < r->route.cheat_count; i++) {   /* the cheats its lines change, each one this harness knows */
+        unsigned bit = 0;
+        if (oracles_cheats_parse(r->route.cheats[i].name, NULL, &bit) != 0) {
+            fprintf(stderr, "harness: the route changes a cheat this harness does not know (%s)\n", r->route.cheats[i].name);
+            return 1;
+        }
+        r->cheats_changed |= bit;
+    }
+    if ((o->cheats | route_cheats | r->cheats_changed) && !oracles_compat_cheats(r->profile)) {
+        fprintf(stderr, "harness: %s does not support the cheats; refusing the request and route option\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
+    if (route_cheats & ~o->cheats) {
+        o->cheats |= route_cheats;
+        fprintf(stderr, "harness: the route was recorded with --cheats %s: they are on\n", oracles_cheats_format(route_cheats, NULL, cheat_names, sizeof cheat_names));
+    }
     char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
     if (oracles_route_language(&r->route.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&r->route.header, o->language)) {
         fprintf(stderr, "harness: the route was played in a language (%s): replay it with --language %s and its European ROM\n", recorded, recorded);
@@ -671,6 +708,13 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     }
     if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
         fprintf(stderr, "harness: --swim-hold needs the hooks on, and the swim's strokes found in the ROM\n");
+        return 1;
+    }
+    /* The points of the cheats the route changes later are armed now, with those on from the start: a point once armed
+     * answers only while its cheat is on. */
+    if ((o->cheats || r->cheats_changed)
+        && (!r->guest || oracles_guest_set_cheats(r->guest, o->cheats | r->cheats_changed) != 0 || oracles_guest_set_cheats(r->guest, o->cheats) != 0)) {
+        fprintf(stderr, "harness: --cheats and a route's cheat lines need the hooks on, and the cheats' points found in the ROM\n");
         return 1;
     }
     if (o->hotkeys_live.mode) {

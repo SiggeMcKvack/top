@@ -76,6 +76,10 @@ static void on_event(void *opaque, const OraclesGuestEvent *e)
         case ORACLES_EVENT_MERMAID_STROKE:
         case ORACLES_EVENT_FLIPPERS_STROKE:
             break;   /* the swim's hold's points */
+        case ORACLES_EVENT_CHEAT_DAMAGE:
+        case ORACLES_EVENT_CHEAT_AMMO:
+        case ORACLES_EVENT_CHEAT_RUPEES:
+            break;   /* the cheats' points */
         case ORACLES_EVENT_VBLANK:
             if (e->value < 4) d->vblanks[e->value]++;
             break;

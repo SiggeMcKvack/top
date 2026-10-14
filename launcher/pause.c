@@ -286,6 +286,8 @@ static void command(pause_loop *p, OraclesHomeCommand c)
             break;
         case ORACLES_HOME_STORE:
             if (p->pause->host && p->pause->host->store) p->pause->host->store(p->pause->host->opaque, &p->nav);
+            if (p->nav.screen == ORACLES_SCREEN_CHEATS && p->session->cheats_changed)
+                p->session->cheats_changed(p->session->opaque, p->nav.games[p->pause->game].cheats);
             if (p->session->settings_changed) {
                 const int margin = p->session->settings_changed(p->session->opaque);
                 if (margin != p->pause->edges.margin) margin_changed(p, margin);
@@ -331,7 +333,7 @@ static void pointer(pause_loop *p, float x, float y, int click)
         c = oracles_controls_click(&p->nav, hit.column, hit.row, hit.option);
     } else if (hit.kind == ORACLES_UI_HIT_ROW) {
         if (!click) { if (hit.index != p->nav.row) { p->nav.row = hit.index; changed(p); } return; }
-        c = oracles_display_click(&p->nav, hit.index, hit.option);
+        c = p->nav.screen == ORACLES_SCREEN_CHEATS ? oracles_cheats_click(&p->nav, hit.index, hit.option) : oracles_display_click(&p->nav, hit.index, hit.option);
     } else if (hit.kind == ORACLES_UI_HIT_ITEM) {
         if (!click) { if (hit.index != oracles_home_focus(&p->nav)) { oracles_home_hover(&p->nav, hit.index); changed(p); } return; }
         c = oracles_home_click(&p->nav, hit.index);
@@ -405,6 +407,10 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     oracles_home_pause(&p.nav, pause->game, pause->playing, oracles_ui_layout_narrow(p.nav.layout, out_w));
     p.nav.display.core = session->core;
     p.nav.display.workers = session->ghosts;
+    /* Cheats shows the running game's, not the settings', and changes them. */
+    p.nav.cheats_fixed = 0;
+    p.nav.cheats_refused = !session->has_cheats;
+    if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) p.nav.games[pause->game].cheats = session->cheats;
     /* The hints follow the device that opened the pause, else the one used last before. */
     oracles_pause_input(pause, &p.nav);
     if (session->device >= 0) oracles_home_input(&p.nav, (OraclesInputDevice)session->device);

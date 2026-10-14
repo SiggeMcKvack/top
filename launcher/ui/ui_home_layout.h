@@ -77,7 +77,8 @@ typedef struct OraclesUiHomeStyles {
 } OraclesUiHomeStyles;
 const OraclesUiHomeStyles *oracles_ui_home_styles(OraclesUiLayout layout);
 
-/* The chosen entry, right-aligned at the top right; `paused`, the pause menu's title, higher in 4:3 without tabs. */
+/* The chosen entry, right-aligned at the top right; `paused`, the pause menu's title, higher in 4:3 without tabs.  4:3
+ * has no words above the title (`over` an empty line): the tab names the game. */
 void oracles_ui_layout_hero(OraclesUiLayout layout, int paused, const char *over, const char *title, const char *state, OraclesUiTitleLayout *out);
 /* 16:9: the two other entries, stacked at the top left. */
 void oracles_ui_layout_others(const char *const over[2], const char *const title[2], const char *const state[2], OraclesUiTitleLayout out[2]);

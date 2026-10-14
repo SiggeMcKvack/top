@@ -2,9 +2,9 @@
  * the session between two frames
  * and lays the menu over the game's last image, darkened, at the size of the
  * game's window, in the layout the window's shape chooses (ui_layout.h).
- * Resume, Save state, Load state, Controls, Display, Quit to launcher; in the
- * 16:9 layout under 960 pixels wide, Controls and Display stay in the
- * launcher.
+ * Resume, Save state, Load state, Controls, Display, Cheats (for a game whose
+ * profile has them), Quit to launcher; in the 16:9 layout under 960 pixels
+ * wide, Controls, Display and Cheats stay in the launcher.
  *
  * Nothing is rasterised during the session: the glyphs of every screen the
  * pause shows are rasterised for the window's size before the first frame
@@ -26,12 +26,16 @@ typedef struct OraclesPauseSession {
     int (*load_state)(void *opaque, char *message, size_t capacity);
     /* The time of the savestate, "22:14", or empty when there is none. */
     void (*state_time)(void *opaque, char *out, size_t capacity);
-    /* The settings changed: the keys, the colour correction, the HUD, the scaling and the screen margin apply at once.  Returns
-     * the screen margin in effect (an OraclesScreenMargin), which the menu's band follows. */
+    /* The settings changed: the keys, the colour correction, the HUD, the scaling, the screen margin and the cheats apply
+     * at once.  Returns the screen margin in effect (an OraclesScreenMargin), which the menu's band follows. */
     int (*settings_changed)(void *opaque);
+    /* Cheats changed the running game's cheats (a mask): they apply from the frame the game resumes on. */
+    void (*cheats_changed)(void *opaque, unsigned cheats);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */
     int device; /* the device that opened the pause (an OraclesInputDevice), which its key hints follow; -1 when not known */
+    unsigned cheats;   /* the running game's cheats, --cheats' perhaps, which its Cheats page starts from */
+    int has_cheats;    /* its profile has them: else the menu has no Cheats */
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {

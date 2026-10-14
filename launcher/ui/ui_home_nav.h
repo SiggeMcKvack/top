@@ -13,7 +13,7 @@
  * Oracle's European ROM and language; Play), with the language beside it when
  * it is not English, Display the profile and the window's choices, the same for every
  * game, Controls the keys and buttons, Mods the mods of an Oracle (ui_page_nav.h),
- * greyed for a fan game. */
+ * greyed for a fan game, and Cheats an Oracle's cheats, which a fan game's menu and an unrecognised ROM's do not have. */
 #ifndef ORACLES_UI_HOME_NAV_H
 #define ORACLES_UI_HOME_NAV_H
 
@@ -45,6 +45,7 @@ typedef enum OraclesHomeItemId {
     ORACLES_HOME_ITEM_CONTROLS,
     ORACLES_HOME_ITEM_DISPLAY,
     ORACLES_HOME_ITEM_MODS,
+    ORACLES_HOME_ITEM_CHEATS,
     ORACLES_HOME_ITEM_EXIT,
     ORACLES_HOME_ITEM_KINOMI,
     ORACLES_HOME_ITEM_MOONRISE,
@@ -95,6 +96,7 @@ typedef enum OraclesScreen {
     ORACLES_SCREEN_DISPLAY,
     ORACLES_SCREEN_CONTROLS,
     ORACLES_SCREEN_MODS,
+    ORACLES_SCREEN_CHEATS,
     ORACLES_SCREEN_PAUSE         /* the menu over a paused game */
 } OraclesScreen;
 
@@ -116,7 +118,7 @@ typedef enum OraclesProfile {
 } OraclesProfile;
 
 
-#define ORACLES_HOME_MAX_ITEMS 6
+#define ORACLES_HOME_MAX_ITEMS 7
 #define ORACLES_HOME_MAX_HINTS 4
 #define ORACLES_HOME_STATE_LENGTH 64
 
@@ -181,6 +183,7 @@ typedef struct OraclesHomeGame {
     char save_written[32];                       /* "21 Sep 2026, 22:14" */
     int hotkeys;                                 /* item hotkeys: 0 off, 1 use, 2 equip, as the policy numbers them */
     int hotkeys_failed;                          /* they could not attach to this ROM in a session: it plays without them */
+    unsigned cheats;                             /* an Oracle's cheats on, settings.txt's cheats_<game>= (ui_page_nav.h) */
     /* An Oracle's European ROM, which its English and official translations come from: NONE, ORIGINAL when it is this
      * game's (recognized), UNRECOGNISED for another file, REFUSED with the loader's reason when it cannot be read; a fan
      * game's, its Oracle's (the state alone), NONE while the fan games' languages are off.  The language the game plays in, an index of oracles_page_language_names,
@@ -278,6 +281,13 @@ typedef struct OraclesHomeNav {
     OraclesHomeControls controls;
     OraclesHomeMods mods[ORACLES_HOME_HOTKEY_GAMES];   /* Ages', Seasons' */
     char mods_folder[ORACLES_HOME_TEXT_LENGTH * 4];
+    /* Cheats: --cheats gave the cheats of every game the home screen starts, for the run (`cheats_fixed`): the page shows
+     * them, dimmed and inert, and never stores them.  The games whose cheats the page changed (1 << ORACLES_HOME_GAME_*),
+     * which alone the host writes. */
+    int cheats_fixed;
+    unsigned cheats_changed;
+    /* In a game: its profile has no cheats (an unrecognised ROM, a fan game): the pause has no Cheats. */
+    int cheats_refused;
     /* In a game (the pause menu, and Controls and Display opened from it): the running game's profile, the pause
      * menu reduced in a 16:9 window under 960 pixels wide (oracles_ui_layout_narrow), and Load state's note
      * ("from 22:14"), empty while there is no savestate: Load state is then greyed, "No savestate yet". */

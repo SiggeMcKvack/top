@@ -185,7 +185,7 @@ static int draw_heroes(OraclesUiDraw *draw, const OraclesUiHome *home, const Ora
         oracles_home_state(nav, (OraclesHomeHero)h, state);
         OraclesUiTitleLayout l;
         oracles_ui_layout_hero(scene, nav->screen == ORACLES_SCREEN_PAUSE, oracles_home_over((OraclesHomeHero)h), oracles_home_title((OraclesHomeHero)h), state, &l);
-        draw_line(draw, st->hero_over, &l.over, oracles_home_over((OraclesHomeHero)h), shift, oracles_ui_rgba(HERO_OVER, opacity));
+        if (l.over.h > 0.0f) draw_line(draw, st->hero_over, &l.over, oracles_home_over((OraclesHomeHero)h), shift, oracles_ui_rgba(HERO_OVER, opacity));
         draw_line(draw, st->hero_title, &l.title, oracles_home_title((OraclesHomeHero)h), shift, oracles_ui_rgba(HERO_TITLE, opacity));
         draw_line(draw, st->hero_state, &l.state, state, shift, oracles_ui_rgba(nav->in_game ? PAUSED_STATE : HERO_STATE, opacity));
     }
@@ -351,6 +351,8 @@ int oracles_ui_home_draw(OraclesUiDraw *draw, OraclesUiHome *home, const Oracles
         oracles_ui_controls_draw(draw, nav, accent);
     } else if (nav->screen == ORACLES_SCREEN_MODS) {
         oracles_ui_mods_draw(draw, nav, accent);
+    } else if (nav->screen == ORACLES_SCREEN_CHEATS) {
+        oracles_ui_cheats_draw(draw, nav, accent);
     } else {
         oracles_ui_display_draw(draw, nav, accent);
     }
@@ -399,7 +401,8 @@ OraclesUiHomeHit oracles_ui_home_hit(const OraclesHomeNav *nav, float x, float y
     }
     if (nav->screen != ORACLES_SCREEN_HOME && nav->screen != ORACLES_SCREEN_PAUSE) {
         const int row = nav->screen == ORACLES_SCREEN_GAME ? oracles_ui_page_hit(nav, x, y, &hit.option)
-                        : nav->screen == ORACLES_SCREEN_MODS ? oracles_ui_mods_hit(nav, x, y) : oracles_ui_display_hit(nav, x, y, &hit.option);
+                        : nav->screen == ORACLES_SCREEN_MODS ? oracles_ui_mods_hit(nav, x, y)
+                        : nav->screen == ORACLES_SCREEN_CHEATS ? oracles_ui_cheats_hit(nav, x, y, &hit.option) : oracles_ui_display_hit(nav, x, y, &hit.option);
         if (row >= 0) { hit.kind = ORACLES_UI_HIT_ROW; hit.index = (unsigned)row; }
         return hit;
     }

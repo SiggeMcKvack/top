@@ -90,6 +90,9 @@ struct OraclesGuest {
     char language[ORACLES_LANGUAGE_INDEX_CODE_BYTES];
     unsigned language_served, language_english, language_missing;
     unsigned mermaid_strokes, flippers_strokes;      /* the swim's hold (guest_swim.c): strokes it started */
+    unsigned cheats, cheats_armed;                   /* the cheats (guest_cheats.c): those on, those whose point is armed */
+    OraclesGuestSym ammo_scripted_return;            /* where the bomb-upgrade fairy's call of decNumBombs returns; bank ABSENT: none */
+    OraclesGuestCheatCounts cheat_counts;
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
     uint16_t link_shown_x, link_shown_y;             /* Link (8.8) where the OAM the frame just scanned drew him (oracles_guest_link_shown) */
@@ -110,5 +113,7 @@ void oracles_guest_serve_text(OraclesGuest *guest);
 /* guest_swim.c: at a stroke's test, the mermaid suit's or the flippers'. */
 void oracles_guest_mermaid_stroke(OraclesGuest *guest);
 void oracles_guest_flippers_stroke(OraclesGuest *guest);
+/* guest_cheats.c: at a cheat's point. */
+void oracles_guest_cheat_point(OraclesGuest *guest, OraclesGuestEventType type);
 
 #endif

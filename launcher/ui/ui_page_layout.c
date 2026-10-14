@@ -925,6 +925,7 @@ static void mods_16_9(const OraclesHomeNav *nav, OraclesUiModsLayout *out)
 #define HELP_LINE_4_3 47.0f               /* the explanation, on one line */
 #define HELP_NOTE_LINE_4_3 40.0f          /* its note, on one line */
 #define HELP_NOTE_GAP_4_3 4.0f
+#define DISPLAY_PAGE_NOTE_LINE_4_3 33.0f       /* Display's note from a game, under the title */
 #define DIAGRAM_RIGHT_4_3 (1440.0f - 64.0f)
 #define DIAGRAM_H_4_3 122.0f
 #define MODS_LABEL_PAD_4_3 34.0f
@@ -1195,7 +1196,7 @@ static void display_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *
     /* Opened from a game, under the title: what only the next session takes, said once for the page. */
     if (t->later)
         out->page_note = line_at(&oracles_ui_page_note_4_3, oracles_ui_display_later, HEAD_X_4_3, out->head.title.lines[0].y + out->head.title.h + HEAD_GAP_4_3,
-                                 0.0f);
+                                 DISPLAY_PAGE_NOTE_LINE_4_3);
     /* The diagram at the top right, half 16:9's, without its line: Window's help says the size. */
     const float box_w = round_half_up((t->diagram_box_w > 0.0f ? t->diagram_box_w : ORACLES_UI_DIAGRAM_W) * 0.5f);
     const float w = fminf(round_half_up(t->diagram_w * 0.5f), box_w - 2.0f * DIAGRAM_BORDER), h = round_half_up(t->diagram_h * 0.5f);

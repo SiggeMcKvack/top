@@ -101,6 +101,38 @@ static int push_action(OraclesRoute *route, const OraclesRouteAction *action)
     return 0;
 }
 
+/* `cheat <name> on|off`: 1, 0 for a malformed line, -1 for a cheat's frame that does not increase strictly (two cheats
+ * may change at a same frame, one cannot twice). */
+static int parse_cheat(const OraclesRoute *route, uint32_t frame, char *rest, const char **name, int *on)
+{
+    const char *value;
+    *name = strtok(rest, " ");
+    value = strtok(NULL, " ");
+    if (!*name || !value || strtok(NULL, " ") || strlen(*name) >= sizeof route->cheats[0].name) return 0;
+    if (strcmp(value, "on") != 0 && strcmp(value, "off") != 0) return 0;
+    *on = strcmp(value, "on") == 0;
+    for (size_t i = route->cheat_count; i-- > 0;)
+        if (!strcmp(route->cheats[i].name, *name)) return route->cheats[i].frame < frame ? 1 : -1;
+    return 1;
+}
+
+static int push_cheat(OraclesRoute *route, uint32_t frame, const char *name, int on)
+{
+    if (route->cheat_count >= ORACLES_ROUTE_MAX_EVENTS) return -1;
+    if (route->cheat_count == route->cheat_capacity) {
+        const size_t capacity = route->cheat_capacity ? route->cheat_capacity * 2 : 16;
+        OraclesRouteCheat *cheats = realloc(route->cheats, capacity * sizeof *cheats);
+        if (!cheats) return -1;
+        route->cheats = cheats;
+        route->cheat_capacity = capacity;
+    }
+    OraclesRouteCheat *cheat = &route->cheats[route->cheat_count++];
+    cheat->frame = frame;
+    snprintf(cheat->name, sizeof cheat->name, "%s", name);
+    cheat->on = on;
+    return 0;
+}
+
 int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_t error_capacity)
 {
     memset(route, 0, sizeof *route);
@@ -124,7 +156,7 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
             }
             if (strcmp(key, "oracles-route") == 0) {
                 route->format = (unsigned)strtoul(value, NULL, 10);
-                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_DIAGONAL) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
+                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_CHEAT_VERB) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
                 format_seen = 1;
             } else if (strcmp(key, "game") == 0) copy_field(route->header.game, sizeof route->header.game, value);
             else if (strcmp(key, "rom_sha1") == 0) copy_field(route->header.rom_sha1, sizeof route->header.rom_sha1, value);
@@ -146,6 +178,11 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
                 /* Nor the transitions' diagonal. */
                 if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) && route->format < ORACLES_ROUTE_FORMAT_DIAGONAL) {
                     set_error(error, error_capacity, "the continuous-diagonal option needs format 6", number);
+                    goto fail;
+                }
+                /* Nor a cheat. */
+                if (oracles_route_has_cheat(&route->header) && route->format < ORACLES_ROUTE_FORMAT_CHEATS) {
+                    set_error(error, error_capacity, "a cheat option needs format 7", number);
                     goto fail;
                 }
             }
@@ -181,11 +218,24 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
         char verb[16];
         int consumed = 0;
         if (sscanf(line, "%lu %15s %n", &frame, verb, &consumed) < 2) { set_error(error, error_capacity, "expected '<frame> <verb> ...'", number); goto fail; }
-        const unsigned which = strcmp(verb, "keys") == 0 ? 0u : strcmp(verb, "equip") == 0 ? 1u : strcmp(verb, "use") == 0 ? 2u : 3u;
-        if (which == 3u || (which != 0u && route->format < 2u)) { set_error(error, error_capacity, "unknown verb for this route format", number); goto fail; }
-        if ((seen_any && frame < last_any) || (seen_verb[which] && frame <= last_of_verb[which])) { set_error(error, error_capacity, "frames must increase", number); goto fail; }
-        seen_any = 1; last_any = (uint32_t)frame; seen_verb[which] = 1; last_of_verb[which] = (uint32_t)frame;
+        const unsigned which = strcmp(verb, "keys") == 0 ? 0u : strcmp(verb, "equip") == 0 ? 1u : strcmp(verb, "use") == 0 ? 2u
+                             : strcmp(verb, "cheat") == 0 ? 3u : 4u;
+        if (which == 4u || (which != 0u && route->format < 2u) || (which == 3u && route->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB)) {
+            set_error(error, error_capacity, "unknown verb for this route format", number);
+            goto fail;
+        }
+        if ((seen_any && frame < last_any) || (which < 3u && seen_verb[which] && frame <= last_of_verb[which])) { set_error(error, error_capacity, "frames must increase", number); goto fail; }
         char *rest = line + consumed;
+        if (which == 3u) {
+            const char *name;
+            int on;
+            const int parsed = parse_cheat(route, (uint32_t)frame, rest, &name, &on);
+            if (parsed <= 0) { set_error(error, error_capacity, parsed < 0 ? "frames must increase" : "expected '<frame> cheat <name> on|off'", number); goto fail; }
+            if (push_cheat(route, (uint32_t)frame, name, on) != 0) { set_error(error, error_capacity, "too many events", number); goto fail; }
+            seen_any = 1; last_any = (uint32_t)frame;
+            continue;
+        }
+        seen_any = 1; last_any = (uint32_t)frame; seen_verb[which] = 1; last_of_verb[which] = (uint32_t)frame;
         if (which == 0u) {
             unsigned mask;
             if (sscanf(rest, "%x", &mask) != 1 || mask > 0xffu) { set_error(error, error_capacity, "expected '<frame> keys <hex mask>'", number); goto fail; }
@@ -221,6 +271,7 @@ void oracles_route_free(OraclesRoute *route)
 {
     free(route->events);
     free(route->actions);
+    free(route->cheats);
     memset(route, 0, sizeof *route);
 }
 
@@ -240,6 +291,17 @@ static int listed(const char *list, const char *name)
 }
 
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name) { return listed(header->options, name); }
+
+int oracles_route_has_cheat(const OraclesRouteHeader *header)
+{
+    const size_t prefix = strlen(ORACLES_ROUTE_OPTION_CHEAT);
+    for (const char *p = header->options; *p;) {
+        const size_t length = strcspn(p, ",");
+        if (length > prefix && !strncmp(p, ORACLES_ROUTE_OPTION_CHEAT, prefix)) return 1;
+        p += length + (p[length] == ',');
+    }
+    return 0;
+}
 
 const char *oracles_route_language(const OraclesRouteHeader *header, char *out, size_t capacity)
 {
@@ -281,11 +343,26 @@ size_t oracles_route_actions_at(const OraclesRoute *route, uint32_t frame, size_
     return count;
 }
 
+size_t oracles_route_cheats_at(const OraclesRoute *route, uint32_t frame, size_t *first)
+{
+    size_t low = 0, high = route->cheat_count;
+    while (low < high) {
+        const size_t mid = low + (high - low) / 2;
+        if (route->cheats[mid].frame < frame) low = mid + 1; else high = mid;
+    }
+    size_t count = 0;
+    while (low + count < route->cheat_count && route->cheats[low + count].frame == frame) count++;
+    if (first) *first = low;
+    return count;
+}
+
 uint32_t oracles_route_last_frame(const OraclesRoute *route)
 {
     const uint32_t keys = route->count ? route->events[route->count - 1].frame : 0u;
     const uint32_t actions = route->action_count ? route->actions[route->action_count - 1].frame : 0u;
-    return keys > actions ? keys : actions;
+    const uint32_t cheats = route->cheat_count ? route->cheats[route->cheat_count - 1].frame : 0u;
+    const uint32_t last = keys > actions ? keys : actions;
+    return last > cheats ? last : cheats;
 }
 
 int oracles_route_mask_at(const OraclesRoute *route, uint32_t frame, unsigned *mask)
@@ -309,10 +386,12 @@ int oracles_route_writer_open(OraclesRouteWriter *writer, const char *path, cons
     writer->file = fopen(path, "wb"); /* LF on every platform */
     if (!writer->file) return -1;
     char language[16];
-    const int format = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) ? ORACLES_ROUTE_FORMAT_DIAGONAL
+    const int format = oracles_route_has_cheat(header) ? ORACLES_ROUTE_FORMAT_CHEATS
+                     : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) ? ORACLES_ROUTE_FORMAT_DIAGONAL
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_SWIM_HOLD) ? ORACLES_ROUTE_FORMAT_SWIM_HOLD
                      : oracles_route_language(header, language, sizeof language)[0] ? ORACLES_ROUTE_FORMAT_LANGUAGE
                      : header->mods[0] ? ORACLES_ROUTE_FORMAT_MODS : ORACLES_ROUTE_FORMAT;
+    writer->format = format;
     fprintf(writer->file, "oracles-route %d\ngame %s\nrom_sha1 %s\nsram_sha1 %s\n", format,
             header->game, header->rom_sha1, header->sram_sha1);
     if (header->options[0]) fprintf(writer->file, "options %s\n", header->options);   /* a replay runs with them: without, it diverges */
@@ -349,6 +428,23 @@ int oracles_route_writer_action(OraclesRouteWriter *writer, const OraclesRouteAc
     }
     if (action->variant) fprintf(writer->file, " %s=%02x", variant_names[action->variant], action->variant_value);
     fprintf(writer->file, "\n");
+    return 0;
+}
+
+int oracles_route_writer_cheat(OraclesRouteWriter *writer, uint32_t frame, const char *name, int on)
+{
+    if (!writer->file) return 0;
+    if (!name[0] || strlen(name) >= sizeof ((OraclesRouteCheat *)0)->name || strpbrk(name, " \t\r\n")) return -1;
+    if (writer->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB) {
+        /* The header was written at the start, before a cheat changed: its format, one digit after "oracles-route ", is
+         * raised in place, 8 taking the place of the digit it replaces. */
+        const long end = ftell(writer->file);
+        if (end < 0 || fseek(writer->file, (long)strlen("oracles-route "), SEEK_SET) != 0) return -1;
+        fputc('0' + ORACLES_ROUTE_FORMAT_CHEAT_VERB, writer->file);
+        if (fseek(writer->file, end, SEEK_SET) != 0) return -1;
+        writer->format = ORACLES_ROUTE_FORMAT_CHEAT_VERB;
+    }
+    fprintf(writer->file, "%u cheat %s %s\n", frame, name, on ? "on" : "off");
     return 0;
 }
 

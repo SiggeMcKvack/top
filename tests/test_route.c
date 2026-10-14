@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         if (older) { fprintf(older, "oracles-route 4\ngame ages\noptions swim-hold\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 5"));
         older = fopen(path, "w");
-        if (older) { fprintf(older, "oracles-route 7\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
+        if (older) { fprintf(older, "oracles-route 9\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);   /* a later format */
     }
     {
@@ -101,6 +101,70 @@ int main(int argc, char **argv)
         if (older) { fprintf(older, "oracles-route 5\ngame ages\noptions continuous-transitions,continuous-diagonal\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 6"));
     }
+    {
+        /* The cheats, with every other option a session writes: format 7, which a reader of format 6 refuses rather than
+         * replay it without; an older format naming one is refused. */
+        OraclesRouteHeader cheats = route.header;
+        snprintf(cheats.options, sizeof cheats.options, "%s", "continuous-transitions,continuous-swim," ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL ","
+                 ORACLES_ROUTE_OPTION_LANGUAGE "en-eu," ORACLES_ROUTE_OPTION_SWIM_HOLD "," ORACLES_ROUTE_OPTION_CHEAT "no-damage,"
+                 ORACLES_ROUTE_OPTION_CHEAT "ammo," ORACLES_ROUTE_OPTION_CHEAT "rupees");
+        OraclesRouteWriter writer_cheats;
+        CHECK(oracles_route_writer_open(&writer_cheats, path, &cheats) == 0);
+        oracles_route_writer_record(&writer_cheats, 0, 0x00);
+        CHECK(oracles_route_writer_close(&writer_cheats) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_CHEATS);
+        CHECK(oracles_route_has_cheat(&back.header) && !strcmp(back.header.options, cheats.options));
+        CHECK(!oracles_route_has_cheat(&route.header));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 6\ngame ages\noptions continuous-transitions,cheat-ammo\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 7"));
+    }
+    {
+        /* A cheat changed during the session: a `cheat` line, the header's format raised to 8 in place at the first,
+         * whatever it was written with; two cheats at a same frame, one cheat's frames increasing. */
+        OraclesRouteHeader plain = route.header;
+        plain.mods[0] = 0;
+        snprintf(plain.options, sizeof plain.options, "%s", ORACLES_ROUTE_OPTION_CHEAT "ammo");
+        OraclesRouteWriter writer_verb;
+        CHECK(oracles_route_writer_open(&writer_verb, path, &plain) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_CHEATS);
+        oracles_route_writer_record(&writer_verb, 0, 0x00);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 600, "rupees", 1) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_CHEAT_VERB);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 600, "no-damage", 1) == 0);
+        oracles_route_writer_record(&writer_verb, 601, 0x10);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 900, "rupees", 0) == 0);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 901, "two words", 1) == -1 && oracles_route_writer_cheat(&writer_verb, 901, "", 1) == -1);
+        CHECK(oracles_route_writer_close(&writer_verb) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_CHEAT_VERB);
+        CHECK(!strcmp(back.header.options, plain.options) && back.count == 2 && back.action_count == 0 && back.cheat_count == 3);
+        size_t first = 99;
+        CHECK(oracles_route_cheats_at(&back, 600, &first) == 2 && first == 0);
+        CHECK(back.cheat_count == 3 && !strcmp(back.cheats[0].name, "rupees") && back.cheats[0].on && !strcmp(back.cheats[1].name, "no-damage") && back.cheats[1].on);
+        CHECK(oracles_route_cheats_at(&back, 900, &first) == 1 && first == 2 && !strcmp(back.cheats[2].name, "rupees") && !back.cheats[2].on);
+        CHECK(oracles_route_cheats_at(&back, 601, &first) == 0);
+        CHECK(oracles_route_last_frame(&back) == 900);   /* the route lasts to its last line, a cheat's too */
+        oracles_route_free(&back);
+        static const char *const malformed[] = {
+            "oracles-route 7\ninputs\n0 keys 00\n10 cheat rupees on\n",                    /* the verb needs format 8 */
+            "oracles-route 8\ninputs\n10 cheat rupees on\n10 cheat rupees off\n",          /* a cheat twice at a frame */
+            "oracles-route 8\ninputs\n10 cheat rupees on\n9 cheat ammo on\n",              /* a frame going back */
+            "oracles-route 8\ninputs\n10 cheat rupees\n",
+            "oracles-route 8\ninputs\n10 cheat rupees yes\n",
+            "oracles-route 8\ninputs\n10 cheat rupees on now\n",
+            "oracles-route 8\ninputs\n10 cheat a-name-far-too-long on\n",
+        };
+        for (unsigned i = 0; i < sizeof malformed / sizeof malformed[0]; i++) {
+            FILE *bad = fopen(path, "w");
+            if (bad) { fputs(malformed[i], bad); fclose(bad); }
+            CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);
+        }
+        FILE *two = fopen(path, "w");   /* two cheats at a frame, one of them again later: read */
+        if (two) { fputs("oracles-route 8\ninputs\n0 keys 00\n10 cheat ammo on\n10 cheat rupees on\n11 cheat ammo off\n", two); fclose(two); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.cheat_count == 3);
+        oracles_route_free(&back);
+    }
 
     unsigned mask = 99;
     CHECK(oracles_route_mask_at(&route, 0, &mask) == 1 && mask == 0x00);
@@ -119,7 +183,7 @@ int main(int argc, char **argv)
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     CHECK(strstr(error, "line 5") != NULL);
     f = fopen(path, "w");
-    fprintf(f, "oracles-route 7\ninputs\n");
+    fprintf(f, "oracles-route 9\ninputs\n");
     fclose(f);
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     /* Format 2: the verbs that change the game's state, written and read back.  Two verbs may share a
@@ -163,7 +227,7 @@ int main(int argc, char **argv)
         "oracles-route 2\ninputs\n10 equip\n",
         "oracles-route 2\ninputs\n10 use s3 0a\n",                               /* a use is carried by a button */
         "oracles-route 2\nmods claw-game@2fd4e1c67a2d28fced849ee1bb76e7391b93eb12\ninputs\n0 keys 00\n",   /* mods need format 3 */
-        "oracles-route 7\ninputs\n0 keys 00\n",                                /* a format to come */
+        "oracles-route 9\ninputs\n0 keys 00\n",                                /* a format to come */
     };
     for (unsigned i = 0; i < sizeof refused / sizeof refused[0]; i++) {
         f = fopen(path, "w"); fputs(refused[i], f); fclose(f);

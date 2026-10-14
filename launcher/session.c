@@ -82,10 +82,52 @@ static int load_sram(OraclesCore *core, const char *path, char sha1[41])
 
 /* ---- session ----------------------------------------------------------------- */
 
+/* The cheats from `frame` on, before it runs: the guest attached at the first one turned on in a game that had no hooks
+ * (they cost an instruction's check each), and kept until the session ends, its points armed; each change written while
+ * recording. */
+static void change_cheats(session *s, uint32_t frame, unsigned cheats)
+{
+    char names[64];
+    if (!s->guest && cheats) {
+        s->guest = oracles_guest_attach(s->core, s->profile);
+        if (!s->guest) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the cheats stay off\n"); return; }
+        oracles_guest_set_frame(s->guest, frame);
+    }
+    if (!s->guest || oracles_guest_set_cheats(s->guest, cheats) != 0) {
+        if (cheats) fprintf(stderr, "oracles: the cheats cannot find their points in this ROM: they stay as they were\n");
+        return;
+    }
+    for (unsigned index = 0; s->recording && index < ORACLES_CHEATS; index++)
+        if ((cheats ^ s->cheats) & 1u << index) oracles_route_writer_cheat(&s->record, frame, oracles_cheat_name(index), (cheats >> index) & 1u);
+    fprintf(stderr, "oracles: cheats from frame %u: %s\n", frame, cheats ? oracles_cheats_format(cheats, NULL, names, sizeof names) : "none");
+    s->cheats = cheats;
+    s->cheats_used |= cheats;
+}
+
 static void frame_begin(void *opaque, uint32_t frame)
 {
     session *s = opaque;
-    oracles_guest_set_frame(s->guest, frame);
+    /* The pause's, when they differ from the game's (one turned on and off again changes nothing): a route recorded
+     * says so; a replay, which has no pause today (--play is --rom's), would give the controls back. */
+    if (s->cheats_pending) {
+        s->cheats_pending = 0;
+        if (s->cheats_next != s->cheats) {
+            if (s->playing) {
+                s->playing = 0;
+                fprintf(stderr, "oracles: route replay stopped by the cheats changed at frame %u, the player has the controls\n", frame);
+                oracles_hotkeys_session_route_over(s->hotkeys);
+            }
+            change_cheats(s, frame, s->cheats_next);
+        }
+    }
+    size_t first = 0;
+    const size_t changes = s->playing ? oracles_route_cheats_at(&s->play, frame, &first) : 0;
+    for (size_t i = first; i < first + changes; i++) {
+        unsigned bit = 0;
+        oracles_cheats_parse(s->play.cheats[i].name, NULL, &bit);   /* each known: the replay refused the route otherwise */
+        change_cheats(s, frame, s->play.cheats[i].on ? s->cheats | bit : s->cheats & ~bit);
+    }
+    if (s->guest) oracles_guest_set_frame(s->guest, frame);
     if (s->diag) oracles_diagnostics_frame_begin(s->diag, frame);
     oracles_hotkeys_session_frame(s->hotkeys, (struct OraclesEnhancedView *)s->view);
     if (s->check) oracles_frame_check_frame_begin(s->check, frame);
@@ -187,6 +229,19 @@ static int pause_settings_changed(void *opaque)
     return s->sdl.screen_margin;
 }
 
+/* The game's cheats as the pause's Cheats shows them: those the next frame begins with. */
+static unsigned pause_cheats(const session *s) { return s->cheats_pending ? s->cheats_next : s->cheats; }
+
+/* Cheats changed them, from the running game's (--cheats' perhaps): from the frame the game resumes on, the first
+ * after the pause. */
+static void pause_cheats_changed(void *opaque, unsigned cheats)
+{
+    session *s = opaque;
+    if (s->cheats_game < 0) return;
+    s->cheats_next = cheats;
+    s->cheats_pending = cheats != s->cheats;
+}
+
 static void session_started(void *opaque)
 {
     session *s = opaque;
@@ -209,8 +264,8 @@ static oracles_host_pause_result session_pause(void *opaque)
     oracles_sdl_backend_suspend_audio(&s->backend);
     oracles_sdl_backend_hold(&s->backend, 1);
     const int device = oracles_home_menu_device((int)oracles_sdl_backend_menu_source(&s->backend));
-    const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, (int)oracles_core_kind(s->core),
-                                           s->ghosts, device };
+    const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, pause_cheats_changed,
+                                           (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s), s->cheats_game >= 0 };
     const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
     if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
     if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);
@@ -404,6 +459,12 @@ static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSess
         fprintf(stderr, "oracles: the swim's hold is not qualified for %s; this game plays without it\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->swim_hold = 0;
     }
+    /* The cheats, a setting of each Oracle: the same, a fan game playing without them. */
+    if (s->cheats && !oracles_compat_cheats(s->profile)) {
+        if (!from_home) return failed(result, "%s does not support --cheats", s->profile ? oracles_compat_name(s->profile) : "this image");
+        fprintf(stderr, "oracles: the cheats are not qualified for %s; this game plays without them\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->cheats = 0;
+    }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
     if (s->continuous_transitions && !oracles_compat_continuous_transitions(s->profile))
@@ -440,9 +501,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold) {
+        || s->swim_hold || s->cheats || s->cheats_route) {
         s->guest = oracles_guest_attach(s->core, s->profile);
-        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold;
+        const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
+                                   && !s->cheats && !s->cheats_route;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -464,6 +526,13 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     if (s->swim_hold) {
         if (oracles_guest_arm_swim_hold(s->guest) != 0) return failed(result, "the swim's hold cannot find its strokes in this ROM");
         fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    }
+    if (s->cheats || s->cheats_route) {   /* the points of those a replayed route turns on later armed too, answering once on */
+        char names[64];
+        if (oracles_guest_set_cheats(s->guest, s->cheats | s->cheats_route) != 0 || oracles_guest_set_cheats(s->guest, s->cheats) != 0)
+            return failed(result, "the cheats cannot find their points in this ROM");
+        if (s->cheats) fprintf(stderr, "oracles: cheats on: %s\n", oracles_cheats_format(s->cheats, NULL, names, sizeof names));
+        s->cheats_used = s->cheats;
     }
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
@@ -529,7 +598,8 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
     if (o->play_path) { config->input_source = input_source; config->input_source_opaque = s; }
     if (o->record_path) { config->input_sink = input_sink; config->input_sink_opaque = s; }
     if (s->hotkeys) { config->input_filter = oracles_hotkeys_session_filter; config->input_filter_opaque = s->hotkeys; }
-    if (s->guest) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
+    /* A game whose cheats the pause may turn on has the frames' callbacks before it has a guest. */
+    if (s->guest || s->cheats_game >= 0) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
     if (s->check) { config->frame_source = native_frame; config->frame_source_opaque = s->check; }
     if (s->sdl.pause_menu) { config->on_started = session_started; config->on_pause = session_pause; config->pause_opaque = s; }
     if (s->view) {
@@ -633,6 +703,12 @@ static void finish(session *s, const OraclesSessionOptions *o)
         oracles_enhanced_view_stop(s->view);
     }
     if (s->diag) oracles_diagnostics_stop(s->diag);
+    if (s->ran && s->cheats_used) {
+        OraclesGuestCheatCounts c;
+        oracles_guest_cheat_counts(s->guest, &c);
+        fprintf(stderr, "oracles: cheats: %u hits cost no heart, %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
+                c.hits, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
+    }
     oracles_mod_session_stop(s->mod, NULL);
     if (s->ran) oracles_language_session_report(s->language, s->guest, "oracles: ", stderr);
     oracles_language_session_stop(s->language);
@@ -703,6 +779,8 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->continuous_swim = o->continuous_swim;
     s->continuous_diagonal = o->continuous_diagonal;
     s->swim_hold = o->swim_hold;
+    s->cheats = o->cheats;
+    s->cheats_game = -1;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near), and its shape: the screen's,
      * a window taking the surface's (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;
@@ -713,6 +791,9 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     char why[1024];
     int ok = load_game(s, o, result) && (!o->play_path || oracles_session_replay_route(s, o, why, sizeof why) || failed(result, "%s", why))
           && check_profile(s, o, result) && (!o->record_path || oracles_session_record_route(s, o, why, sizeof why) || failed(result, "%s", why));
+    /* The pause's Cheats change the cheats of an Oracle the home screen started, from the next frame. */
+    if (ok && s->pause && oracles_compat_cheats(s->profile))
+        s->cheats_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
     if (ok) {
         window_options(s, o);
         s->backend_ready = o->no_window ? oracles_null_backend_init(&s->backend) : oracles_sdl_backend_init(&s->backend, &s->sdl);

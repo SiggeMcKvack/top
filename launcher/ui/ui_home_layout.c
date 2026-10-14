@@ -51,7 +51,8 @@ const char oracles_ui_item_dot[] = "\xc2\xb7";
 typedef struct metrics {
     float scene_w;
     float top, paused_top;               /* top of the hero's block, at home and in the pause */
-    float hero_right, hero_state_margin, hero_title_line;
+    float hero_right, hero_title_margin, hero_state_margin, hero_title_line;
+    int hero_over;                       /* the words above the title, on their line; 4:3's tab carries them */
     float menu_right, menu_bottom, menu_gap;
     float item_min_width, item_min_height, item_pad_y, item_pad_right, item_pad_left, item_gap;
     float label_line;                    /* the items' line height, 0: normal */
@@ -65,7 +66,7 @@ typedef struct metrics {
 static const metrics metrics_16_9 = {
     .scene_w = 1920.0f,
     .top = 88.0f, .paused_top = 88.0f,
-    .hero_right = 1920.0f - 96.0f, .hero_state_margin = 20.0f, .hero_title_line = 120.0f,
+    .hero_right = 1920.0f - 96.0f, .hero_title_margin = 16.0f, .hero_state_margin = 20.0f, .hero_title_line = 120.0f, .hero_over = 1,
     .menu_right = 1920.0f - 32.0f, .menu_bottom = 1080.0f - 76.0f, .menu_gap = 4.0f,
     .item_min_width = 720.0f, .item_min_height = 0.0f, .item_pad_y = 6.0f, .item_pad_right = 36.0f, .item_pad_left = 40.0f, .item_gap = 28.0f,
     .label_line = 0.0f,
@@ -77,11 +78,12 @@ static const metrics metrics_16_9 = {
     .slow_line = 24.0f * 1.35f,
     .pad_toast_top = 64.0f, .pad_toast_pad_x = 26.0f, .pad_toast_pad_y = 14.0f, .pad_toast_min_h = 0.0f,
 };
-/* 4:3: every target at least 90 tall; the hero under the tabs, and higher in the pause, which has none. */
+/* 4:3: every target at least 90 tall; the hero's title alone under the tabs, and higher in the pause, which has none,
+ * so that seven entries fit under it. */
 static const metrics metrics_4_3 = {
     .scene_w = 1440.0f,
-    .top = 160.0f, .paused_top = 96.0f,
-    .hero_right = 1440.0f - 64.0f, .hero_state_margin = 14.0f, .hero_title_line = 120.0f,
+    .top = 124.0f, .paused_top = 96.0f,
+    .hero_right = 1440.0f - 64.0f, .hero_title_margin = 0.0f, .hero_state_margin = 14.0f, .hero_title_line = 120.0f, .hero_over = 0,
     .menu_right = 1440.0f - 36.0f, .menu_bottom = 1080.0f - 110.0f, .menu_gap = 4.0f,
     .item_min_width = 640.0f, .item_min_height = 90.0f, .item_pad_y = 0.0f, .item_pad_right = 28.0f, .item_pad_left = 36.0f, .item_gap = 24.0f,
     .label_line = 58.0f * 1.1f,
@@ -143,9 +145,11 @@ void oracles_ui_layout_hero(OraclesUiLayout layout, int paused, const char *over
     const metrics *m = metrics_of(layout);
     const OraclesUiHomeStyles *st = oracles_ui_home_styles(layout);
     const float top = paused ? m->paused_top : m->top;
-    /* text-align: right; the widths carry the trailing letter spacing, as the browser's do. */
-    out->over = line_at(st->hero_over, over, 0.0f, top, 0.0f);
-    out->title = line_at(st->hero_title, title, 0.0f, out->over.y + out->over.h, m->hero_title_line);
+    /* text-align: right; the widths carry the trailing letter spacing, as the browser's do.  Without the words above
+     * it, the title starts the block. */
+    out->over = line_at(st->hero_over, m->hero_over ? over : NULL, 0.0f, top, 0.0f);
+    if (!m->hero_over) out->over.h = 0.0f;
+    out->title = line_at(st->hero_title, title, 0.0f, out->over.y + out->over.h + m->hero_title_margin, m->hero_title_line);
     out->state = line_at(st->hero_state, state, 0.0f, out->title.y + out->title.h + m->hero_state_margin, 0.0f);
     OraclesUiLine *lines[3] = { &out->over, &out->title, &out->state };
     float width = 0.0f;

@@ -114,6 +114,9 @@ typedef struct oracles_settings {
     /* mods_ages=, mods_seasons=: the mods the game's Mods page made active, their names in order and separated by
      * commas, eight at most; empty: none.  The Mods page's Play starts the game with them. */
     char mods[ORACLES_SETTINGS_GAMES][ORACLES_SETTINGS_MODS_LENGTH];
+    /* cheats_ages=, cheats_seasons=: the cheats each Oracle plays with, their names separated by commas (no-damage, ammo,
+     * rupees), a mask of OraclesGuestCheat; empty, none, by default.  Not for the fan games made on it. */
+    unsigned cheats[ORACLES_SETTINGS_GAMES];
     int launcher_width, launcher_height;                      /* launcher_window=WxH: the home screen's window as the player left it */
     int window_scale;             /* window_scale=2|3|4|full, Display's window for the games the home screen starts: 2 to 4, 0 fullscreen (the default) */
     int scaling_fill;             /* scaling=sharp|fill, Display's Scaling: the game in fullscreen at its largest whole scale (sharp, the

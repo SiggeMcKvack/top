@@ -102,6 +102,11 @@ typedef struct OraclesGuestTables {
      * and period of his speed's steps and the frames left of his stroke (linkUpdateVelocity). */
     OraclesGuestSym link_update_velocity_mermaid, link_update_flippers_state0, game_keys_pressed, game_keys_just_pressed,
         link_speed_cap, link_speed_step_counter, link_speed_step_period, link_stroke_counter;
+    /* The cheats: the routines whose one read of a register each answers, Link's damage (linkApplyDamage's body, bank 6,
+     * which reads w1Link.damageToApply), the ammunition used up (decNumBombs, whose end decNumActiveSeeds and
+     * decNumBombchus share) and the rupees taken away (removeRupeeValue's call of getRupeeValue; remove_rupee_value is
+     * above); the routine of Ages' bomb-upgrade fairy that takes every bomb through decNumBombs (absent in Seasons). */
+    OraclesGuestSym link_apply_damage, link_damage_to_apply, dec_num_bombs, get_rupee_value, bomb_fairy_lose_all_bombs;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */

@@ -60,6 +60,25 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
     if (route_swim_hold != s->swim_hold)
         fprintf(stderr, "oracles: the route was recorded %s --swim-hold: the replay plays %s it\n", route_swim_hold ? "with" : "without", route_swim_hold ? "with" : "without");
     s->swim_hold = route_swim_hold;
+    /* The cheats, a setting of each game: the route's, whatever they are. */
+    unsigned route_cheats = 0;
+    char names[64];
+    if (oracles_cheats_parse(s->play.header.options, ORACLES_ROUTE_OPTION_CHEAT, &route_cheats) != 0)
+        return refuse(error, capacity, "the route was recorded with a cheat this version does not know (%s)", s->play.header.options);
+    if (route_cheats && !oracles_compat_cheats(s->profile))
+        return refuse(error, capacity, "the route was recorded with --cheats, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
+    if (route_cheats != s->cheats && route_cheats)
+        fprintf(stderr, "oracles: the route was recorded with --cheats %s: the replay plays with them\n", oracles_cheats_format(route_cheats, NULL, names, sizeof names));
+    else if (route_cheats != s->cheats) fprintf(stderr, "oracles: the route was recorded without cheats: the replay plays without them\n");
+    s->cheats = route_cheats;
+    for (size_t i = 0; i < s->play.cheat_count; i++) {   /* and those its `cheat` lines change, at their frames */
+        unsigned bit = 0;
+        if (oracles_cheats_parse(s->play.cheats[i].name, NULL, &bit) != 0)
+            return refuse(error, capacity, "the route changes a cheat this version does not know (%s)", s->play.cheats[i].name);
+        s->cheats_route |= bit;
+    }
+    if (s->cheats_route && !oracles_compat_cheats(s->profile))
+        return refuse(error, capacity, "the route changes a cheat, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
     char recorded[8];   /* a route played in a language replays in it; one without plays in any, as the hand-written ones do */
     if (oracles_route_language(&s->play.header, recorded, sizeof recorded)[0] && !oracles_route_language_matches(&s->play.header, o->language))
         return refuse(error, capacity, "the route was played in a language (%s): replay it with --language %s and its European ROM", recorded, recorded);
@@ -110,6 +129,11 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
     if (s->swim_hold) {   /* a stroke started by the hold is not in the keys: a replay starts it too */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_SWIM_HOLD, used ? "," : "");
+    }
+    if (s->cheats) {   /* a cheat's answers are not in the keys: a replay gives them too */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s", used ? "," : "");
+        oracles_cheats_format(s->cheats, ORACLES_ROUTE_OPTION_CHEAT, header.options + strlen(header.options), sizeof header.options - strlen(header.options));
     }
     snprintf(header.mods, sizeof header.mods, "%s", oracles_mod_session_identity(s->mod));
     header.store_sha1[0] = 0;

@@ -1,4 +1,4 @@
-/* Where Cartridge, Display and Mods put their pieces in the scene of a
+/* Where Cartridge, Display, Mods and Cheats put their pieces in the scene of a
  * layout (ui_layout.h), without SDL: in 16:9 the title column at the left,
  * the panel of rows at the right; in 4:3 a header with the game's title (and
  * Display's diagram, small, at the top right, its Advanced button beside it)
@@ -233,6 +233,23 @@ typedef struct OraclesUiModsLayout {
 extern const OraclesUiTextStyle oracles_ui_mod_games;
 
 void oracles_ui_layout_mods(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiModsLayout *out);
+
+/* Cheats (ui_page_cheats.c): the head and the note on the save under the title (16:9: in the head's column, wrapped;
+ * 4:3: one line), each row's label and Off and On; 16:9 has the panel, each row's explanation beside its choices and
+ * each row's highlight the value's cell, 4:3 the whole row and the highlighted row's explanation and note under the
+ * rows (`help`, `help_note`). */
+typedef struct OraclesUiCheatsLayout {
+    OraclesUiPageHead head;
+    OraclesUiWrapped note;
+    OraclesUiBox panel;
+    OraclesUiLine labels[ORACLES_CHEATS_ROWS];
+    OraclesUiBox rows[ORACLES_CHEATS_ROWS];
+    OraclesUiWrapped explanations[ORACLES_CHEATS_ROWS];
+    OraclesUiOptionLayout choices[ORACLES_CHEATS_ROWS][2];
+    OraclesUiLine help, help_note;
+} OraclesUiCheatsLayout;
+
+void oracles_ui_layout_cheats(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiCheatsLayout *out);
 
 /* `text` broken into lines of at most `width`, the first at (x, y). */
 void oracles_ui_wrap(const OraclesUiTextStyle *style, const char *text, float width, float x, float y, OraclesUiWrapped *out);

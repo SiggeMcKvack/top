@@ -82,14 +82,15 @@ static void menu(void)
     OraclesHomeNav nav;
     oracles_home_init(&nav);
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
-    CHECK(oracles_home_items(&nav, items) == 6);
-    static const char *const labels[6] = { "Start game", "Cartridge", "Controls", "Display", "Mods", "Exit" };
-    for (int i = 0; i < 6; i++) CHECK(!strcmp(items[i].label, labels[i]));
-    /* Without a ROM Start game is disabled, with its reason; Cartridge, Controls, Display and Mods open their pages. */
+    CHECK(oracles_home_items(&nav, items) == 7);
+    static const char *const labels[7] = { "Start game", "Cartridge", "Controls", "Display", "Mods", "Cheats", "Exit" };
+    for (int i = 0; i < 7; i++) CHECK(!strcmp(items[i].label, labels[i]));
+    /* Without a ROM Start game is disabled, with its reason; Cartridge, Controls, Display, Mods and Cheats open their
+     * pages. */
     CHECK(items[0].disabled && !strcmp(items[0].reason, "Choose a ROM in Cartridge first"));
     CHECK(!items[1].disabled && !items[2].disabled && !items[3].disabled);
     CHECK(!items[4].disabled && items[4].note == NULL);   /* no mod active: no note */
-    CHECK(!items[5].disabled);
+    CHECK(!items[5].disabled && !items[6].disabled);
     /* A disabled item is highlighted like the others and OK does nothing there. */
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
@@ -102,10 +103,14 @@ static void menu(void)
     nav.focus = 4;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_MODS && nav.row == ORACLES_MODS_ROW_FOLDER);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 4);
+    /* Cheats opens on No damage; Back returns to Cheats in the menu. */
+    nav.focus = 5;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_CHEATS && nav.row == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 5);
     /* Up from the first item wraps to Exit, which exits. */
     nav.focus = 0;
     oracles_home_act(&nav, ORACLES_HOME_UP);
-    CHECK(oracles_home_focus(&nav) == 5 && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_EXIT);
+    CHECK(oracles_home_focus(&nav) == 6 && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_EXIT);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(oracles_home_focus(&nav) == 0);
     /* With a ROM, Start game starts the game of the entry. */
@@ -268,6 +273,7 @@ static void fan_games(void)
     CHECK(oracles_home_hero(&nav) == ORACLES_HOME_HERO_KINOMI && oracles_home_focus(&nav) == 0);
     CHECK(oracles_home_game(&nav) == ORACLES_HOME_GAME_KINOMI);
     CHECK(oracles_home_items(&nav, items) == 6 && items[0].disabled && !strcmp(items[0].reason, "Choose both files in Cartridge first") && !items[1].disabled);
+    CHECK(items[5].id == ORACLES_HOME_ITEM_EXIT);   /* no Cheats for a fan game */
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY);
     CHECK(oracles_home_hints(&nav, hints) == 4 && hints[3].back && !strcmp(hints[3].label, "Fan games"));
     nav.games[ORACLES_HOME_GAME_KINOMI].usable = 1;
@@ -321,7 +327,7 @@ static void pointer(void)
     CHECK(oracles_home_focus(&nav) == 4);
     oracles_home_hover(&nav, 9);   /* past the menu: nothing */
     CHECK(oracles_home_focus(&nav) == 4);
-    CHECK(oracles_home_click(&nav, 5) == ORACLES_HOME_EXIT && oracles_home_focus(&nav) == 5);
+    CHECK(oracles_home_click(&nav, 6) == ORACLES_HOME_EXIT && oracles_home_focus(&nav) == 6);
     CHECK(oracles_home_click(&nav, 0) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0);
     /* The highlight is kept within a shorter menu. */
     nav.focus = 5;

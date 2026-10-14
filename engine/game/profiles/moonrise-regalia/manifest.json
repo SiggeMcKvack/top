@@ -1174,7 +1174,12 @@
     "link_speed_step_counter": null,
     "link_speed_step_period": null,
     "link_stroke_counter": null,
-    "link_update_flippers_state0": null
+    "link_update_flippers_state0": null,
+    "link_apply_damage": null,
+    "link_damage_to_apply": null,
+    "dec_num_bombs": null,
+    "get_rupee_value": null,
+    "bomb_fairy_lose_all_bombs": null
   },
   "guest_table_absent": {
     "num_placed_slates": "a symbol of another fan game: this game's engine has none",
@@ -1238,7 +1243,12 @@
     "link_speed_step_counter": "the swim's hold not qualified for this revision",
     "link_speed_step_period": "the swim's hold not qualified for this revision",
     "link_stroke_counter": "the swim's hold not qualified for this revision",
-    "link_update_flippers_state0": "the swim's hold not qualified for this revision"
+    "link_update_flippers_state0": "the swim's hold not qualified for this revision",
+    "link_apply_damage": "the cheats play on the original ROMs alone",
+    "link_damage_to_apply": "the cheats play on the original ROMs alone",
+    "dec_num_bombs": "the cheats play on the original ROMs alone",
+    "get_rupee_value": "the cheats play on the original ROMs alone",
+    "bomb_fairy_lose_all_bombs": "the cheats play on the original ROMs alone"
   },
   "guest_table_sizes": {
     "global_flags_size": 16,

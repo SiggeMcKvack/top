@@ -48,6 +48,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-swim-hold)
     add_test(NAME oracles-swim-hold COMMAND oracles-test-swim-hold)
 
+    add_executable(oracles-test-cheats test_cheats.c)
+    target_link_libraries(oracles-test-cheats PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-cheats)
+    add_test(NAME oracles-cheats COMMAND oracles-test-cheats)
+
     add_executable(oracles-test-language test_language.c)
     target_include_directories(oracles-test-language PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
     target_link_libraries(oracles-test-language PRIVATE oracles_language)
@@ -188,6 +193,11 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-launcher-mods PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-mods)
     add_test(NAME oracles-launcher-mods COMMAND oracles-test-launcher-mods ${ORACLES_LAYOUT_REFERENCE})
+
+    add_executable(oracles-test-launcher-cheats test_launcher_cheats.c layout_reference.c)
+    target_link_libraries(oracles-test-launcher-cheats PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-cheats)
+    add_test(NAME oracles-launcher-cheats COMMAND oracles-test-launcher-cheats ${ORACLES_LAYOUT_REFERENCE})
 
     add_executable(oracles-test-launcher-controls test_launcher_controls.c layout_reference.c)
     target_link_libraries(oracles-test-launcher-controls PRIVATE oracles_ui)

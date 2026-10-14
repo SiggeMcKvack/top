@@ -236,6 +236,7 @@ void oracles_settings_defaults(oracles_settings *s)
     memset(s->language, 0, sizeof s->language);   /* English, the US ROM's own */
     memset(s->fan_language, 0, sizeof s->fan_language);
     memset(s->mods, 0, sizeof s->mods);
+    memset(s->cheats, 0, sizeof s->cheats);   /* the game as it plays */
     /* A first opening plays Enhanced, the view drawn back with the continuous transitions it carries, fullscreen. */
     s->profile = ORACLES_PROFILE_ENHANCED;
     s->transitions = 1;
@@ -263,7 +264,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -322,6 +323,14 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         if (!strcmp(name, expected)) {
             char names[ORACLES_SETTINGS_MODS_MAX][ORACLES_SETTINGS_MOD_NAME];
             join_mods(s->mods[g], names, parse_mods(value, names));
+            return 1;
+        }
+        snprintf(expected, sizeof expected, "cheats_%s", game_names[g]);
+        if (!strcmp(name, expected)) {
+            /* A later version's list (a cheat this one does not know): the cheats it knows. */
+            unsigned cheats = 0;
+            if (oracles_cheats_parse(value, NULL, &cheats) != 0) fprintf(stderr, "oracles: %s=%s names a cheat this version does not know; it is dropped\n", name, value);
+            s->cheats[g] = cheats;
             return 1;
         }
         snprintf(expected, sizeof expected, "item_hotkeys_%s", game_names[g]);
@@ -451,6 +460,12 @@ int oracles_settings_store(const oracles_settings *s)
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "item_hotkeys_%s=%s\n", game_names[g], hotkey_names[s->item_hotkeys[g]]);
     fprintf(f, "# Each game's active mods (its Mods page), the names of their folders in the mods folder beside this file.\n");
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "mods_%s=%s\n", game_names[g], s->mods[g]);
+    fprintf(f, "# Each game's cheats, in both profiles: no-damage (Link loses no heart), ammo (seeds, bombs and Bombchus are not\n"
+               "# used up) and rupees (buying costs nothing; a mod's prices still apply), separated by commas; empty for none.\n");
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
+        char names[64];
+        fprintf(f, "cheats_%s=%s\n", game_names[g], oracles_cheats_format(s->cheats[g], NULL, names, sizeof names));
+    }
     fprintf(f, "# Display, for the games the home screen starts: the profile (faithful or enhanced), the view in enhanced (near,\n"
                "# medium or far, how much of the world it shows, in the screen's shape), the continuous transitions (off|on, in\n"
                "# enhanced only), and the window, 2, 3 or 4 times its surface or full (the screen); enhanced, far, on and full at\n"

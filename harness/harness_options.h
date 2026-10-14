@@ -30,6 +30,7 @@ typedef struct harness_options {
     unsigned enhanced_ghosts;                 /* --enhanced-ghosts: ghosts working at once, threaded (1 by default) */
     int objects_capture, enhanced_objects, enhanced_threaded, enhanced_paced, enhanced_zoom_out, continuous_transitions, continuous_swim, continuous_diagonal;
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
+    unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */
     int enhanced_level, enhanced_aspect;      /* --view (near unless --zoom-out) and --aspect: an OraclesEnhancedLevel and OraclesEnhancedAspect */
     int enhanced_hud_full;                    /* --hud full: the status bar drawn full width; original (0) by default, which every row hashed before it keeps */
     int hooks, colour_correction, ghost_threaded, ghost_trace, ghost_trace_load, compare_session;

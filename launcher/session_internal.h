@@ -39,6 +39,13 @@ typedef struct session {
     char route_sram_path[PATH_MAX_LENGTH], record_sram_path[PATH_MAX_LENGTH];
     int enhanced, continuous_transitions, continuous_swim, continuous_diagonal, zoom_out;   /* zoom_out: the view draws back (medium or far) */
     int swim_hold;                            /* the swim's hold: the option's, as a replayed route or the profile may change it */
+    unsigned cheats;                          /* the cheats on (OraclesGuestCheat): the option's, as a replayed route or the profile may change them */
+    /* The pause's Cheats: the settings' game whose cheats the game plays with (an OraclesSettingsGame), -1 when its
+     * profile has none or no pause can change them; the cheats the next frame begins with, once the pause changed them;
+     * the cheats a replayed route's `cheat` lines change; and every cheat that was on, for the session's report. */
+    int cheats_game;
+    unsigned cheats_next, cheats_route, cheats_used;
+    int cheats_pending;
     int view_level, view_4_3;                    /* the Enhanced view's level (OraclesEnhancedLevel) and its shape: 4:3, else 16:9 */   /* the options, as a replayed route or the profile may change them */
     int ghosts;                                  /* the neighbour ghosts chosen, --ghosts' else the settings': 0 auto, 1, 2 */
     OraclesHotkeysMode hotkeys_mode;

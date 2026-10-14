@@ -112,6 +112,7 @@ static void emit(OraclesGuest *guest, OraclesGuestEventType type, uint16_t pc, u
     if (type == ORACLES_EVENT_TEXT_ADDRESS) oracles_guest_serve_text(guest);
     if (type == ORACLES_EVENT_MERMAID_STROKE) oracles_guest_mermaid_stroke(guest);
     if (type == ORACLES_EVENT_FLIPPERS_STROKE) oracles_guest_flippers_stroke(guest);
+    if (type == ORACLES_EVENT_CHEAT_DAMAGE || type == ORACLES_EVENT_CHEAT_AMMO || type == ORACLES_EVENT_CHEAT_RUPEES) oracles_guest_cheat_point(guest, type);
     if (!guest->sink && !guest->listener_count) return;
     const OraclesCoreRegisters r = oracles_core_registers(guest->core);
     OraclesGuestEvent event;

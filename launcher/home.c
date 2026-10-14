@@ -258,6 +258,7 @@ static void pointer(home_app *app, float x, float y, int click)
         if (!click) { if (hit.index != app->nav.row) { app->nav.row = hit.index; changed(app); } return; }
         const OraclesHomeCommand c = app->nav.screen == ORACLES_SCREEN_GAME ? oracles_page_click(&app->nav, hit.index, hit.option)
                                      : app->nav.screen == ORACLES_SCREEN_MODS ? oracles_mods_click(&app->nav, hit.index)
+                                     : app->nav.screen == ORACLES_SCREEN_CHEATS ? oracles_cheats_click(&app->nav, hit.index, hit.option)
                                                                               : oracles_display_click(&app->nav, hit.index, hit.option);
         changed(app);
         command(app, c);

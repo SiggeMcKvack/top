@@ -490,3 +490,43 @@ int oracles_ui_mods_hit(const OraclesHomeNav *nav, float x, float y)
     if (inside(&l.play_row, x, y)) return (int)oracles_mods_row_play(nav);
     return -1;
 }
+
+/* ---- Cheats ---------------------------------------------------------------------- */
+
+void oracles_ui_cheats_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent)
+{
+    const OraclesUiPageStyles *st = oracles_ui_page_styles(nav->layout);
+    const look *lk = look_of(nav->layout);
+    OraclesUiCheatsLayout l;
+    oracles_ui_layout_cheats(nav->layout, nav, &l);
+    const unsigned row = nav->row;
+    head(draw, st, &l.head, "Cheats", oracles_home_over(oracles_home_hero(nav)), NULL, accent);
+    wrapped(draw, nav->layout == ORACLES_UI_LAYOUT_4_3 ? st->page_note : st->row_text, &l.note,
+            oracles_ui_rgb(nav->layout == ORACLES_UI_LAYOUT_4_3 ? NOTE_ITALIC : NOTE));
+    panel(draw, &l.panel);
+    /* Every row dimmed, label and all, while --cheats holds them. */
+    for (unsigned r = 0; r < ORACLES_CHEATS_ROWS; r++) {
+        const float opacity = oracles_cheats_row_live(nav, r) ? 1.0f : ROW_NOT_APPLIED;
+        highlight_dimmed(draw, lk, &l.rows[r], r == row, opacity);
+        text(draw, st->row_label, &l.labels[r], oracles_cheats_labels[r], oracles_ui_rgba(LABEL, opacity));
+        wrapped(draw, st->row_text, &l.explanations[r], oracles_ui_rgba(NOTE, opacity));
+        const int on = oracles_cheats_on(nav, r);
+        for (int c = 0; c < 2; c++)
+            option(draw, st, lk, &l.choices[r][c], 0, c ? "On" : "Off", NULL, c == on, r == row, accent, CHOICE_OFF, opacity);
+    }
+    /* 4:3: the highlighted row's explanation and its note, under the rows. */
+    const unsigned shown = row < ORACLES_CHEATS_ROWS ? row : 0u;
+    text(draw, st->help, &l.help, oracles_cheats_texts[shown], oracles_ui_rgb(HELP));
+    text(draw, st->help_note, &l.help_note, oracles_cheats_notes[shown], oracles_ui_rgb(NOTE_ITALIC));
+}
+
+int oracles_ui_cheats_hit(const OraclesHomeNav *nav, float x, float y, int *option)
+{
+    OraclesUiCheatsLayout l;
+    oracles_ui_layout_cheats(nav->layout, nav, &l);
+    *option = -1;
+    for (int r = 0; r < ORACLES_CHEATS_ROWS; r++)
+        for (int c = 0; c < 2; c++) if (inside(&l.choices[r][c].box, x, y)) { *option = c; return r; }
+    for (int r = 0; r < ORACLES_CHEATS_ROWS; r++) if (inside(&l.rows[r], x, y)) return r;
+    return -1;
+}

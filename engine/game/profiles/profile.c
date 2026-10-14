@@ -19,13 +19,13 @@ static const uint8_t kinomi_room_flag_pages[8] = { 0, 1, 0, 1, 2, 3, 2, 3 };   /
 
 static const OraclesCompatProfile profiles[] = {
     { .id = "ages-original", .name = "Oracle of Ages", .revision = ORACLES_ROM_REVISION_AGES_US, .family = ORACLES_GAME_AGES,
-      .continuous_transitions = 1, .continuous_swim = 1, .item_hotkeys = 1, .zoom_out = 1, .swim_hold = 1, .continuous_diagonal = 1,
+      .continuous_transitions = 1, .continuous_swim = 1, .item_hotkeys = 1, .zoom_out = 1, .swim_hold = 1, .continuous_diagonal = 1, .cheats = 1,
       .guest_tables = &oracles_guest_tables_ages, .data_tables = &oracles_tables_ages, .room_flag_pages = ages_room_flag_pages,
       .map_width = 14, .map_height = 14,
       .open_water_rules = 1, .maku_tree_rules = 1, .maku_isolation_rules = 1, .sea_level_rules = 1, .forest_scrambler_rules = 1,
       .language_bank = ORACLES_IMAGE_LANGUAGE_BANK },
     { .id = "seasons-original", .name = "Oracle of Seasons", .revision = ORACLES_ROM_REVISION_SEASONS_US, .family = ORACLES_GAME_SEASONS,
-      .continuous_transitions = 1, .continuous_swim = 1, .item_hotkeys = 1, .zoom_out = 1, .swim_hold = 1, .continuous_diagonal = 1,
+      .continuous_transitions = 1, .continuous_swim = 1, .item_hotkeys = 1, .zoom_out = 1, .swim_hold = 1, .continuous_diagonal = 1, .cheats = 1,
       .guest_tables = &oracles_guest_tables_seasons, .data_tables = &oracles_tables_seasons, .room_flag_pages = seasons_room_flag_pages,
       .map_width = 16, .map_height = 16, .second_map_width = 11, .second_map_height = 8,   /* SUBROSIA_WIDTH, _HEIGHT */
       .maku_tree_rules = 1, .seasons_rules = 1, .lost_woods_rules = 1, .tileset_map_rules = 1,
@@ -98,6 +98,10 @@ int oracles_compat_swim_hold(const OraclesCompatProfile *profile)
 int oracles_compat_continuous_diagonal(const OraclesCompatProfile *profile)
 {
     return profile ? profile->continuous_diagonal : 0;
+}
+int oracles_compat_cheats(const OraclesCompatProfile *profile)
+{
+    return profile ? profile->cheats : 0;
 }
 const OraclesGuestTables *oracles_compat_guest_tables(const OraclesCompatProfile *profile)
 {

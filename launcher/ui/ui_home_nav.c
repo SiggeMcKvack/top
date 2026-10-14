@@ -125,6 +125,8 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
         if (!nav->narrow) {
             items[n++] = item(ORACLES_HOME_ITEM_CONTROLS, "Controls", NULL, 0, NULL);
             items[n++] = item(ORACLES_HOME_ITEM_DISPLAY, "Display", NULL, 0, NULL);
+            /* Cheats where they apply: not for a fan game, nor a game whose profile has none. */
+            if (!oracles_home_fan_game(oracles_home_game(nav)) && !nav->cheats_refused) items[n++] = item(ORACLES_HOME_ITEM_CHEATS, "Cheats", NULL, 0, NULL);
         }
         items[n++] = item(ORACLES_HOME_ITEM_QUIT_GAME, "Quit to launcher", NULL, 0, NULL);
         return n;
@@ -161,8 +163,11 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
         snprintf(items[4].text, sizeof items[4].text, "%u active", active);
         items[4].note = items[4].text;
     }
-    items[5] = item(ORACLES_HOME_ITEM_EXIT, "Exit", NULL, 0, NULL);
-    return 6;
+    /* Cheats, for an Oracle whose ROM has them: a fan game's menu, and an unrecognised ROM's, keep their six entries. */
+    unsigned n = 5;
+    if (!fan && game->rom != ORACLES_ROM_UNRECOGNISED) items[n++] = item(ORACLES_HOME_ITEM_CHEATS, "Cheats", NULL, 0, NULL);
+    items[n++] = item(ORACLES_HOME_ITEM_EXIT, "Exit", NULL, 0, NULL);
+    return n;
 }
 
 unsigned oracles_home_focus(const OraclesHomeNav *nav)
@@ -333,6 +338,7 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *i
         case ORACLES_HOME_ITEM_DISPLAY: nav->screen = ORACLES_SCREEN_DISPLAY; nav->row = 0; nav->advanced = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CONTROLS: oracles_controls_open(nav); return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_MODS: nav->screen = ORACLES_SCREEN_MODS; nav->row = 0; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_ITEM_CHEATS: nav->screen = ORACLES_SCREEN_CHEATS; nav->row = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_RESUME: return ORACLES_HOME_RESUME;
         case ORACLES_HOME_ITEM_SAVE_STATE: return ORACLES_HOME_SAVE_STATE;
         case ORACLES_HOME_ITEM_LOAD_STATE: return ORACLES_HOME_LOAD_STATE;
@@ -369,6 +375,7 @@ OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction actio
     if (nav->screen == ORACLES_SCREEN_DISPLAY) return oracles_display_act(nav, action);
     if (nav->screen == ORACLES_SCREEN_CONTROLS) return oracles_controls_act(nav, action);
     if (nav->screen == ORACLES_SCREEN_MODS) return oracles_mods_act(nav, action);
+    if (nav->screen == ORACLES_SCREEN_CHEATS) return oracles_cheats_act(nav, action);
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items), focus = oracles_home_focus(nav);
     if (nav->screen == ORACLES_SCREEN_PAUSE && (action == ORACLES_HOME_LEFT || action == ORACLES_HOME_RIGHT)) return ORACLES_HOME_STAY;

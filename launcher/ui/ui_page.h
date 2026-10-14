@@ -1,4 +1,4 @@
-/* Cartridge, Display and Mods drawn: ui_page_nav.h's state at the places of
+/* Cartridge, Display, Mods and Cheats drawn: ui_page_nav.h's state at the places of
  * ui_page_layout.h, in their colours, in the layout of nav->layout; a point
  * is in that layout's scene. */
 #ifndef ORACLES_UI_PAGE_H
@@ -20,5 +20,9 @@ int oracles_ui_display_hit(const OraclesHomeNav *nav, float x, float y, int *opt
 /* Mods, and the row under a point of it: Folder, a mod, Play, or -1. */
 void oracles_ui_mods_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent);
 int oracles_ui_mods_hit(const OraclesHomeNav *nav, float x, float y);
+
+/* Cheats, and the row under a point of it, or -1, and its Off (0) or On (1) under it, or -1. */
+void oracles_ui_cheats_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent);
+int oracles_ui_cheats_hit(const OraclesHomeNav *nav, float x, float y, int *option);
 
 #endif

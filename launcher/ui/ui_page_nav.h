@@ -271,4 +271,36 @@ void oracles_mods_hover(OraclesHomeNav *nav, unsigned row);
 /* A click on a row: a mod's switches it. */
 OraclesHomeCommand oracles_mods_click(OraclesHomeNav *nav, unsigned row);
 
+/* ---- Cheats ----------------------------------------------------------------------
+ *
+ * Cheats, for an Oracle whose profile has them (a fan game's menu and pause do
+ * not have it, nor an Oracle's on an unrecognised ROM): No damage,
+ * Ammo never runs out and Rupees never run out, each Off or On.  Up and down
+ * move through the three rows and wrap; left, right and OK turn the
+ * highlighted cheat off and on, a click on Off or On sets it.  Each change is kept in
+ * settings.txt at once (cheats_<game>=): the next Play takes it, and from the
+ * pause the running game at once, the page there starting from the running
+ * game's cheats.  With --cheats, which holds for the run, the home screen's
+ * page shows its cheats, dimmed and inert.  Back returns to the menu, on
+ * Cheats. */
+
+#define ORACLES_CHEATS_ROWS 3
+/* The rows are the bits of OraclesHomeGame.cheats, in settings.txt's order: no-damage (1), ammo (2), rupees (4). */
+extern const char *const oracles_cheats_labels[ORACLES_CHEATS_ROWS];
+/* Each row's explanation and its note (empty: none); 16:9 joins them beside the choices, 4:3 says the highlighted
+ * row's under the rows, the note on its own line. */
+extern const char *const oracles_cheats_texts[ORACLES_CHEATS_ROWS];
+extern const char *const oracles_cheats_notes[ORACLES_CHEATS_ROWS];
+extern const char oracles_cheats_note[];          /* under the title: "Cheats play with your usual save: ..." */
+/* A row's explanation and note as one text, 16:9's. */
+void oracles_cheats_explanation(unsigned row, char *out, size_t capacity);
+/* The row's cheat is on for the page's game. */
+int oracles_cheats_on(const OraclesHomeNav *nav, unsigned row);
+/* The row changes: every row, and none while --cheats holds them for the run (nav->cheats_fixed). */
+int oracles_cheats_row_live(const OraclesHomeNav *nav, unsigned row);
+
+OraclesHomeCommand oracles_cheats_act(OraclesHomeNav *nav, OraclesHomeAction action);
+/* A click on a row, or on its Off (0) or On (1): `option` -1 for the row itself. */
+OraclesHomeCommand oracles_cheats_click(OraclesHomeNav *nav, unsigned row, int option);
+
 #endif

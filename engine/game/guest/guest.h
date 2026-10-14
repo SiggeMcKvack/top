@@ -10,10 +10,10 @@
  *   - the live-WRAM fingerprint of the harness, which excludes only the dead
  *     stack bytes below each thread's stack pointer.
  *
- * Observation hooks never write to the guest.  The write paths are five closed
+ * Observation hooks never write to the guest.  The write paths are six closed
  * transactions: the call's (a mod's host scene, further below), the
- * inventory's (the item hotkeys, further below), the language's and the
- * swim's hold (further below), and the transition's: at the return of
+ * inventory's (the item hotkeys, further below), the language's, the swim's
+ * hold and the cheats (further below), and the transition's: at the return of
  * drawAllSprites, a policy may ask for a bounded change of the scroll
  * machine's step and of Link's position and walking animation, applied here
  * after its own checks; it never receives a writable view of the RAM.
@@ -77,7 +77,10 @@ typedef enum OraclesGuestEventType {
     ORACLES_EVENT_FILE_OPERATION,          /* entry of fileManagementFunction, hooked by the mods: c = 0 create, 1 save, 2 load, 3 erase the file of hActiveFileSlot */
     ORACLES_EVENT_TEXT_ADDRESS,            /* return of getTextAddress, with a language composed: the language transaction runs here */
     ORACLES_EVENT_MERMAID_STROKE,          /* the `and` after linkUpdateVelocity@mermaidSuit's read of wGameKeysJustPressed, with the swim's hold armed: its transaction runs here */
-    ORACLES_EVENT_FLIPPERS_STROKE          /* the `and` after linkUpdateFlippersSpeed@flippersState0's read of wGameKeysJustPressed, the same */
+    ORACLES_EVENT_FLIPPERS_STROKE,         /* the `and` after linkUpdateFlippersSpeed@flippersState0's read of wGameKeysJustPressed, the same */
+    ORACLES_EVENT_CHEAT_DAMAGE,            /* linkApplyDamage's `or a` of the damage it read, with a cheat armed: the cheats' transaction runs here */
+    ORACLES_EVENT_CHEAT_AMMO,              /* the `ld (hl),a` of decNumBombs' end, the same */
+    ORACLES_EVENT_CHEAT_RUPEES             /* removeRupeeValue's `call getRupeeValue`, the same */
 } OraclesGuestEventType;
 
 typedef struct OraclesGuestEvent {
@@ -385,6 +388,55 @@ uint16_t oracles_guest_find_stroke_test(const uint8_t *rom, size_t size, Oracles
 int oracles_guest_arm_swim_hold(OraclesGuest *guest);
 /* The strokes the transaction started since the attach, with the mermaid suit and with the flippers. */
 void oracles_guest_swim_strokes(const OraclesGuest *guest, unsigned *mermaid, unsigned *flippers);
+
+/* ---- the cheats ------------------------------------------------------------------------
+ *
+ * Each cheat answers in a register, at the one instruction of a routine that reads it, before it runs, found in the
+ * user's ROM within the routine's first $40 bytes (exactly once, else the cheat is refused); nothing is written in
+ * memory.  No damage: at linkApplyDamage's `or a` (bank 6), with d on Link's object, a hit's damage (a negative
+ * w1Link.damageToApply, which the routine has just loaded in a and cleared) becomes 0: Link loses no heart, and the
+ * knockback, the sound and the invincibility frames of the hit are the game's.  Ammo never runs out: at the `ld (hl),a`
+ * of decNumBombs' end, which decNumActiveSeeds and decNumBombchus share, the count less one becomes the count (hl)
+ * holds: the counter is written back as it was; at zero the routine returns before; Ages' bomb-upgrade fairy taking
+ * every bomb (bombUpgradeFairy_loseAllBombs' call, found in the ROM) is left to the game.  Rupees never run out: at
+ * removeRupeeValue's `call getRupeeValue`, with hl on wNumRupees, the value to take away becomes 0, whose amount is
+ * none; Seasons' ore chunks, and a call of the call transaction (a mod's game.pay), are left as they are.  A cheat
+ * changes from one frame to the next: its point stays armed once armed, and answers only while the cheat is on. */
+typedef enum OraclesGuestCheat {
+    ORACLES_CHEAT_NO_DAMAGE = 1u << 0,
+    ORACLES_CHEAT_AMMO = 1u << 1,
+    ORACLES_CHEAT_RUPEES = 1u << 2
+} OraclesGuestCheat;
+#define ORACLES_CHEATS 3u   /* the cheats, bits 0 to ORACLES_CHEATS - 1 */
+
+/* The name of the cheat of bit 1 << `index` ("no-damage", "ammo", "rupees"), as the settings, the command line and,
+ * after "cheat-", a route's options write it; NULL past the last. */
+const char *oracles_cheat_name(unsigned index);
+/* Pure: the cheats a comma-separated list names into *cheats; with `prefix`, only its items that start with it name a
+ * cheat ("cheat-", a route's options), the others skipped.  0, or -1 when an item names no cheat, *cheats then holding
+ * those the others name (a later version's list read by this one). */
+int oracles_cheats_parse(const char *list, const char *prefix, unsigned *cheats);
+/* Pure: `cheats` as such a list, each name after `prefix` (NULL for none), in `out`; returns `out`. */
+const char *oracles_cheats_format(unsigned cheats, const char *prefix, char *out, size_t capacity);
+/* Pure: the address of the one occurrence of `sequence` starting within the first $40 bytes of `routine` in `rom` (the
+ * flat image, bank n from n * $4000), inside its bank; 0 when there is none or several. */
+uint16_t oracles_guest_find_in_routine(const uint8_t *rom, size_t size, OraclesGuestSym routine, const uint8_t *sequence, size_t length);
+/* Pure: the instruction `cheat` answers at in `rom`: `ld h,d / ld l,<w1Link.damageToApply / ld a,(hl) / ld (hl),$00 /
+ * or a` in linkApplyDamage, its `or a`; `ld a,(hl) / sub $01 / daa / ld (hl),a / or h / ret` in decNumBombs, its
+ * `ld (hl),a`; `ld hl,wNumRupees / call getRupeeValue` in removeRupeeValue, its call; 0 when not found once. */
+uint16_t oracles_guest_find_cheat_point(const OraclesGuestTables *tables, const uint8_t *rom, size_t size, OraclesGuestCheat cheat);
+/* Sets the cheats on (a mask of OraclesGuestCheat, 0 for none), arming the point of each the first time; -1, the cheats
+ * unchanged, when the profile does not qualify them, a point is not found once, or the hook table is full. */
+int oracles_guest_set_cheats(OraclesGuest *guest, unsigned cheats);
+unsigned oracles_guest_cheats(const OraclesGuest *guest);
+/* What the cheats did since the attach. */
+typedef struct OraclesGuestCheatCounts {
+    unsigned hits, health_kept;          /* hits whose damage was cancelled, and that damage, in quarters of a heart */
+    unsigned ammo_kept;                  /* seeds, bombs and Bombchus used and not taken away */
+    unsigned payments, rupees_kept;      /* payments of rupees cancelled, and their rupees */
+    unsigned calls_charged;              /* payments of the call transaction (a mod's game.pay) left to the game */
+} OraclesGuestCheatCounts;
+void oracles_guest_cheat_counts(const OraclesGuest *guest, OraclesGuestCheatCounts *counts);
 
 typedef struct OraclesGuestRegWrite {
     uint8_t ly;

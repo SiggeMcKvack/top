@@ -7,7 +7,7 @@
  * window; the toast after a game that ran slowly, 11c, 11f and 11h; the language beside Cartridge, 14f, 15d and
  * 16f; the toast over the first game started with a controller, 18d and 18e; the help bar after a key or a
  * controller's button, at home (21a to 21d), in the pause menu (21e, 21f, its entries naming no key: 21y) and on
- * Display (21g, 21h): a text is
+ * Display (21g, 21h); Cheats in the menus, 22g, 22k, 22q and 22r, and a fan game's menu without it, 23g: a text is
  * compared by its left edge, its width, the top and height of its line box,
  * and its baseline; an element by its box.  And the choice of the layout by the
  * window's shape. */
@@ -63,8 +63,8 @@ static void frame_1a(void)
     layout_line("1a", "fan state", &others[1].state);
 
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
-    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL 1a: six items expected\n"); layout_fail(); return; }
-    for (int i = 0; i < 6; i++) {
+    if (menu(&nav, items) != 7) { fprintf(stderr, "FAIL 1a: seven items expected\n"); layout_fail(); return; }
+    for (int i = 0; i < 7; i++) {
         char name[32];
         snprintf(name, sizeof name, "item %d", i); layout_box("1a", name, &items[i].box);
         snprintf(name, sizeof name, "item %d label", i); layout_line("1a", name, &items[i].label);
@@ -109,8 +109,9 @@ static void frame_language(const char *frame, int game, int language, const char
     }
     nav.focus = 1;
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
-    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL %s: six items expected\n", frame); layout_fail(); return; }
-    for (int i = 0; i < 6; i++) {
+    const unsigned count = oracles_home_fan_game(game) ? 6u : 7u;   /* a fan game's menu has no Cheats */
+    if (menu(&nav, items) != count) { fprintf(stderr, "FAIL %s: %u items expected\n", frame, count); layout_fail(); return; }
+    for (int i = 0; i < (int)count; i++) {
         char probe[32];
         snprintf(probe, sizeof probe, "item %d", i);
         layout_box(frame, probe, &items[i].box);
@@ -363,13 +364,13 @@ static void frame_10a(void)
     oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
     OraclesUiTitleLayout hero;
     oracles_ui_layout_hero(ORACLES_UI_LAYOUT_4_3, 0, "Oracle of", "Ages", state, &hero);
-    layout_line("10a", "hero over", &hero.over);
+    CHECK(hero.over.h == 0.0f);   /* the tab says "Oracle of Ages" */
     layout_line("10a", "hero title", &hero.title);
     layout_line("10a", "hero state", &hero.state);
     layout_box("10a", "hero", &hero.box);
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
-    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL 10a: six items expected\n"); layout_fail(); return; }
-    for (int i = 0; i < 6; i++) {
+    if (menu(&nav, items) != 7) { fprintf(stderr, "FAIL 10a: seven items expected\n"); layout_fail(); return; }
+    for (int i = 0; i < 7; i++) {
         char name[32];
         snprintf(name, sizeof name, "item %d", i); layout_box("10a", name, &items[i].box);
         snprintf(name, sizeof name, "item %d label", i); layout_line("10a", name, &items[i].label);
@@ -399,7 +400,7 @@ static void frame_10b(void)
     oracles_home_state(&nav, ORACLES_HOME_HERO_FAN, state);
     OraclesUiTitleLayout hero;
     oracles_ui_layout_hero(ORACLES_UI_LAYOUT_4_3, 0, oracles_home_over(ORACLES_HOME_HERO_FAN), oracles_home_title(ORACLES_HOME_HERO_FAN), state, &hero);
-    layout_line("10b", "hero over", &hero.over);
+    CHECK(hero.over.h == 0.0f);
     layout_line("10b", "hero title", &hero.title);
     layout_line("10b", "hero state", &hero.state);
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
@@ -433,7 +434,7 @@ static void frame_10c(void)
     layout_box("10c", "start reason background", &items[0].note_box);
 }
 
-/* The pause menu in 4:3 (10n), and in a 640x480 window (10t): no narrow menu, Controls and Display stay. */
+/* The pause menu in 4:3 (10n), and in a 640x480 window (10t): no narrow menu, Controls, Display and Cheats stay. */
 static void pause_4_3(const char *frame, int width, int height)
 {
     OraclesHomeNav nav;
@@ -442,8 +443,8 @@ static void pause_4_3(const char *frame, int width, int height)
     CHECK(nav.layout == ORACLES_UI_LAYOUT_4_3);
     oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, oracles_ui_layout_narrow(nav.layout, width));
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
-    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL %s: six items expected\n", frame); layout_fail(); return; }
-    for (int i = 0; i < 6; i++) {
+    if (menu(&nav, items) != 7) { fprintf(stderr, "FAIL %s: seven items expected\n", frame); layout_fail(); return; }
+    for (int i = 0; i < 7; i++) {
         char name[32];
         snprintf(name, sizeof name, "item %d", i); layout_box(frame, name, &items[i].box);
         snprintf(name, sizeof name, "item %d label", i); layout_line(frame, name, &items[i].label);
@@ -453,7 +454,7 @@ static void pause_4_3(const char *frame, int width, int height)
     oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
     OraclesUiTitleLayout hero;
     oracles_ui_layout_hero(nav.layout, 1, "Oracle of", "Ages", state, &hero);
-    layout_line(frame, "hero over", &hero.over);
+    CHECK(hero.over.h == 0.0f);
     layout_line(frame, "hero title", &hero.title);
     layout_line(frame, "hero state", &hero.state);
     layout_box(frame, "hero", &hero.box);
@@ -499,8 +500,8 @@ static void devices(void)
     snprintf(nav.load_note, sizeof nav.load_note, "from 22:14");
     OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
     nav.layout = ORACLES_UI_LAYOUT_16_9;
-    if (menu(&nav, items) == 6) {
-        for (int i = 0; i < 6; i++) {
+    if (menu(&nav, items) == 7) {
+        for (int i = 0; i < 7; i++) {
             char name[32];
             snprintf(name, sizeof name, "item %d", i); layout_box("21y", name, &items[i].box);
             snprintf(name, sizeof name, "item %d label", i); layout_line("21y", name, &items[i].label);
@@ -516,6 +517,89 @@ static void devices(void)
     hints_of("21g", &nav, ORACLES_UI_LAYOUT_16_9, 4);
     oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
     hints_of("21h", &nav, ORACLES_UI_LAYOUT_4_3, 4);
+}
+
+/* The menu's items of `frame`: their boxes and labels, and their dots when `dots`. */
+static void items_of(const char *frame, const OraclesHomeNav *nav, int dots)
+{
+    OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
+    if (menu(nav, items) != 7) { fprintf(stderr, "FAIL %s: seven items expected\n", frame); layout_fail(); return; }
+    for (int i = 0; i < 7; i++) {
+        char name[32];
+        snprintf(name, sizeof name, "item %d", i); layout_box(frame, name, &items[i].box);
+        snprintf(name, sizeof name, "item %d label", i); layout_line(frame, name, &items[i].label);
+        if (dots) { snprintf(name, sizeof name, "item %d dot", i); layout_line(frame, name, &items[i].dot); }
+    }
+}
+
+/* Cheats, the seventh entry: an Oracle's menu after Mods, highlighted, after a key (22g), and in 4:3, where the title
+ * has no words above it so that the seven fit (22q); the pause's after Display (22k, 22r); none in a fan game's menu,
+ * which keeps its six entries (23g), nor in its pause. */
+static void cheats_entry(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.games[0].usable = 1;
+    snprintf(nav.games[0].last_session, sizeof nav.games[0].last_session, "21 Sep 2026");
+    nav.focus = 5;
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    OraclesHomeItem it[ORACLES_HOME_MAX_ITEMS];
+    CHECK(oracles_home_items(&nav, it) == 7 && it[5].id == ORACLES_HOME_ITEM_CHEATS && !strcmp(it[5].label, "Cheats") && !it[5].disabled
+          && it[6].id == ORACLES_HOME_ITEM_EXIT);
+    char state[ORACLES_HOME_STATE_LENGTH];
+    oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
+    OraclesUiTitleLayout hero;
+    oracles_ui_layout_hero(ORACLES_UI_LAYOUT_16_9, 0, "Oracle of", "Ages", state, &hero);
+    layout_line("22g", "hero title", &hero.title);
+    layout_line("22g", "hero state", &hero.state);
+    layout_box("22g", "hero", &hero.box);
+    items_of("22g", &nav, 1);
+    hints_of("22g", &nav, ORACLES_UI_LAYOUT_16_9, 3);
+    nav.layout = ORACLES_UI_LAYOUT_4_3;
+    tabs_4_3("22q");
+    oracles_ui_layout_hero(ORACLES_UI_LAYOUT_4_3, 0, "Oracle of", "Ages", state, &hero);
+    CHECK(hero.over.h == 0.0f);
+    layout_line("22q", "hero title", &hero.title);
+    layout_line("22q", "hero state", &hero.state);
+    layout_box("22q", "hero", &hero.box);
+    items_of("22q", &nav, 0);
+
+    oracles_home_init(&nav);
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
+    nav.focus = 5;
+    CHECK(oracles_home_items(&nav, it) == 7 && it[4].id == ORACLES_HOME_ITEM_DISPLAY && it[5].id == ORACLES_HOME_ITEM_CHEATS && !it[5].disabled);
+    oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
+    oracles_ui_layout_hero(ORACLES_UI_LAYOUT_16_9, 1, "Oracle of", "Ages", state, &hero);
+    layout_line("22k", "hero over", &hero.over);
+    layout_line("22k", "hero title", &hero.title);
+    layout_line("22k", "hero state", &hero.state);
+    items_of("22k", &nav, 0);
+    nav.layout = ORACLES_UI_LAYOUT_4_3;
+    oracles_ui_layout_hero(ORACLES_UI_LAYOUT_4_3, 1, "Oracle of", "Ages", state, &hero);
+    CHECK(hero.over.h == 0.0f);
+    layout_line("22r", "hero title", &hero.title);
+    layout_line("22r", "hero state", &hero.state);
+    layout_box("22r", "hero", &hero.box);
+    items_of("22r", &nav, 0);
+    /* Narrow, the settings stay in the launcher, Cheats with them. */
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 1);
+    CHECK(oracles_home_items(&nav, it) == 4);
+
+    oracles_home_init(&nav);
+    nav.entry = ORACLES_HOME_FAN;
+    nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    nav.focus = 5;
+    OraclesUiItemLayout items[ORACLES_HOME_MAX_ITEMS];
+    if (menu(&nav, items) != 6) { fprintf(stderr, "FAIL 23g: six items expected\n"); layout_fail(); return; }
+    for (int i = 0; i < 6; i++) {
+        char name[32];
+        snprintf(name, sizeof name, "item %d", i); layout_box("23g", name, &items[i].box);
+        snprintf(name, sizeof name, "item %d label", i); layout_line("23g", name, &items[i].label);
+    }
+    CHECK(oracles_home_items(&nav, it) == 6 && it[4].id == ORACLES_HOME_ITEM_MODS && it[5].id == ORACLES_HOME_ITEM_EXIT);
+    /* Nor has a fan game's pause: its profile has no cheats. */
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_MOONRISE, ORACLES_PROFILE_ENHANCED, 0);
+    CHECK(oracles_home_items(&nav, it) == 6 && it[4].id == ORACLES_HOME_ITEM_DISPLAY && it[5].id == ORACLES_HOME_ITEM_QUIT_GAME);
 }
 
 /* The layout of a window's shape: the nearer of 4:3 and 16:9 by their ratio, unless aspect= names one; the narrow
@@ -573,6 +657,7 @@ int main(int argc, char **argv)
     slow_toast("11f", 1440, 1080, 2);
     slow_toast("11h", 640, 480, 2);
     devices();
+    cheats_entry();
     layout_choice();
     if (layout_failures()) { fprintf(stderr, "%d failure(s)\n", layout_failures()); return 1; }
     printf("launcher layout: the home screen matches the layout reference within %.1f px\n", (double)LAYOUT_TOLERANCE);

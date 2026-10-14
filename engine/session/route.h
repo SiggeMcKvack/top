@@ -14,13 +14,15 @@
 #define ORACLES_ROUTE_FORMAT_LANGUAGE 4 /* written with a language among the options: a reader before it would replay in English */
 #define ORACLES_ROUTE_FORMAT_SWIM_HOLD 5   /* written with the swim's hold among the options: a reader before it would replay without */
 #define ORACLES_ROUTE_FORMAT_DIAGONAL 6    /* written with the transitions' diagonal among the options: the same */
+#define ORACLES_ROUTE_FORMAT_CHEATS 7      /* written with a cheat among the options: the same */
+#define ORACLES_ROUTE_FORMAT_CHEAT_VERB 8  /* written with a `cheat` line, a cheat changed during the session: a verb a reader before it does not know */
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
     char game[16];        /* "ages" or "seasons" */
     char rom_sha1[41];
     char sram_sha1[41];   /* SHA-1 of the SRAM loaded before the run, or "none" */
-    char options[96];     /* the gameplay options the session ran with, comma-separated ("continuous-transitions"); empty for none */
+    char options[192];    /* the gameplay options the session ran with, comma-separated ("continuous-transitions"); empty for none */
     char core[48];        /* how the core ran, comma-separated ("joypad-bouncing-off", "mgba"); empty in the routes recorded before the core's joypad bouncing was cut */
     char mods[1024];      /* the mods the session ran, "NAME@SHA1,..." in the order of their names; empty for none */
     char store_sha1[41];  /* with mods: SHA-1 of the mods' storage the run starts from (ROUTE.store), or "none"; empty in routes before it */
@@ -31,8 +33,11 @@ typedef struct OraclesRouteHeader {
 #define ORACLES_ROUTE_OPTION_LANGUAGE "language-"   /* and the language's code ("language-fr"): the texts the route was played in */
 #define ORACLES_ROUTE_OPTION_SWIM_HOLD "swim-hold"   /* the swim's strokes started by a held button */
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL "continuous-diagonal"   /* with the transitions: a diagonal held carries Link across their axis too */
+#define ORACLES_ROUTE_OPTION_CHEAT "cheat-"   /* and a cheat's name ("cheat-no-damage"): a cheat on from the start; a `cheat` line changes one later */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);
+/* Whether it names a cheat (an option after ORACLES_ROUTE_OPTION_CHEAT), which the guest's oracles_cheats_parse reads. */
+int oracles_route_has_cheat(const OraclesRouteHeader *header);
 /* The language the route was played in ("fr"), "" for the game's own English. */
 const char *oracles_route_language(const OraclesRouteHeader *header, char *out, size_t capacity);
 /* Whether a session in `language` (NULL or "en" for the game's English) replays the route: a text's length paces its
@@ -66,6 +71,14 @@ typedef struct OraclesRouteAction {
     uint8_t button, item;                           /* use: the carrier slot (0 B, 1 A) and the item */
 } OraclesRouteAction;
 
+/* Format 8, `cheat <name> on|off`: a cheat changed at the start of that frame (from the pause menu), its name as the
+ * guest's oracles_cheats_parse reads it ("rupees"), which the replayer checks. */
+typedef struct OraclesRouteCheat {
+    uint32_t frame;
+    char name[16];
+    int on;
+} OraclesRouteCheat;
+
 typedef struct OraclesRoute {
     OraclesRouteHeader header;
     unsigned format;
@@ -74,6 +87,8 @@ typedef struct OraclesRoute {
     size_t capacity;
     OraclesRouteAction *actions;            /* in the file's order: non-decreasing frames */
     size_t action_count, action_capacity;
+    OraclesRouteCheat *cheats;              /* the `cheat` lines, apart from the item hotkeys' actions, in the file's order */
+    size_t cheat_count, cheat_capacity;
 } OraclesRoute;
 
 /* Reads a route file; returns 0, or -1 with a message. The caller frees with oracles_route_free. */
@@ -82,6 +97,8 @@ void oracles_route_free(OraclesRoute *route);
 
 /* The actions of `frame`: the index of the first and their number (in the file's order). */
 size_t oracles_route_actions_at(const OraclesRoute *route, uint32_t frame, size_t *first);
+/* The `cheat` lines of `frame`, the same. */
+size_t oracles_route_cheats_at(const OraclesRoute *route, uint32_t frame, size_t *first);
 
 /* Key mask in force at `frame`; returns 0 when the route has ended (frame is past its last event). */
 /* The frame of the route's last line, of whatever verb: the route lasts until then. */
@@ -93,12 +110,15 @@ typedef struct OraclesRouteWriter {
     FILE *file;
     unsigned last_mask;
     int has_last;
+    int format;   /* the header's */
 } OraclesRouteWriter;
 
 int oracles_route_writer_open(OraclesRouteWriter *writer, const char *path, const OraclesRouteHeader *header);
 void oracles_route_writer_record(OraclesRouteWriter *writer, uint32_t frame, unsigned mask);
 /* An `equip` or `use` line; 0, or -1 when the action cannot be written (a slot or a variant out of range). */
 int oracles_route_writer_action(OraclesRouteWriter *writer, const OraclesRouteAction *action);
+/* A `cheat` line, the header's format raised to 8 at the first; 0, or -1 for a name the line cannot carry. */
+int oracles_route_writer_cheat(OraclesRouteWriter *writer, uint32_t frame, const char *name, int on);
 int oracles_route_writer_close(OraclesRouteWriter *writer);
 
 #endif

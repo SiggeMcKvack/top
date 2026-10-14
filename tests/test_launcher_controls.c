@@ -198,13 +198,13 @@ static void pause_menu(void)
     oracles_home_init(&nav);
     oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
-    static const char *const labels[6] = { "Resume", "Save state", "Load state", "Controls", "Display", "Quit to launcher" };
-    CHECK(oracles_home_items(&nav, items) == 6);
+    static const char *const labels[7] = { "Resume", "Save state", "Load state", "Controls", "Display", "Cheats", "Quit to launcher" };
+    CHECK(oracles_home_items(&nav, items) == 7);
     /* No key's note; Load state greyed while there is no savestate, its time once there is one. */
-    for (int i = 0; i < 6; i++) CHECK(!strcmp(items[i].label, labels[i]) && items[i].disabled == (i == 2));
+    for (int i = 0; i < 7; i++) CHECK(!strcmp(items[i].label, labels[i]) && items[i].disabled == (i == 2));
     CHECK(!items[1].note && !items[2].note && !strcmp(items[2].reason, "No savestate yet") && oracles_home_click(&nav, 2) == ORACLES_HOME_STAY);
     oracles_home_hover(&nav, 0); snprintf(nav.load_note, sizeof nav.load_note, "from 22:14");
-    CHECK(oracles_home_items(&nav, items) == 6 && !items[2].disabled && !strcmp(items[2].note, "from 22:14"));
+    CHECK(oracles_home_items(&nav, items) == 7 && !items[2].disabled && !strcmp(items[2].note, "from 22:14"));
     char state[ORACLES_HOME_STATE_LENGTH];
     oracles_home_state(&nav, ORACLES_HOME_HERO_AGES, state);
     CHECK(!strcmp(state, "Paused \xc2\xb7 Profile: Enhanced"));
@@ -213,14 +213,17 @@ static void pause_menu(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_RESUME);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.entry == ORACLES_HOME_AGES);
     CHECK(oracles_home_click(&nav, 1) == ORACLES_HOME_SAVE_STATE && oracles_home_click(&nav, 2) == ORACLES_HOME_LOAD_STATE);
-    CHECK(oracles_home_click(&nav, 5) == ORACLES_HOME_QUIT_GAME);
-    /* Controls and Display from the pause come back to it, on their entry. */
+    CHECK(oracles_home_click(&nav, 6) == ORACLES_HOME_QUIT_GAME);
+    /* Controls, Display and Cheats from the pause come back to it, on their entry. */
     CHECK(oracles_home_click(&nav, 3) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_CONTROLS);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     CHECK(nav.screen == ORACLES_SCREEN_PAUSE && oracles_home_focus(&nav) == 3);
     CHECK(oracles_home_click(&nav, 4) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     CHECK(nav.screen == ORACLES_SCREEN_PAUSE && oracles_home_focus(&nav) == 4);
+    CHECK(oracles_home_click(&nav, 5) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_CHEATS && nav.row == 0);
+    oracles_home_act(&nav, ORACLES_HOME_BACK);
+    CHECK(nav.screen == ORACLES_SCREEN_PAUSE && oracles_home_focus(&nav) == 5);
     /* Under 960 pixels wide: Resume, Save state, Load state, Quit to launcher. */
     oracles_home_pause(&nav, ORACLES_HOME_GAME_SEASONS, ORACLES_PROFILE_FAITHFUL, 1);
     CHECK(oracles_home_items(&nav, items) == 4);
@@ -499,7 +502,7 @@ static void pause_4_3(void)
     nav.layout = ORACLES_UI_LAYOUT_4_3;
     oracles_home_pause(&nav, ORACLES_HOME_GAME_MOONRISE, ORACLES_PROFILE_ENHANCED, oracles_ui_layout_narrow(nav.layout, 640));
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
-    CHECK(oracles_home_items(&nav, items) == 6 && !strcmp(items[3].label, "Controls"));
+    CHECK(oracles_home_items(&nav, items) == 6 && !strcmp(items[3].label, "Controls"));   /* a fan game's: no Cheats */
     CHECK(oracles_home_click(&nav, 3) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_CONTROLS);
     CHECK(oracles_controls_tab(&nav) == ORACLES_CONTROLS_TAB_BUTTONS && nav.controls.row == 0);
     oracles_home_act(&nav, ORACLES_HOME_UP);
