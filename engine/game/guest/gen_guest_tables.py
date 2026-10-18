@@ -307,6 +307,26 @@ DISASM_CONSTANTS = [
     ("cutscene_din_imprisoned", "common/cutsceneIndices.s", "CUTSCENE_S_DIN_IMPRISONED", "seasons"),
     ("cutscene_temple_sinking", "common/cutsceneIndices.s", "CUTSCENE_S_TEMPLE_SINKING", "seasons"),
     ("cutscene_onox_taunting", "common/cutsceneIndices.s", "CUTSCENE_S_ONOX_TAUNTING", "seasons"),
+    # The cutscenes it frames while the status bar is off the screen: those that show full-screen pictures (a scene's
+    # graphics header and tile map, gfxRegisterStates 4 or 9) or a room without the bar (gfxRegisterStates $13) between
+    # rooms they play with it.  Ages: the black tower's three explanations, Veran beaten, the flames of sorrow and
+    # despair, the tower complete (miscCutscenes.s, endgameCutscenes.s, linkedGameCutscenes.s); Seasons: Din's crystal,
+    # the flame of destruction, the princess taken; both: the room of rites collapsing and the credits.  A fan game's own
+    # (CUTSCENE_THE_END_SCREEN) is 0xff in both.  And the fade-outs before a warp (cutscene03 to cutscene05, bank1.s),
+    # which show the screen left until the LCD goes off: framed too while it has no bar (a picture's warp out).
+    ("cutscene_black_tower_explanation", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_EXPLANATION", "ages"),
+    ("cutscene_black_tower_escape", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_ESCAPE", "ages"),
+    ("cutscene_flame_of_sorrow", "common/cutsceneIndices.s", "CUTSCENE_FLAME_OF_SORROW", "ages"),
+    ("cutscene_flame_of_despair", "common/cutsceneIndices.s", "CUTSCENE_FLAME_OF_DESPAIR", "ages"),
+    ("cutscene_black_tower_complete", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_COMPLETE", "ages"),
+    ("cutscene_din_crystal_descending", "common/cutsceneIndices.s", "CUTSCENE_S_DIN_CRYSTAL_DESCENDING", "seasons"),
+    ("cutscene_flame_of_destruction", "common/cutsceneIndices.s", "CUTSCENE_S_FLAME_OF_DESTRUCTION", "seasons"),
+    ("cutscene_princess_kidnapped", "common/cutsceneIndices.s", "CUTSCENE_S_ZELDA_KIDNAPPED", "seasons"),
+    ("cutscene_room_of_rites_collapse", "common/cutsceneIndices.s", "CUTSCENE_{s}ROOM_OF_RITES_COLLAPSE"),
+    ("cutscene_credits", "common/cutsceneIndices.s", "CUTSCENE_{s}CREDITS"),
+    ("cutscene_the_end_screen", "common/cutsceneIndices.s", "CUTSCENE_THE_END_SCREEN"),
+    ("cutscene_03", "common/cutsceneIndices.s", "CUTSCENE_{s}03"), ("cutscene_04", "common/cutsceneIndices.s", "CUTSCENE_{s}04"),
+    ("cutscene_05", "common/cutsceneIndices.s", "CUTSCENE_{s}05"),
     ("interac_wild_tokay_controller", "{game}/interactions.s", "INTERAC_WILD_TOKAY_CONTROLLER"),
     ("interac_golden_cave_subrosian", "{game}/interactions.s", "INTERAC_GOLDEN_CAVE_SUBROSIAN"),
     ("tilesetflag_bit_sidescroll", "common/tilesetFlags.s", "TILESETFLAG_BIT_SIDESCROLL"),

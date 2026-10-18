@@ -198,6 +198,9 @@ unsigned oracles_enhanced_view_uncovered(const OraclesEnhancedView *view);
 void oracles_enhanced_view_shown(const OraclesEnhancedView *view, unsigned *width, unsigned *height);
 /* Frames shown framed because the game drew its area elsewhere than its camera (a cutscene's pan or flash). */
 unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *view);
+/* World frames shown while a cutscene held the game with its area drawn elsewhere than its camera, a room's load
+ * included, waves and shakes apart: a picture the band placed at the camera's spot.  None is meant. */
+unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *view);
 /* Frames shown in the band with the game's per-line scroll (under water, the strange force). */
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *view);
 /* Frames shown in the band shaken whole with the game's screen shake (a gate, a bomb, a boss). */

@@ -1,7 +1,8 @@
 /* The drawn-back view without a ROM: the geometry of a 480x270
  * surface in the camera's world math, the compositor and the view on a
  * synthetic core, the refusal of a savestate taken at the other size, and,
- * at both sizes, the scenes of both games' intros the band shows or frames, and the
+ * at both sizes, the scenes of both games' intros the band shows or frames, the
+ * pictures their cutscenes show between rooms, and the
  * ghost's captures of a fade, never kept. */
 #include "camera.h"
 #include "compositor.h"
@@ -244,7 +245,7 @@ static void ripple(void)
 
 /* A synthetic core running `jr -2`, whose WRAM the test writes as the game would. */
 typedef struct rig { uint8_t *rom; OraclesCore *core; OraclesGuest *guest; } rig;
-static int rig_start_game(rig *r, OraclesGame game)
+static int rig_start_profile(rig *r, const OraclesCompatProfile *profile)
 {
     const size_t size = 1024u * 1024u;
     r->rom = calloc(size, 1);
@@ -254,9 +255,10 @@ static int rig_start_game(rig *r, OraclesGame game)
     r->rom[0x150] = 0x18; r->rom[0x151] = 0xfe;
     const OraclesCoreOptions options = { 0, 0, ORACLES_CORE_SAMEBOY, 0 };
     r->core = oracles_core_create(r->rom, size, &options);
-    r->guest = r->core ? oracles_guest_attach(r->core, original_profile(game)) : NULL;
+    r->guest = r->core && profile ? oracles_guest_attach(r->core, profile) : NULL;
     return r->guest != NULL;
 }
+static int rig_start_game(rig *r, OraclesGame game) { return rig_start_profile(r, original_profile(game)); }
 static int rig_start(rig *r) { return rig_start_game(r, ORACLES_GAME_AGES); }
 static void rig_stop(rig *r)
 {
@@ -647,6 +649,109 @@ static void seasons_scenes(void)
     }
 }
 
+/* The cutscenes that show full-screen pictures between rooms (the black
+ * tower's explanations, the endings, the credits, the flames lit in the room
+ * of rites), on each game that has them, at both sizes: framed while the
+ * status bar is off the screen (wGfxRegs1 splitting it nowhere, or on its
+ * first line), in the band while the bar shows (Ambi's room after the
+ * tower), the screen variables cleared as clearScreenVariablesAndWramBank1
+ * leaves them, which the observation takes for a load in the room it has.
+ * A warp's fade-out (cutscene03 to cutscene05) is framed the same way: from
+ * a picture, not from play.  The scenes played in the room itself stay in
+ * the band, the bar shown or not. */
+static unsigned scene_world_frames(rig *r, OraclesEnhancedView *view, const OraclesGuestTables *t, uint8_t cutscene, uint8_t lyc, int cleared)
+{
+    uint8_t *w0 = oracles_guest_wram_writable(r->guest, 0);
+    #define W0(sym) w0[(sym).addr - 0xc000u]
+    W0(t->cutscene_index) = cutscene; W0(t->scroll_mode) = cleared ? 0 : 1; W0(t->screen_transition_state) = cleared ? 0 : 2;
+    w0[t->gfx_regs1.addr + 5u - 0xc000u] = lyc;
+    OraclesEnhancedMode mode = ORACLES_ENHANCED_FRAMED;
+    int32_t cam = 0, cam_y = 0;
+    unsigned world = 0;
+    for (unsigned i = 0; i < 10u; i++) { frames(r, view, 1, &mode, &cam, &cam_y); world += mode == ORACLES_ENHANCED_WORLD; }
+    W0(t->cutscene_index) = 1; W0(t->scroll_mode) = 1; W0(t->screen_transition_state) = 2;
+    w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0x0f;
+    frames(r, view, 5, &mode, &cam, &cam_y);
+    CHECK(mode == ORACLES_ENHANCED_WORLD);
+    #undef W0
+    return world;
+}
+
+static void picture_scenes_of(const OraclesCompatProfile *profile, const uint8_t *pictures, unsigned n_pictures, const uint8_t *in_room, unsigned n_in_room)
+{
+    for (int drawn_back = 0; drawn_back < 2; drawn_back++) {
+        rig r;
+        memset(&r, 0, sizeof r);
+        CHECK(rig_start_profile(&r, profile));
+        OraclesEnhancedView *view = r.guest ? oracles_enhanced_view_start(r.core, r.guest, NULL, 0) : NULL;
+        CHECK(view != NULL);
+        if (!view) { rig_stop(&r); return; }
+        oracles_enhanced_view_set_zoom_out(view, drawn_back);
+        const OraclesGuestTables *t = oracles_compat_guest_tables(profile);
+        uint8_t *w0 = oracles_guest_wram_writable(r.guest, 0), *w1 = oracles_guest_wram_writable(r.guest, 1);
+        uint8_t *link = w1 + (ORACLES_OBJECTS_BASE - 0xd000u);
+        #define W0(sym) w0[(sym).addr - 0xc000u]
+        W0(t->game_state) = 2; W0(t->cutscene_index) = 1; W0(t->scroll_mode) = 1; W0(t->screen_transition_state) = 2;
+        W0(t->active_group) = 0; W0(t->active_room) = 0x86; W0(t->room_is_large) = 0;
+        w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0x0f;   /* gfxRegisterStates 2: the bar above the game area */
+        link[ORACLES_OBJ_ENABLED] = 1; link[ORACLES_OBJ_STATE] = 1; link[ORACLES_OBJ_XH] = 80; link[ORACLES_OBJ_YH] = 64;
+        #undef W0
+        OraclesEnhancedMode mode = ORACLES_ENHANCED_FRAMED;
+        int32_t cam = 0, cam_y = 0;
+        frames(&r, view, 40, &mode, &cam, &cam_y);
+        CHECK(mode == ORACLES_ENHANCED_WORLD);
+        for (unsigned k = 0; k < n_pictures; k++) {
+            CHECK(pictures[k] != 0xffu);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x0f, 0) == 10u);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x0f, 1) == 10u);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 1) == 0);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 0) == 0);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x00, 1) == 0);
+        }
+        for (unsigned k = 0; k < n_in_room; k++) {
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0x0f, 0) == 10u);
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0xc7, 1) == 10u);
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0x00, 0) == 10u);
+        }
+        oracles_enhanced_view_stop(view);
+        rig_stop(&r);
+    }
+}
+
+static void picture_scenes(void)
+{
+    /* Ages and the fan games on its engine: the explanations of the black tower, Veran beaten, the credits, the room of
+     * rites collapsing, the flames of sorrow and despair, the tower complete; in the room: Nayru's song, a wall
+     * retracting, the Wing Dungeon collapsing, Jabu-Jabu opening, Ambi's passage, the seas cleaned, the fairies hiding,
+     * the palace's guard, the people turned to stone, the princess taken, the pirates' ship (Seasons) in its window. */
+    const OraclesGuestTables *a = &oracles_guest_tables_ages, *s = &oracles_guest_tables_seasons;
+    CHECK(a->cutscene_black_tower_explanation == 0x08u && a->cutscene_black_tower_escape == 0x09u && a->cutscene_credits == 0x0au
+          && a->cutscene_room_of_rites_collapse == 0x0fu && a->cutscene_flame_of_sorrow == 0x11u && a->cutscene_flame_of_despair == 0x20u
+          && a->cutscene_black_tower_complete == 0x21u && a->cutscene_din_crystal_descending == 0xffu && a->cutscene_flame_of_destruction == 0xffu
+          && a->cutscene_princess_kidnapped == 0xffu && a->cutscene_the_end_screen == 0xffu);
+    CHECK(s->cutscene_din_crystal_descending == 0x09u && s->cutscene_credits == 0x0au && s->cutscene_room_of_rites_collapse == 0x0fu
+          && s->cutscene_flame_of_destruction == 0x10u && s->cutscene_princess_kidnapped == 0x12u && s->cutscene_black_tower_explanation == 0xffu
+          && s->cutscene_black_tower_escape == 0xffu && s->cutscene_flame_of_sorrow == 0xffu && s->cutscene_flame_of_despair == 0xffu
+          && s->cutscene_black_tower_complete == 0xffu && s->cutscene_the_end_screen == 0xffu);
+    const uint8_t ages_pictures[] = { 0x03, 0x04, 0x05, 0x08, 0x09, 0x0a, 0x0f, 0x11, 0x20, 0x21 };
+    const uint8_t ages_in_room[] = { 0x06, 0x0b, 0x1a, 0x1d, 0x1c, 0x1e, 0x13, 0x14, 0x10, 0x12 };
+    const uint8_t seasons_pictures[] = { 0x03, 0x04, 0x05, 0x09, 0x0a, 0x0f, 0x10, 0x12 };
+    const uint8_t seasons_in_room[] = { 0x06, 0x0b, 0x0c };
+    /* Gifts of Kinomi's credits are a stub that never runs (0xff), and its own end screen (0x22) is a picture. */
+    const uint8_t kinomi_pictures[] = { 0x03, 0x04, 0x05, 0x08, 0x09, 0x0f, 0x11, 0x20, 0x21, 0x22 };
+    picture_scenes_of(original_profile(ORACLES_GAME_AGES), ages_pictures, sizeof ages_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(original_profile(ORACLES_GAME_SEASONS), seasons_pictures, sizeof seasons_pictures, seasons_in_room, sizeof seasons_in_room);
+    const OraclesRomInfo moonrise = { .game = ORACLES_GAME_AGES, .revision = ORACLES_ROM_REVISION_MOONRISE_1_0_6, .known = 1 };
+    const OraclesRomInfo temple = { .game = ORACLES_GAME_SEASONS, .revision = ORACLES_ROM_REVISION_TEMPLE_1_073, .known = 1 };
+    const OraclesRomInfo kinomi = { .game = ORACLES_GAME_AGES, .revision = ORACLES_ROM_REVISION_KINOMI_1_1_2, .known = 1 };
+    CHECK(oracles_compat_find(&moonrise) && oracles_compat_find(&temple) && oracles_compat_find(&kinomi));
+    if (!oracles_compat_find(&moonrise) || !oracles_compat_find(&temple) || !oracles_compat_find(&kinomi)) return;
+    CHECK(oracles_compat_guest_tables(oracles_compat_find(&kinomi))->cutscene_credits == 0xffu);
+    picture_scenes_of(oracles_compat_find(&moonrise), ages_pictures, sizeof ages_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(oracles_compat_find(&kinomi), kinomi_pictures, sizeof kinomi_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(oracles_compat_find(&temple), seasons_pictures, sizeof seasons_pictures, seasons_in_room, sizeof seasons_in_room);
+}
+
 /* The black the band shows, counted by the view for the harness and the
  * launcher: without a ghost every room around the one in play stays black,
  * and each is a room black whole once past the threshold, counted from the
@@ -855,6 +960,7 @@ int main(void)
     stairs_walk();
     cutscenes();
     seasons_scenes();
+    picture_scenes();
     blank_captures();
     black_count();
     black_kinds();

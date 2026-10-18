@@ -537,6 +537,7 @@ struct OraclesEnhancedView {
     int source_pipeline;
     unsigned uncovered;              /* world-band pixels without a source in the last composed frame */
     unsigned off_camera_frames;      /* frames the game drew its area elsewhere than its camera: framed */
+    unsigned world_off_camera_frames;   /* world frames a cutscene drew elsewhere than its camera (oracles_enhanced_view_world_off_camera_frames) */
     unsigned wave_frames;            /* frames the game scrolled its area line by line (under water, the strange force): shown in the band, waves and all */
     unsigned shake_frames;           /* frames the game shook its screen (updateScreenShake): shown in the band, shaken whole */
     unsigned shake_history;          /* bit n: the shake under way n + 1 observations ago (the image on screen shows the registers of a logic run one or more observations before) */

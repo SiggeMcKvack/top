@@ -61,6 +61,8 @@ typedef struct run {
     unsigned dumps;               /* --dump-at, as many times as wanted */
     uint32_t dump_at[HARNESS_MAX_DUMPS];
     const char *dump_path[HARNESS_MAX_DUMPS];
+    harness_poke pokes[HARNESS_MAX_POKES];   /* --poke-at */
+    unsigned poke_count;
     OraclesModSession *mod;   /* --mods */
     OraclesLanguageSession *language;   /* --language */
     OraclesGame game;
@@ -213,6 +215,12 @@ static void on_frame_end(void *opaque, uint32_t frame)
         oracles_guest_journal(r->guest, &count);
         r->journal_writes += count;
         oracles_guest_journal_clear(r->guest);
+    }
+    for (unsigned p = 0; p < r->poke_count; p++) if (frame == r->pokes[p].frame) {   /* after the frame's checks: the next frame runs with it */
+        const OraclesGuestSym sym = { r->pokes[p].bank, r->pokes[p].addr };
+        uint8_t *byte = (uint8_t *)oracles_guest_ptr(bus, sym, 1);
+        if (byte) *byte = r->pokes[p].value;
+        else fprintf(stderr, "harness: --poke-at %u %x:%04x: no such byte\n", frame, r->pokes[p].bank, r->pokes[p].addr);
     }
     if (transient) oracles_guest_detach(bus);
 }
@@ -761,6 +769,7 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     r->corrupt_at = o->corrupt_at;
     r->colour_toggle_at = o->colour_toggle_at;
     r->dumps = o->dumps; memcpy(r->dump_at, o->dump_at, sizeof r->dump_at); memcpy(r->dump_path, o->dump_path, sizeof r->dump_path);
+    r->poke_count = o->poke_count; memcpy(r->pokes, o->pokes, sizeof r->pokes);
     if (o->out_path) { r->out = fopen(o->out_path, "wb"); if (!r->out) { fprintf(stderr, "harness: cannot write %s\n", o->out_path); return 1; } }
     if (o->positions_path) { r->positions = fopen(o->positions_path, "wb"); if (!r->positions) { fprintf(stderr, "harness: cannot write %s\n", o->positions_path); return 1; } }
     if (o->frame_times_path) { r->frame_times = fopen(o->frame_times_path, "wb"); if (!r->frame_times) { fprintf(stderr, "harness: cannot write %s\n", o->frame_times_path); return 1; } fputs("frame\tcore_us\tsource_us\tpresent_us\tend_us\n", r->frame_times); }

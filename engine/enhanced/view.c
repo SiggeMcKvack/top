@@ -580,6 +580,7 @@ int oracles_enhanced_view_isolated(const OraclesEnhancedView *v) { return ev_iso
 unsigned oracles_enhanced_view_uncovered(const OraclesEnhancedView *v) { return v->uncovered; }
 void oracles_enhanced_view_shown(const OraclesEnhancedView *v, unsigned *width, unsigned *height) { *width = v->shown_width; *height = v->shown_height; }
 unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *v) { return v->off_camera_frames; }
+unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *v) { return v->world_off_camera_frames; }
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *v) { return v->wave_frames; }
 unsigned oracles_enhanced_view_shake_frames(const OraclesEnhancedView *v) { return v->shake_frames; }
 unsigned oracles_enhanced_view_waiting_frames(const OraclesEnhancedView *v) { return v->waiting_frames; }

@@ -8,6 +8,10 @@
 #include <stdint.h>
 
 #define HARNESS_MAX_DUMPS 64u
+#define HARNESS_MAX_POKES 64u
+
+/* A byte of WRAM written at the end of a frame (--poke-at): a test's way into a scene no route reaches. */
+typedef struct harness_poke { uint32_t frame; uint8_t bank; uint16_t addr; uint8_t value; } harness_poke;
 
 /* What the command line asks of a run. */
 typedef struct harness_options {
@@ -23,6 +27,8 @@ typedef struct harness_options {
     uint32_t dump_at[HARNESS_MAX_DUMPS];
     const char *dump_path[HARNESS_MAX_DUMPS];
     unsigned dumps;
+    harness_poke pokes[HARNESS_MAX_POKES];
+    unsigned poke_count;
     uint32_t surface_at[16];                  /* --surface-at, with the Enhanced check */
     const char *surface_path[16];
     unsigned surfaces;

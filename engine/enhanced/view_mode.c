@@ -92,6 +92,35 @@ static int area_drawn_off_camera(OraclesEnhancedView *v)
     return dx != 0 || dy != 0;
 }
 
+/* Whether the status bar is off the screen: the game splits the screen below
+ * the bar (wGfxRegs1.LYC, 15 in play: the LCD interrupt loads the game area's
+ * registers there); a screen of its own splits it nowhere (the registers of
+ * the first line hold for all 144, gfxRegisterStates 4, 9 or $13) or on the
+ * first line (blackTowerCompleteCutsceneHandler writes 0). */
+static int status_bar_off(OraclesEnhancedView *v)
+{
+    const uint8_t *regs = oracles_guest_ptr(v->guest, oracles_guest_tables(v->guest)->gfx_regs1, 6u);
+    return regs && (regs[5] == 0 || regs[5] >= ORACLES_PPU_HEIGHT);
+}
+
+/* The cutscenes that show full-screen pictures, or a room without its status
+ * bar, between rooms they play with it (the endings, the credits, the black
+ * tower's explanations, the flames lit in the room of rites): framed while
+ * the bar is off, in the band with the rooms.  So is the fade-out before a
+ * warp (cutscene03 to cutscene05) while the LCD is on: it shows the screen
+ * left, a picture's warp out, never the bar of play; the blank after it is
+ * a load's, as any warp's. */
+static int picture_cutscene(const OraclesGuestTables *t, uint8_t cutscene, int lcd_on)
+{
+    if (cutscene == t->cutscene_03 || cutscene == t->cutscene_04 || cutscene == t->cutscene_05) return lcd_on;
+    return cutscene == t->cutscene_black_tower_explanation || cutscene == t->cutscene_black_tower_escape
+        || cutscene == t->cutscene_flame_of_sorrow || cutscene == t->cutscene_flame_of_despair
+        || cutscene == t->cutscene_black_tower_complete || cutscene == t->cutscene_din_crystal_descending
+        || cutscene == t->cutscene_flame_of_destruction || cutscene == t->cutscene_princess_kidnapped
+        || cutscene == t->cutscene_room_of_rites_collapse || cutscene == t->cutscene_credits
+        || cutscene == t->cutscene_the_end_screen;
+}
+
 /* The ring menu and cutscenes (LCD behaviours 5 and 6), a scanned window and
  * a game area drawn elsewhere than the camera are not part of the wide
  * world: they use the framed fallback. */
@@ -112,11 +141,12 @@ static int framed_frame_menus(OraclesEnhancedView *v)
     if (v->observation.playing && cutscene != 0xffu
         && (cutscene == t->cutscene_pregame_intro || cutscene == t->cutscene_din_imprisoned
             || cutscene == t->cutscene_temple_sinking || cutscene == t->cutscene_onox_taunting)) return 1;
+    const uint8_t *io = oracles_guest_io(v->guest);
+    if (v->observation.playing && cutscene != 0xffu && picture_cutscene(t, cutscene, io && (io[IO_LCDC] & 0x80u)) && status_bar_off(v)) return 1;
     /* An open menu (wOpenedMenuType: the inventory, the map, save and quit,
      * the ring appraisal, the warp menu...) draws its screens with the
      * game's own background map and registers: not part of the world. */
     if (oracles_guest_read8(v->guest, t->opened_menu_type) != 0) return 1;
-    const uint8_t *io = oracles_guest_io(v->guest);
     if (io && (io[IO_LCDC] & 0x20u) && io[IO_WY] < 144u && io[IO_WX] <= 166u) return 1;
     return 0;
 }
@@ -160,6 +190,9 @@ OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
     v->framed_load = !v->framed_only && !menus && !off_camera && (ob->loading_room || (ob->playing && (loading || room_load || ob->link_warping)));
     if (v->framed_only || !ob->playing || loading || menus || off_camera || !tracking) return ORACLES_ENHANCED_FRAMED;
     v->framed_load = 0;
+    /* A cutscene's world frame drawn elsewhere than the camera, which the off-camera rule let through as a load:
+     * counted, never meant (the room left loaded is the camera's, the image on screen is not). */
+    if (ob->cutscene && !v->have_wave && area_drawn_off_camera(v)) v->world_off_camera_frames++;
     return ORACLES_ENHANCED_WORLD;
 }
 

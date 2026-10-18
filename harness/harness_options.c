@@ -36,6 +36,7 @@ int harness_usage(void)
                     "                       [--hotkeys-live use|equip] [--hotkey-slot N=<b|a>:<item>:<variant or -->]... [--hotkey-press FRAME:SLOT:FRAMES]... [--hotkeys-record ROUTE]\n"
                     "                                                (the live policy with scripted keys over the route's inputs, and the format 2 route of that session)\n"
                     "                       [--surface-at FRAME FILE.ppm]...   (with --enhanced-check: the surface composed at that frame, to look at)\n"
+                    "                       [--poke-at FRAME BANK:ADDR=VALUE]...   (a byte of WRAM written at the end of that frame, in hexadecimal (0:cc04=08): a test's way into a scene no route reaches, the variables the game's own caller sets)\n"
                     "                       [--dump-at FRAME FILE]...   (the live state at the end of that frame, dead memory zeroed: WRAM bank 0 then HRAM, to name the bytes two replays differ by)\n"
                     "                       [--summary FILE]   (the figures of every check as key=value lines, for tools/check_routes.py)\n"
                     "       oracles-harness --compare A.tsv B.tsv\n"
@@ -138,6 +139,18 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         else if (!strcmp(argv[i], "--hotkey-press") && i + 1 < argc) { if (!oracles_hotkeys_live_parse_press(&o->hotkeys_live, argv[++i])) return -1; }
         else if (!strcmp(argv[i], "--hotkeys-record") && i + 1 < argc) o->hotkeys_live.record_path = argv[++i];
         else if (!strcmp(argv[i], "--dump-at") && i + 2 < argc && o->dumps < HARNESS_MAX_DUMPS) { o->dump_at[o->dumps] = (uint32_t)strtoul(argv[++i], NULL, 10); o->dump_path[o->dumps++] = argv[++i]; }
+        else if (!strcmp(argv[i], "--poke-at") && i + 2 < argc && o->poke_count < HARNESS_MAX_POKES) {
+            harness_poke *p = &o->pokes[o->poke_count];
+            unsigned bank = 0, addr = 0, value = 0;
+            char rest = 0;
+            p->frame = (uint32_t)strtoul(argv[++i], NULL, 10);
+            if (sscanf(argv[++i], "%x:%x=%x%c", &bank, &addr, &value, &rest) != 3 || addr < 0xc000u || addr > 0xdfffu || bank > 7u || value > 0xffu) {
+                fprintf(stderr, "harness: --poke-at FRAME BANK:ADDR=VALUE, in hexadecimal, a byte of WRAM ($c000-$dfff), not %s\n", argv[i]);
+                return -1;
+            }
+            p->bank = (uint8_t)bank; p->addr = (uint16_t)addr; p->value = (uint8_t)value;
+            o->poke_count++;
+        }
         else if (!strcmp(argv[i], "--surface-at") && i + 2 < argc && o->surfaces < 16u) { o->surface_at[o->surfaces] = (uint32_t)strtoul(argv[++i], NULL, 10); o->surface_path[o->surfaces++] = argv[++i]; }
         else if (!strcmp(argv[i], "--summary") && i + 1 < argc) o->summary_path = argv[++i];
         else if (!strcmp(argv[i], "--neighbour-objects-check") && i + 1 < argc) o->objects_dir = argv[++i];
