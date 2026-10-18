@@ -30,16 +30,17 @@ Most of this release answers what players asked for after 1.1.0, many of them on
 ### Fixed
 
 - In the drawn-back view (Medium and Far), far rooms are prepared a little before they come into view, so their corners show black much less often at the edges of the screen, swimming in particular.
-- In Far, when Link first reaches the past in Ages, the room two screens to his left, past the grove where Moblins attack the Maku sapling, no longer stays black for some fifteen seconds, nor the room past it once Link walks down below the grove: they now fill in within about two seconds. The same goes for the rooms beyond any other room that starts a scene as Link enters it.
+- In Far, when Link first reaches the past in Ages, the rooms to his left, past the Maku sapling's grove, now fill in much faster instead of staying black. The same goes for the rooms beyond any other room that starts a scene as Link enters it.
 - At each door, while the next room loads, the status bar keeps its look from play (full width, with the item hotkeys) instead of switching for a moment to its original, narrow form.
 - After the season changes in Seasons (crossing into an area of another season, or with the Rod of Seasons), and after a game loads, a piece of the season's or era's banner no longer stays drawn over the scenery for a frame.
 - Enemies of the room Link leaves no longer vanish at the edge of the game's own screen during the scroll: they stay where they were and fade out once it ends, as the ones of the room entered fade in.
 - Walking diagonally or on stairs in Enhanced, Link no longer shakes a pixel back and forth against the screen. The fix in 1.1.0 was not enough; the camera now follows Link where the picture draws him.
+- With Continuous transitions, Link no longer vanishes for a few frames as he crosses a room's edge in Enhanced, swimming at the surface across the bottom of a room or walking across its left edge.
 - Entering or leaving a house or a shop with the game's menus enlarged (the default on Android) no longer shows the room enlarged before it shrinks back: the room stays at the view's scale while it loads.
 - With the Fast (mGBA) core on Windows, mods could misbehave; they now play as on the other platforms.
 - In Gifts of Kinomi, the caves made of several rooms (east of the map) now show in Medium and Far with the rooms they open onto, instead of a single screen framed in black.
-- In Enhanced, the cutscenes that draw a picture over the whole screen now show it framed, as the game draws it, instead of amid the scenery with its top in the status bar and a line of its text copied above it: in Ages, the black tower's story (the worker at its building site, Ambi after the third dungeon, Twinrova), Veran's defeat and the ending; in Seasons, Din's crystal after Onox; in both games, the flames lit in the Room of Rites, the Room of Rites collapsing and the credits; and the same scenes in the fan games. The rooms these scenes play in stay in the wide view.
-- When a scene darkens the screen in Enhanced (night falling on Lynna as Nayru is possessed in Ages' introduction, Onox's arrival in Seasons'), the neighbouring rooms now darken with it, instead of the game's own screen standing as a dark rectangle in a bright world.
+- In Enhanced, the cutscenes that draw a picture over the whole screen (the story of the tower told by a worker in Ages, and other scenes of both games and the fan games) now show it framed, as the game draws it, instead of amid the scenery with its top in the status bar and a line of its text copied above it. The rooms these scenes play in stay in the wide view.
+- When a scene darkens the screen in Enhanced (night falling over Lynna in Ages' introduction, a scene of Seasons' introduction), the neighbouring rooms now darken with it, instead of the game's own screen standing as a dark rectangle in a bright world.
 
 ### Android
 

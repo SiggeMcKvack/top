@@ -119,7 +119,7 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
         OraclesUiHome view;
         oracles_ui_home_start(&view, &nav);
         oracles_pause_paint(draw, renderer, image, frame_width, frame_height, presentation == SDL_LOGICAL_PRESENTATION_LETTERBOX, width, height,
-                            &view, &nav, 0.0);
+                            &view, &nav, 0.0, NULL);
         SDL_RenderPresent(renderer);
         if (write_ppm(path, surface)) status = 0;
         else snprintf(error, capacity, "cannot write %s", path);

@@ -36,6 +36,9 @@ typedef struct OraclesPauseSession {
     int device; /* the device that opened the pause (an OraclesInputDevice), which its key hints follow; -1 when not known */
     unsigned cheats;   /* the running game's cheats, --cheats' perhaps, which its Cheats page starts from */
     int has_cheats;    /* its profile has them: else the menu has no Cheats */
+    /* Draws the game's last image into `image`, in the window's pixels, as its last frame showed it (the sub-pixel
+     * camera's band at its fraction of a pixel, Link at his place); NULL: the frame drawn there as it is. */
+    int (*game_image)(void *opaque, SDL_Renderer *renderer, const SDL_FRect *image);
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {
@@ -76,9 +79,10 @@ unsigned oracles_pause_late_glyphs(const OraclesPause *pause);
 
 /* The pause's image on an output of `out_width` x `out_height`: the game's `frame` at its whole scale (with `fill`, as
  * Scaling's Fill shows it in fullscreen: the whole output in its proportions), darkened, and the screen of `nav` over
- * it, in its layout (nav->layout and nav->narrow set for that output); the capture draws it offscreen too.  Returns 1
- * while a transition runs. */
+ * it, in its layout (nav->layout and nav->narrow set for that output); the capture draws it offscreen too.  With
+ * `session` and its game_image, the game's image is drawn by it, `frame` otherwise.  Returns 1 while a transition runs. */
 int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture *frame, int width, int height, int fill,
-                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms);
+                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms,
+                        const OraclesPauseSession *session);
 
 #endif

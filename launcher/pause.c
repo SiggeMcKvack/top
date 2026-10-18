@@ -163,7 +163,8 @@ void oracles_pause_prepare(OraclesPause *pause, SDL_Renderer *renderer)
 }
 
 int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture *frame, int width, int height, int fill,
-                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms)
+                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms,
+                        const OraclesPauseSession *session)
 {
     int moving = 0;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -175,7 +176,8 @@ int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture
         oracles_ui_draw_band_of(draw, out_height, &band_top, &band_height);
         const OraclesTouchBox box = oracles_touch_frame(out_width, band_height, width, height, fill);
         const SDL_FRect image = { box.x, (float)band_top + box.y, box.w, box.h };
-        SDL_RenderTexture(renderer, frame, NULL, &image);
+        if (session && session->game_image) session->game_image(session->opaque, renderer, &image);
+        else SDL_RenderTexture(renderer, frame, NULL, &image);
     }
     /* Darkened, more on the right where the menu is. */
     const SDL_FColor left = { (float)((SHADE >> 16) & 0xffu) / 255.0f, (float)((SHADE >> 8) & 0xffu) / 255.0f, (float)(SHADE & 0xffu) / 255.0f,
@@ -428,7 +430,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
             /* Fill as the session presents it (oracles_sdl_presentation): Scaling, which Display changes here, in fullscreen. */
             const int fill = p.nav.display.scaling && window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
             band(pause, out_w, out_h);
-            p.moving = oracles_pause_paint(pause->draw, renderer, frame, width, height, fill, out_w, out_h, &p.view, &p.nav, now);
+            p.moving = oracles_pause_paint(pause->draw, renderer, frame, width, height, fill, out_w, out_h, &p.view, &p.nav, now, session);
             SDL_RenderPresent(renderer);
             presented = now;
             p.dirty = 0;

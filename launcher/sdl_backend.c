@@ -47,6 +47,10 @@ typedef struct sdl_backend {
     SDL_Texture *texture;
     SDL_Texture *layer;           /* the sub-pixel camera's layer (Link drawn apart), made at its first use */
     int layer_w, layer_h;
+    /* The last frame as it was shown, which the pause shows: moved by the sub-pixel camera (the band, the patch and
+     * the layer as `shown` placed them, the layer's texture holding them when `shown_layered`), or the texture as it is. */
+    oracles_host_video_subpixel shown;
+    int shown_layered, shown_subpixel;
     int frame_width, frame_height;   /* the texture's: the session's surface */
     int logical_w, logical_h;        /* the renderer's logical size: the surface's, or the part shown alone */
     int fill;                        /* Scaling's Fill chosen */
@@ -752,36 +756,81 @@ static float screen_fraction_down(int32_t fraction, float scale)
     return scale >= 1.0f ? SDL_floorf(f * scale) / scale : f;
 }
 
-static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame *frame)
+/* A texture's part drawn at `dst`, in the frame's pixels: through the logical presentation (`to` NULL), or into `to`,
+ * the frame's place in the window's pixels, as the logical presentation maps it there. */
+static int put(SDL_Renderer *r, SDL_Texture *texture, const SDL_FRect *src, const SDL_FRect *dst, const SDL_FRect *to, float sx, float sy)
 {
-    const oracles_host_video_subpixel *sp = frame->subpixel;
+    if (!to) return SDL_RenderTexture(r, texture, src, dst);
+    const SDL_FRect mapped = { to->x + dst->x * sx, to->y + dst->y * sy, dst->w * sx, dst->h * sy };
+    return SDL_RenderTexture(r, texture, src, &mapped);
+}
+
+/* The band, the patch, the layer and the fixed rectangles of `sp` from the texture and the layer as they were last
+ * uploaded (`layered`: the layer's upload succeeded); through the logical presentation, or into `to`, the frame's
+ * place in the window's pixels, cut to it. */
+static int draw_subpixel(sdl_backend *backend, const oracles_host_video_subpixel *sp, int layered, const SDL_FRect *to)
+{
     SDL_Renderer *r = backend->renderer;
-    const float w = (float)frame->width, top = (float)sp->band_top, bh = (float)sp->band_height, h = (float)frame->height;
+    const float w = (float)backend->frame_width, top = (float)sp->band_top, bh = (float)sp->band_height, h = (float)backend->frame_height;
     SDL_FRect area;
     float scale = 0.0f;
-    if (SDL_GetRenderLogicalPresentationRect(r, &area) && area.w > 0.0f) scale = area.w / w;
-    if (scale < 2.0f) return SDL_RenderTexture(r, backend->texture, NULL, NULL);
+    if (to) scale = to->w / w;
+    else if (SDL_GetRenderLogicalPresentationRect(r, &area) && area.w > 0.0f) scale = area.w / w;
+    const float sx = to ? to->w / w : 1.0f, sy = to ? to->h / h : 1.0f;
+    if (scale < 2.0f) return SDL_RenderTexture(r, backend->texture, NULL, to);
     const float fx = screen_fraction(sp->x, scale), fy = screen_fraction(sp->y, scale);
     SDL_FRect src = { 0.0f, top, w, bh }, dst = { -fx, top - fy, w, bh };
-    if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+    if (!put(r, backend->texture, &src, &dst, to, sx, sy)) return 0;
     if (fx != 0.0f) {
         src = (SDL_FRect){ fx > 0.0f ? w - 1.0f : 0.0f, top, 1.0f, bh };
         dst = (SDL_FRect){ fx > 0.0f ? w - fx : 0.0f, top - fy, fx > 0.0f ? fx : -fx, bh };
-        if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+        if (!put(r, backend->texture, &src, &dst, to, sx, sy)) return 0;
     }
     if (fy != 0.0f) {
         src = (SDL_FRect){ 0.0f, fy > 0.0f ? top + bh - 1.0f : top, w, 1.0f };
         dst = (SDL_FRect){ 0.0f, fy > 0.0f ? top + bh - fy : top, w, fy > 0.0f ? fy : -fy };
-        if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+        if (!put(r, backend->texture, &src, &dst, to, sx, sy)) return 0;
     }
     if (top > 0.0f) {
         src = (SDL_FRect){ 0.0f, 0.0f, w, top };
-        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
+        if (!put(r, backend->texture, &src, &src, to, sx, sy)) return 0;
     }
     if (h > top + bh) {
         src = (SDL_FRect){ 0.0f, top + bh, w, h - top - bh };
-        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
+        if (!put(r, backend->texture, &src, &src, to, sx, sy)) return 0;
     }
+    if (layered) {
+        SDL_ScaleMode mode = SDL_SCALEMODE_NEAREST;
+        SDL_GetTextureScaleMode(backend->texture, &mode);
+        SDL_SetTextureScaleMode(backend->layer, mode);
+        /* The patch where the band puts the place he stands, then him at his own place; cut to the band: none of
+         * him over the status bar or below the band. */
+        const int half = (int)sp->layer_pitch;
+        const float lx = screen_fraction_down(sp->layer_fx + sp->x, scale) - fx, ly = screen_fraction_down(sp->layer_fy + sp->y, scale) - fy;
+        for (int pass = 0; pass < 2; pass++) {
+            const float x0 = (float)sp->layer_x + (pass ? lx : -fx), y0 = (float)sp->layer_y + (pass ? ly : -fy);
+            const float cut = top > y0 ? top - y0 : 0.0f;
+            float lh = (float)sp->layer_h - cut;
+            if (y0 + cut + lh > top + bh) lh = top + bh - y0 - cut;
+            if (lh <= 0.0f) continue;
+            src = (SDL_FRect){ pass ? 0.0f : (float)half, cut, (float)sp->layer_w, lh };
+            dst = (SDL_FRect){ x0, y0 + cut, (float)sp->layer_w, lh };
+            if (!put(r, backend->layer, &src, &dst, to, sx, sy)) return 0;
+        }
+    }
+    for (uint32_t i = 0; i < sp->fixed_count && i < ORACLES_HOST_SUBPIXEL_FIXED; i++) {
+        src = (SDL_FRect){ (float)sp->fixed[i][0], (float)sp->fixed[i][1], (float)sp->fixed[i][2], (float)sp->fixed[i][3] };
+        if (!put(r, backend->texture, &src, &src, to, sx, sy)) return 0;
+    }
+    return 1;
+}
+
+/* The layer and the patch uploaded, then the frame drawn moved; kept for the pause, which shows it as it was. */
+static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame *frame)
+{
+    const oracles_host_video_subpixel *sp = frame->subpixel;
+    SDL_Renderer *r = backend->renderer;
+    int layered = 0;
     if (sp->layer && sp->patch && sp->layer_w && sp->layer_h && sp->layer_pitch) {
         /* One texture, the layer in its left half, the patch in its right. */
         if (!backend->layer || backend->layer_w < 2 * (int)sp->layer_pitch || backend->layer_h < (int)sp->layer_pitch) {
@@ -795,31 +844,14 @@ static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame
         }
         const int half = (int)sp->layer_pitch;
         const SDL_Rect part = { 0, 0, (int)sp->layer_w, (int)sp->layer_h }, under = { half, 0, (int)sp->layer_w, (int)sp->layer_h };
-        if (backend->layer && SDL_UpdateTexture(backend->layer, &part, sp->layer, (int)(sp->layer_pitch * sizeof(uint32_t)))
-            && SDL_UpdateTexture(backend->layer, &under, sp->patch, (int)(sp->layer_pitch * sizeof(uint32_t)))) {
-            SDL_ScaleMode mode = SDL_SCALEMODE_NEAREST;
-            SDL_GetTextureScaleMode(backend->texture, &mode);
-            SDL_SetTextureScaleMode(backend->layer, mode);
-            /* The patch where the band puts the place he stands, then him at his own place; cut to the band: none of
-             * him over the status bar or below the band. */
-            const float lx = screen_fraction_down(sp->layer_fx + sp->x, scale) - fx, ly = screen_fraction_down(sp->layer_fy + sp->y, scale) - fy;
-            for (int pass = 0; pass < 2; pass++) {
-                const float x0 = (float)sp->layer_x + (pass ? lx : -fx), y0 = (float)sp->layer_y + (pass ? ly : -fy);
-                const float cut = top > y0 ? top - y0 : 0.0f;
-                float lh = (float)sp->layer_h - cut;
-                if (y0 + cut + lh > top + bh) lh = top + bh - y0 - cut;
-                if (lh <= 0.0f) continue;
-                src = (SDL_FRect){ pass ? 0.0f : (float)half, cut, (float)sp->layer_w, lh };
-                dst = (SDL_FRect){ x0, y0 + cut, (float)sp->layer_w, lh };
-                if (!SDL_RenderTexture(r, backend->layer, &src, &dst)) return 0;
-            }
-        }
+        layered = backend->layer && SDL_UpdateTexture(backend->layer, &part, sp->layer, (int)(sp->layer_pitch * sizeof(uint32_t)))
+                  && SDL_UpdateTexture(backend->layer, &under, sp->patch, (int)(sp->layer_pitch * sizeof(uint32_t)));
     }
-    for (uint32_t i = 0; i < sp->fixed_count && i < ORACLES_HOST_SUBPIXEL_FIXED; i++) {
-        src = (SDL_FRect){ (float)sp->fixed[i][0], (float)sp->fixed[i][1], (float)sp->fixed[i][2], (float)sp->fixed[i][3] };
-        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
-    }
-    return 1;
+    backend->shown = *sp;
+    backend->shown.layer = backend->shown.patch = NULL;   /* the view's, which change: the layer's texture keeps them */
+    backend->shown_layered = layered;
+    backend->shown_subpixel = 1;
+    return draw_subpixel(backend, &backend->shown, layered, NULL);
 }
 
 static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
@@ -837,6 +869,7 @@ static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame
     const int logical_w = cropped ? (int)frame->crop_w : backend->frame_width, logical_h = cropped ? (int)frame->crop_h : backend->frame_height;
     const int filled = backend->fill && window_fullscreen(backend);
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) present_as(backend, logical_w, logical_h);
+    backend->shown_subpixel = 0;
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
         if (frame->subpixel && !cropped) { if (!present_subpixel(backend, frame)) return 0; }
@@ -1107,6 +1140,23 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
     *frame = state->texture;
     *width = state->frame_width;
     *height = state->frame_height;
+}
+
+int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image)
+{
+    sdl_backend *state = backend->opaque;
+    if (!state->texture) return 0;
+    if (!state->shown_subpixel) return SDL_RenderTexture(state->renderer, state->texture, NULL, image);
+    /* At the image's whole pixels and cut to it, as the logical presentation's viewport places and cuts the frame. */
+    const SDL_FRect at = { SDL_floorf(image->x), SDL_floorf(image->y), image->w, image->h };
+    const SDL_Rect cut = { (int)at.x, (int)at.y, (int)at.w, (int)at.h };
+    const bool clipped = SDL_RenderClipEnabled(state->renderer);
+    SDL_Rect before = { 0, 0, 0, 0 };
+    if (clipped) SDL_GetRenderClipRect(state->renderer, &before);
+    SDL_SetRenderClipRect(state->renderer, &cut);
+    const int drawn = draw_subpixel(state, &state->shown, state->shown_layered, &at);
+    SDL_SetRenderClipRect(state->renderer, clipped ? &before : NULL);
+    return drawn;
 }
 
 oracles_sdl_menu_source oracles_sdl_backend_menu_source(const oracles_host_backend *backend)

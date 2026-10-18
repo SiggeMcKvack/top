@@ -483,6 +483,113 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
     }
 }
 
+/* The pixels of the picture drawn last, and how many differ between two such. */
+static SDL_Surface *picture(SDL_Renderer *renderer)
+{
+    SDL_Surface *read = SDL_RenderReadPixels(renderer, NULL);
+    SDL_Surface *argb = read ? SDL_ConvertSurface(read, SDL_PIXELFORMAT_ARGB8888) : NULL;
+    SDL_DestroySurface(read);
+    return argb;
+}
+
+static long differing(const SDL_Surface *a, const SDL_Surface *b)
+{
+    if (!a || !b || a->w != b->w || a->h != b->h) return -1;
+    long count = 0;
+    for (int y = 0; y < a->h; y++) {
+        const Uint32 *ra = (const Uint32 *)((const Uint8 *)a->pixels + (size_t)y * (size_t)a->pitch);
+        const Uint32 *rb = (const Uint32 *)((const Uint8 *)b->pixels + (size_t)y * (size_t)b->pitch);
+        for (int x = 0; x < a->w; x++) count += ra[x] != rb[x];
+    }
+    return count;
+}
+
+/* The pause shows the game's last frame as it was shown: the band at its fraction of a pixel (here half a pixel left
+ * and three quarters up, the sliver it uncovers filled), the patch and Link's layer at their places, the status bar
+ * and a fixed rectangle unmoved; drawn where the pause puts the image, in the window's pixels, it is the frame's
+ * picture pixel for pixel, at 4x in a 1920x1080 window, at 2x in a 960x540 one, and with Fill in fullscreen on
+ * 1280x720 (8/3), though the view's layer has changed since.  With the screen margin, whose drawing shows the frame as it is, the
+ * frame as it is. */
+static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
+{
+    static uint32_t pixels[480 * 270], layer[64 * 64], patch[64 * 64];
+    for (unsigned y = 0; y < 270; y++)
+        for (unsigned x = 0; x < 480; x++) pixels[y * 480 + x] = y < 16 ? 0xffff0000u : 0xff000000u | (x * 7u % 256u) << 8 | (y * 13u % 256u);
+    for (unsigned y = 40; y < 42; y++) for (unsigned x = 20; x < 22; x++) pixels[y * 480 + x] = 0xff00ff00u;   /* Link */
+    const int sizes[3][4] = { { 1920, 1080, 4, 0 }, { 960, 540, 2, 0 }, { 1280, 720, 2, 1 } };
+    for (int i = 0; i < 3; i++) {
+        const int fullscreen = sizes[i][3];
+        SDL_SetWindowSize(window, sizes[i][0], sizes[i][1]);
+        SDL_SyncWindow(window);
+        if (fullscreen) { SDL_SetWindowFullscreen(window, true); SDL_SyncWindow(window); }
+        oracles_sdl_options options = { 0 };
+        options.scale = (unsigned)sizes[i][2];
+        options.window = window;
+        options.renderer = renderer;
+        options.fill = 1;
+        options.pause_menu = 1;
+        oracles_host_backend backend;
+        if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+        if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
+            for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xff000000u; }
+            const oracles_host_video_subpixel sub = { 128, 192, 16, 254, layer, 20, 40, 2, 2, 64, 64, -32, patch, 1, { { 100, 200, 40, 20 } } };
+            const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
+            CHECK(backend.present_frame(backend.opaque, &image));
+            SDL_FRect area;
+            CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area) && area.w == (fullscreen ? 1280.0f : 480.0f * (float)sizes[i][2]));
+            SDL_Surface *played = picture(renderer);
+            /* The band moved: the frame as it is is another picture. */
+            int logical_w = 0, logical_h = 0, out_w = 0, out_h = 0;
+            SDL_RendererLogicalPresentation presentation = SDL_LOGICAL_PRESENTATION_DISABLED;
+            SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
+            SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+            CHECK(SDL_GetRenderOutputSize(renderer, &out_w, &out_h));
+            const OraclesTouchBox box = oracles_touch_frame(out_w, out_h, 480, 270, fullscreen);
+            const SDL_FRect at = { box.x, box.y, box.w, box.h };
+            SDL_Window *pw; SDL_Renderer *pr; SDL_Texture *kept; int kw = 0, kh = 0;
+            oracles_sdl_backend_pause_view(&backend, &pw, &pr, &kept, &kw, &kh);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            CHECK(SDL_RenderTexture(renderer, kept, NULL, &at));
+            SDL_Surface *whole = picture(renderer);
+            CHECK(differing(played, whole) > 0);
+            /* The pause's image: the picture played, the view's layer since then another. */
+            layer[0] = layer[1] = layer[64] = layer[65] = 0xffff00ffu;
+            SDL_RenderClear(renderer);
+            CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+            SDL_Surface *paused = picture(renderer);
+            CHECK(differing(played, paused) == 0);
+            CHECK(!SDL_RenderClipEnabled(renderer));
+            SDL_DestroySurface(played);
+            SDL_DestroySurface(whole);
+            SDL_DestroySurface(paused);
+            SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
+            /* The screen margin draws the frame as it is: so does the pause. */
+            if (i == 1) {
+                oracles_sdl_backend_set_screen_margin(&backend, ORACLES_SCREEN_MARGIN_SMALL);
+                CHECK(backend.present_frame(backend.opaque, &image));
+                SDL_Surface *margined = picture(renderer);
+                CHECK(SDL_GetRenderLogicalPresentation(renderer, NULL, NULL, &presentation) && presentation == SDL_LOGICAL_PRESENTATION_DISABLED);
+                const OraclesTouchEdges edges = { ORACLES_SCREEN_MARGIN_SMALL, 1.0f, 0, 0 };
+                const OraclesTouchBox band = oracles_touch_band(out_w, out_h, &edges);
+                const OraclesTouchBox in = oracles_touch_frame((int)band.w, (int)band.h, 480, 270, 0);
+                const SDL_FRect there = { band.x + in.x, band.y + in.y, in.w, in.h };
+                SDL_RenderClear(renderer);
+                CHECK(oracles_sdl_backend_pause_image(&backend, &there));
+                SDL_Surface *paused_margin = picture(renderer);
+                CHECK(differing(margined, paused_margin) == 0);
+                SDL_DestroySurface(margined);
+                SDL_DestroySurface(paused_margin);
+            }
+        } else CHECK(0);
+        backend.stop(backend.opaque);
+        oracles_sdl_backend_release(&backend);
+        if (fullscreen) { SDL_SetWindowFullscreen(window, false); SDL_SyncWindow(window); }
+    }
+    SDL_SetWindowSize(window, 1280, 720);
+    SDL_SyncWindow(window);
+}
+
 /* A session in the lent window with only a virtual gamepad `vendor`:`product` plugged in, known by `mapping` (a line
  * of SDL's database after its GUID) when given: the game's buttons its joystick buttons 0 and 1 press, with the default
  * names ("a" for A, "b" for B). */
@@ -755,6 +862,7 @@ int main(int argc, char **argv)
     touches(window, renderer);
     enlarged_menus(window, renderer);
     subpixel_band(window, renderer);
+    pause_image(window, renderer);
     scaling(window, renderer);
     margins(window, renderer);
     face_buttons(window, renderer, 0, 0, NULL, &south, &east);
