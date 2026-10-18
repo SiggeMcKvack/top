@@ -750,6 +750,34 @@ int main(int argc, char **argv)
     written.view = 0;
     CHECK(!oracles_settings_lighter(&written, &lighter, &lighter_view) && !oracles_settings_slow_hint(&written, 1, 6000, 300));
 
+    /* The sub-pixel camera: absent, the platform's default, on on the desktops and off on Android whatever the Quality,
+     * and not written; set either way, written as it is. */
+    CHECK(oracles_settings_default_subpixel_camera(0) == 1 && oracles_settings_default_subpixel_camera(1) == 0);
+#ifdef __ANDROID__
+    const int platform_subpixel = 0;
+#else
+    const int platform_subpixel = 1;
+#endif
+    oracles_settings defaults_only;
+    oracles_settings_defaults(&defaults_only);
+    snprintf(defaults_only.path, sizeof defaults_only.path, "%s", path);
+    CHECK(defaults_only.subpixel_camera == -1 && oracles_settings_subpixel_camera(&defaults_only) == platform_subpixel);
+    for (int quality = 0; quality < ORACLES_QUALITIES; quality++) {
+        oracles_settings_apply_quality(&defaults_only, (OraclesQuality)quality);
+        CHECK(oracles_settings_subpixel_camera(&defaults_only) == platform_subpixel);
+    }
+    oracles_settings_store(&defaults_only);
+    CHECK(!file_has_line(path, "subpixel_camera=0\n") && !file_has_line(path, "subpixel_camera=1\n"));
+    for (int chosen = 0; chosen < 2; chosen++) {
+        write_text(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n");
+        oracles_settings_defaults(&read_back);
+        snprintf(read_back.path, sizeof read_back.path, "%s", path);
+        oracles_settings_load(&read_back);
+        CHECK(read_back.subpixel_camera == chosen && oracles_settings_subpixel_camera(&read_back) == chosen);
+        oracles_settings_store(&read_back);
+        CHECK(file_has_line(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n"));
+    }
+
     menu_pad_resolved();
     display_stored();
     pause_changes();

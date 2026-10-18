@@ -548,6 +548,8 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         }
         const int camera = o->camera_profile ? o->camera_profile : s->settings->camera;
         oracles_enhanced_view_set_camera_profile(s->view, (unsigned)camera);
+        oracles_enhanced_view_set_subpixel(s->view, oracles_settings_subpixel_camera(s->settings));
+        oracles_enhanced_view_set_link_phase(s->view, s->settings->link_phase);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
         oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
         /* The ghosts: the command line's, else the settings'; auto, two where four cores leave one to each besides the
@@ -586,6 +588,21 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     return 1;
 }
 
+/* The host's frame_subpixel: the Enhanced sub-pixel camera's move of the frame just composed. */
+static int view_subpixel(void *opaque, oracles_host_video_subpixel *out)
+{
+    memset(out, 0, sizeof *out);
+    if (!oracles_enhanced_view_subpixel(opaque, &out->x, &out->y, &out->band_top, &out->band_height, &out->layer, &out->layer_x, &out->layer_y,
+                                        &out->layer_w, &out->layer_h, &out->layer_fx, &out->layer_fy)) return 0;
+    out->layer_pitch = ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH;
+    out->patch = oracles_enhanced_view_subpixel_patch(opaque);
+    const uint32_t (*fixed)[4] = NULL;
+    out->fixed_count = oracles_enhanced_view_subpixel_fixed(opaque, &fixed);
+    if (out->fixed_count > ORACLES_HOST_SUBPIXEL_FIXED) out->fixed_count = ORACLES_HOST_SUBPIXEL_FIXED;
+    if (out->fixed_count) memcpy(out->fixed, fixed, out->fixed_count * sizeof out->fixed[0]);
+    return 1;
+}
+
 static void configure(session *s, const OraclesSessionOptions *o, oracles_host_run_config *config)
 {
     memset(config, 0, sizeof *config);
@@ -614,6 +631,7 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
         config->frame_source_opaque = s->view;
         /* The game's menus enlarged: the framed core shown alone, at its own whole scale. */
         if (s->settings->menus_large) { config->frame_crop = oracles_enhanced_view_framed_crop; config->frame_crop_opaque = s->view; }
+        if (oracles_settings_subpixel_camera(s->settings)) { config->frame_subpixel = view_subpixel; config->frame_subpixel_opaque = s->view; }
         config->frame_width = oracles_enhanced_view_width(s->view);
         config->frame_height = oracles_enhanced_view_height(s->view);
     }

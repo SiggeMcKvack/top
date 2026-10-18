@@ -45,6 +45,8 @@ typedef struct sdl_backend {
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
+    SDL_Texture *layer;           /* the sub-pixel camera's layer (Link drawn apart), made at its first use */
+    int layer_w, layer_h;
     int frame_width, frame_height;   /* the texture's: the session's surface */
     int logical_w, logical_h;        /* the renderer's logical size: the surface's, or the part shown alone */
     int fill;                        /* Scaling's Fill chosen */
@@ -731,6 +733,95 @@ static int sdl_poll_event(void *opaque, oracles_host_event *event, int *has_even
 
 static uint64_t sdl_monotonic_ns(void *opaque);
 
+/* A frame whose band the sub-pixel camera moves (oracles_host_video_subpixel): the band drawn moved by the
+ * fraction, at the screen's own pixels (rounded to the scale the logical presentation draws with), the sliver it
+ * uncovers filled with its edge column or line; the lines above it (the status bar) and below it unmoved, over it;
+ * then the patch moved with the band and the layer, moved by Link's own fraction, cut to the band; then the fixed
+ * rectangles unmoved.  Link's own fraction is rounded down: against the band he stays less than a pixel of the frame
+ * off the game's drawing of him.  Under twice the frame's size the screen has no pixel between two of the frame's to
+ * show: the frame is drawn as it is, whole. */
+static float screen_fraction(int32_t fraction, float scale)
+{
+    const float f = (float)fraction / 256.0f;
+    return scale >= 1.0f ? SDL_roundf(f * scale) / scale : f;
+}
+
+static float screen_fraction_down(int32_t fraction, float scale)
+{
+    const float f = (float)fraction / 256.0f;
+    return scale >= 1.0f ? SDL_floorf(f * scale) / scale : f;
+}
+
+static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame *frame)
+{
+    const oracles_host_video_subpixel *sp = frame->subpixel;
+    SDL_Renderer *r = backend->renderer;
+    const float w = (float)frame->width, top = (float)sp->band_top, bh = (float)sp->band_height, h = (float)frame->height;
+    SDL_FRect area;
+    float scale = 0.0f;
+    if (SDL_GetRenderLogicalPresentationRect(r, &area) && area.w > 0.0f) scale = area.w / w;
+    if (scale < 2.0f) return SDL_RenderTexture(r, backend->texture, NULL, NULL);
+    const float fx = screen_fraction(sp->x, scale), fy = screen_fraction(sp->y, scale);
+    SDL_FRect src = { 0.0f, top, w, bh }, dst = { -fx, top - fy, w, bh };
+    if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+    if (fx != 0.0f) {
+        src = (SDL_FRect){ fx > 0.0f ? w - 1.0f : 0.0f, top, 1.0f, bh };
+        dst = (SDL_FRect){ fx > 0.0f ? w - fx : 0.0f, top - fy, fx > 0.0f ? fx : -fx, bh };
+        if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+    }
+    if (fy != 0.0f) {
+        src = (SDL_FRect){ 0.0f, fy > 0.0f ? top + bh - 1.0f : top, w, 1.0f };
+        dst = (SDL_FRect){ 0.0f, fy > 0.0f ? top + bh - fy : top, w, fy > 0.0f ? fy : -fy };
+        if (!SDL_RenderTexture(r, backend->texture, &src, &dst)) return 0;
+    }
+    if (top > 0.0f) {
+        src = (SDL_FRect){ 0.0f, 0.0f, w, top };
+        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
+    }
+    if (h > top + bh) {
+        src = (SDL_FRect){ 0.0f, top + bh, w, h - top - bh };
+        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
+    }
+    if (sp->layer && sp->patch && sp->layer_w && sp->layer_h && sp->layer_pitch) {
+        /* One texture, the layer in its left half, the patch in its right. */
+        if (!backend->layer || backend->layer_w < 2 * (int)sp->layer_pitch || backend->layer_h < (int)sp->layer_pitch) {
+            if (backend->layer) SDL_DestroyTexture(backend->layer);
+            backend->layer_w = 2 * (int)sp->layer_pitch; backend->layer_h = (int)sp->layer_pitch;
+            backend->layer = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, backend->layer_w, backend->layer_h);
+            if (!backend->layer) backend->layer_w = backend->layer_h = 0;   /* him with the band for a frame rather than no frame */
+            /* Premultiplied (its pixels opaque or wholly transparent, 0): Fill's smooth sampling blends his edges
+             * toward what lies under them, not toward black. */
+            else SDL_SetTextureBlendMode(backend->layer, SDL_BLENDMODE_BLEND_PREMULTIPLIED);
+        }
+        const int half = (int)sp->layer_pitch;
+        const SDL_Rect part = { 0, 0, (int)sp->layer_w, (int)sp->layer_h }, under = { half, 0, (int)sp->layer_w, (int)sp->layer_h };
+        if (backend->layer && SDL_UpdateTexture(backend->layer, &part, sp->layer, (int)(sp->layer_pitch * sizeof(uint32_t)))
+            && SDL_UpdateTexture(backend->layer, &under, sp->patch, (int)(sp->layer_pitch * sizeof(uint32_t)))) {
+            SDL_ScaleMode mode = SDL_SCALEMODE_NEAREST;
+            SDL_GetTextureScaleMode(backend->texture, &mode);
+            SDL_SetTextureScaleMode(backend->layer, mode);
+            /* The patch where the band puts the place he stands, then him at his own place; cut to the band: none of
+             * him over the status bar or below the band. */
+            const float lx = screen_fraction_down(sp->layer_fx + sp->x, scale) - fx, ly = screen_fraction_down(sp->layer_fy + sp->y, scale) - fy;
+            for (int pass = 0; pass < 2; pass++) {
+                const float x0 = (float)sp->layer_x + (pass ? lx : -fx), y0 = (float)sp->layer_y + (pass ? ly : -fy);
+                const float cut = top > y0 ? top - y0 : 0.0f;
+                float lh = (float)sp->layer_h - cut;
+                if (y0 + cut + lh > top + bh) lh = top + bh - y0 - cut;
+                if (lh <= 0.0f) continue;
+                src = (SDL_FRect){ pass ? 0.0f : (float)half, cut, (float)sp->layer_w, lh };
+                dst = (SDL_FRect){ x0, y0 + cut, (float)sp->layer_w, lh };
+                if (!SDL_RenderTexture(r, backend->layer, &src, &dst)) return 0;
+            }
+        }
+    }
+    for (uint32_t i = 0; i < sp->fixed_count && i < ORACLES_HOST_SUBPIXEL_FIXED; i++) {
+        src = (SDL_FRect){ (float)sp->fixed[i][0], (float)sp->fixed[i][1], (float)sp->fixed[i][2], (float)sp->fixed[i][3] };
+        if (!SDL_RenderTexture(r, backend->texture, &src, &src)) return 0;
+    }
+    return 1;
+}
+
 static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
 {
     sdl_backend *backend = opaque;
@@ -748,7 +839,8 @@ static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) present_as(backend, logical_w, logical_h);
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
-        if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
+        if (frame->subpixel && !cropped) { if (!present_subpixel(backend, frame)) return 0; }
+        else if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
     }
     if (backend->overlay && !backend->overlay(backend->overlay_opaque, backend->renderer)) backend->overlay = NULL;
     const uint64_t present_started_ns = sdl_monotonic_ns(backend);
@@ -944,6 +1036,8 @@ static void sdl_stop(void *opaque)
     oracles_sdl_pads_close(&backend->pads);
     if (backend->texture) SDL_DestroyTexture(backend->texture);
     backend->texture = NULL;
+    if (backend->layer) SDL_DestroyTexture(backend->layer);
+    backend->layer = NULL; backend->layer_w = backend->layer_h = 0;
     if (backend->borrowed) {
         /* The launcher's window goes back as it was lent, even when the start failed half way: no logical size, the
          * launcher sets its own size again; only the subsystems the loan started are quit. */

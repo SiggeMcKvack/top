@@ -52,9 +52,28 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
         oracles_enhanced_view_handoff_counts(c->view, &shown, &jumps, &holes, &unseen);
         fprintf(out, "enhanced.handoff_shown=%u\nenhanced.handoff_jumps=%u\nenhanced.handoff_hole_frames=%u\nenhanced.handoff_unseen=%u\n", shown, jumps, holes, unseen);
     }
+    fprintf(out, "enhanced.link_unshown_frames=%u\nenhanced.link_built_frames=%u\n", oracles_enhanced_view_link_unshown_frames(c->view),
+            oracles_enhanced_view_link_built_frames(c->view));
     fprintf(out, "enhanced.camera_jumps=%u\nenhanced.largest_jump=%" PRId32 "\nenhanced.camera_jumps_y=%u\nenhanced.largest_jump_y=%" PRId32 "\n", c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);
     fprintf(out, "enhanced.link_jumps=%u\nenhanced.link_jumps_y=%u\nenhanced.window_jumps=%u\n", c->link_jumps, c->link_jumps_y, c->window_jumps);
     fprintf(out, "enhanced.link_drawn_steps=%u\nenhanced.link_backsteps=%u\nenhanced.link_backsteps_y=%u\n", c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y);
+    {
+        unsigned moved = 0, engaged = 0;
+        oracles_enhanced_view_link_phase_counts(c->view, &moved, &engaged);
+        fprintf(out, "enhanced.diagonal_frames=%u\nenhanced.camera_wobble=%u\nenhanced.link_phase_frames=%u\nenhanced.link_phase_engaged=%u\n", c->diagonal_frames, c->camera_wobble, moved, engaged);
+        unsigned sub = 0, layered = 0, refused = 0, left_pixels = 0, wrong_pixels = 0, alike_pixels = 0;
+        oracles_enhanced_view_subpixel_counts(c->view, &sub, &layered, &refused);
+        oracles_enhanced_view_subpixel_pixel_counts(c->view, &left_pixels, &wrong_pixels, &alike_pixels);
+        fprintf(out, "enhanced.band_stops=%u\nenhanced.band_wobble=%u\nenhanced.straight_frames=%u\nenhanced.straight_band_stops=%u\nenhanced.link_screen_moves=%u\nenhanced.link_screen_backsteps=%u\n"
+                     "enhanced.subpixel_frames=%u\nenhanced.subpixel_layer_frames=%u\nenhanced.subpixel_refused_frames=%u\nenhanced.subpixel_left_pixels=%u\nenhanced.subpixel_wrong_pixels=%u\nenhanced.subpixel_alike_pixels=%u\n",
+                c->band_stops, c->band_wobble, c->straight_frames, c->straight_band_stops, c->link_screen_moves, c->link_screen_backsteps, sub, layered, refused, left_pixels, wrong_pixels, alike_pixels);
+        fprintf(out, "enhanced.subpixel_covered_pixels=%u\nenhanced.subpixel_unexplained_frames=%u\n", oracles_enhanced_view_subpixel_covered_pixels(c->view),
+                oracles_enhanced_view_subpixel_unexplained_frames(c->view));
+        fprintf(out, "enhanced.subpixel_objects=%u\nenhanced.subpixel_objects_off=%u\nenhanced.subpixel_objects_left=%u\n", c->layer_objects, c->layer_objects_off,
+                oracles_enhanced_view_subpixel_objects_left(c->view));
+        fprintf(out, "enhanced.switch_edges=%u\nenhanced.switch_band_jolt_max=%" PRId32 "\nenhanced.switch_link_jolt_max=%" PRId32 "\nenhanced.band_jolt_max=%" PRId32 "\nenhanced.link_jolt_max=%" PRId32 "\n",
+                c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->band_jolt_max, c->link_jolt_max);
+    }
     fprintf(out, "enhanced.link_edge_margin_min=%" PRId32 "\nenhanced.link_near_edge_frames=%u\n", c->link_edge_margin_min, c->link_near_edge_frames);
     fprintf(out, "enhanced.ghost_requested=%u\nenhanced.ghost_completed=%u\nenhanced.ghost_failed=%u\nenhanced.ghost_not_primeable=%u\nenhanced.ghost_load_failed=%u\nenhanced.ghost_never_settled=%u\nenhanced.ghost_wrong_room=%u\nenhanced.ghost_other=%u\n",
             requested, completed, failed, reasons[0], reasons[1], reasons[2], reasons[3], reasons[4]);
@@ -169,6 +188,19 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
             c->link_jumps, c->largest_link_jump, c->link_jumps_y, c->largest_link_jump_y, c->window_jumps, c->largest_window_jump, c->epochs);
     fprintf(out, "  Link's sprite as drawn, on the screen in normal play: %u steps between frames, %u back against the step before across and %u down, he not turning%s%s\n",
             c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y, c->link_backsteps_list[0] ? "; first: " : "", c->link_backsteps_list);
+    {
+        unsigned moved = 0, engaged = 0;
+        oracles_enhanced_view_link_phase_counts(c->view, &moved, &engaged);
+        fprintf(out, "  walking diagonally: %u frames, %u where the camera stepped back across the walk; Link drawn in phase on %u frames, off the game's sprite on %u\n",
+                c->diagonal_frames, c->camera_wobble, engaged, moved);
+        unsigned sub = 0, layered = 0, refused = 0;
+        oracles_enhanced_view_subpixel_counts(c->view, &sub, &layered, &refused);
+        fprintf(out, "  as shown at 4x: the band stopping between two steps %u times an axis in those frames (%u in %u walking straight); Link moving on the screen on %u, back against his step before %u times; "
+                     "sub-pixel camera on %u frames, Link drawn apart on %u, refused on %u\n",
+                c->band_stops, c->straight_band_stops, c->straight_frames, c->link_screen_moves, c->link_screen_backsteps, sub, layered, refused);
+        fprintf(out, "  as shown at 4x, a step changing from one frame to the next: at the %u switches (a transition, a text box, Link drawn apart) by %" PRId32 " px at most for the band, %" PRId32 " for Link (%s); elsewhere by %" PRId32 " and %" PRId32 "\n",
+                c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->jolt_list[0] ? c->jolt_list : "none of 2 px", c->band_jolt_max, c->link_jolt_max);
+    }
     unsigned requested = 0, completed = 0, failed = 0;
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     unsigned reasons[5] = { 0, 0, 0, 0, 0 };

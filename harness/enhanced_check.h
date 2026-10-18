@@ -39,6 +39,8 @@ void oracles_enhanced_check_surface_at(OraclesEnhancedCheck *check, uint32_t fra
 struct OraclesEnhancedView *oracles_enhanced_check_view(OraclesEnhancedCheck *check);
 /* The camera profile (1 or 2), before the first frame. */
 void oracles_enhanced_check_set_camera_profile(OraclesEnhancedCheck *check, unsigned profile);
+void oracles_enhanced_check_set_link_phase(OraclesEnhancedCheck *check, int enabled);
+void oracles_enhanced_check_set_subpixel(OraclesEnhancedCheck *check, int enabled);
 /* The drawn-back view's surface, 480x270, before the first frame. */
 void oracles_enhanced_check_set_zoom_out(OraclesEnhancedCheck *check, int enabled);
 /* The surface of a view's level in a screen's shape (oracles_enhanced_view_size), before the first frame. */

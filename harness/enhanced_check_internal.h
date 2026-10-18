@@ -117,6 +117,37 @@ struct OraclesEnhancedCheck {
     int32_t drawn_screen[2], drawn_world[2], drawn_screen_step[2], drawn_world_step[2];
     unsigned link_drawn_steps, link_backsteps, link_backsteps_y;
     char link_backsteps_list[96];      /* the first frames, "frame:x" or "frame:y" */
+    /* Walking diagonally in normal play (his drawn place moved 3 px or more both ways over the last 8 frames, never
+     * back): the frames, and those where the camera's step goes across the walk the other way from its last step
+     * across (the band zigzagging with his gait) (ec_measure_link_backsteps). */
+    int32_t wobble_world[9][2], wobble_camera[2];
+    uint32_t wobble_frame[9], wobble_camera_frame;
+    unsigned wobble_count;
+    int wobble_last_across;
+    unsigned diagonal_frames, camera_wobble;
+    /* The same walk as the screen shows it at 4x (MEASURE_SCALE), the band moved by the sub-pixel camera's fraction
+     * and Link drawn apart where the view does: the stops of the band on an axis between two of its steps (its jerks, an axis at a time), its steps back across the walk by 2 px or more (its zigzag), those Link moves on the
+     * screen, and those he goes back there against his step before. */
+    int32_t shown_band[2], shown_link[2], shown_link_step[2];
+    uint32_t shown_frame;
+    int shown_band_moved[2];
+    int shown_last_across;
+    unsigned band_stops, band_wobble, straight_frames, straight_band_stops, link_screen_moves, link_screen_backsteps;
+    /* The band and Link as the screen shows them at 4x where the picture switches (a transition, a text box, Link
+     * drawn apart): the change of their step from one frame to the next (a jolt) at the frame of the switch, the one
+     * before and the one after, the largest on either axis; and the largest elsewhere (measure_switch_jolts). */
+    int32_t jolt_band[2], jolt_link[2], jolt_band_step[2], jolt_link_step[2];
+    uint32_t jolt_frame;
+    uint64_t jolt_epoch;
+    int jolt_have, jolt_have_step, jolt_state;
+    unsigned jolt_edge_frames;           /* frames left in which a jolt is a switch's */
+    int32_t jolt_pending_band, jolt_pending_link;   /* the last frame's, attributed once the next one says whether a switch follows */
+    int jolt_pending;
+    int32_t switch_band_jolt_max, switch_link_jolt_max, band_jolt_max, link_jolt_max;
+    unsigned switch_edges;
+    unsigned jolt_fraction_frames;       /* the last three frames the band had a fraction on, a bit each */
+    unsigned layer_objects, layer_objects_off;   /* special objects but Link in the sub-pixel camera's layer, an object a frame; those at a fraction not his (measure_layer_objects) */
+    char jolt_list[256];                 /* the switches where the band's step changed by 2 px or more, "frame:band/link" */
     uint64_t epochs;
     unsigned neighbours_frames[5];       /* world frames with 0 to 4 neighbours shown */
     unsigned transitions, transitions_with_terrain, transitions_black, transitions_vertical;   /* the scrolling transitions judged: was the room entered shown, and true; those on the vertical axis among them */

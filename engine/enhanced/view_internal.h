@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SUB_LAYER_SIZE ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH           /* the largest drawing of Link and what he holds the sub-pixel camera draws apart */
+
 #define IO_LCDC 0x40u
 #define IO_SCY 0x42u
 #define IO_SCX 0x43u
@@ -501,6 +503,9 @@ struct OraclesEnhancedView {
     blurb_drawing blurb_drawings[BLURB_DRAWINGS];
     unsigned blurb_drawings_head;
     uint64_t blurb_mask;             /* this frame's OAM entries that are the blurb's (bit per entry) */
+    unsigned link_unshown_frames;    /* scroll frames with Link to draw, none of him on the screen nor drawn past its edge */
+    unsigned link_built_frames;      /* scroll frames he was drawn from his fields, the game writing none of his sprites */
+    int edge_link_made;              /* this frame's edge overlay drew sprites of his the OAM does not hold (a column, or all of him) */
     /* The objects of a large room beyond the game's window: at each drawing
      * of the game in a large room, every object's
      * sprites built from its fields and the game's data, kept with the wOam
@@ -583,6 +588,44 @@ struct OraclesEnhancedView {
     unsigned scrolls_animated, scrolls_still, scroll_landed, scroll_landed_off, scroll_gaps, scroll_gap_max, scroll_tiles_off;
     unsigned scroll_streams_run, scroll_window_pixels, scroll_tiles_given_back;
     unsigned scroll_pace[SCROLL_PACE_MAX + 1u];
+    /* Link drawn in phase on a diagonal walk (view_phase.c). */
+    int link_phase;                  /* enabled */
+    unsigned phase_count;            /* positions kept, up to 3 */
+    int32_t phase_x[3], phase_y[3];  /* Link's room-local position in 256ths, this observation's and the two before */
+    uint64_t phase_epoch[3];
+    uint8_t phase_room[3];
+    int phase_latched;               /* the offset below is in use */
+    int32_t phase_c;                 /* added to his y, in 256ths: his y steps on the frames his x does */
+    int phase_dy, phase_last_dy;     /* this frame's and the last: Link drawn that many pixels below the game's sprite */
+    uint64_t phase_mask;             /* his OAM entries on screen, to draw moved */
+    unsigned phase_frames, phase_engaged_frames;
+    /* The sub-pixel camera (view_phase.c): the band moved by the camera's fraction of a pixel at the screen's
+     * resolution, Link and what he holds drawn apart, unmoved. */
+    int subpixel;                    /* enabled */
+    int32_t sub_x, sub_y;            /* this frame's, in 256ths of a pixel: the band drawn that much left and up */
+    /* The fraction shown, kept from frame to frame: where the camera's fraction comes or goes (the reducer tracking or
+     * not, Link drawn apart or not for a stretch), the band takes it up or gives it back by SUB_EASE a frame from where
+     * it stood, never at once. */
+    uint32_t sub_last_frame;
+    uint64_t sub_last_epoch;
+    int sub_have_last, sub_live;
+    int32_t sub_last_x, sub_last_y, sub_raw_x, sub_raw_y;   /* the last frame's fraction shown, and the camera's */
+    unsigned sub_wave_hold;          /* frames left before the band takes a fraction again after the waves */
+    int32_t sub_ease_x, sub_ease_y;  /* the fraction shown less the camera's, given back by SUB_EASE a frame */
+    uint32_t sub_layer[SUB_LAYER_SIZE * SUB_LAYER_SIZE];   /* Link's pixels, 0 where none */
+    uint32_t sub_patch[SUB_LAYER_SIZE * SUB_LAYER_SIZE];   /* the window without him under them, 0 elsewhere */
+    uint8_t sub_pending[SUB_LAYER_SIZE * SUB_LAYER_SIZE];  /* his pixels past the window, which the edge overlay draws: taken once it has */
+    uint32_t sub_fixed[ORACLES_ENHANCED_SUBPIXEL_FIXED][4];  /* the surface's rectangles shown unmoved (the text box, the area's name) */
+    unsigned sub_fixed_count;
+    int32_t sub_layer_x, sub_layer_y;   /* its top left in the surface */
+    int32_t sub_layer_fx, sub_layer_fy;   /* and its move, in 256ths of a pixel right and down: Link's place less the band's */
+    uint32_t sub_layer_w, sub_layer_h;
+    unsigned sub_frames, sub_layer_frames, sub_refused_frames;
+    unsigned sub_left_pixels, sub_wrong_pixels, sub_alike_pixels;   /* the checks of the layer (view_phase.c) */
+    unsigned sub_covered_pixels;     /* his pixels another drawing covered after the layer was taken, left to the band */
+    unsigned sub_unexplained_frames; /* frames the window rendered again did not explain around him: left to the band */
+    uint64_t sub_taken;              /* the OAM entries the layer took, this frame's */
+    unsigned sub_objects_left;       /* special objects near him at a fraction of their own, left to the band (an object a frame) */
 };
 
 /* ---- shared between the view's files ---- */
@@ -717,6 +760,14 @@ void ev_overlay_area_blurb(OraclesEnhancedView *v, int32_t camera_x, int32_t cam
 void ev_overlay_warp_curtain(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 /* A dialogue's text box, drawn again at the middle of the band (view_textbox.c). */
 void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
+void ev_phase_observe(OraclesEnhancedView *v);
+void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, int32_t camera_y);
+/* A rectangle of the band, in the band's pixels, the sub-pixel camera shows unmoved over the band and Link: what the
+ * view draws there stands on the screen, not in the world. */
+void ev_subpixel_fixed(OraclesEnhancedView *v, int32_t x, int32_t y, int32_t w, int32_t h);
+/* Once every drawing is in the band: his pixels another drawing covered go back to the band. */
+void ev_subpixel_settle(OraclesEnhancedView *v);
+void ev_overlay_link_phase(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 /* view_hotbar.c: the hotbar of the item hotkeys, drawn last in the HUD band's gutters, in every mode of the surface. */
 void ev_draw_hotbar(OraclesEnhancedView *v);
 void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);

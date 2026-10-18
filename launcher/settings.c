@@ -107,6 +107,18 @@ int oracles_settings_core(const oracles_settings *s)
     return default_core();
 }
 
+int oracles_settings_default_subpixel_camera(int fullscreen_only) { return !fullscreen_only; }
+
+int oracles_settings_subpixel_camera(const oracles_settings *s)
+{
+    if (s->subpixel_camera >= 0) return s->subpixel_camera != 0;
+#ifdef __ANDROID__
+    return oracles_settings_default_subpixel_camera(1);
+#else
+    return oracles_settings_default_subpixel_camera(0);
+#endif
+}
+
 const char *const oracles_settings_aspect_names[3] = { "auto", "16:9", "4:3" };   /* ORACLES_ASPECT_AUTO's order */
 /* The launcher window at its first opening. */
 #define LAUNCHER_WIDTH 1280
@@ -259,6 +271,7 @@ void oracles_settings_defaults(oracles_settings *s)
     /* No core chosen: the build's default plays, and is not written, so that a build with another default (an update
      * of the application, a build on the other core) plays its own. */
     s->core = -1;
+    s->subpixel_camera = -1;   /* not chosen: the platform's default, not written, so that another default can come */
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) s->item_hotkeys[g] = ORACLES_HOTKEYS_OFF;
     s->launcher_width = LAUNCHER_WIDTH;
     s->launcher_height = LAUNCHER_HEIGHT;
@@ -421,6 +434,8 @@ void oracles_settings_load(oracles_settings *s)
         if (!strcmp(name, "colour_correction")) { s->colour_correction = atoi(value) != 0; continue; }
         if (!strcmp(name, "vsync")) { if (!strcmp(value, "on") || !strcmp(value, "off") || !strcmp(value, "auto")) snprintf(s->vsync, sizeof s->vsync, "%s", value); continue; }
         if (!strcmp(name, "camera")) { s->camera = atoi(value) == 1 ? 1 : 2; continue; }
+        if (!strcmp(name, "link_phase")) { s->link_phase = atoi(value) != 0; continue; }
+        if (!strcmp(name, "subpixel_camera")) { s->subpixel_camera = atoi(value) != 0; continue; }   /* set either way */
         if (load_launcher(s, name, value)) continue;
         if (load_name(name, value, "key_hotkey_bind_", "b", s->hotkey_bind_b) || load_name(name, value, "key_hotkey_bind_", "a", s->hotkey_bind_a)) continue;
         unsigned game = 0, n = 0;
@@ -452,6 +467,8 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "colour_correction=%d\n", s->colour_correction ? 1 : 0);
     fprintf(f, "vsync=%s\n", s->vsync);
     fprintf(f, "camera=%d\n", s->camera);
+    if (s->link_phase) fprintf(f, "link_phase=1\n");
+    if (s->subpixel_camera >= 0) fprintf(f, "subpixel_camera=%d\n", s->subpixel_camera != 0);
     fprintf(f, "# The home screen: each game's ROM (Cartridge's Choose ROM, or a file dropped on the window) and its item hotkeys\n"
                "# (off|use, Controls' Off or On, for the games the home screen starts; equip as --item-hotkeys=equip), and the\n"
                "# launcher window's size.\n");

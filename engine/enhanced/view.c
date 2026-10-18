@@ -385,7 +385,9 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     v->animation_renders = 0;
     ev_track_fade(v);
     ev_track_scene_tint(v);
+    ev_phase_observe(v);
     int tracking = oracles_enhanced_camera_reduce(v->camera, v->frame, &v->observation, &camera_x, &camera_y);
+    const int reducer_tracking = tracking;   /* the camera the reducer's own, its fraction the sub-pixel camera's */
     /* A scroll out of a room the game routes itself toward a side off the map
      * (the Lost Woods' west, which brings Link back into the woods from the
      * east): the game's window leaves the map, where the camera does not go.
@@ -480,10 +482,15 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     } else v->large_was_in_scroll = 0;
     const int load_band = ev_load_band(v, &in, tracking, camera_x, camera_y);
     in.hud_fill = ev_hud_fill(v, in.mode);
+    v->sub_x = v->sub_y = 0;
+    v->sub_layer_w = v->sub_layer_h = 0;
+    v->sub_fixed_count = 0;
     v->uncovered = oracles_enhanced_compose(ev_scroll_window(v), &in, v->surface);
     if (load_band) { in.mode = ORACLES_ENHANCED_FRAMED; v->uncovered = 0; }
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {
+        ev_overlay_link_phase(v, camera_x, camera_y);
+        ev_subpixel_layer(v, reducer_tracking, camera_x, camera_y);
         ev_fade_vanishing(v, camera_x, camera_y);
         ev_overlay_large_objects(v, camera_x, camera_y);
         ev_overlay_edge_sprites(v, camera_x, camera_y);
@@ -492,6 +499,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         ev_overlay_warp_curtain(v, camera_x, camera_y);
         ev_overlay_text_box(v, camera_x, camera_y);
         black_outside_shown(v);
+        ev_subpixel_settle(v);
     }
     /* In the HUD band's gutters, whatever the mode: they exist in the framed
      * surface too, beside the status bar wherever the image stands (centred

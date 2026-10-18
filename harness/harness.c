@@ -389,6 +389,8 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
             fprintf(stderr, "harness: %s\n", fitting);
         }
         oracles_enhanced_check_set_camera_profile(r->enhanced, o->enhanced_camera);
+        oracles_enhanced_check_set_link_phase(r->enhanced, o->enhanced_link_phase);
+        oracles_enhanced_check_set_subpixel(r->enhanced, o->enhanced_subpixel);
         oracles_enhanced_view_set_hud(oracles_enhanced_check_view(r->enhanced), o->enhanced_hud_full);
         if (o->enhanced_ghosts > 1u) oracles_enhanced_view_set_ghosts(oracles_enhanced_check_view(r->enhanced), o->enhanced_ghosts);
         oracles_enhanced_check_set_paced(r->enhanced, o->enhanced_paced);

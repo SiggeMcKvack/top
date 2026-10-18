@@ -74,6 +74,8 @@ static void write_surface(const OraclesEnhancedCheck *c, const uint32_t *surface
     fclose(f);
 }
 void oracles_enhanced_check_set_neighbour_objects(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_neighbour_objects(c->view, enabled); }
+void oracles_enhanced_check_set_link_phase(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_link_phase(c->view, enabled); }
+void oracles_enhanced_check_set_subpixel(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_subpixel(c->view, enabled); }
 void oracles_enhanced_check_set_camera_profile(OraclesEnhancedCheck *c, unsigned profile)
 {
     oracles_enhanced_view_set_camera_profile(c->view, profile);

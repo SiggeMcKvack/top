@@ -129,6 +129,13 @@ void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camer
         for (unsigned row = 0; row < rows; row++)
             for (unsigned col = 0; col < cols; col++) {
                 if (!cells[row][col]) continue;
+                if (pass == 1) {   /* the box stands on the screen: the sub-pixel camera shows it unmoved */
+                    const int gx = (int)(col * 8u) - ob->drawn_camera_x, gy = (int)(row * 8u) - ob->drawn_camera_y;
+                    const int x0 = gx < 0 ? 0 : gx, y0 = gy < 0 ? 0 : gy;
+                    const int x1 = gx + 8 > (int)ORACLES_ENHANCED_CORE_WIDTH ? (int)ORACLES_ENHANCED_CORE_WIDTH : gx + 8;
+                    const int y1 = gy + 8 > (int)ORACLES_ENHANCED_AREA_HEIGHT ? (int)ORACLES_ENHANCED_AREA_HEIGHT : gy + 8;
+                    if (x1 > x0 && y1 > y0) ev_subpixel_fixed(v, ob->window_left + x0 - camera_x + dx, y0 + dy, x1 - x0, y1 - y0);
+                }
                 for (unsigned y = 0; y < 8u; y++)
                     for (unsigned x = 0; x < 8u; x++) {
                         const int gx = (int)(col * 8u + x) - ob->drawn_camera_x, gy = (int)(row * 8u + y) - ob->drawn_camera_y;

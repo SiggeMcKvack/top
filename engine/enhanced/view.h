@@ -86,6 +86,54 @@ void oracles_enhanced_view_set_camera_profile(OraclesEnhancedView *view, unsigne
  * entry and those another object created are never drawn, their place at the
  * real entry not being the one the ghost found. */
 void oracles_enhanced_view_set_neighbour_objects(OraclesEnhancedView *view, int enabled);
+/* Walking diagonally at the same speed both ways, Link's sprite drawn up to a pixel off the game's, on the line his y
+ * would take stepping on the frames his x does, and the camera following him there: the band moves along the
+ * diagonal without the zigzag of his gait.  Presentation only.  Off by default. */
+void oracles_enhanced_view_set_link_phase(OraclesEnhancedView *view, int enabled);
+/* This frame's: Link drawn that many pixels below the game's sprite; frames drawn so, frames the phase was in use. */
+int oracles_enhanced_view_link_phase_dy(const OraclesEnhancedView *view);
+void oracles_enhanced_view_link_phase_counts(const OraclesEnhancedView *view, unsigned *moved_frames, unsigned *engaged_frames);
+/* The sub-pixel camera: the camera is the reducer's smooth position, to the 256th of a pixel, and the band is moved
+ * by its fraction of a pixel when it is shown, at the screen's resolution; Link and what he holds are drawn apart, at
+ * his exact place (his position in 256ths of a pixel), so that he does not shake on the screen.  The surface keeps the camera's whole pixels.  Presentation
+ * only.  Off by default; it sets the link phase aside. */
+void oracles_enhanced_view_set_subpixel(OraclesEnhancedView *view, int enabled);
+/* This frame's (the frame just composed): 1 when the band is to be moved, by `x` and `y` 256ths of a pixel left and
+ * up (negative: right and down), its lines `band_top` to `band_top + band_height` of the surface, or Link drawn apart;
+ * Link's layer (0 alpha where it shows nothing) at `layer_x`, `layer_y` of the surface moved `layer_fx`, `layer_fy`
+ * 256ths of a pixel right and down, NULL when it has none.  The surface keeps him: a frame shown as it is shows him at
+ * his whole pixels. */
+int oracles_enhanced_view_subpixel(const OraclesEnhancedView *view, int32_t *x, int32_t *y, uint32_t *band_top, uint32_t *band_height,
+                                   const uint32_t **layer, int32_t *layer_x, int32_t *layer_y, uint32_t *layer_w, uint32_t *layer_h,
+                                   int32_t *layer_fx, int32_t *layer_fy);
+/* Frames moved by a fraction, frames with Link drawn apart, frames it was refused (Link not wholly in the game's
+ * window, or too large). */
+/* Its layer's lines are this many pixels apart. */
+#define ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH 64u
+void oracles_enhanced_view_subpixel_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *layer_frames, unsigned *refused_frames);
+/* The checks of Link's layer over the run, where it is used: pixels the frame showed in his area, outside his sprites
+ * and off the tiles the game animates, that the window rendered again without them does not show (a drawing of his
+ * the patch would leave behind; a frame with any is left to the band, oracles_enhanced_view_subpixel_unexplained_frames),
+ * and pixels where the layer over the band at the whole pixels is not the frame as the game drew it; and the pixels of
+ * his sprites that had the colour of the background under them (which a layer of the pixels that differ would leave
+ * behind). */
+void oracles_enhanced_view_subpixel_pixel_counts(const OraclesEnhancedView *view, unsigned *left_pixels, unsigned *wrong_pixels, unsigned *alike_pixels);
+/* With the layer, the window without him where it shows him (0 alpha elsewhere), the layer's size and place, to draw
+ * over the band moved with it before the layer; NULL without a layer. */
+const uint32_t *oracles_enhanced_view_subpixel_patch(const OraclesEnhancedView *view);
+/* The rectangles of the surface shown unmoved over the band moved and the layer (x, y, w, h): what the view draws
+ * standing on the screen, the text box and the area's name; their count. */
+#define ORACLES_ENHANCED_SUBPIXEL_FIXED 16u
+unsigned oracles_enhanced_view_subpixel_fixed(const OraclesEnhancedView *view, const uint32_t (**rects)[4]);
+/* His pixels another drawing covered once the layer was taken (the text box, the area's name), left to the band. */
+unsigned oracles_enhanced_view_subpixel_covered_pixels(const OraclesEnhancedView *view);
+/* Frames Link was left to the band because the window rendered again without him did not show the frame around him
+ * (in a scroll, the next room's lines written into the VRAM since the frame was drawn). */
+unsigned oracles_enhanced_view_subpixel_unexplained_frames(const OraclesEnhancedView *view);
+/* The OAM entries this frame's layer took (bit k: entry k), none without a layer; and over the run, the special objects
+ * at a fraction of their own (a companion waiting, a bomb laid) left to the band, an object a frame. */
+uint64_t oracles_enhanced_view_subpixel_taken(const OraclesEnhancedView *view);
+unsigned oracles_enhanced_view_subpixel_objects_left(const OraclesEnhancedView *view);
 
 /* The hotbar of the item hotkeys, in the gutters of the HUD band.  The launcher hands the view what
  * only it knows, read-only: the slots, their keys, the slot whose request waits, and a count of refusals a slot, whose
@@ -329,6 +377,11 @@ void oracles_enhanced_view_scroll_animation_counts(const OraclesEnhancedView *vi
 void oracles_enhanced_view_stream_counts(const OraclesEnhancedView *view, unsigned *matched, unsigned *followed);
 /* Whether the area blurb was taken out of the window and drawn apart this frame (its pixels are repainted). */
 int oracles_enhanced_view_blurb_drawn(const OraclesEnhancedView *view);
+/* Scroll frames where Link is to be drawn (his object visible) and nothing of him is on the screen nor drawn past its
+ * edge: Link missing from the view; and those he was drawn from his fields, past the edge where the game writes none
+ * of his sprites. */
+unsigned oracles_enhanced_view_link_unshown_frames(const OraclesEnhancedView *view);
+unsigned oracles_enhanced_view_link_built_frames(const OraclesEnhancedView *view);
 /* Pre-runs started while a room loaded: results filed beside the room the ghost primed in, and results dropped. */
 void oracles_enhanced_view_blind_runs(const OraclesEnhancedView *view, unsigned *filed, unsigned *dropped);
 /* Neighbours run again from the live state because the key had moved since they were computed (the source of a chain). */

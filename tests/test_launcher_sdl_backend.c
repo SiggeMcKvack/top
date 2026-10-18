@@ -143,7 +143,7 @@ static void enlarged_menus(SDL_Window *window, SDL_Renderer *renderer)
     static uint32_t pixels[480 * 270];
     if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
         int w = 0, h = 0;
-        oracles_host_video_frame frame = { pixels, 480, 270, 480 * sizeof(uint32_t), 160, 63, 160, 144 };
+        oracles_host_video_frame frame = { pixels, 480, 270, 480 * sizeof(uint32_t), 160, 63, 160, 144, NULL };
         CHECK(backend.present_frame(backend.opaque, &frame));
         CHECK(SDL_GetRenderLogicalPresentation(renderer, &w, &h, NULL) && w == 160 && h == 144);
         frame.crop_w = frame.crop_h = 0;
@@ -253,7 +253,7 @@ static void scaling(SDL_Window *window, SDL_Renderer *renderer)
         SDL_Texture *frame;
         int width, height, fill = 0, filled = 1;
         oracles_sdl_backend_pause_view(&backend, &w, &r, &frame, &width, &height);
-        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0 };
+        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, NULL };
         SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
         SDL_ScaleMode sampling = SDL_SCALEMODE_INVALID;
         /* In a window: whole scales. */
@@ -312,6 +312,105 @@ static Uint32 pixel_at(SDL_Renderer *renderer, int x, int y)
     return value;
 }
 
+/* The sub-pixel camera's frame, 480x270 at a whole scale k of the window: the band moved half a pixel left (k / 2
+ * pixels of the screen), its last column filling the sliver at the right; the status bar unmoved; the patch moved
+ * with the band over Link's whole place in it, and the layer drawn at his own place over it, cut where it would cover
+ * the status bar; a fixed rectangle unmoved over all.  The frame keeps him at his whole pixels: the pause shows him.
+ * At the window's own size (k 1), the frame as it is. */
+static void subpixel_band(SDL_Window *window, SDL_Renderer *renderer)
+{
+    SDL_SetWindowSize(window, 1280, 720);
+    SDL_SyncWindow(window);
+    oracles_sdl_options options = { 0 };
+    options.scale = 2;
+    options.window = window;
+    options.renderer = renderer;
+    oracles_host_backend backend;
+    if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+    static uint32_t pixels[480 * 270];
+    static uint32_t layer[64 * 64], patch[64 * 64];
+    for (unsigned i = 0; i < 480u * 270u; i++) pixels[i] = 0xff000000u;
+    for (unsigned y = 16; y < 270; y++) { pixels[y * 480 + 10] = 0xffffffffu; pixels[y * 480 + 479] = 0xff0000ffu; }
+    for (unsigned y = 0; y < 16; y++) pixels[y * 480 + 10] = 0xffff0000u;
+    pixels[40 * 480 + 20] = pixels[41 * 480 + 20] = 0xff00ff00u;   /* Link, at his whole pixels */
+    layer[0] = layer[64] = 0xff00ff00u;                             /* at (20, 40) and (20, 41) */
+    patch[0] = patch[64] = 0xff000000u;                             /* the band without him there */
+    if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
+        /* The band half a pixel left, Link at his own place: his fraction the band's, his move 0 against it. */
+        oracles_host_video_subpixel sub = { 128, 0, 16, 254, layer, 20, 40, 1, 2, 64, 0, 0, patch, 1, { { 10, 90, 1, 20 } } };
+        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
+        CHECK(backend.present_frame(backend.opaque, &image));
+        SDL_FRect area;
+        CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area));
+        const int k = (int)(area.w / 480.0f), x0 = (int)area.x, y0 = (int)area.y, half = k / 2;
+        CHECK(k == 2);
+        /* The band's column 10, half a pixel left; the bar's, where it was. */
+        CHECK(pixel_at(renderer, x0 + 10 * k - half, y0 + 120 * k) == 0xffffffffu && pixel_at(renderer, x0 + 10 * k + k - half - 1, y0 + 120 * k) == 0xffffffffu);
+        CHECK(pixel_at(renderer, x0 + 10 * k + k - half, y0 + 120 * k) == 0xff000000u && pixel_at(renderer, x0 + 10 * k - half - 1, y0 + 120 * k) == 0xff000000u);
+        CHECK(pixel_at(renderer, x0 + 10 * k, y0 + 10 * k) == 0xffff0000u && pixel_at(renderer, x0 + 10 * k + k - 1, y0 + 10 * k) == 0xffff0000u);
+        CHECK(pixel_at(renderer, x0 + 10 * k - 1, y0 + 10 * k) == 0xff000000u);
+        /* The fixed rectangle, column 10 of lines 90 to 109, unmoved. */
+        CHECK(pixel_at(renderer, x0 + 10 * k, y0 + 100 * k) == 0xffffffffu && pixel_at(renderer, x0 + 10 * k + k - 1, y0 + 100 * k) == 0xffffffffu);
+        /* The last column over the sliver it uncovers. */
+        CHECK(pixel_at(renderer, x0 + 480 * k - 1, y0 + 100 * k) == 0xff0000ffu && pixel_at(renderer, x0 + 479 * k - half, y0 + 100 * k) == 0xff0000ffu);
+        /* Link unmoved, the patch hiding his whole place in the band moved, nothing of him twice. */
+        CHECK(pixel_at(renderer, x0 + 20 * k, y0 + 40 * k) == 0xff00ff00u && pixel_at(renderer, x0 + 20 * k + k - 1, y0 + 41 * k + k - 1) == 0xff00ff00u);
+        CHECK(pixel_at(renderer, x0 + 20 * k - half, y0 + 40 * k) == 0xff000000u);
+        /* His fraction 0 against the band's half: drawn with it, half a pixel left. */
+        sub.layer_fx = -128;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, x0 + 20 * k - half, y0 + 40 * k) == 0xff00ff00u && pixel_at(renderer, x0 + 20 * k + k - half, y0 + 40 * k) == 0xff000000u);
+        /* His fraction 255: rounded down, half a pixel right of the band's drawing of him, never a whole one. */
+        sub.layer_fx = 127;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, x0 + 20 * k, y0 + 40 * k) == 0xff00ff00u && pixel_at(renderer, x0 + 20 * k + k, y0 + 40 * k) == 0xff000000u);
+        CHECK(pixel_at(renderer, x0 + 20 * k - half, y0 + 40 * k) == 0xff000000u);
+        /* The frame the pause keeps (its texture) has him at his whole place. */
+        SDL_Window *pw; SDL_Renderer *pr; SDL_Texture *kept; int kw = 0, kh = 0;
+        oracles_sdl_backend_pause_view(&backend, &pw, &pr, &kept, &kw, &kh);
+        SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+        SDL_RenderClear(renderer);
+        const SDL_FRect whole = { 0.0f, 0.0f, 480.0f, 270.0f };
+        CHECK(SDL_RenderTexture(renderer, kept, &whole, &whole));
+        CHECK(pixel_at(renderer, 20, 40) == 0xff00ff00u && pixel_at(renderer, 20, 41) == 0xff00ff00u && pixel_at(renderer, 10, 100) == 0xffffffffu);
+        SDL_SetRenderLogicalPresentation(renderer, 480, 270, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+        const oracles_host_video_subpixel high = { 0, 0, 16, 254, layer, 20, 15, 1, 2, 64, 0, 0, patch, 0, { { 0 } } };
+        const oracles_host_video_frame cut = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &high };
+        CHECK(backend.present_frame(backend.opaque, &cut));
+        CHECK(pixel_at(renderer, x0 + 20 * k, y0 + 15 * k) == 0xff000000u && pixel_at(renderer, x0 + 20 * k, y0 + 16 * k) == 0xff00ff00u);
+        /* Sampled smoothly (Fill's pixel art), the layer's and the patch's edges blend with their transparent pixels:
+         * on a white band, white Link and white patch, nothing darker than white around him. */
+        static uint32_t white[480 * 270], white_layer[64 * 64], white_patch[64 * 64];
+        for (unsigned i = 0; i < 480u * 270u; i++) white[i] = 0xffffffffu;
+        for (unsigned y = 0; y < 3u; y++) {
+            white_layer[y * 64] = white_layer[y * 64 + 2] = white_layer[y * 64 + 4] = 0xffffffffu;   /* his pixels, holes between */
+            white_patch[y * 64] = white_patch[y * 64 + 2] = white_patch[y * 64 + 4] = 0xffffffffu;
+        }
+        SDL_SetTextureScaleMode(kept, SDL_SCALEMODE_LINEAR);
+        const oracles_host_video_subpixel smooth = { 128, 64, 16, 254, white_layer, 20, 40, 5, 3, 64, -64, 32, white_patch, 0, { { 0 } } };
+        const oracles_host_video_frame bright = { white, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &smooth };
+        CHECK(backend.present_frame(backend.opaque, &bright));
+        int darker = 0;
+        for (int y = y0 + 38 * k; y < y0 + 44 * k; y++)
+            for (int x = x0 + 18 * k; x < x0 + 24 * k; x++) darker += pixel_at(renderer, x, y) != 0xffffffffu;
+        CHECK(darker == 0);
+        SDL_SetTextureScaleMode(kept, SDL_SCALEMODE_NEAREST);
+        /* At the window's own size, the frame as it is: column 10 and Link where the frame has them. */
+        SDL_SetWindowSize(window, 640, 360);
+        SDL_SyncWindow(window);
+        sub.layer_fx = 64;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area) && (int)(area.w / 480.0f) == 1);
+        const int x1 = (int)area.x, y1 = (int)area.y;
+        CHECK(pixel_at(renderer, x1 + 10, y1 + 120) == 0xffffffffu && pixel_at(renderer, x1 + 9, y1 + 120) == 0xff000000u);
+        CHECK(pixel_at(renderer, x1 + 20, y1 + 40) == 0xff00ff00u && pixel_at(renderer, x1 + 21, y1 + 40) == 0xff000000u);
+        SDL_SetWindowSize(window, 1280, 720);
+        SDL_SyncWindow(window);
+    } else CHECK(0);
+    backend.stop(backend.opaque);
+    oracles_sdl_backend_release(&backend);
+}
+
 /* The screen margin, in the lent window sized for 160x144 at five times (800x720): off presents through SDL's logical
  * presentation, as before it, the frame filling the window; small draws the frame itself in the band 24 dp clear at
  * the top and at the bottom (a dp a pixel on the dummy display), black outside, at the band's whole scale, four times,
@@ -320,7 +419,13 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
 {
     static uint32_t pixels[160 * 144];
     for (unsigned i = 0; i < 160u * 144u; i++) pixels[i] = 0xffffffffu;
-    const oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0 };
+    const oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, NULL };
+    static uint32_t with_link[160 * 144], layer[64 * 64], patch[64 * 64];
+    for (unsigned i = 0; i < 160u * 144u; i++) with_link[i] = 0xffffffffu;
+    for (unsigned y = 40; y < 42; y++) for (unsigned x = 20; x < 22; x++) with_link[y * 160 + x] = 0xff00ff00u;
+    for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xffffffffu; }
+    const oracles_host_video_subpixel sub = { 128, 0, 16, 128, layer, 20, 40, 2, 2, 64, -128, 0, patch, 0, { { 0 } } };
+    const oracles_host_video_frame moved = { with_link, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
     for (int margin = ORACLES_SCREEN_MARGIN_OFF; margin <= ORACLES_SCREEN_MARGIN_SMALL; margin += ORACLES_SCREEN_MARGIN_SMALL) {
         oracles_sdl_options options = { 0 };
         options.scale = 5;
@@ -361,10 +466,16 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
                 finger(SDL_EVENT_FINGER_UP, 1, l.a.x, band.y + l.a.y);
                 touch_drain(&backend, &pressed, &released, &pauses);
                 CHECK(released == ORACLES_KEY_A);
+                /* A frame of the sub-pixel camera the band draws itself: Link, whom the frame keeps, at his place. */
+                CHECK(backend.present_frame(backend.opaque, &moved));
+                CHECK(pixel_at(renderer, 80 + 20 * 4 + 1, 72 + 40 * 4 + 1) == 0xff00ff00u);
                 /* Off from the pause: the whole window's five times at the next frame, the controls over it. */
                 oracles_sdl_backend_set_screen_margin(&backend, ORACLES_SCREEN_MARGIN_OFF);
                 CHECK(backend.present_frame(backend.opaque, &image));
                 CHECK(pixel_at(renderer, 400, 0) == 0xffffffffu && pixel_at(renderer, 400, 719) == 0xffffffffu);
+                /* And through the controls' own drawing, a finger having touched: Link there still. */
+                CHECK(backend.present_frame(backend.opaque, &moved));
+                CHECK(pixel_at(renderer, 20 * 5 + 1, 40 * 5 + 1) == 0xff00ff00u);
             }
         } else CHECK(0);
         backend.stop(backend.opaque);
@@ -643,6 +754,7 @@ int main(int argc, char **argv)
     SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
     touches(window, renderer);
     enlarged_menus(window, renderer);
+    subpixel_band(window, renderer);
     scaling(window, renderer);
     margins(window, renderer);
     face_buttons(window, renderer, 0, 0, NULL, &south, &east);
