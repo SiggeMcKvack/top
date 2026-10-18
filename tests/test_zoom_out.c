@@ -772,6 +772,27 @@ static void beside_reads(void)
     CHECK(oracles_enhanced_reads_hold(0, addresses, seen, live, 0xc797, 0x10));    /* nothing read */
 }
 
+/* A room whose run was refused for its parent's state, no start (Ages' 1:37
+ * beyond the Maku sapling's grove at the first arrival in the past): settled
+ * for the band's fill as a failed room is, though it waits on no clock, and
+ * its parent run again no sooner than a failure would allow. */
+static void waiting_on_a_start(void)
+{
+    const unsigned grove = 0x138u, beside = 0x147u, arrival = 0x139u, below = 0x148u;
+    CHECK(!oracles_enhanced_fill_settled(0, 0, 0, 0, 0u, arrival));   /* nothing yet: the fill goes on */
+    CHECK(oracles_enhanced_fill_settled(1, 0, 0, 0, 0u, arrival) && oracles_enhanced_fill_settled(0, 1, 0, 0, 0u, arrival)
+          && oracles_enhanced_fill_settled(0, 0, 1, 0, 0u, arrival));
+    CHECK(oracles_enhanced_fill_settled(0, 0, 0, 1, arrival, arrival));   /* waiting for another parent: settled, the look-ahead and the corners go on */
+    CHECK(!oracles_enhanced_fill_settled(0, 0, 0, 1, arrival, below));    /* marked around another reference room: not, until found so again */
+    CHECK(oracles_enhanced_parent_rerun_due(0, 0u, 0u, 0u, grove, arrival, 5u));   /* not waiting: the parent is run again at once */
+    CHECK(!oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1000u));
+    CHECK(!oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1299u));
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1300u));   /* the pace of a failure, 300 frames */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 0xffffff00u, grove, arrival, 0x0000002cu));   /* across the frame counter's wrap */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, beside, arrival, 1001u));   /* another parent: at once */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, below, 1001u));      /* Link in another room: at once */
+}
+
 /* A ghost's capture of no terrain, never kept: Seasons' intro fades to white
  * as Din starts dancing, and a run settled in it captured every colour white
  * but for the outlines (71 % of its area one colour, under the nine tenths
@@ -839,6 +860,7 @@ int main(void)
     black_kinds();
     parent_keys();
     beside_reads();
+    waiting_on_a_start();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("test_zoom_out: ok\n");
     return 0;

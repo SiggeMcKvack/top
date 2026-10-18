@@ -168,6 +168,9 @@ if(BUILD_TESTING)
         # The same routes on mGBA: the rows of both cores and its own.
         add_test(NAME oracles-routes-mgba COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/check_routes.py --harness $<TARGET_FILE:oracles-harness> --core mgba)
         set_tests_properties(oracles-routes-mgba PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 3600)
+        # The rules the script holds a row to, without the ROMs.
+        add_test(NAME oracles-check-routes-rules COMMAND ${Python3_EXECUTABLE} -B -m unittest test_check_routes
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../tools)
     endif()
     # Each fan game's table against its manifest and the guest table's fields: a field the guest gains fails here,
     # before it takes the zero of C in a checked-in table (engine/game/profiles/gen_tables.py).

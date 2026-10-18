@@ -345,6 +345,18 @@ int oracles_enhanced_parent_key_holds(const uint8_t *parent_key, const uint8_t *
  * flags (`own_flags`) aside, which the entry into it sets and no load reads.
  * A room run from beside is kept only if they are. */
 int oracles_enhanced_reads_hold(unsigned count, const uint16_t *addresses, const uint8_t *seen, const uint8_t *live, uint16_t own_flags, uint8_t visited);
+/* Whether a room around the reference room `ref` is settled for the band's
+ * fill: delivered, under way, failed, or waiting for another parent than one
+ * whose state is no start (`waits_start`, marked around `waits_ref`), which
+ * the band would otherwise wait on for as long as that parent holds.  Rooms
+ * as group << 8 | room. */
+int oracles_enhanced_fill_settled(int valid, int in_flight, int failed, int waits_start, unsigned waits_ref, unsigned ref);
+/* Whether `parent`, no longer holding, may be run again for a room around
+ * `ref` at `frame`: at once, unless it is the parent the room waits on as no
+ * start (`waits_parent`, found so around `waits_ref` since `waits_since`),
+ * then at the pace of a failure, as when the room itself was failed. */
+int oracles_enhanced_parent_rerun_due(int waits_start, unsigned waits_parent, unsigned waits_ref, uint32_t waits_since,
+                                      unsigned parent, unsigned ref, uint32_t frame);
 /* Results run from a room beside while a cutscene held the game, refused because a byte they read had changed. */
 unsigned oracles_enhanced_view_beside_refused(const OraclesEnhancedView *view);
 /* Runs started from the live state across the sea's surface (Ages), ahead of a dive or a return to the surface. */

@@ -54,7 +54,7 @@ static int run_from_other_side(OraclesEnhancedView *v, entry *e, const entry *ro
         uint8_t room;
         if (!ev_room_toward(v, e->room, (OraclesGhostDirection)d, &room) || room == routed->room) continue;
         entry *side = ev_find_entry(v, e->group, room);
-        if (!side || !side->valid || !side->settled_size || side->refresh || side->rerun || ev_self_routed(v, side->group, side->room)) continue;
+        if (!side || !side->valid || !side->settled_size || side->refresh || side->rerun || side->not_a_start || ev_self_routed(v, side->group, side->room)) continue;
         if (!ev_entry_key_current(v, side, key, key_len, e->group, e->room)) continue;
         if (v->neighbour_objects && oracles_objects_killed_in_list(side->killed_list, e->room) != oracles_objects_killed_enemies(v->guest, e->room)) continue;
         e->last_use = v->frame;
@@ -70,7 +70,9 @@ static int run_from_other_side(OraclesEnhancedView *v, entry *e, const entry *ro
  * room), else (`two_steps`: a diagonal) from its own parent `via`, the room
  * above or below it (`parent_dir` is then the way from `via` to it,
  * `via_dir` the direction of `via` from the reference room), or not at all.  A diagonal run
- * from the live state would scroll into the room above or below. */
+ * from the live state would scroll into the room above or below.  A parent
+ * whose state refused to prime (not_a_start) is no start while it holds: the
+ * room waits for another parent; one that no longer holds is run again. */
 static int run_from_parent(OraclesEnhancedView *v, entry *e, entry *parent, OraclesGhostDirection dir, OraclesGhostDirection parent_dir,
                            int two_steps, entry *via, OraclesGhostDirection via_dir, const uint8_t *key, size_t key_len, int live_primeable)
 {
@@ -108,8 +110,11 @@ static int run_from_parent(OraclesEnhancedView *v, entry *e, entry *parent, Orac
     const int key_current = two_steps ? (via && ev_entry_key_current(v, via, key, key_len, e->group, e->room) && parent->accepted_at >= via->accepted_at)
                                       : ev_entry_key_current(v, parent, key, key_len, e->group, e->room);
     if (parent->refresh || parent->rerun || !killed_current || !key_current) {
-        /* A parent whose run for its state failed stays drawn (record_failure): tried again at the pace of a failure. */
+        /* A parent whose run for its state failed stays drawn (record_failure): tried again at the pace of a failure,
+         * as is one whose state was no start for this room (waits_start). */
         if (parent->failed && v->frame - parent->failed_at < FAILED_RETRY_FRAMES) return 0;
+        if (!oracles_enhanced_parent_rerun_due(e->waits_start, e->waits_parent, e->waits_ref, e->waits_since,
+                                               (unsigned)parent->group << 8 | parent->room, (unsigned)v->observer.ref_group << 8 | v->observer.ref_room, v->frame)) return 0;
         /* A parent two steps away is run again from `via` alone, which must
          * then agree on the enemies of the room asked for too: otherwise
          * `via` itself first, from the live state. */
@@ -124,6 +129,7 @@ static int run_from_parent(OraclesEnhancedView *v, entry *e, entry *parent, Orac
         if (started) { v->refreshed++; if (!killed_current) v->parents_run_for_kills++; return 1; }
         return 0;
     }
+    if (parent->not_a_start) { ev_wait_for_start(v, e, parent); return 0; }
     e->last_use = v->frame;
     return ev_start_job(v, e, parent->settled_state, parent->settled_size, dir, parent);
 }
@@ -325,9 +331,21 @@ static int near_ready(OraclesEnhancedView *v, const run_plan *p)
 {
     for (unsigned w = 1; w < p->near_count; w++) {
         const entry *e = ev_find_entry(v, p->group, p->wanted[w]);
-        if (!e || !(e->valid || e->in_flight || e->failed)) return 0;
+        if (!e || !oracles_enhanced_fill_settled(e->valid, e->in_flight, e->failed, e->waits_start, e->waits_ref,
+                                                 (unsigned)v->observer.ref_group << 8 | v->observer.ref_room)) return 0;
     }
     return 1;
+}
+
+int oracles_enhanced_fill_settled(int valid, int in_flight, int failed, int waits_start, unsigned waits_ref, unsigned ref)
+{
+    return valid || in_flight || failed || (waits_start && waits_ref == ref);
+}
+
+int oracles_enhanced_parent_rerun_due(int waits_start, unsigned waits_parent, unsigned waits_ref, uint32_t waits_since,
+                                      unsigned parent, unsigned ref, uint32_t frame)
+{
+    return !waits_start || waits_parent != parent || waits_ref != ref || frame - waits_since >= FAILED_RETRY_FRAMES;
 }
 
 /* A step of the run order: a room of the plan and the way it is run. */
@@ -355,7 +373,7 @@ int oracles_enhanced_parent_key_holds(const uint8_t *parent_key, const uint8_t *
 
 static int parent_holds(OraclesEnhancedView *v, const run_plan *p, const entry *parent, uint8_t group, uint8_t room)
 {
-    if (!parent || !parent->valid || !parent->settled_size || parent->refresh || parent->rerun || parent->key_len != p->key_len) return 0;
+    if (!parent || !parent->valid || !parent->settled_size || parent->refresh || parent->rerun || parent->not_a_start || parent->key_len != p->key_len) return 0;
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
     /* The time portal and a time warp's arrival, for the room chained, as in ev_invalidate_by_reads: the live key with
      * the parent's values where they do not matter to it. */
@@ -374,8 +392,10 @@ static int parent_holds(OraclesEnhancedView *v, const run_plan *p, const entry *
  * for): from a room beside it already delivered, entered from that side as
  * a diagonal is.  Without it a neighbour lost at the scene's start
  * (a capture refused in the fade that opens it) stayed black to its end
- * while the rooms around it were drawn.  `beside` are the candidates, `ways`
- * the direction from each into the room. */
+ * while the rooms around it were drawn.  The same for a room beyond left or
+ * right whose only parent's state is no start (not_a_start), and for a room
+ * of the second ring chained through such a room above or below.  `beside`
+ * are the candidates, `ways` the direction from each into the room. */
 static int run_from_beside(OraclesEnhancedView *v, run_plan *p, entry *e, uint8_t room, const entry *const beside[3], const OraclesGhostDirection ways[3])
 {
     for (unsigned k = 0; k < 3u; k++) {
@@ -402,11 +422,18 @@ static int run_step_now(OraclesEnhancedView *v, run_plan *p, const run_step *st)
         const OraclesGhostDirection ways[3] = { ORACLES_DIR_DOWN, ORACLES_DIR_UP, plan_sides[1u - s] };
         return run_from_beside(v, p, e, p->first[plan_sides[s]], beside, ways);
     }
-    case STEP_SECOND: {   /* beyond them, from their settled states */
+    case STEP_SECOND: {   /* beyond them, from their settled states, or from the outer ring's diagonals while that state is no start */
         entry *parent = ev_find_entry(v, group, p->first[plan_sides[s]]);
         if (!parent || !parent->valid) return 0;
         entry *e = ev_take_slot(v, group, p->second[s], p->wanted, p->wanted_count);
-        return entry_wanting(v, e) && run_from_parent(v, e, parent, plan_sides[s], plan_sides[s], 0, NULL, plan_sides[s], p->key, p->key_len, p->live_primeable);
+        if (!entry_wanting(v, e)) return 0;
+        if (parent->not_a_start) {
+            const entry *const beside[3] = { p->have_second_diagonal[0][s] ? ev_find_entry(v, group, p->second_diagonal[0][s]) : NULL,
+                                             p->have_second_diagonal[1][s] ? ev_find_entry(v, group, p->second_diagonal[1][s]) : NULL, NULL };
+            const OraclesGhostDirection ways[3] = { ORACLES_DIR_DOWN, ORACLES_DIR_UP, plan_sides[s] };
+            if (run_from_beside(v, p, e, p->second[s], beside, ways)) return 1;
+        }
+        return run_from_parent(v, e, parent, plan_sides[s], plan_sides[s], 0, NULL, plan_sides[s], p->key, p->key_len, p->live_primeable);
     }
     case STEP_REF: {   /* the reference room, back from a neighbour */
         entry *e = ev_take_slot(v, group, p->ref, p->wanted, p->wanted_count);
@@ -478,13 +505,24 @@ static int run_step_now(OraclesEnhancedView *v, run_plan *p, const run_step *st)
         return entry_wanting(v, e) && run_from_parent(v, e, parent, plan_verticals[u], plan_verticals[u], 0, NULL, plan_verticals[u], p->key, p->key_len, p->live_primeable);
     }
     default: {
-        /* A diagonal parent is two steps away: run again, if it must be, from the room above or below it. */
+        /* A diagonal parent is two steps away: run again, if it must be, from the room above or below it.  While
+         * that room's state is no start, the diagonal cannot be run again through it: from beside instead, the
+         * diagonal as it stands or the room of the second ring on the other side. */
         entry *vertical = p->have_first[plan_verticals[u]] ? ev_find_entry(v, group, p->first[plan_verticals[u]]) : NULL;
         entry *parent = ev_find_entry(v, group, p->diagonal[u][s]);
         if (!parent || !parent->valid) return 0;
         const int second = st->kind == STEP_SECOND_DIAGONAL;
-        entry *e = ev_take_slot(v, group, second ? p->second_diagonal[u][s] : p->beyond_diagonal[u][s], p->wanted, p->wanted_count);
-        return entry_wanting(v, e) && run_from_parent(v, e, parent, second ? plan_sides[s] : plan_verticals[u], plan_sides[s], 1, vertical, plan_verticals[u], p->key, p->key_len, p->live_primeable);
+        const uint8_t room = second ? p->second_diagonal[u][s] : p->beyond_diagonal[u][s];
+        entry *e = ev_take_slot(v, group, room, p->wanted, p->wanted_count);
+        if (!entry_wanting(v, e)) return 0;
+        if (vertical && vertical->valid && vertical->not_a_start) {
+            const entry *other = second ? (p->have_second[s] ? ev_find_entry(v, group, p->second[s]) : NULL)
+                                        : (p->have_beyond[u] ? ev_find_entry(v, group, p->beyond[u]) : NULL);
+            const entry *const beside[3] = { parent, other, NULL };
+            const OraclesGhostDirection ways[3] = { second ? plan_sides[s] : plan_verticals[u], second ? plan_verticals[u] : plan_sides[s], plan_sides[s] };
+            if (run_from_beside(v, p, e, room, beside, ways)) return 1;
+        }
+        return run_from_parent(v, e, parent, second ? plan_sides[s] : plan_verticals[u], plan_sides[s], 1, vertical, plan_verticals[u], p->key, p->key_len, p->live_primeable);
     }
     }
 }

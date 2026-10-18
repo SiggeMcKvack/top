@@ -109,7 +109,9 @@ ALWAYS = {
 ALWAYS["enhanced-zoom"] = ALWAYS["enhanced"] + ["enhanced.ghost_wrong_room=0", "enhanced.cold_fill_frames>=0"]
 ALWAYS["enhanced-zoom-threaded"] = ALWAYS["enhanced-threaded"]   # a run the thread's timing sends astray is dropped, as in enhanced-threaded: nothing wrong is shown
 # A row at another of the view's sizes (`--view`) holds what a zoom row holds: the synchronous ghost in the right room, and
-# the band filled at least once.
+# the band filled at least once; a row that gives one of these keys its own ceiling (`key<=N`, or `core:key<=N` for one
+# core) holds that figure instead on the cores it names, the reason in a comment above it (a route played whose ghost runs
+# astray where nothing is shown wrong).
 SIZED = {"enhanced": ["enhanced.ghost_wrong_room=0", "enhanced.cold_fill_frames>=0"]}
 MODE_FLAGS = {
     "faithful": lambda w: ["--render-check", str(w / "render"), "--colour-correction", "off", "--ghost-check", str(w / "ghost"), "--ghost-trace",
@@ -266,6 +268,23 @@ def parse_summary(path: Path) -> dict:
     return values
 
 
+def sized_rules(mode: str, options: list, expect: list, core: str) -> list:
+    """The rules a row at another of the view's sizes holds on `core` on top of its mode's: SIZED's, less those whose key
+    the row gives its own ceiling on that core (`key<=N`, or `core:key<=N` naming it)."""
+    if "--view" not in options:
+        return []
+    own = set()
+    for rule in expect:
+        on, colon, rest = rule.partition(":")
+        if colon and on in CORES:
+            if on != core:
+                continue
+            rule = rest
+        if "<=" in rule:
+            own.add(rule.split("<=", 1)[0])
+    return [rule for rule in SIZED.get(mode, []) if rule.split(">=", 1)[0].split("=", 1)[0] not in own]
+
+
 def check(rule: str, values: dict) -> str:
     """The violated rule as text, or an empty string."""
     if ">=" in rule:   # a floor: what the route must exercise
@@ -351,7 +370,7 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_d
             violations.append("no positions to compare with SameBoy's replay")
     if not values:
         violations.append(f"no summary written (harness exit {proc.returncode}{retried}; see {w / 'harness.log'})")
-    sized = SIZED.get(row["mode"], []) if "--view" in row["options"] else []
+    sized = sized_rules(row["mode"], row["options"], row["expect"], core)
     for rule in ALWAYS[row["mode"]] + sized + row["expect"]:
         on, colon, rest = rule.partition(":")
         if colon and on in CORES:

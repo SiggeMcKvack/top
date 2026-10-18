@@ -130,6 +130,10 @@ typedef struct entry {
     int near;                           /* last wanted near its reference room, not in the second ring: evicted after the others */
     int rerun;                          /* valid and drawn, its settled state not a start for the rooms beyond: run again from the live state */
     uint32_t rerun_at;                  /* when a chained run last asked for that */
+    int not_a_start;                    /* valid, but its settled state refused to prime a run (a scene its entry starts disables the transitions): no parent until delivered again */
+    int waits_start;                    /* its parent's state is no start (ev_wait_for_start): it waits for another parent, settled for the band's fill, that parent run again at the pace of a failure */
+    uint32_t waits_since;               /* since when */
+    unsigned waits_parent, waits_ref;   /* that parent and the reference room then, group << 8 | room: the mark holds for them alone */
     int corner_asked;                   /* a corner beyond it asked for that, and it has not held for the key since (view_schedule.c) */
     uint8_t season;                     /* the season it was loaded in */
     uint8_t collisions[ORACLES_GHOST_LAYOUT_BYTES];
@@ -570,6 +574,7 @@ uint8_t ev_live_byte(OraclesEnhancedView *v, uint16_t a);
 size_t ev_read_key(OraclesEnhancedView *v, uint8_t *out);
 long ev_key_offset(const OraclesEnhancedView *v, uint16_t a);
 void ev_drop_entry(entry *e);
+void ev_wait_for_start(OraclesEnhancedView *v, entry *e, const entry *parent);
 void ev_invalidate_all(OraclesEnhancedView *v);
 uint16_t ev_room_flags_address(const OraclesEnhancedView *v, uint8_t group, uint8_t room);
 void ev_invalidate_by_reads(OraclesEnhancedView *v);

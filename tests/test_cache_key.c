@@ -1,4 +1,4 @@
-/* The Moonrise profile's cache: its key read through its own tables, and its loaded tileset's identity; no game ROM or emulation is exercised. */
+/* The view's cache: the Moonrise profile's key read through its own tables and its loaded tileset's identity, and a room waiting for a parent that is no start; no game ROM or emulation is exercised. */
 #include "view_internal.h"
 
 static int failures;
@@ -61,6 +61,38 @@ static void check_moonrise_traced_key(void)
     CHECK(m == n && key_has(shifted, m, elsewhere) && !key_has(shifted, m, before));
 }
 
+/* A room whose parent's state is no start (Ages' grove 1:38 in the past,
+ * whose entry starts the Moblins' scene), marked whether its own run was
+ * refused or it found the parent marked by a sibling: settled for the fill
+ * around that reference room, the parent run again for it at the pace of a
+ * failure from the first time, and marked afresh around another one. */
+static void check_wait_for_start(OraclesEnhancedView *view)
+{
+    entry *grove = &view->slots[0], *beyond = &view->slots[1];
+    grove->used = beyond->used = 1;
+    grove->group = beyond->group = 1;
+    grove->room = 0x38; beyond->room = 0x37;
+    view->observer.ref_group = 1; view->observer.ref_room = 0x39;
+    view->frame = 1000;
+    ev_wait_for_start(view, beyond, grove);
+    CHECK(beyond->waits_start && beyond->waits_since == 1000 && beyond->waits_parent == 0x138u && beyond->waits_ref == 0x139u);
+    CHECK(oracles_enhanced_fill_settled(beyond->valid, beyond->in_flight, beyond->failed, beyond->waits_start, beyond->waits_ref, 0x139u));
+    view->frame = 1200;
+    ev_wait_for_start(view, beyond, grove);   /* found so again: the clock runs from the first time */
+    CHECK(beyond->waits_since == 1000);
+    CHECK(!oracles_enhanced_parent_rerun_due(beyond->waits_start, beyond->waits_parent, beyond->waits_ref, beyond->waits_since, 0x138u, 0x139u, view->frame));
+    view->observer.ref_room = 0x48;            /* Link below the grove: the mark of the other room no longer holds */
+    CHECK(!oracles_enhanced_fill_settled(beyond->valid, beyond->in_flight, beyond->failed, beyond->waits_start, beyond->waits_ref, 0x148u));
+    CHECK(oracles_enhanced_parent_rerun_due(beyond->waits_start, beyond->waits_parent, beyond->waits_ref, beyond->waits_since, 0x138u, 0x148u, view->frame));
+    ev_wait_for_start(view, beyond, grove);
+    CHECK(beyond->waits_since == 1200 && beyond->waits_ref == 0x148u);
+    ev_drop_entry(beyond);
+    CHECK(!beyond->waits_start);
+    memset(view->slots, 0, 2 * sizeof *view->slots);
+    view->frame = 0;
+    view->observer.ref_group = 0; view->observer.ref_room = 0;
+}
+
 int main(void)
 {
     check_moonrise_traced_key();
@@ -75,6 +107,7 @@ int main(void)
     if (!rom || !view || !slots) { free(rom); free(view); free(slots); return 1; }
     view->slots = slots;
     view->slot_count = NORMAL_SLOTS;
+    check_wait_for_start(view);
     rom[0x143] = 0xc0; rom[0x147] = 0x1b; rom[0x148] = 0x05; rom[0x149] = 0x02;
     const OraclesCoreOptions options = { 0, 0, ORACLES_CORE_SAMEBOY, 0 };
     view->core = oracles_core_create(rom, size, &options);
