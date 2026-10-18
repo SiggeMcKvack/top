@@ -241,3 +241,50 @@ void ec_check_blurb(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, uint32_t 
     const size_t used = strlen(c->blurb_list);
     if (used + 12 < sizeof c->blurb_list) snprintf(c->blurb_list + used, sizeof c->blurb_list - used, "%s%u", used ? " " : "", frame);
 }
+
+#define TINT_RING 24u              /* the band's columns and rows around the game's window compared with it */
+#define TINT_DARKER_LUMA 40u       /* how much darker than the ring around it (mean luminance, 0..255) the window stands apart */
+
+static unsigned pixel_luma(uint32_t p) { return (((p >> 16) & 0xffu) * 2u + ((p >> 8) & 0xffu) * 5u + (p & 0xffu)) / 8u; }
+
+/* The game's window against the ring of the band around it: a scene that
+ * darkens the game's screen (the night of Nayru's possession) and leaves the
+ * rooms around in their colours shows a window much darker than the ring.
+ * In play the window stands as bright as the ring or brighter (the room Link
+ * walks in against the trees around it, 30 to 75 on the routes), never 40
+ * darker.  Counted on the world frames with a ring of at least a quarter of
+ * the window's pixels on screen; a blank surface (a fade's end), a warp's
+ * curtain, a text box and a large room are not. */
+void ec_measure_window_darker(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
+                           int32_t camera_x, int32_t camera_y, int blank, uint32_t frame)
+{
+    c->window_luma = c->ring_luma = 0;
+    /* A large room is shown alone, the rest of it around the window, which
+     * may well be darker: no other room to compare with. */
+    if (mode != ORACLES_ENHANCED_WORLD || !surface || blank || ob->large) return;
+    /* The curtain of a warp opens the window column by column over the band;
+     * a text box darkens the window by itself. */
+    const OraclesGuestTables *t = oracles_guest_tables(c->guest);
+    if (oracles_guest_read8(c->guest, t->scroll_mode) == CURTAIN_SCROLL_MODE && oracles_guest_read8(c->guest, t->screen_transition_state) == CURTAIN_TRANSITION_STATE) return;
+    if (oracles_guest_read8(c->guest, t->text_is_active)) return;
+    const int32_t left = ob->window_left - camera_x, top = ob->window_top - camera_y;
+    const int32_t w = (int32_t)ORACLES_ENHANCED_CORE_WIDTH, h = (int32_t)ORACLES_ENHANCED_AREA_HEIGHT, ring = (int32_t)TINT_RING;
+    uint64_t in_sum = 0, ring_sum = 0;
+    unsigned in_count = 0, ring_count = 0;
+    for (int32_t y = top - ring; y < top + h + ring; y++) {
+        if (y < 0 || y >= (int32_t)c->band_height) continue;
+        for (int32_t x = left - ring; x < left + w + ring; x++) {
+            if (x < 0 || x >= (int32_t)c->width) continue;
+            const unsigned luma = pixel_luma(surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)y) * c->width + (unsigned)x]);
+            if (x >= left && x < left + w && y >= top && y < top + h) { in_sum += luma; in_count++; }
+            else { ring_sum += luma; ring_count++; }
+        }
+    }
+    if (!in_count || ring_count < in_count / 4u) return;
+    c->window_luma = (unsigned)(in_sum / in_count);
+    c->ring_luma = (unsigned)(ring_sum / ring_count);
+    if (c->ring_luma <= c->window_luma + TINT_DARKER_LUMA) return;
+    if (!c->window_darker_frames) c->window_darker_first = frame;
+    c->window_darker_last = frame;
+    c->window_darker_frames++;
+}

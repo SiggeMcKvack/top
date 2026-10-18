@@ -947,6 +947,139 @@ static void blank_captures(void)
     CHECK(oracles_enhanced_capture_blank(base, base, 0, area, 160u * 128u));    /* more: the LCD off */
 }
 
+/* The night Nayru's possession puts on Lynna (Ages' CUTSCENE_NAYRU_SINGING):
+ * PALH_99 over palettes 2 to 7 of PALH_TILESET_LYNNA_CITY, the base itself,
+ * with no fade.  The other rooms take it as a colour transform; a palette or
+ * two of an object, a palette transition's last mix and palettes of another
+ * room are no scene's tint. */
+static void set_colours(uint8_t *palettes, unsigned first, const uint8_t (*rgb)[3], unsigned count)
+{
+    for (unsigned i = 0; i < count; i++) {
+        const unsigned c = rgb[i][0] | rgb[i][1] << 5 | rgb[i][2] << 10;
+        palettes[(first + i) * 2u] = (uint8_t)c; palettes[(first + i) * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+}
+
+static unsigned channel(const uint8_t *palettes, unsigned i, unsigned shift) { return ((unsigned)(palettes[i * 2u] | palettes[i * 2u + 1u] << 8) >> shift) & 31u; }
+
+static void scene_tints(void)
+{
+    static const uint8_t common[8][3] = { { 31, 31, 31 }, { 20, 20, 20 }, { 10, 10, 10 }, { 0, 0, 0 }, { 31, 31, 24 }, { 31, 12, 4 }, { 16, 4, 0 }, { 0, 0, 0 } };
+    static const uint8_t lynna[24][3] = {   /* paletteData4a30 */
+        { 31, 28, 2 }, { 16, 28, 2 }, { 6, 17, 0 }, { 0, 0, 0 }, { 25, 17, 1 }, { 16, 28, 2 }, { 6, 17, 0 }, { 0, 0, 0 },
+        { 31, 28, 2 }, { 25, 17, 1 }, { 16, 10, 0 }, { 0, 0, 0 }, { 26, 23, 20 }, { 15, 18, 20 }, { 8, 9, 12 }, { 4, 2, 0 },
+        { 31, 31, 24 }, { 4, 22, 31 }, { 0, 10, 22 }, { 0, 0, 0 }, { 20, 24, 15 }, { 7, 18, 16 }, { 9, 4, 16 }, { 0, 5, 5 } };
+    static const uint8_t night[24][3] = {   /* paletteData44a8 */
+        { 7, 16, 19 }, { 6, 10, 13 }, { 2, 3, 11 }, { 0, 0, 5 }, { 9, 11, 11 }, { 6, 11, 13 }, { 2, 3, 11 }, { 0, 0, 5 },
+        { 7, 16, 19 }, { 9, 11, 11 }, { 5, 6, 8 }, { 0, 0, 5 }, { 7, 16, 19 }, { 3, 12, 14 }, { 2, 4, 12 }, { 0, 0, 5 },
+        { 7, 18, 25 }, { 3, 14, 21 }, { 2, 4, 14 }, { 0, 0, 5 }, { 7, 16, 19 }, { 3, 12, 14 }, { 2, 4, 12 }, { 0, 0, 5 } };
+    uint8_t reference[64], scene[64], out[64], other[64];
+    int32_t k[12];
+    uint8_t slots = 0, changed = 0;
+    set_colours(reference, 0, common, 8); set_colours(reference, 8, lynna, 24);
+    set_colours(scene, 0, common, 8); set_colours(scene, 8, night, 24);
+    CHECK(oracles_enhanced_scene_tint(reference, scene, &slots, &changed, k) && slots == 0xfcu && changed == 0xfcu);
+    oracles_enhanced_scene_tinted(reference, reference, scene, changed, k, out);
+    CHECK(memcmp(out, scene, 64u) == 0);   /* a room of the live room's palettes: the scene's own */
+    oracles_enhanced_scene_tinted(scene, reference, scene, changed, k, out);
+    CHECK(memcmp(out, scene, 64u) == 0);   /* a room the ghost ran during the scene, its palettes the scene's: kept */
+    /* Another room's palettes: through the transform, darker and bluer, palettes 0 and 1 untouched. */
+    for (unsigned i = 0; i < 32u; i++) {
+        const uint8_t rgb[1][3] = { { (uint8_t)(10u + i % 20u), (uint8_t)(12u + i % 19u), (uint8_t)(i % 9u) } };
+        set_colours(other, i, rgb, 1);
+    }
+    oracles_enhanced_scene_tinted(other, reference, scene, changed, k, out);
+    CHECK(memcmp(out, other, 16u) == 0);
+    unsigned red_in = 0, red_out = 0, blue_in = 0, blue_out = 0;
+    for (unsigned i = 8; i < 32u; i++) { red_in += channel(other, i, 0); red_out += channel(out, i, 0); blue_in += channel(other, i, 10); blue_out += channel(out, i, 10); }
+    CHECK(red_out * 2u < red_in && blue_out > blue_in);
+    /* Half way through the palette thread's fade between the two: the tint so far. */
+    uint8_t half[64];
+    memcpy(half, reference, 64u);
+    for (unsigned i = 4; i < 32u; i++) {
+        unsigned c = 0;
+        for (unsigned shift = 0; shift < 15u; shift += 5u) c |= ((channel(reference, i, shift) + channel(scene, i, shift)) / 2u) << shift;
+        half[i * 2u] = (uint8_t)c; half[i * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+    CHECK(oracles_enhanced_scene_tint(reference, half, &slots, &changed, k) && slots == 0xfcu);
+    /* Two palettes of an object: no tint of the screen. */
+    memcpy(half, reference, 64u);
+    memcpy(half + 16u, scene + 16u, 16u);
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* A palette transition's last mix, every channel within 2: no scene's tint. */
+    memcpy(half, reference, 64u);
+    for (unsigned i = 4; i < 32u; i++) {
+        unsigned c = 0;
+        for (unsigned shift = 0; shift < 15u; shift += 5u) { const unsigned ch = channel(reference, i, shift); c |= (ch >= 2u ? ch - 2u : ch + 1u) << shift; }
+        half[i * 2u] = (uint8_t)c; half[i * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* That last mix with two palettes far apart, which no transform of the
+     * others explains: what is left is no tint either. */
+    for (unsigned i = 0; i < 8u; i++) { half[i * 2u] = (uint8_t)(0x1fu * (i & 1u)); half[i * 2u + 1u] = (uint8_t)(0x7cu * ((i >> 1) & 1u)); }
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* The same palettes in another order: no transform takes the one to the other. */
+    memcpy(half, reference, 64u);
+    for (unsigned p = 2; p < 8u; p++) memcpy(half + p * 8u, reference + (9u - p) * 8u, 8u);
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    CHECK(!oracles_enhanced_scene_tint(reference, reference, &slots, &changed, k));
+    /* Onox's arrival in Seasons: four palettes to the night, two others red,
+     * which no transform of the night explains.  The night is the tint: a
+     * room's palettes that were the live room's take the scene's, red ones
+     * included, any other goes to the night. */
+    static const uint8_t red[8][3] = { { 18, 3, 1 }, { 25, 16, 4 }, { 19, 10, 1 }, { 0, 0, 0 }, { 24, 1, 11 }, { 29, 3, 0 }, { 18, 2, 1 }, { 0, 0, 0 } };
+    memcpy(half, scene, 64u);
+    set_colours(half, 24, red, 8);
+    CHECK(oracles_enhanced_scene_tint(reference, half, &slots, &changed, k) && slots == 0x3cu && changed == 0xfcu);
+    oracles_enhanced_scene_tinted(reference, reference, half, changed, k, out);
+    CHECK(memcmp(out, half, 64u) == 0);
+    uint8_t dark_other[64];
+    oracles_enhanced_scene_tinted(other, reference, scene, changed, k, dark_other);
+    oracles_enhanced_scene_tinted(other, reference, half, changed, k, out);
+    CHECK(memcmp(out, dark_other, 64u) == 0);   /* another room's palettes all go to the night */
+}
+
+/* The room's own palettes a scene's tint is taken from, kept by room while
+ * the scene lasts and no longer: its entry run again during the scene (the
+ * night in it, or the fade part way) or taken for another room does not
+ * change them; the scene over, a warp or a load, or ten seconds without a
+ * tint drop them, so that palettes kept by mistake cannot tint a room's
+ * neighbours for the rest of the session. */
+static void tint_memories(void)
+{
+    OraclesTintMemory m[ORACLES_TINT_MEMORIES];
+    uint8_t day[64], night[64], dusk[64], other[64];
+    for (unsigned i = 0; i < 64u; i++) { day[i] = (uint8_t)(i * 3u); night[i] = (uint8_t)(i * 3u + 1u); dusk[i] = (uint8_t)(i * 3u + 2u); other[i] = (uint8_t)(200u - i); }
+    oracles_enhanced_tint_forget(m);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 100, day, night) == day);   /* nothing kept: the entry */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 100, NULL, night) == NULL);
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 100, day);
+    const uint8_t *r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 101, night, night);   /* the entry run again in the night */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 102, dusk, night);   /* run again part way through the fade */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 102, dusk);   /* what a tint held from: never the later entry */
+    r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 103, NULL, night);   /* the entry taken for another room */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x38, 0x10, 103, other, night) == other);   /* another room: its own entry */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x11, 103, NULL, night) == NULL);    /* another palette header */
+    /* The scene over: entry, screen and kept palettes the same. */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 104, day, day) == day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 105, NULL, night) == NULL);
+    /* Ten seconds without a tint held from them. */
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 200, day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 200 + ORACLES_TINT_MEMORY_FRAMES, NULL, night) != NULL);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 201 + ORACLES_TINT_MEMORY_FRAMES, NULL, night) == NULL);
+    /* A warp or a load. */
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 300, day);
+    oracles_enhanced_tint_forget(m);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 301, NULL, night) == NULL);
+    /* Four rooms kept at most: the longest without a tint goes first. */
+    for (unsigned i = 0; i < ORACLES_TINT_MEMORIES + 1u; i++) oracles_enhanced_tint_kept(m, 0, (uint8_t)(0x40u + i), 0x10, 400u + i, day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x40, 0x10, 410, NULL, night) == NULL);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x44, 0x10, 410, NULL, night) != NULL);
+}
+
 int main(void)
 {
     world_math();
@@ -962,6 +1095,8 @@ int main(void)
     seasons_scenes();
     picture_scenes();
     blank_captures();
+    scene_tints();
+    tint_memories();
     black_count();
     black_kinds();
     parent_keys();

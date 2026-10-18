@@ -38,6 +38,7 @@ Most of this release answers what players asked for after 1.1.0, many of them on
 - With the Fast (mGBA) core on Windows, mods could misbehave; they now play as on the other platforms.
 - In Gifts of Kinomi, the caves made of several rooms (east of the map) now show in Medium and Far with the rooms they open onto, instead of a single screen framed in black.
 - In Enhanced, the cutscenes that draw a picture over the whole screen now show it framed, as the game draws it, instead of amid the scenery with its top in the status bar and a line of its text copied above it: in Ages, the black tower's story (the worker at its building site, Ambi after the third dungeon, Twinrova), Veran's defeat and the ending; in Seasons, Din's crystal after Onox; in both games, the flames lit in the Room of Rites, the Room of Rites collapsing and the credits; and the same scenes in the fan games. The rooms these scenes play in stay in the wide view.
+- When a scene darkens the screen in Enhanced (night falling on Lynna as Nayru is possessed in Ages' introduction, Onox's arrival in Seasons'), the neighbouring rooms now darken with it, instead of the game's own screen standing as a dark rectangle in a bright world.
 
 ### Android
 

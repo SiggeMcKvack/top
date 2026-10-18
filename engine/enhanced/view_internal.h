@@ -408,6 +408,22 @@ struct OraclesEnhancedView {
      * tileset's base palettes, the offset the palette thread has applied
      * so far, to apply to the other rooms. */
     int fade_effective;
+    /* A scene's tint (ev_track_scene_tint): the palettes a cutscene shows
+     * instead of the room's own (the night of Nayru's possession), as a
+     * colour transform from the palettes the room's load gives to those, to
+     * apply to the other rooms.  `tint_changed`: the palettes it changed;
+     * `tint_slots`: those the transform explains. */
+    int scene_tint;
+    int transition_mix;                /* the palette thread mixes the palettes of a scroll's two rooms, or left their mix on screen */
+    unsigned transition_mix_room;      /* the room (group << 8 | room) it mixes in */
+    OraclesTintMemory tint_memories[ORACLES_TINT_MEMORIES];   /* by room, its own palettes a tint was taken from, kept while the scene lasts */
+    uint32_t tint_epoch;               /* the observation's epoch they were kept in */
+    uint8_t tint_slots, tint_changed;
+    uint8_t tint_reference[64], tint_scene[64];
+    int32_t tint_coefficients[12];     /* by output channel: red, green, blue and a constant, in 1/1024 */
+    uint64_t tint_key;
+    unsigned scene_tint_frames;        /* frames composed under a scene's tint */
+    uint32_t scene_tint_first, scene_tint_last;
     /* The hotbar of the item hotkeys (view_hotbar.c). */
     int hotbar_shown;
     unsigned hud_top;                /* the surface's line where the status bar stands this frame: 0, or the framed drawn-back surface's centred image's */
@@ -643,6 +659,8 @@ void ev_advance_neighbour_animations(OraclesEnhancedView *v);
 /* The live room's animation handed to its entry as it becomes a neighbour. */
 void ev_hand_live_animation(OraclesEnhancedView *v, entry *e);
 void ev_track_fade(OraclesEnhancedView *v);
+/* A scene's tint on the live room's base palettes, after ev_track_fade. */
+void ev_track_scene_tint(OraclesEnhancedView *v);
 /* view_scroll.c: a scroll's animation run by the view, once a composition after the live tiles are tracked; the tiles and
  * the mask of animated tiles the band draws the live tileset with; the game's window and the captures drawn with them. */
 void ev_scroll_animation(OraclesEnhancedView *v);

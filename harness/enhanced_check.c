@@ -37,7 +37,7 @@ OraclesEnhancedCheck *oracles_enhanced_check_start(OraclesCore *core, OraclesGue
     char path[4096];
     snprintf(path, sizeof path, "%s/frames.tsv", dir);
     c->tsv = fopen(path, "w");
-    if (c->tsv) fprintf(c->tsv, "frame\thash\tmode\tcamera_x\tgroup\troom\tlink_x\tlink_y\tscroll_mode\ttransition_state\tlink_world_x\twindow_left\tepoch\tleft\tright\tuncovered\tdrawn_scx\tdrawn_scy\thcamera_x\thcamera_y\tscreen_offset_x\tscreen_offset_y\toam_used\toam0_y\toam0_x\tlcdc\tcamera_y\tlink_world_y\twindow_top\tmenu\tfade\tisolated\tlarge\torigin_x\torigin_y\n");
+    if (c->tsv) fprintf(c->tsv, "frame\thash\tmode\tcamera_x\tgroup\troom\tlink_x\tlink_y\tscroll_mode\ttransition_state\tlink_world_x\twindow_left\tepoch\tleft\tright\tuncovered\tdrawn_scx\tdrawn_scy\thcamera_x\thcamera_y\tscreen_offset_x\tscreen_offset_y\toam_used\toam0_y\toam0_x\tlcdc\tcamera_y\tlink_world_y\twindow_top\tmenu\tfade\tisolated\tlarge\torigin_x\torigin_y\twindow_luma\tring_luma\n");
     return c;
 }
 
@@ -136,6 +136,7 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
     int blank = surface != NULL;   /* one colour: the screen faded out, where a camera that moves shows nothing moving */
     for (size_t i = 1, n = (size_t)c->width * oracles_enhanced_view_height(c->view); blank && i < n; i++) blank = surface[i] == surface[0];
     ec_measure_camera(c, ob, mode, camera_x, camera_y, blank);
+    ec_measure_window_darker(c, ob, mode, surface, camera_x, camera_y, blank, frame);
     {   /* each run is a jump to the large menus' scale and back */
         uint32_t crop[4];
         const int enlarged = oracles_enhanced_view_framed_crop(c->view, crop);

@@ -18,12 +18,12 @@ void ec_write_frame_row(OraclesEnhancedCheck *c, uint32_t frame, uint64_t hash, 
     const uint8_t *oam = oracles_guest_oam(c->guest);
     unsigned oam_used = 0;
     for (unsigned i = 0; oam && i < 40u; i++) if (oam[i * 4] != 0 && oam[i * 4] < 160u) oam_used++;
-    fprintf(c->tsv, "\t%s%02x\t%s%02x\t%u\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%02x\t%" PRId32 "\t%" PRId32 "\t%" PRId32 "\t%u\t%d\t%d\t%d\t%" PRId32 "\t%" PRId32 "\n", left_shown ? "+" : "-", left_room, right_shown ? "+" : "-", right_room, uncovered, scx, scy,
+    fprintf(c->tsv, "\t%s%02x\t%s%02x\t%u\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%02x\t%" PRId32 "\t%" PRId32 "\t%" PRId32 "\t%u\t%d\t%d\t%d\t%" PRId32 "\t%" PRId32 "\t%u\t%u\n", left_shown ? "+" : "-", left_room, right_shown ? "+" : "-", right_room, uncovered, scx, scy,
             (int16_t)oracles_guest_read16(c->guest, t->camera_x), (int16_t)oracles_guest_read16(c->guest, t->camera_y), off_x, off_y,
             oam_used, oam ? oam[0] : 0u, oam ? oam[1] : 0u, oracles_guest_io(c->guest) ? oracles_guest_io(c->guest)[0x40] : 0u,
             camera_y, ob->world.link_y, ob->window_top, oracles_guest_read8(c->guest, t->opened_menu_type),
             (int)(int8_t)oracles_guest_read8(c->guest, (OraclesGuestSym){ t->thread_state_buffer.bank, (uint16_t)(t->thread_state_buffer.addr + 0x1fu) }),
-            oracles_enhanced_view_isolated(c->view), ob->large, ob->world.origin_x, ob->world.origin_y);
+            oracles_enhanced_view_isolated(c->view), ob->large, ob->world.origin_x, ob->world.origin_y, c->window_luma, c->ring_luma);
 }
 
 /* The figures of the band itself: the frames, the cost of a composition,
@@ -43,6 +43,11 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
         fprintf(out, "enhanced.fade_frames=%u\nenhanced.faded_objects=%u\n", fade_frames, faded);
         oracles_enhanced_view_fade_out_counts(c->view, &fade_frames, &faded);
         fprintf(out, "enhanced.fade_out_frames=%u\nenhanced.faded_out_objects=%u\n", fade_frames, faded);
+        unsigned tint_frames = 0;
+        uint32_t tint_first = 0, tint_last = 0;
+        oracles_enhanced_view_scene_tint_counts(c->view, &tint_frames, &tint_first, &tint_last);
+        fprintf(out, "enhanced.scene_tint_frames=%u\nenhanced.scene_tint_first=%" PRIu32 "\nenhanced.scene_tint_last=%" PRIu32 "\n", tint_frames, tint_first, tint_last);
+        fprintf(out, "enhanced.window_darker_frames=%u\nenhanced.window_darker_first=%" PRIu32 "\nenhanced.window_darker_last=%" PRIu32 "\n", c->window_darker_frames, c->window_darker_first, c->window_darker_last);
         unsigned shown = 0, jumps = 0, holes = 0, unseen = 0;
         oracles_enhanced_view_handoff_counts(c->view, &shown, &jumps, &holes, &unseen);
         fprintf(out, "enhanced.handoff_shown=%u\nenhanced.handoff_jumps=%u\nenhanced.handoff_hole_frames=%u\nenhanced.handoff_unseen=%u\n", shown, jumps, holes, unseen);

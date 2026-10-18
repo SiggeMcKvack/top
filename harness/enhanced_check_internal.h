@@ -38,6 +38,12 @@ struct OraclesEnhancedCheck {
     int have_camera;
     int32_t last_camera;
     unsigned camera_jumps;            /* |delta| > MAX_CAMERA_STEP between two world frames */
+    /* The game's window against the band around it, in mean luminance (0..255): a scene
+     * that darkens the game's screen and not the rooms around shows as a window much
+     * darker than its surroundings (ec_measure_window_darker). */
+    unsigned window_luma, ring_luma;
+    unsigned window_darker_frames;
+    uint32_t window_darker_first, window_darker_last;
     int32_t largest_jump;
     unsigned camera_jumps_y;          /* the same, on the vertical camera */
     int32_t largest_jump_y, last_camera_y;
@@ -207,6 +213,9 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
 void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y,
                            uint8_t box[ORACLES_ENHANCED_AREA_HEIGHT][ORACLES_ENHANCED_CORE_WIDTH], uint32_t frame);
 void ec_check_curtain(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y, uint32_t frame);
+/* The game's window and the ring of the band around it, compared in luminance on a world frame. */
+void ec_measure_window_darker(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
+                           int32_t camera_x, int32_t camera_y, int blank, uint32_t frame);
 void ec_note_blurb_drawn(OraclesEnhancedCheck *c);
 void ec_check_blurb(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, uint32_t frame);
 

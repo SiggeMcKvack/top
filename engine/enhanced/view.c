@@ -384,6 +384,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     ev_advance_neighbour_animations(v);
     v->animation_renders = 0;
     ev_track_fade(v);
+    ev_track_scene_tint(v);
     int tracking = oracles_enhanced_camera_reduce(v->camera, v->frame, &v->observation, &camera_x, &camera_y);
     /* A scroll out of a room the game routes itself toward a side off the map
      * (the Lost Woods' west, which brings Link back into the woods from the
@@ -794,6 +795,8 @@ int oracles_enhanced_view_load_state(OraclesEnhancedView *v, const uint8_t *data
         for (unsigned b = 0; b < 4u; b++) { cols |= (uint32_t)loop[4 + b] << (8u * b); rows |= (uint32_t)loop[8 + b] << (8u * b); }
         v->observer.loop_cols = (int32_t)cols; v->observer.loop_rows = (int32_t)rows; v->observer.loop_epoch = v->observer.epoch;
     }
+    oracles_enhanced_tint_forget(v->tint_memories);   /* a scene's tint is taken afresh */
+    v->transition_mix = 0;
     ev_invalidate_all(v);
     v->coarse_len = 0;   /* the coarse list is taken again from the state loaded */
     v->black_loaded = 1;   /* the band fills again (view_black.c) */

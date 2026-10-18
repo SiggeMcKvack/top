@@ -125,6 +125,8 @@ void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *view, unsigned 
  * (the LCD off, a full fade). */
 int oracles_enhanced_view_load_band(const OraclesEnhancedView *view, int32_t *area_left, int32_t *area_top);
 void oracles_enhanced_view_load_counts(const OraclesEnhancedView *view, unsigned *band_frames, unsigned *blank_frames);
+/* Frames composed under a scene's tint of the game's screen, which the other rooms took, and the first and last of them. */
+void oracles_enhanced_view_scene_tint_counts(const OraclesEnhancedView *view, unsigned *frames, uint32_t *first, uint32_t *last);
 /* Frames that drew the fade of objects appearing on entry, and objects that started one. */
 void oracles_enhanced_view_fade_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *objects);
 /* Frames that drew the fade of objects an image of a room left showed, once replaced, and objects that started one. */
@@ -247,6 +249,44 @@ unsigned oracles_enhanced_routed_beyond(uint8_t ref, unsigned dir, uint8_t answe
 void oracles_enhanced_band_order(const int32_t *shown, const int32_t *distance, unsigned count, unsigned *out);
 /* World frames where a neighbour drawn in the band holds a fade's palettes (oracles_enhanced_capture_blank): never, if its guard holds. */
 unsigned oracles_enhanced_view_plain_shown_frames(const OraclesEnhancedView *view);
+/* A scene's tint of the game's screen: `scene`, the palettes a cutscene
+ * shows over `reference`, those the room's own load gives.  1 when it
+ * changed palettes (`changed`, a bit each), one of them by more than 2 on a
+ * channel, and one colour transform (`coefficients`, by output channel red,
+ * green, blue: the weights of red, green and blue and a constant, in 1/1024)
+ * takes every colour of at least four of them (`slots`) within 4 of the
+ * scene's, the others left out the farthest first.  `oracles_enhanced_scene_tinted`
+ * applies it to a room's own palettes: of those changed, a palette that is the
+ * scene's already stays, the room's that is the reference's takes the scene's,
+ * any other goes through the transform. */
+int oracles_enhanced_scene_tint(const uint8_t reference[64], const uint8_t scene[64], uint8_t *slots, uint8_t *changed, int32_t coefficients[12]);
+void oracles_enhanced_scene_tinted(const uint8_t own[64], const uint8_t reference[64], const uint8_t scene[64], uint8_t changed,
+                                   const int32_t coefficients[12], uint8_t out[64]);
+/* The room's own palettes a scene's tint is taken from, kept by room while
+ * the scene lasts: its entry may be taken for another room, or run again
+ * from the live game, which carries the scene's palettes (the ghost's load
+ * keeps the base of the same palette header: loadTilesetData loads the
+ * palettes of another one only).  `oracles_enhanced_tint_reference` returns
+ * the palettes to fit the scene against: those kept for the room, the first
+ * a tint held from there, else `entry` (its last delivery, NULL without
+ * one); it drops what was kept once the room's entry, the scene and the kept
+ * palettes are the same (the scene over), and what no tint held from for
+ * ORACLES_TINT_MEMORY_FRAMES.  `oracles_enhanced_tint_kept` notes a tint
+ * held from `reference`; `oracles_enhanced_tint_forget` drops everything (a
+ * warp, a load). */
+#define ORACLES_TINT_MEMORIES 4u
+#define ORACLES_TINT_MEMORY_FRAMES 600u
+typedef struct OraclesTintMemory {
+    int valid;
+    uint8_t group, room, header;   /* the room and its palette header (wTilesetPalette) */
+    uint32_t used_at;              /* the last frame a tint held from it */
+    uint8_t reference[64];
+} OraclesTintMemory;
+const uint8_t *oracles_enhanced_tint_reference(OraclesTintMemory memories[ORACLES_TINT_MEMORIES], uint8_t group, uint8_t room, uint8_t header,
+                                               uint32_t frame, const uint8_t *entry, const uint8_t scene[64]);
+void oracles_enhanced_tint_kept(OraclesTintMemory memories[ORACLES_TINT_MEMORIES], uint8_t group, uint8_t room, uint8_t header, uint32_t frame,
+                                const uint8_t reference[64]);
+void oracles_enhanced_tint_forget(OraclesTintMemory memories[ORACLES_TINT_MEMORIES]);
 /* Whether a ghost's capture of a room is no terrain: its background palettes
  * the palette thread's fade rather than the room's own (the offset most
  * channels agree on, against the base palettes w2TilesetBgPalettes, more
