@@ -424,6 +424,7 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
     static uint32_t with_link[160 * 144], layer[64 * 64], patch[64 * 64];
     for (unsigned i = 0; i < 160u * 144u; i++) with_link[i] = 0xffffffffu;
     for (unsigned y = 40; y < 42; y++) for (unsigned x = 20; x < 22; x++) with_link[y * 160 + x] = 0xff00ff00u;
+    for (unsigned y = 16; y < 144; y++) with_link[y * 160 + 10] = 0xff0000ffu;   /* a column of the band */
     for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xffffffffu; }
     const oracles_host_video_subpixel sub = { 128, 0, 16, 128, layer, 20, 40, 2, 2, 64, -128, 0, patch, 0, { { 0 } } };
     const oracles_host_video_frame moved = { with_link, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 0, 0, 0, 0, 0, 0, 0 };
@@ -437,11 +438,14 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
         options.screen_margin = margin;
         oracles_host_backend backend;
         if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+        CHECK(oracles_sdl_backend_whole_scale(&backend) == 0u);   /* before the session starts */
         if (backend.start(backend.opaque, 160, 144, 48000, 0)) {
             SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
             CHECK(SDL_GetRenderOutputSize(renderer, &output_w, &output_h) && output_w == 800 && output_h == 720);
             CHECK(backend.present_frame(backend.opaque, &image));
             CHECK(SDL_GetRenderLogicalPresentation(renderer, NULL, NULL, &mode));
+            /* The whole scale Display's Camera follows: five times, four in the margin's band (672 lines of 720). */
+            CHECK(oracles_sdl_backend_whole_scale(&backend) == (margin == ORACLES_SCREEN_MARGIN_OFF ? 5u : 4u));
             if (margin == ORACLES_SCREEN_MARGIN_OFF) {
                 CHECK(mode == SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
                 CHECK(pixel_at(renderer, 400, 0) == 0xffffffffu && pixel_at(renderer, 400, 719) == 0xffffffffu);
@@ -467,16 +471,26 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
                 finger(SDL_EVENT_FINGER_UP, 1, l.a.x, band.y + l.a.y);
                 touch_drain(&backend, &pressed, &released, &pauses);
                 CHECK(released == ORACLES_KEY_A);
-                /* A frame of the sub-pixel camera the band draws itself: Link, whom the frame keeps, at his place. */
+                /* A frame of the sub-pixel camera the band draws itself: moved half a pixel left at its four times (2
+                 * pixels of the screen), Link with it, black kept beside it. */
                 CHECK(backend.present_frame(backend.opaque, &moved));
-                CHECK(pixel_at(renderer, 80 + 20 * 4 + 1, 72 + 40 * 4 + 1) == 0xff00ff00u);
+                CHECK(pixel_at(renderer, 80 + 20 * 4 - 2, 72 + 40 * 4 + 1) == 0xff00ff00u && pixel_at(renderer, 80 + 22 * 4 - 2, 72 + 40 * 4 + 1) == 0xffffffffu);
+                CHECK(pixel_at(renderer, 80 + 10 * 4 - 2, 300) == 0xff0000ffu && pixel_at(renderer, 80 + 10 * 4 + 1, 300) == 0xff0000ffu);
+                CHECK(pixel_at(renderer, 80 + 10 * 4 + 2, 300) == 0xffffffffu && pixel_at(renderer, 80 + 10 * 4 - 3, 300) == 0xffffffffu);
+                CHECK(pixel_at(renderer, 79, 300) == 0xff000000u && pixel_at(renderer, 80 + 640, 300) == 0xff000000u && pixel_at(renderer, 400, 71) == 0xff000000u);
                 /* Off from the pause: the whole window's five times at the next frame, the controls over it. */
                 oracles_sdl_backend_set_screen_margin(&backend, ORACLES_SCREEN_MARGIN_OFF);
                 CHECK(backend.present_frame(backend.opaque, &image));
                 CHECK(pixel_at(renderer, 400, 0) == 0xffffffffu && pixel_at(renderer, 400, 719) == 0xffffffffu);
-                /* And through the controls' own drawing, a finger having touched: Link there still. */
+                /* And through the controls' own drawing, a finger having touched: the band moved there too, half a
+                 * pixel at five times rounded to 3 pixels of the screen, Link with it. */
                 CHECK(backend.present_frame(backend.opaque, &moved));
-                CHECK(pixel_at(renderer, 20 * 5 + 1, 40 * 5 + 1) == 0xff00ff00u);
+                CHECK(pixel_at(renderer, 20 * 5 - 3, 40 * 5 + 1) == 0xff00ff00u && pixel_at(renderer, 22 * 5 - 3, 40 * 5 + 1) == 0xffffffffu);
+                CHECK(pixel_at(renderer, 10 * 5 - 3, 300) == 0xff0000ffu && pixel_at(renderer, 10 * 5 + 1, 300) == 0xff0000ffu);
+                CHECK(pixel_at(renderer, 10 * 5 + 2, 300) == 0xffffffffu && pixel_at(renderer, 10 * 5 - 4, 300) == 0xffffffffu);
+                /* A frame without the move, through the same drawing: as it is. */
+                CHECK(backend.present_frame(backend.opaque, &image));
+                CHECK(pixel_at(renderer, 10 * 5 - 3, 300) == 0xffffffffu);
             }
         } else CHECK(0);
         backend.stop(backend.opaque);
@@ -510,8 +524,8 @@ static long differing(const SDL_Surface *a, const SDL_Surface *b)
  * and a fixed rectangle unmoved, the text box Text size Large enlarges over them; drawn where the pause puts the image,
  * in the window's pixels, it is the frame's picture pixel for pixel, at 4x in a 1920x1080 window, at 2x in a 960x540
  * one, and with Fill in fullscreen on 1280x720 (8/3), though the view's layer has changed since; so is it without the
- * sub-pixel camera, the box enlarged over the frame as it is.  With the screen margin, whose drawing shows the frame as
- * it is, the frame as it is, the box enlarged over it. */
+ * sub-pixel camera, the box enlarged over the frame as it is.  With the screen margin, whose drawing moves the band
+ * too, the same in the margin's band. */
 static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
 {
     static uint32_t pixels[480 * 270], layer[64 * 64], patch[64 * 64];
@@ -585,7 +599,7 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
             SDL_DestroySurface(unboxed);
             SDL_DestroySurface(paused_flat);
             SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
-            /* The screen margin draws the frame as it is: so does the pause. */
+            /* The screen margin draws the band moved too, in its own place: so does the pause. */
             if (i == 1) {
                 oracles_sdl_backend_set_screen_margin(&backend, ORACLES_SCREEN_MARGIN_SMALL);
                 CHECK(backend.present_frame(backend.opaque, &image));
@@ -596,10 +610,15 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
                 const OraclesTouchBox in = oracles_touch_frame((int)band.w, (int)band.h, 480, 270, 0);
                 const SDL_FRect there = { band.x + in.x, band.y + in.y, in.w, in.h };
                 SDL_RenderClear(renderer);
+                CHECK(SDL_RenderTexture(renderer, kept, NULL, &there));
+                SDL_Surface *unmoved = picture(renderer);
+                CHECK(differing(margined, unmoved) > 0);
+                SDL_RenderClear(renderer);
                 CHECK(oracles_sdl_backend_pause_image(&backend, &there));
                 SDL_Surface *paused_margin = picture(renderer);
                 CHECK(differing(margined, paused_margin) == 0);
                 SDL_DestroySurface(margined);
+                SDL_DestroySurface(unmoved);
                 SDL_DestroySurface(paused_margin);
             }
         } else CHECK(0);

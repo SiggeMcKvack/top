@@ -1,5 +1,6 @@
 /* The SDL 3 backend's presentation (backends.h): the frame at its whole scale or filling the screen, the band the
- * sub-pixel camera moves with Link's layer, and the text box Text size shows again larger. */
+ * sub-pixel camera moves with Link's layer (through the logical presentation, or where the touch controls' and the
+ * screen margin's own drawing puts the frame), and the text box Text size shows again larger. */
 #include "sdl_backend_internal.h"
 
 /* A frame whose band the sub-pixel camera moves (oracles_host_video_subpixel): the band drawn moved by the
@@ -90,8 +91,8 @@ int sb_draw_subpixel(sdl_backend *backend, const oracles_host_video_subpixel *sp
     return 1;
 }
 
-/* The layer and the patch uploaded, then the frame drawn moved; kept for the pause, which shows it as it was. */
-static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame *frame)
+/* The layer and the patch uploaded, the frame's move kept for the pause, which shows it as it was. */
+static void take_subpixel(sdl_backend *backend, const oracles_host_video_frame *frame)
 {
     const oracles_host_video_subpixel *sp = frame->subpixel;
     SDL_Renderer *r = backend->renderer;
@@ -116,7 +117,34 @@ static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame
     backend->shown.layer = backend->shown.patch = NULL;   /* the view's, which change: the layer's texture keeps them */
     backend->shown_layered = layered;
     backend->shown_subpixel = 1;
-    return sb_draw_subpixel(backend, &backend->shown, layered, NULL);
+}
+
+int sb_draw_subpixel_cut(sdl_backend *backend, const SDL_FRect *to)
+{
+    /* At its whole pixels and cut to it, as the logical presentation's viewport places and cuts the frame. */
+    const SDL_FRect at = { SDL_floorf(to->x), SDL_floorf(to->y), to->w, to->h };
+    const SDL_Rect cut = { (int)at.x, (int)at.y, (int)at.w, (int)at.h };
+    const bool clipped = SDL_RenderClipEnabled(backend->renderer);
+    SDL_Rect before = { 0, 0, 0, 0 };
+    if (clipped) SDL_GetRenderClipRect(backend->renderer, &before);
+    SDL_SetRenderClipRect(backend->renderer, &cut);
+    const int drawn = sb_draw_subpixel(backend, &backend->shown, backend->shown_layered, &at);
+    SDL_SetRenderClipRect(backend->renderer, clipped ? &before : NULL);
+    return drawn;
+}
+
+/* The touch controls' and the screen margin's own drawing of the frame (touch_sdl.h's draw_frame), at `to` in the
+ * screen's pixels: the band moved by the sub-pixel camera there, as through the logical presentation.  A part shown
+ * alone, or a frame without a move, is left to the texture. */
+static int draw_frame_direct(void *opaque, SDL_Renderer *renderer, const SDL_FRect *part, const SDL_FRect *to)
+{
+    (void)renderer;
+    sdl_backend *backend = opaque;
+    const oracles_host_video_frame *frame = backend->presenting;
+    if (!frame || !frame->subpixel || part) return 0;
+    take_subpixel(backend, frame);
+    if (!sb_draw_subpixel_cut(backend, to)) { backend->shown_subpixel = 0; return 0; }
+    return 1;
 }
 
 /* Text size Large or Very large: the frame's text box (oracles_host_video_frame's box) shown again above the frame, in
@@ -200,12 +228,17 @@ int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
     backend->presenting_cropped = cropped;
     backend->touch.over_frame = draw_box_direct;
     backend->touch.over_frame_opaque = backend;
+    backend->touch.draw_frame = draw_frame_direct;
+    backend->touch.draw_frame_opaque = backend;
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) sb_present_as(backend, logical_w, logical_h);
     backend->shown_subpixel = 0;
     backend->shown_box.box_w = 0;
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
-        if (frame->subpixel && !cropped) { if (!present_subpixel(backend, frame)) return 0; }
+        if (frame->subpixel && !cropped) {
+            take_subpixel(backend, frame);
+            if (!sb_draw_subpixel(backend, &backend->shown, backend->shown_layered, NULL)) return 0;
+        }
         else if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
         SDL_FRect to;   /* the box above the band, Link and the fixed rectangles, at the frame's whole place */
         if (SDL_GetRenderLogicalPresentationRect(backend->renderer, &to)) draw_box(backend, &to, 0);

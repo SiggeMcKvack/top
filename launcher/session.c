@@ -96,6 +96,7 @@ static void replay_stopped(session *s, uint32_t frame, const char *why)
 static void frame_begin(void *opaque, uint32_t frame)
 {
     session *s = opaque;
+    oracles_session_follow_subpixel(s);
     /* The pause's, when they differ from the game's (one turned on and off again changes nothing): a route recorded
      * says so; a replay, which has no pause today (--play is --rom's), would give the controls back. */
     if (s->cheats_pending) {
@@ -519,7 +520,12 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         }
         const int camera = o->camera_profile ? o->camera_profile : s->settings->camera;
         oracles_enhanced_view_set_camera_profile(s->view, (unsigned)camera);
-        oracles_enhanced_view_set_subpixel(s->view, oracles_settings_subpixel_camera(s->settings));
+        /* Display's Camera: the platform's default at the scale the screen shows the view at, which the first frame
+         * knows (oracles_session_follow_subpixel), else the player's choice; the pause changes it at once. */
+        oracles_enhanced_view_set_subpixel(s->view, oracles_settings_subpixel_camera(s->settings, 0));
+        s->subpixel_followed = !o->no_window;
+        fprintf(stderr, "oracles: camera %s (%s)\n", oracles_enhanced_view_subpixel_on(s->view) ? "smooth" : "pixel",
+                s->settings->subpixel_camera >= 0 ? "subpixel_camera= in the settings" : "the platform's default");
         oracles_enhanced_view_set_link_phase(s->view, s->settings->link_phase);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
         const int frozen = oracles_settings_quality_of(s->view_level, (int)oracles_core_kind(s->core), s->ghosts) == ORACLES_QUALITY_LOW;
@@ -614,7 +620,8 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
         config->frame_source_opaque = s->view;
         /* The game's menus enlarged: the framed core shown alone, at its own whole scale. */
         if (s->settings->menus_large) { config->frame_crop = oracles_enhanced_view_framed_crop; config->frame_crop_opaque = s->view; }
-        if (oracles_settings_subpixel_camera(s->settings)) { config->frame_subpixel = view_subpixel; config->frame_subpixel_opaque = s->view; }
+        config->frame_subpixel = view_subpixel;   /* none while the camera keeps whole pixels */
+        config->frame_subpixel_opaque = s->view;
         oracles_enhanced_view_set_large_menus(s->view, s->settings->menus_large);
         /* Text size: the text box shown again larger by the presenter, in whole screen pixels. */
         config->frame_box = oracles_enhanced_view_text_box_enlarged;

@@ -377,6 +377,17 @@ static void measure_switch_jolts(OraclesEnhancedCheck *c, uint32_t frame, const 
         if (c->jolt_edge_frames) c->jolt_edge_frames--;
         c->jolt_have_step = 1;
     }
+    int32_t ground[2];
+    for (unsigned a = 0; a < 2u; a++) ground[a] = link[a] + band[a] - world[a] * MEASURE_SCALE;
+    if (contiguous && (layer != NULL) != c->ground_layer && (ob->in_transition || c->ground_transition)) {
+        c->transition_layer_switches++;
+        for (unsigned a = 0; a < 2u; a++) {
+            const int32_t shift = ground[a] > c->ground_offset[a] ? ground[a] - c->ground_offset[a] : c->ground_offset[a] - ground[a];
+            if (shift > c->transition_layer_shift_max) c->transition_layer_shift_max = shift;
+        }
+    }
+    memcpy(c->ground_offset, ground, sizeof ground);
+    c->ground_layer = layer != NULL; c->ground_transition = ob->in_transition;
     memcpy(c->jolt_band, band, sizeof band); memcpy(c->jolt_link, link, sizeof link);
     c->jolt_frame = frame; c->jolt_epoch = ob->epoch; c->jolt_state = state; c->jolt_have = 1;
 }

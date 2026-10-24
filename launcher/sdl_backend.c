@@ -195,6 +195,17 @@ void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chose
     *in_effect = state && state->filled;
 }
 
+unsigned oracles_sdl_backend_whole_scale(const oracles_host_backend *backend)
+{
+    const sdl_backend *state = backend->opaque;
+    int w = 0, h = 0;
+    if (!state || !state->renderer || state->frame_width <= 0 || state->frame_height <= 0 || !SDL_GetRenderOutputSize(state->renderer, &w, &h) || w <= 0 || h <= 0)
+        return 0;
+    const OraclesTouchBox band = oracles_touch_band(w, h, &state->touch.edges);
+    const float kx = band.w / (float)state->frame_width, ky = band.h / (float)state->frame_height, k = kx < ky ? kx : ky;
+    return k >= 1.0f ? (unsigned)k : 1u;
+}
+
 int oracles_sdl_backend_window_closed(const oracles_host_backend *backend)
 {
     const sdl_backend *state = backend->opaque;
@@ -432,15 +443,7 @@ int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const s
         sb_draw_shown_box(state, image);   /* Text size Large's box, which the presenter drew over the frame */
         return 1;
     }
-    /* At the image's whole pixels and cut to it, as the logical presentation's viewport places and cuts the frame. */
-    const SDL_FRect at = { SDL_floorf(image->x), SDL_floorf(image->y), image->w, image->h };
-    const SDL_Rect cut = { (int)at.x, (int)at.y, (int)at.w, (int)at.h };
-    const bool clipped = SDL_RenderClipEnabled(state->renderer);
-    SDL_Rect before = { 0, 0, 0, 0 };
-    if (clipped) SDL_GetRenderClipRect(state->renderer, &before);
-    SDL_SetRenderClipRect(state->renderer, &cut);
-    const int drawn = sb_draw_subpixel(state, &state->shown, state->shown_layered, &at);
-    SDL_SetRenderClipRect(state->renderer, clipped ? &before : NULL);
+    const int drawn = sb_draw_subpixel_cut(state, image);
     if (drawn) sb_draw_shown_box(state, image);
     return drawn;
 }

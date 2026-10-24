@@ -147,6 +147,14 @@ struct OraclesEnhancedCheck {
     unsigned switch_edges;
     unsigned jolt_fraction_frames;       /* the last three frames the band had a fraction on, a bit each */
     unsigned layer_objects, layer_objects_off;   /* special objects but Link in the sub-pixel camera's layer, an object a frame; those at a fraction not his (measure_layer_objects) */
+    /* Link's place against the ground as the screen at 4x shows it, on each axis: his layer's own move where he is drawn
+     * apart, none where he stays in the band.  Where the layer comes or goes in a transition (a scroll, a room's load),
+     * the game holding his fraction of a pixel there, he jumps against the ground by up to that fraction: those frames,
+     * and the largest jump (measure_switch_jolts). */
+    int32_t ground_offset[2];
+    int ground_layer, ground_transition;
+    unsigned transition_layer_switches;
+    int32_t transition_layer_shift_max;
     char jolt_list[256];                 /* the switches where the band's step changed by 2 px or more, "frame:band/link" */
     uint64_t epochs;
     unsigned neighbours_frames[5];       /* world frames with 0 to 4 neighbours shown */
@@ -243,6 +251,8 @@ struct OraclesEnhancedCheck {
     int last_playing, last_mode_world;
     /* the reload check */
     uint32_t reload_at;
+    uint32_t subpixel_switch_at[8];         /* --enhanced-subpixel-switch, and those done */
+    unsigned subpixel_switches, subpixel_switched;
     unsigned surfaces;                      /* --surface-at: composed surfaces to write out, as PPM */
     uint32_t surface_at[16];
     const char *surface_path[16];

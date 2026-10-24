@@ -1387,25 +1387,28 @@ static void display_9a_9b_9c(void)
     layout_text("9b", "diagram label", &l.diagram_label);
 
     nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     display_advanced_rows("9c", &t, &l);
     layout_text("9c", "page note", &l.page_note.lines[0]);
     layout_box("9c", "diagram", &l.diagram);
     /* From the game (turn 29) Core, the transitions, Vsync and the workers, which it keeps, are dimmed and inert, their
-     * reason in place of their notes, Vsync's and the workers' rows growing by its line; Scaling and the margin change. */
+     * reason in place of their notes, Vsync's and the workers' rows growing by its line; Scaling, the camera and the margin
+     * change. */
     layout_text("9c", "vsync note", &l.vsync_note);
     layout_text("9c", "workers note", &l.workers_note);
     CHECK(!strcmp(t.core_note, "Change it from the home screen.") && t.transitions_note == t.core_note && t.vsync_note == t.core_note
           && t.workers_note == t.core_note);
     for (unsigned r = ORACLES_DISPLAY_CORE; r < ORACLES_DISPLAY_LETTERS; r++) {
-        const int locked = r != ORACLES_DISPLAY_SCALING && r != ORACLES_DISPLAY_MARGIN;
+        const int locked = r != ORACLES_DISPLAY_SCALING && r != ORACLES_DISPLAY_CAMERA && r != ORACLES_DISPLAY_MARGIN;
         nav.row = r;
         CHECK(oracles_display_row_fixed(&nav, r) == locked);
         CHECK((oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY) == locked);
         if (locked) CHECK(oracles_display_click(&nav, r, 1) == ORACLES_HOME_STAY);
     }
     nav.display.scaling = nav.display.margin = 0;
+    nav.display.camera = -1;
     nav.row = ORACLES_DISPLAY_CORE;
     /* Auto names the one worker of a device under four cores. */
     nav.display.cores = 2;
@@ -1472,8 +1475,8 @@ static void display_navigation(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_ADVANCED);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_CORE);
     CHECK(!strcmp(oracles_display_section(&nav), "Display \xe2\x80\xba Advanced"));
-    /* Its rows: Core, the transitions, Vsync, the workers, the scaling, the screen margin, going round; Display's own are
-     * not there. */
+    /* Its rows: Core, the transitions, Vsync, the workers, the scaling, the camera, the screen margin, going round;
+     * Display's own are not there. */
     CHECK(oracles_display_row_shown(&nav, ORACLES_DISPLAY_WORKERS) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_PROFILE)
           && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_ADVANCED));
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_PROFILE, 0) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
@@ -1525,6 +1528,27 @@ static void display_navigation(void)
     CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING));
     nav.in_game = 0;
     nav.display.scaling = 0;
+    /* The camera, Pixel then Smooth, the platform's default shown until one is chosen (Smooth on the desktops, on
+     * Android from three times on): the shown value changes nothing, the other is stored; from a game too, where it
+     * applies at once, and not in Faithful, nor from a game running in Faithful. */
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_DISPLAY_CAMERA && nav.display.camera == -1 && oracles_display_camera(&nav) == 1 && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_CAMERA));
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    CHECK(!oracles_display_camera_applies(&nav) && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && nav.display.camera == -1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CAMERA, 0) == ORACLES_HOME_STAY && nav.display.camera == -1);
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CAMERA, 1) == ORACLES_HOME_STAY && nav.display.camera == -1);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.camera == 0 && oracles_display_camera(&nav) == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.camera == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CAMERA, 0) == ORACLES_HOME_STORE && nav.display.camera == 0);
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.camera == 1 && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_CAMERA));
+    nav.playing = ORACLES_PROFILE_FAITHFUL;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CAMERA, 0) == ORACLES_HOME_STAY && nav.display.camera == 1);
+    nav.in_game = 0;
+    nav.display.camera = -1;
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
     /* The screen margin last, Off, Auto, Small, Large, going round, by a key and by a click; in Faithful and from a game
      * too, where it applies at once. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
@@ -2732,6 +2756,100 @@ static void display_margin(void)
     }
 }
 
+/* Camera's probes: its label, its row and its grid, Pixel's and Smooth's boxes and names, the rows around it. */
+static void camera_probes(const char *frame, const OraclesUiDisplayLayout *l, int wide)
+{
+    if (wide) layout_line(frame, "Camera", &l->labels[ORACLES_DISPLAY_CAMERA].lines[0]);
+    else layout_text(frame, "Camera", &l->labels[ORACLES_DISPLAY_CAMERA].lines[0]);
+    layout_box(frame, "cam row", &l->rows[ORACLES_DISPLAY_CAMERA]);
+    layout_near(frame, "cam grid", "y", l->rows[ORACLES_DISPLAY_CAMERA].y);
+    layout_near(frame, "cam grid", "h", l->rows[ORACLES_DISPLAY_CAMERA].h);
+    layout_box(frame, "cam Pixel", &l->camera[0].box);
+    layout_box(frame, "cam Smooth", &l->camera[1].box);
+    layout_box(frame, "cam Pixel box", &l->camera[0].box);
+    layout_box(frame, "cam Smooth box", &l->camera[1].box);
+    if (wide) { layout_line(frame, "cam Pixel text", &l->camera[0].name); layout_line(frame, "cam Smooth text", &l->camera[1].name); }
+    else { layout_text(frame, "cam Pixel text", &l->camera[0].name); layout_text(frame, "cam Smooth text", &l->camera[1].name); }
+    layout_box(frame, "scaling row", &l->rows[ORACLES_DISPLAY_SCALING]);
+    layout_box(frame, "margin row", &l->rows[ORACLES_DISPLAY_MARGIN]);
+    layout_near(frame, "rows", "y", l->rows[ORACLES_DISPLAY_CORE].y);
+    layout_near(frame, "rows", "h", l->rows[ORACLES_DISPLAY_MARGIN].y + l->rows[ORACLES_DISPLAY_MARGIN].h - l->rows[ORACLES_DISPLAY_CORE].y);
+}
+
+/* Camera (turn 30), the sixth Advanced row, after Scaling: in 16:9 Smooth chosen and highlighted, its explanation on
+ * three lines (30h), from the pause, live (30k), and in Faithful, dimmed and inert (30l); in 4:3 its short help (30i);
+ * at 640x480 on Android, the far view at once, the note that it does nothing there (30j).  The value shown is the
+ * player's, else the platform's default at the scale the game is shown at: Smooth at every scale on the desktops, on
+ * Android from three times on. */
+static void display_camera(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    nav.display.window = 2;
+    nav.display.cores = 8;
+    nav.advanced = 1;
+    nav.row = ORACLES_DISPLAY_CAMERA;
+    nav.display.camera = 1;
+    OraclesUiDisplayTexts t;
+    OraclesUiDisplayLayout l;
+    static const char *const frames[3] = { "30h", "30k", "30l" };
+    for (int f = 0; f < 3; f++) {
+        nav.in_game = f == 1;
+        nav.playing = ORACLES_PROFILE_ENHANCED;
+        nav.display.profile = f == 2 ? ORACLES_PROFILE_FAITHFUL : ORACLES_PROFILE_ENHANCED;
+        oracles_ui_display_texts(&nav, &t);
+        oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
+        camera_probes(frames[f], &l, 0);
+        CHECK(l.camera_explanation.count == 3 && !t.camera_note);
+        layout_text(frames[f], "cam explanation", &l.camera_explanation.lines[0]);
+        layout_near(frames[f], "cam explanation", "width", l.camera_explanation.w);
+        layout_box(frames[f], "panel", &l.panel);
+        if (nav.in_game) layout_text(frames[f], "page note", &l.page_note.lines[0]);
+        CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_CAMERA) && oracles_display_camera_applies(&nav) == (f != 2));
+    }
+    display_advanced_rows("30h", &t, &l);
+    for (int f = 0; f < 2; f++) {
+        const char *frame = f ? "30j" : "30i";
+        display_4_3_nav(&nav, f ? 640 : 1440, f ? 480 : 1080);
+        nav.advanced = 1;
+        nav.row = ORACLES_DISPLAY_CAMERA;
+        nav.display.camera = 1;
+        nav.display.view = 2;
+        oracles_ui_display_texts(&nav, &t);
+        oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
+        CHECK(!strcmp(t.help, "Smooth: diagonal walks glide."));
+        camera_probes(frame, &l, 1);
+        layout_box(frame, "core row", &l.rows[ORACLES_DISPLAY_CORE]);
+        layout_line(frame, "help text", &l.help);
+        layout_near(frame, "help", "y", l.help.y);
+        layout_near(frame, "help note", "y", l.help_note.y);
+        if (f) {
+            CHECK(oracles_display_camera_scale(&nav) == 1u && t.help_note && !strcmp(t.help_note, "No effect at this size: the view fills the screen at 1\xc3\x97."));
+            layout_line(frame, "help note text", &l.help_note);
+        } else CHECK(!t.help_note && oracles_display_camera_scale(&nav) == 2u);   /* 4x reduced to the 2x that fits */
+    }
+    /* The default shown: on the desktops Smooth whatever the scale; on Android from three times on (Near 4:3's 213x160
+     * at 3x on 640x480, not Medium's 320x240 at 2x nor Far's at 1x). */
+    display_4_3_nav(&nav, 640, 480);
+    nav.display.window = 3;
+    nav.display.fullscreen_only = 1;
+    for (int view = 0; view < 3; view++) {
+        nav.display.view = view;
+        nav.display.camera_from = 0;
+        CHECK(oracles_display_camera(&nav) == 1);
+        nav.display.camera_from = 3;
+        CHECK(oracles_display_camera_scale(&nav) == (unsigned)(3 - view) && oracles_display_camera(&nav) == (view == 0));
+        nav.display.camera = 0;
+        CHECK(oracles_display_camera(&nav) == 0);
+        nav.display.camera = 1;
+        CHECK(oracles_display_camera(&nav) == 1);
+        nav.display.camera = -1;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2 || !layout_reference_load(argv[1])) { fprintf(stderr, "usage: oracles-test-launcher-page launcher_layout_reference.json\n"); return 2; }
@@ -2764,6 +2882,7 @@ int main(int argc, char **argv)
     display_scaling();
     display_hud();
     display_margin();
+    display_camera();
     far_fitted_sizes();
     display_far_fitted();
     advanced_rows_stay();

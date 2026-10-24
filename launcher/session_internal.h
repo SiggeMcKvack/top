@@ -92,6 +92,7 @@ typedef struct session {
     const char *vsync;       /* the vsync asked for: the option's, or the settings' */
     int screen_margin_option;   /* --screen-margin's, an OraclesScreenMargin plus one, which holds for the run; 0: the settings' */
     int text_size_option;       /* --text-size's, the size plus one, which holds for the run; 0: the settings' */
+    int subpixel_followed;      /* in a window: the view's sub-pixel camera follows the settings at the scale the screen shows it */
 } session;
 
 /* Writes a file through a temporary name (1 when done); reads a whole file into a buffer the caller frees (1, or 0
@@ -113,6 +114,10 @@ void oracles_session_hotkeys_settled(session *s, uint32_t frame, int settled);
 void oracles_session_change_hotkeys(session *s, uint32_t frame, OraclesHotkeysMode mode);
 OraclesEnhancedSize oracles_session_window_surface(const session *s);
 void oracles_session_apply_window(session *s, int window);
+/* Before each frame: the sub-pixel camera Display's Camera gives the view at the whole scale the screen shows it at now
+ * (oracles_settings_subpixel_camera), switched without a jolt where that changed (the pause's Camera, Scaling, Window or
+ * screen margin). */
+void oracles_session_follow_subpixel(session *s);
 /* session_pause.c: the item hotkeys' keys taken from the game or given back to it; the pause's renderer prepared once the
  * window is open; the pause menu run over the game. */
 void oracles_session_hotkey_keys(session *s, int on);

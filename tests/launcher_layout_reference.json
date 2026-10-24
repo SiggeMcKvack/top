@@ -3741,13 +3741,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 705
+    "h": 834
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 755
+    "h": 884
    },
    "Core": {
     "x": 689,
@@ -4050,13 +4050,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 761
+    "h": 890
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 811
+    "h": 940
    },
    "Core": {
     "x": 689,
@@ -8264,7 +8264,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "Core": {
     "x": 84,
@@ -18962,13 +18962,13 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 705
+    "h": 834
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 755
+    "h": 884
    },
    "Core": {
     "x": 689,
@@ -19552,7 +19552,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "Core": {
     "x": 84,
@@ -20048,7 +20048,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "transitions row": {
     "x": 64,
@@ -25306,69 +25306,69 @@
    "Screen margin": {
     "x": 689,
     "w": 99.484,
-    "glyph_top": 683,
+    "glyph_top": 812,
     "glyph_h": 27,
-    "top": 683,
+    "top": 812,
     "h": 27,
-    "baseline": 704,
+    "baseline": 833,
     "width": 112.5,
     "lines": 2
    },
    "margin grid": {
     "x": 689,
-    "y": 665,
+    "y": 794,
     "w": 1142,
     "h": 121
    },
    "margin row": {
     "x": 909,
-    "y": 665,
+    "y": 794,
     "w": 922,
     "h": 121
    },
    "margin off": {
     "x": 929,
-    "y": 673,
+    "y": 802,
     "w": 70.156,
     "h": 41
    },
    "margin auto": {
     "x": 1007.156,
-    "y": 673,
+    "y": 802,
     "w": 89.781,
     "h": 41
    },
    "margin small": {
     "x": 1104.938,
-    "y": 673,
+    "y": 802,
     "w": 92.469,
     "h": 41
    },
    "margin large": {
     "x": 1205.406,
-    "y": 673,
+    "y": 802,
     "w": 96.391,
     "h": 41
    },
    "margin Small text": {
     "x": 1121.938,
     "w": 58.469,
-    "glyph_top": 678,
+    "glyph_top": 807,
     "glyph_h": 31,
-    "top": 678,
+    "top": 807,
     "h": 31,
-    "baseline": 702,
+    "baseline": 831,
     "width": 58.469,
     "lines": 1
    },
    "margin Large text": {
     "x": 1222.406,
     "w": 62.391,
-    "glyph_top": 678,
+    "glyph_top": 807,
     "glyph_h": 31,
-    "top": 678,
+    "top": 807,
     "h": 31,
-    "baseline": 702,
+    "baseline": 831,
     "width": 62.391,
     "lines": 1
    },
@@ -25376,7 +25376,7 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 705
+    "h": 834
    },
    "scaling row": {
     "x": 909,
@@ -25387,11 +25387,11 @@
    "margin explanation": {
     "x": 929,
     "w": 845.672,
-    "glyph_top": 722,
+    "glyph_top": 851,
     "glyph_h": 24,
-    "top": 720,
+    "top": 849,
     "h": 29,
-    "baseline": 741,
+    "baseline": 870,
     "width": 845.672,
     "lines": 2
    },
@@ -25399,76 +25399,76 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 755
+    "h": 884
    }
   },
   "margin 4:3": {
    "Screen margin": {
     "x": 84,
     "w": 287.859,
-    "glyph_top": 769.5,
+    "glyph_top": 875.5,
     "glyph_h": 37,
-    "top": 769.5,
+    "top": 875.5,
     "h": 37,
-    "baseline": 798.5,
+    "baseline": 904.5,
     "width": 287.859,
     "lines": 1
    },
    "margin grid": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin row": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin off": {
     "x": 408,
-    "y": 743,
+    "y": 849,
     "w": 110,
     "h": 90
    },
    "margin auto": {
     "x": 530,
-    "y": 743,
+    "y": 849,
     "w": 128.328,
     "h": 90
    },
    "margin small": {
     "x": 670.328,
-    "y": 743,
+    "y": 849,
     "w": 132.188,
     "h": 90
    },
    "margin large": {
     "x": 814.516,
-    "y": 743,
+    "y": 849,
     "w": 137.828,
     "h": 90
    },
    "margin Small text": {
     "x": 694.328,
     "w": 84.188,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 84.188,
     "lines": 1
    },
    "margin Large text": {
     "x": 838.516,
     "w": 89.828,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 89.828,
     "lines": 1
    },
@@ -25476,7 +25476,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "scaling row": {
     "x": 64,
@@ -25518,69 +25518,69 @@
    "Screen margin": {
     "x": 84,
     "w": 287.859,
-    "glyph_top": 769.5,
+    "glyph_top": 875.5,
     "glyph_h": 37,
-    "top": 769.5,
+    "top": 875.5,
     "h": 37,
-    "baseline": 798.5,
+    "baseline": 904.5,
     "width": 287.859,
     "lines": 1
    },
    "margin grid": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin row": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin off": {
     "x": 408,
-    "y": 743,
+    "y": 849,
     "w": 110,
     "h": 90
    },
    "margin auto": {
     "x": 530,
-    "y": 743,
+    "y": 849,
     "w": 128.328,
     "h": 90
    },
    "margin small": {
     "x": 670.328,
-    "y": 743,
+    "y": 849,
     "w": 132.188,
     "h": 90
    },
    "margin large": {
     "x": 814.516,
-    "y": 743,
+    "y": 849,
     "w": 137.828,
     "h": 90
    },
    "margin Small text": {
     "x": 694.328,
     "w": 84.188,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 84.188,
     "lines": 1
    },
    "margin Large text": {
     "x": 838.516,
     "w": 89.828,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 89.828,
     "lines": 1
    },
@@ -25588,7 +25588,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "scaling row": {
     "x": 64,
@@ -25630,69 +25630,69 @@
    "Screen margin": {
     "x": 689,
     "w": 99.484,
-    "glyph_top": 739,
+    "glyph_top": 868,
     "glyph_h": 27,
-    "top": 739,
+    "top": 868,
     "h": 27,
-    "baseline": 760,
+    "baseline": 889,
     "width": 112.5,
     "lines": 2
    },
    "margin grid": {
     "x": 689,
-    "y": 721,
+    "y": 850,
     "w": 1142,
     "h": 121
    },
    "margin row": {
     "x": 909,
-    "y": 721,
+    "y": 850,
     "w": 922,
     "h": 121
    },
    "margin off": {
     "x": 929,
-    "y": 729,
+    "y": 858,
     "w": 70.156,
     "h": 41
    },
    "margin auto": {
     "x": 1007.156,
-    "y": 729,
+    "y": 858,
     "w": 89.781,
     "h": 41
    },
    "margin small": {
     "x": 1104.938,
-    "y": 729,
+    "y": 858,
     "w": 92.469,
     "h": 41
    },
    "margin large": {
     "x": 1205.406,
-    "y": 729,
+    "y": 858,
     "w": 96.391,
     "h": 41
    },
    "margin Small text": {
     "x": 1121.938,
     "w": 58.469,
-    "glyph_top": 734,
+    "glyph_top": 863,
     "glyph_h": 31,
-    "top": 734,
+    "top": 863,
     "h": 31,
-    "baseline": 758,
+    "baseline": 887,
     "width": 58.469,
     "lines": 1
    },
    "margin Large text": {
     "x": 1222.406,
     "w": 62.391,
-    "glyph_top": 734,
+    "glyph_top": 863,
     "glyph_h": 31,
-    "top": 734,
+    "top": 863,
     "h": 31,
-    "baseline": 758,
+    "baseline": 887,
     "width": 62.391,
     "lines": 1
    },
@@ -25700,7 +25700,7 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 761
+    "h": 890
    },
    "scaling row": {
     "x": 909,
@@ -25711,11 +25711,11 @@
    "margin explanation": {
     "x": 929,
     "w": 845.672,
-    "glyph_top": 778,
+    "glyph_top": 907,
     "glyph_h": 24,
-    "top": 776,
+    "top": 905,
     "h": 29,
-    "baseline": 797,
+    "baseline": 926,
     "width": 845.672,
     "lines": 2
    },
@@ -25723,7 +25723,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 811
+    "h": 940
    },
    "page note": {
     "x": 96,
@@ -25741,69 +25741,69 @@
    "Screen margin": {
     "x": 84,
     "w": 287.859,
-    "glyph_top": 769.5,
+    "glyph_top": 875.5,
     "glyph_h": 37,
-    "top": 769.5,
+    "top": 875.5,
     "h": 37,
-    "baseline": 798.5,
+    "baseline": 904.5,
     "width": 287.859,
     "lines": 1
    },
    "margin grid": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin row": {
     "x": 64,
-    "y": 738,
+    "y": 844,
     "w": 1312,
     "h": 100
    },
    "margin off": {
     "x": 408,
-    "y": 743,
+    "y": 849,
     "w": 110,
     "h": 90
    },
    "margin auto": {
     "x": 530,
-    "y": 743,
+    "y": 849,
     "w": 128.328,
     "h": 90
    },
    "margin small": {
     "x": 670.328,
-    "y": 743,
+    "y": 849,
     "w": 132.188,
     "h": 90
    },
    "margin large": {
     "x": 814.516,
-    "y": 743,
+    "y": 849,
     "w": 137.828,
     "h": 90
    },
    "margin Small text": {
     "x": 694.328,
     "w": 84.188,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 84.188,
     "lines": 1
    },
    "margin Large text": {
     "x": 838.516,
     "w": 89.828,
-    "glyph_top": 765.297,
+    "glyph_top": 871.297,
     "glyph_h": 45,
-    "top": 767.297,
+    "top": 873.297,
     "h": 41.391,
-    "baseline": 800.297,
+    "baseline": 906.297,
     "width": 89.828,
     "lines": 1
    },
@@ -25811,7 +25811,7 @@
     "x": 64,
     "y": 208,
     "w": 1312,
-    "h": 630
+    "h": 736
    },
    "scaling row": {
     "x": 64,
@@ -25864,69 +25864,69 @@
    "Screen margin": {
     "x": 689,
     "w": 99.484,
-    "glyph_top": 683,
+    "glyph_top": 812,
     "glyph_h": 27,
-    "top": 683,
+    "top": 812,
     "h": 27,
-    "baseline": 704,
+    "baseline": 833,
     "width": 112.5,
     "lines": 2
    },
    "margin grid": {
     "x": 689,
-    "y": 665,
+    "y": 794,
     "w": 1142,
     "h": 121
    },
    "margin row": {
     "x": 909,
-    "y": 665,
+    "y": 794,
     "w": 922,
     "h": 121
    },
    "margin off": {
     "x": 929,
-    "y": 673,
+    "y": 802,
     "w": 70.156,
     "h": 41
    },
    "margin auto": {
     "x": 1007.156,
-    "y": 673,
+    "y": 802,
     "w": 89.781,
     "h": 41
    },
    "margin small": {
     "x": 1104.938,
-    "y": 673,
+    "y": 802,
     "w": 92.469,
     "h": 41
    },
    "margin large": {
     "x": 1205.406,
-    "y": 673,
+    "y": 802,
     "w": 96.391,
     "h": 41
    },
    "margin Small text": {
     "x": 1121.938,
     "w": 58.469,
-    "glyph_top": 678,
+    "glyph_top": 807,
     "glyph_h": 31,
-    "top": 678,
+    "top": 807,
     "h": 31,
-    "baseline": 702,
+    "baseline": 831,
     "width": 58.469,
     "lines": 1
    },
    "margin Large text": {
     "x": 1222.406,
     "w": 62.391,
-    "glyph_top": 678,
+    "glyph_top": 807,
     "glyph_h": 31,
-    "top": 678,
+    "top": 807,
     "h": 31,
-    "baseline": 702,
+    "baseline": 831,
     "width": 62.391,
     "lines": 1
    },
@@ -25934,7 +25934,7 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 705
+    "h": 834
    },
    "scaling row": {
     "x": 909,
@@ -25945,11 +25945,11 @@
    "margin explanation": {
     "x": 929,
     "w": 845.672,
-    "glyph_top": 722,
+    "glyph_top": 851,
     "glyph_h": 24,
-    "top": 720,
+    "top": 849,
     "h": 29,
-    "baseline": 741,
+    "baseline": 870,
     "width": 845.672,
     "lines": 2
    },
@@ -25957,7 +25957,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 755
+    "h": 884
    }
   },
   "22g": {
@@ -33266,6 +33266,1042 @@
     "baseline": 1049.5,
     "width": 53.484,
     "lines": 1
+   }
+  },
+  "30h": {
+   "section": {
+    "x": 96,
+    "w": 348.891,
+    "glyph_top": 88,
+    "glyph_h": 32,
+    "top": 88,
+    "h": 32,
+    "baseline": 113,
+    "width": 348.891,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 834
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 884
+   },
+   "Core": {
+    "x": 689,
+    "w": 72.25,
+    "glyph_top": 99,
+    "glyph_h": 27,
+    "top": 99,
+    "h": 27,
+    "baseline": 120,
+    "width": 72.25,
+    "lines": 1
+   },
+   "core explanation": {
+    "x": 929,
+    "w": 419.813,
+    "glyph_top": 97,
+    "glyph_h": 24,
+    "top": 95,
+    "h": 29,
+    "baseline": 116,
+    "width": 419.813,
+    "lines": 2
+   },
+   "core note": {
+    "x": 929,
+    "w": 204.875,
+    "glyph_top": 157,
+    "glyph_h": 22,
+    "top": 155,
+    "h": 26,
+    "baseline": 175,
+    "width": 204.875,
+    "lines": 1
+   },
+   "core 0": {
+    "x": 1389.969,
+    "w": 225.844,
+    "glyph_top": 122.5,
+    "glyph_h": 31,
+    "top": 122.5,
+    "h": 31,
+    "baseline": 146.5,
+    "width": 225.844,
+    "lines": 1
+   },
+   "core 1": {
+    "x": 1657.813,
+    "w": 136.188,
+    "glyph_top": 122.5,
+    "glyph_h": 31,
+    "top": 122.5,
+    "h": 31,
+    "baseline": 146.5,
+    "width": 136.188,
+    "lines": 1
+   },
+   "core Accurate": {
+    "x": 1372.969,
+    "y": 117.5,
+    "w": 259.844,
+    "h": 41
+   },
+   "core Fast": {
+    "x": 1640.813,
+    "y": 117.5,
+    "w": 170.188,
+    "h": 41
+   },
+   "core row": {
+    "x": 909,
+    "y": 81,
+    "w": 922,
+    "h": 114
+   },
+   "core grid": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 114
+   },
+   "Vsync": {
+    "x": 689,
+    "w": 89.109,
+    "glyph_top": 355,
+    "glyph_h": 27,
+    "top": 355,
+    "h": 27,
+    "baseline": 376,
+    "width": 89.109,
+    "lines": 1
+   },
+   "vsync explanation": {
+    "x": 929,
+    "w": 466.563,
+    "glyph_top": 353,
+    "glyph_h": 24,
+    "top": 351,
+    "h": 29,
+    "baseline": 372,
+    "width": 466.563,
+    "lines": 1
+   },
+   "vsync Auto": {
+    "x": 1566.703,
+    "y": 359.5,
+    "w": 89.781,
+    "h": 41
+   },
+   "vsync Off": {
+    "x": 1740.844,
+    "y": 359.5,
+    "w": 70.156,
+    "h": 41
+   },
+   "vsync row": {
+    "x": 909,
+    "y": 337,
+    "w": 922,
+    "h": 86
+   },
+   "vsync grid": {
+    "x": 689,
+    "y": 337,
+    "w": 1142,
+    "h": 86
+   },
+   "Neighbour workers": {
+    "x": 689,
+    "w": 139.953,
+    "glyph_top": 455,
+    "glyph_h": 27,
+    "top": 455,
+    "h": 27,
+    "baseline": 476,
+    "width": 139.953,
+    "lines": 2
+   },
+   "workers explanation": {
+    "x": 929,
+    "w": 625.344,
+    "glyph_top": 453,
+    "glyph_h": 24,
+    "top": 451,
+    "h": 29,
+    "baseline": 472,
+    "width": 625.344,
+    "lines": 2
+   },
+   "workers 0": {
+    "x": 1600.109,
+    "w": 89.203,
+    "glyph_top": 464.5,
+    "glyph_h": 31,
+    "top": 464.5,
+    "h": 31,
+    "baseline": 488.5,
+    "width": 89.203,
+    "lines": 1
+   },
+   "workers 1": {
+    "x": 1731.313,
+    "w": 7.375,
+    "glyph_top": 464.5,
+    "glyph_h": 31,
+    "top": 464.5,
+    "h": 31,
+    "baseline": 488.5,
+    "width": 7.375,
+    "lines": 1
+   },
+   "workers 2": {
+    "x": 1780.688,
+    "w": 13.313,
+    "glyph_top": 464.5,
+    "glyph_h": 31,
+    "top": 464.5,
+    "h": 31,
+    "baseline": 488.5,
+    "width": 13.313,
+    "lines": 1
+   },
+   "workers Auto": {
+    "x": 1583.109,
+    "y": 459.5,
+    "w": 123.203,
+    "h": 41
+   },
+   "workers One": {
+    "x": 1714.313,
+    "y": 459.5,
+    "w": 41.375,
+    "h": 41
+   },
+   "workers Two": {
+    "x": 1763.688,
+    "y": 459.5,
+    "w": 47.313,
+    "h": 41
+   },
+   "workers row": {
+    "x": 909,
+    "y": 437,
+    "w": 922,
+    "h": 86
+   },
+   "workers grid": {
+    "x": 689,
+    "y": 437,
+    "w": 1142,
+    "h": 86
+   },
+   "Continuous transitions": {
+    "x": 689,
+    "w": 182.688,
+    "glyph_top": 227,
+    "glyph_h": 27,
+    "top": 227,
+    "h": 27,
+    "baseline": 248,
+    "width": 182.688,
+    "lines": 2
+   },
+   "transitions explanation": {
+    "x": 929,
+    "w": 625.5,
+    "glyph_top": 225,
+    "glyph_h": 24,
+    "top": 223,
+    "h": 29,
+    "baseline": 244,
+    "width": 625.5,
+    "lines": 2
+   },
+   "transitions note": {
+    "x": 929,
+    "w": 391.078,
+    "glyph_top": 285,
+    "glyph_h": 22,
+    "top": 283,
+    "h": 26,
+    "baseline": 303,
+    "width": 391.078,
+    "lines": 1
+   },
+   "transitions grid": {
+    "x": 689,
+    "y": 209,
+    "w": 1142,
+    "h": 114
+   },
+   "transitions Off": {
+    "x": 1664.484,
+    "y": 245.5,
+    "w": 70.156,
+    "h": 41
+   },
+   "transitions On": {
+    "x": 1742.641,
+    "y": 245.5,
+    "w": 68.359,
+    "h": 41
+   },
+   "transitions row": {
+    "x": 909,
+    "y": 209,
+    "w": 922,
+    "h": 114
+   },
+   "Camera": {
+    "x": 689,
+    "w": 114.891,
+    "glyph_top": 683,
+    "glyph_h": 27,
+    "top": 683,
+    "h": 27,
+    "baseline": 704,
+    "width": 114.891,
+    "lines": 1
+   },
+   "cam row": {
+    "x": 909,
+    "y": 665,
+    "w": 922,
+    "h": 115
+   },
+   "cam grid": {
+    "x": 689,
+    "y": 665,
+    "w": 1142,
+    "h": 115
+   },
+   "cam Pixel": {
+    "x": 1596.172,
+    "y": 702,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth": {
+    "x": 1689.672,
+    "y": 702,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel box": {
+    "x": 1596.172,
+    "y": 702,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth box": {
+    "x": 1689.672,
+    "y": 702,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel text": {
+    "x": 1613.172,
+    "w": 51.5,
+    "glyph_top": 707,
+    "glyph_h": 31,
+    "top": 707,
+    "h": 31,
+    "baseline": 731,
+    "width": 51.5,
+    "lines": 1
+   },
+   "cam Smooth text": {
+    "x": 1706.672,
+    "w": 87.328,
+    "glyph_top": 707,
+    "glyph_h": 31,
+    "top": 707,
+    "h": 31,
+    "baseline": 731,
+    "width": 87.328,
+    "lines": 1
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 537,
+    "w": 922,
+    "h": 114
+   },
+   "margin row": {
+    "x": 909,
+    "y": 794,
+    "w": 922,
+    "h": 121
+   },
+   "cam explanation": {
+    "x": 929,
+    "w": 593.375,
+    "glyph_top": 681,
+    "glyph_h": 24,
+    "top": 679,
+    "h": 29,
+    "baseline": 700,
+    "width": 620.063,
+    "lines": 3
+   }
+  },
+  "30i": {
+   "section": {
+    "x": 64,
+    "w": 391.766,
+    "glyph_top": 28,
+    "glyph_h": 37,
+    "top": 28,
+    "h": 37,
+    "baseline": 57,
+    "width": 391.766,
+    "lines": 1
+   },
+   "rows": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 736
+   },
+   "Core": {
+    "x": 84,
+    "w": 93.734,
+    "glyph_top": 239.5,
+    "glyph_h": 37,
+    "top": 239.5,
+    "h": 37,
+    "baseline": 268.5,
+    "width": 93.734,
+    "lines": 1
+   },
+   "core 0": {
+    "x": 432,
+    "w": 325.203,
+    "glyph_top": 235.297,
+    "glyph_h": 45,
+    "top": 237.297,
+    "h": 41.391,
+    "baseline": 270.297,
+    "width": 325.203,
+    "lines": 1
+   },
+   "core 1": {
+    "x": 817.203,
+    "w": 196.109,
+    "glyph_top": 235.297,
+    "glyph_h": 45,
+    "top": 237.297,
+    "h": 41.391,
+    "baseline": 270.297,
+    "width": 196.109,
+    "lines": 1
+   },
+   "core Accurate": {
+    "x": 408,
+    "y": 213,
+    "w": 373.203,
+    "h": 90
+   },
+   "core Fast": {
+    "x": 793.203,
+    "y": 213,
+    "w": 244.109,
+    "h": 90
+   },
+   "core row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "Vsync": {
+    "x": 84,
+    "w": 115.5,
+    "glyph_top": 451.5,
+    "glyph_h": 37,
+    "top": 451.5,
+    "h": 37,
+    "baseline": 480.5,
+    "width": 115.5,
+    "lines": 1
+   },
+   "vsync Auto": {
+    "x": 408,
+    "y": 425,
+    "w": 128.328,
+    "h": 90
+   },
+   "vsync Off": {
+    "x": 670.328,
+    "y": 425,
+    "w": 110,
+    "h": 90
+   },
+   "vsync row": {
+    "x": 64,
+    "y": 420,
+    "w": 1312,
+    "h": 100
+   },
+   "Continuous transitions": {
+    "x": 84,
+    "w": 237.125,
+    "glyph_top": 327,
+    "glyph_h": 37,
+    "top": 327,
+    "h": 37,
+    "baseline": 356,
+    "width": 237.125,
+    "lines": 2
+   },
+   "transitions Off": {
+    "x": 408,
+    "y": 319,
+    "w": 110,
+    "h": 90
+   },
+   "transitions On": {
+    "x": 530,
+    "y": 319,
+    "w": 110,
+    "h": 90
+   },
+   "transitions row": {
+    "x": 64,
+    "y": 314,
+    "w": 1312,
+    "h": 100
+   },
+   "Neighbour workers": {
+    "x": 84,
+    "w": 181.25,
+    "glyph_top": 539,
+    "glyph_h": 37,
+    "top": 539,
+    "h": 37,
+    "baseline": 568,
+    "width": 181.25,
+    "lines": 2
+   },
+   "workers 0": {
+    "x": 432,
+    "w": 128.453,
+    "glyph_top": 553.297,
+    "glyph_h": 45,
+    "top": 555.297,
+    "h": 41.391,
+    "baseline": 588.297,
+    "width": 128.453,
+    "lines": 1
+   },
+   "workers 1": {
+    "x": 646.141,
+    "w": 10.625,
+    "glyph_top": 553.297,
+    "glyph_h": 45,
+    "top": 555.297,
+    "h": 41.391,
+    "baseline": 588.297,
+    "width": 10.625,
+    "lines": 1
+   },
+   "workers 2": {
+    "x": 763.859,
+    "w": 19.172,
+    "glyph_top": 553.297,
+    "glyph_h": 45,
+    "top": 555.297,
+    "h": 41.391,
+    "baseline": 588.297,
+    "width": 19.172,
+    "lines": 1
+   },
+   "workers Auto": {
+    "x": 408,
+    "y": 531,
+    "w": 176.453,
+    "h": 90
+   },
+   "workers One": {
+    "x": 596.453,
+    "y": 531,
+    "w": 110,
+    "h": 90
+   },
+   "workers Two": {
+    "x": 718.453,
+    "y": 531,
+    "w": 110,
+    "h": 90
+   },
+   "workers row": {
+    "x": 64,
+    "y": 526,
+    "w": 1312,
+    "h": 100
+   },
+   "help": {
+    "x": 64,
+    "y": 69,
+    "w": 860,
+    "h": 47
+   },
+   "help text": {
+    "x": 64,
+    "w": 416.453,
+    "glyph_top": 74,
+    "glyph_h": 36,
+    "top": 69,
+    "h": 47,
+    "baseline": 103,
+    "width": 416.453,
+    "lines": 1
+   },
+   "help note": {
+    "x": 64,
+    "y": 120,
+    "w": 860,
+    "h": 40
+   },
+   "Camera": {
+    "x": 84,
+    "w": 149.469,
+    "glyph_top": 769.5,
+    "glyph_h": 37,
+    "top": 769.5,
+    "h": 37,
+    "baseline": 798.5,
+    "width": 149.469,
+    "lines": 1
+   },
+   "cam row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "cam grid": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "cam Pixel": {
+    "x": 408,
+    "y": 743,
+    "w": 122.156,
+    "h": 90
+   },
+   "cam Smooth": {
+    "x": 542.156,
+    "y": 743,
+    "w": 173.75,
+    "h": 90
+   },
+   "cam Pixel box": {
+    "x": 408,
+    "y": 743,
+    "w": 122.156,
+    "h": 90
+   },
+   "cam Smooth box": {
+    "x": 542.156,
+    "y": 743,
+    "w": 173.75,
+    "h": 90
+   },
+   "cam Pixel text": {
+    "x": 432,
+    "w": 74.156,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 74.156,
+    "lines": 1
+   },
+   "cam Smooth text": {
+    "x": 566.156,
+    "w": 125.75,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 125.75,
+    "lines": 1
+   },
+   "scaling row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "margin row": {
+    "x": 64,
+    "y": 844,
+    "w": 1312,
+    "h": 100
+   }
+  },
+  "30j": {
+   "Camera": {
+    "x": 84,
+    "w": 149.469,
+    "glyph_top": 769.5,
+    "glyph_h": 37,
+    "top": 769.5,
+    "h": 37,
+    "baseline": 798.5,
+    "width": 149.469,
+    "lines": 1
+   },
+   "cam row": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "cam grid": {
+    "x": 64,
+    "y": 738,
+    "w": 1312,
+    "h": 100
+   },
+   "cam Pixel": {
+    "x": 408,
+    "y": 743,
+    "w": 122.156,
+    "h": 90
+   },
+   "cam Smooth": {
+    "x": 542.156,
+    "y": 743,
+    "w": 173.75,
+    "h": 90
+   },
+   "cam Pixel box": {
+    "x": 408,
+    "y": 743,
+    "w": 122.156,
+    "h": 90
+   },
+   "cam Smooth box": {
+    "x": 542.156,
+    "y": 743,
+    "w": 173.75,
+    "h": 90
+   },
+   "cam Pixel text": {
+    "x": 432,
+    "w": 74.156,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 74.156,
+    "lines": 1
+   },
+   "cam Smooth text": {
+    "x": 566.156,
+    "w": 125.75,
+    "glyph_top": 765.297,
+    "glyph_h": 45,
+    "top": 767.297,
+    "h": 41.391,
+    "baseline": 800.297,
+    "width": 125.75,
+    "lines": 1
+   },
+   "rows": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 736
+   },
+   "scaling row": {
+    "x": 64,
+    "y": 632,
+    "w": 1312,
+    "h": 100
+   },
+   "margin row": {
+    "x": 64,
+    "y": 844,
+    "w": 1312,
+    "h": 100
+   },
+   "help": {
+    "x": 64,
+    "y": 69,
+    "w": 860,
+    "h": 47
+   },
+   "help text": {
+    "x": 64,
+    "w": 416.453,
+    "glyph_top": 74,
+    "glyph_h": 36,
+    "top": 69,
+    "h": 47,
+    "baseline": 103,
+    "width": 416.453,
+    "lines": 1
+   },
+   "help note": {
+    "x": 64,
+    "y": 120,
+    "w": 860,
+    "h": 40
+   },
+   "core row": {
+    "x": 64,
+    "y": 208,
+    "w": 1312,
+    "h": 100
+   },
+   "help note text": {
+    "x": 64,
+    "w": 529.328,
+    "glyph_top": 125,
+    "glyph_h": 30,
+    "top": 120,
+    "h": 40,
+    "baseline": 149,
+    "width": 529.328,
+    "lines": 1
+   }
+  },
+  "30k": {
+   "Camera": {
+    "x": 689,
+    "w": 114.891,
+    "glyph_top": 739,
+    "glyph_h": 27,
+    "top": 739,
+    "h": 27,
+    "baseline": 760,
+    "width": 114.891,
+    "lines": 1
+   },
+   "cam row": {
+    "x": 909,
+    "y": 721,
+    "w": 922,
+    "h": 115
+   },
+   "cam grid": {
+    "x": 689,
+    "y": 721,
+    "w": 1142,
+    "h": 115
+   },
+   "cam Pixel": {
+    "x": 1596.172,
+    "y": 758,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth": {
+    "x": 1689.672,
+    "y": 758,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel box": {
+    "x": 1596.172,
+    "y": 758,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth box": {
+    "x": 1689.672,
+    "y": 758,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel text": {
+    "x": 1613.172,
+    "w": 51.5,
+    "glyph_top": 763,
+    "glyph_h": 31,
+    "top": 763,
+    "h": 31,
+    "baseline": 787,
+    "width": 51.5,
+    "lines": 1
+   },
+   "cam Smooth text": {
+    "x": 1706.672,
+    "w": 87.328,
+    "glyph_top": 763,
+    "glyph_h": 31,
+    "top": 763,
+    "h": 31,
+    "baseline": 787,
+    "width": 87.328,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 890
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 593,
+    "w": 922,
+    "h": 114
+   },
+   "margin row": {
+    "x": 909,
+    "y": 850,
+    "w": 922,
+    "h": 121
+   },
+   "cam explanation": {
+    "x": 929,
+    "w": 593.375,
+    "glyph_top": 737,
+    "glyph_h": 24,
+    "top": 735,
+    "h": 29,
+    "baseline": 756,
+    "width": 620.063,
+    "lines": 3
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 940
+   },
+   "page note": {
+    "x": 96,
+    "w": 510.719,
+    "glyph_top": 330,
+    "glyph_h": 22,
+    "top": 327,
+    "h": 29,
+    "baseline": 348,
+    "width": 510.719,
+    "lines": 1
+   }
+  },
+  "30l": {
+   "Camera": {
+    "x": 689,
+    "w": 114.891,
+    "glyph_top": 683,
+    "glyph_h": 27,
+    "top": 683,
+    "h": 27,
+    "baseline": 704,
+    "width": 114.891,
+    "lines": 1
+   },
+   "cam row": {
+    "x": 909,
+    "y": 665,
+    "w": 922,
+    "h": 115
+   },
+   "cam grid": {
+    "x": 689,
+    "y": 665,
+    "w": 1142,
+    "h": 115
+   },
+   "cam Pixel": {
+    "x": 1596.172,
+    "y": 702,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth": {
+    "x": 1689.672,
+    "y": 702,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel box": {
+    "x": 1596.172,
+    "y": 702,
+    "w": 85.5,
+    "h": 41
+   },
+   "cam Smooth box": {
+    "x": 1689.672,
+    "y": 702,
+    "w": 121.328,
+    "h": 41
+   },
+   "cam Pixel text": {
+    "x": 1613.172,
+    "w": 51.5,
+    "glyph_top": 707,
+    "glyph_h": 31,
+    "top": 707,
+    "h": 31,
+    "baseline": 731,
+    "width": 51.5,
+    "lines": 1
+   },
+   "cam Smooth text": {
+    "x": 1706.672,
+    "w": 87.328,
+    "glyph_top": 707,
+    "glyph_h": 31,
+    "top": 707,
+    "h": 31,
+    "baseline": 731,
+    "width": 87.328,
+    "lines": 1
+   },
+   "rows": {
+    "x": 689,
+    "y": 81,
+    "w": 1142,
+    "h": 834
+   },
+   "scaling row": {
+    "x": 909,
+    "y": 537,
+    "w": 922,
+    "h": 114
+   },
+   "margin row": {
+    "x": 909,
+    "y": 794,
+    "w": 922,
+    "h": 121
+   },
+   "cam explanation": {
+    "x": 929,
+    "w": 593.375,
+    "glyph_top": 681,
+    "glyph_h": 24,
+    "top": 679,
+    "h": 29,
+    "baseline": 700,
+    "width": 620.063,
+    "lines": 3
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 884
    }
   }
  },

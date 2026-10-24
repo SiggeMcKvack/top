@@ -236,6 +236,9 @@ typedef struct OraclesHomeDisplay {
     int core;                   /* 0 Accurate (SameBoy), 1 Fast (mGBA); in a game, the running game's, which does not change */
     int workers;                /* the neighbour workers, the settings' ghosts=: 0 auto, 1, 2; in a game, the running game's */
     int scaling;                /* 0 Sharp, 1 Fill, the settings' scaling=; from a game too, where it applies at once */
+    int camera;                 /* Camera: 0 Pixel, 1 Smooth, the settings' subpixel_camera=, -1 while it is absent (the platform's
+                                 * default); in Enhanced only, from a game too, where it applies at once */
+    int camera_from;            /* the whole scale from which the platform's default is Smooth, 0 for every scale (the desktops) */
     int margin;                 /* the screen margin, the settings' screen_margin= (or the command line's, for the run): 0 off,
                                  * 1 auto, 2 small, 3 large; from a game too, where it applies at once */
     int margin_fixed;           /* --screen-margin gave it for the run: the row shows it, dimmed and inert, and it is never stored */

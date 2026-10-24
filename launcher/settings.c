@@ -112,15 +112,27 @@ int oracles_settings_core(const oracles_settings *s)
     return default_core();
 }
 
-int oracles_settings_default_subpixel_camera(int fullscreen_only) { return !fullscreen_only; }
+int oracles_settings_default_subpixel_camera(int fullscreen_only, unsigned scale)
+{
+    return !fullscreen_only || scale >= ORACLES_SETTINGS_SUBPIXEL_SCALE;
+}
 
-int oracles_settings_subpixel_camera(const oracles_settings *s)
+unsigned oracles_settings_subpixel_default_from(void)
+{
+#ifdef __ANDROID__
+    return ORACLES_SETTINGS_SUBPIXEL_SCALE;
+#else
+    return 0u;
+#endif
+}
+
+int oracles_settings_subpixel_camera(const oracles_settings *s, unsigned scale)
 {
     if (s->subpixel_camera >= 0) return s->subpixel_camera != 0;
 #ifdef __ANDROID__
-    return oracles_settings_default_subpixel_camera(1);
+    return oracles_settings_default_subpixel_camera(1, scale);
 #else
-    return oracles_settings_default_subpixel_camera(0);
+    return oracles_settings_default_subpixel_camera(0, scale);
 #endif
 }
 

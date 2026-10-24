@@ -34,6 +34,8 @@ typedef struct harness_options {
     unsigned surfaces;
     unsigned objects_lead, enhanced_budget, enhanced_camera, ghost_lead;
     int enhanced_link_phase, enhanced_subpixel;
+    uint32_t enhanced_subpixel_switch[8];   /* --enhanced-subpixel-switch: the frames the sub-pixel camera switches at, as from the pause */
+    unsigned enhanced_subpixel_switches;
     uint32_t enhanced_reload_at, frames, corrupt_at, sample_rate_hz, colour_toggle_at;
     unsigned enhanced_ghosts;                 /* --enhanced-ghosts: ghosts working at once, threaded (1 by default) */
     int object_animation;                  /* --object-animation-check: the objects' animation from the game's data against the live game */

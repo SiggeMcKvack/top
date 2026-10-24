@@ -107,6 +107,12 @@ static void write_surface(const OraclesEnhancedCheck *c, const uint32_t *surface
 void oracles_enhanced_check_set_neighbour_objects(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_neighbour_objects(c->view, enabled); }
 void oracles_enhanced_check_set_link_phase(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_link_phase(c->view, enabled); }
 void oracles_enhanced_check_set_subpixel(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_subpixel(c->view, enabled); }
+
+void oracles_enhanced_check_subpixel_switch_at(OraclesEnhancedCheck *c, const uint32_t *frames, unsigned count)
+{
+    c->subpixel_switches = count < 8u ? count : 8u;
+    memcpy(c->subpixel_switch_at, frames, c->subpixel_switches * sizeof *frames);
+}
 void oracles_enhanced_check_set_text_box(OraclesEnhancedCheck *c, int enabled) { c->host_box = enabled != 0; }
 void oracles_enhanced_check_set_text_size(OraclesEnhancedCheck *c, unsigned size)
 {
@@ -173,6 +179,11 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
 {
     OraclesEnhancedMode mode;
     int32_t camera_x = 0, camera_y = 0;
+    for (unsigned i = 0; i < c->subpixel_switches; i++)
+        if (c->subpixel_switch_at[i] == frame) {
+            oracles_enhanced_view_switch_subpixel(c->view, !oracles_enhanced_view_subpixel_on(c->view));
+            c->subpixel_switched++;
+        }
     const double compose_start = ec_monotonic_us();
     const uint32_t *surface = oracles_enhanced_view_compose(c->view, &mode, &camera_x, &camera_y);
     {   /* A renderer of objects is judged on the peak, which puts a frame late, not on the mean. */

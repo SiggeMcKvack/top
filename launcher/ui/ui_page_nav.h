@@ -31,9 +31,9 @@
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
  * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
  * (Sharp, the whole scales; Fill, the whole screen in the image's
- * proportions, in fullscreen only), the screen margin (Off, Auto, Small, Large: the band of the screen the picture keeps
- * to, in either profile).  No camera: Enhanced takes the
- * smooth one.  Left and right change the option of the row, OK takes its
+ * proportions, in fullscreen only), the camera (Pixel, Smooth: the sub-pixel camera; dimmed and inert in Faithful; the
+ * platform's default shown until one is chosen), the screen margin (Off, Auto, Small, Large: the band of the screen the
+ * picture keeps to, in either profile).  Left and right change the option of the row, OK takes its
  * next one (Quality stops at Low and at Max; from Custom, right takes Low and
  * left Max); on Advanced, OK and right open it, on Core, or from a game on
  * Scaling; on Text, OK and right open Display › Text, on its Text row.  Where
@@ -45,8 +45,8 @@
  * at once or not at all: the profile, the quality, the view, the core, the
  * transitions, Vsync, the workers, the text and the text box, which the game
  * keeps, are dimmed and inert, "Change it from the home screen."; the window,
- * color correction, the HUD, the scaling, the screen margin and the text
- * size apply at once there. */
+ * color correction, the HUD, the scaling, the camera, the screen margin and
+ * the text size apply at once there. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
 
@@ -155,6 +155,7 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_VSYNC,
     ORACLES_DISPLAY_WORKERS,
     ORACLES_DISPLAY_SCALING,
+    ORACLES_DISPLAY_CAMERA,
     ORACLES_DISPLAY_MARGIN,
     ORACLES_DISPLAY_LETTERS,       /* Display › Text's Text: Classic or Compact */
     ORACLES_DISPLAY_TEXT_BOX,
@@ -239,6 +240,15 @@ int oracles_display_window_size_length(const OraclesHomeNav *nav, int window);
  * of the surface, or the largest size in its proportions (1920x1080). */
 extern const char *const oracles_display_scaling_choices[2];
 void oracles_display_scaling_size(const OraclesHomeNav *nav, int scaling, char *out, size_t capacity);
+/* Camera's choices, "Pixel" and "Smooth" (settings.txt's subpixel_camera= 0 and 1), which apply in Enhanced as the HUD
+ * does; the one shown: the player's, else the platform's default at the whole scale the game is shown at
+ * (oracles_display_camera_scale, the band's scale less its fraction); and its note where that scale is under twice, where
+ * the camera does nothing, "No effect at this size: the view fills the screen at 1x.", else empty. */
+extern const char *const oracles_display_camera_choices[2];
+int oracles_display_camera_applies(const OraclesHomeNav *nav);
+unsigned oracles_display_camera_scale(const OraclesHomeNav *nav);
+int oracles_display_camera(const OraclesHomeNav *nav);
+const char *oracles_display_camera_note(const OraclesHomeNav *nav);
 /* The diagram: the window the game will have, reduced to fit when it must, on the screen; with Fill chosen, when the
  * game plays fullscreen (oracles_display_fullscreen), the image filling the screen in its proportions. */
 void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h, float *w, float *h, char *label, size_t capacity);

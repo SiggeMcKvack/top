@@ -146,6 +146,10 @@ void oracles_sdl_backend_set_window(const oracles_host_backend *backend, int ful
 void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin);
 /* Scaling's Fill chosen, and in effect at the last frame (the window fullscreen then). */
 void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chosen, int *in_effect);
+/* The whole scale the frame is shown at on the screen now, in the band the screen margin leaves it: the largest whole
+ * number of the screen's pixels a pixel of the frame takes there (Fill's 2.67 counts 2), at least 1; 0 before the
+ * session started. */
+unsigned oracles_sdl_backend_whole_scale(const oracles_host_backend *backend);
 /* 1 when the session ended because the window was closed, not by Escape. */
 int oracles_sdl_backend_window_closed(const oracles_host_backend *backend);
 /* Frames presented and the seconds between the first and the last (with vsync, the rate the display imposed), and

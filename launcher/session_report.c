@@ -106,6 +106,12 @@ void oracles_session_finish(session *s, const OraclesSessionOptions *o)
         for (unsigned k = 0; k < ORACLES_ENHANCED_BLACK_KINDS; k++)
             fprintf(stderr, "%s %s %u, %u, %u, %u", k ? ";" : "", oracles_enhanced_black_kind_name(k), black.kinds[k].episodes, black.kinds[k].frames, black.kinds[k].longest, black.kinds[k].in_transition);
         fprintf(stderr, "\n");
+        {   /* Display's Camera: the frames the band was moved by a fraction of a pixel, those Link was drawn apart on */
+            unsigned moved = 0, layered = 0, refused = 0;
+            oracles_enhanced_view_subpixel_counts(s->view, &moved, &layered, &refused);
+            fprintf(stderr, "oracles: camera %s at the end: the band moved by a fraction of a pixel on %u frames, Link drawn apart on %u, refused on %u\n",
+                    oracles_enhanced_view_subpixel_on(s->view) ? "smooth" : "pixel", moved, layered, refused);
+        }
         if (s->text_box_wide) {
             unsigned world = 0, framed = 0, uncovered = 0;
             oracles_enhanced_view_text_box_counts(s->view, &world, &framed, &uncovered);

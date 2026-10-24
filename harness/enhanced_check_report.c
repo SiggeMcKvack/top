@@ -73,6 +73,8 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
                 oracles_enhanced_view_subpixel_objects_left(c->view));
         fprintf(out, "enhanced.switch_edges=%u\nenhanced.switch_band_jolt_max=%" PRId32 "\nenhanced.switch_link_jolt_max=%" PRId32 "\nenhanced.band_jolt_max=%" PRId32 "\nenhanced.link_jolt_max=%" PRId32 "\n",
                 c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->band_jolt_max, c->link_jolt_max);
+        fprintf(out, "enhanced.transition_layer_switches=%u\nenhanced.transition_layer_shift_max=%" PRId32 "\nenhanced.subpixel_switched=%u\n", c->transition_layer_switches,
+                c->transition_layer_shift_max, c->subpixel_switched);
     }
     fprintf(out, "enhanced.link_edge_margin_min=%" PRId32 "\nenhanced.link_near_edge_frames=%u\n", c->link_edge_margin_min, c->link_near_edge_frames);
     fprintf(out, "enhanced.ghost_requested=%u\nenhanced.ghost_completed=%u\nenhanced.ghost_failed=%u\nenhanced.ghost_not_primeable=%u\nenhanced.ghost_load_failed=%u\nenhanced.ghost_never_settled=%u\nenhanced.ghost_wrong_room=%u\nenhanced.ghost_other=%u\n",
@@ -216,6 +218,8 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
                 c->band_stops, c->straight_band_stops, c->straight_frames, c->link_screen_moves, c->link_screen_backsteps, sub, layered, refused);
         fprintf(out, "  as shown at 4x, a step changing from one frame to the next: at the %u switches (a transition, a text box, Link drawn apart) by %" PRId32 " px at most for the band, %" PRId32 " for Link (%s); elsewhere by %" PRId32 " and %" PRId32 "\n",
                 c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->jolt_list[0] ? c->jolt_list : "none of 2 px", c->band_jolt_max, c->link_jolt_max);
+        fprintf(out, "  as shown at 4x, Link drawn apart or no longer in a transition, the band at a fraction: %u times, he moving against the ground by %" PRId32 " px at most\n",
+                c->transition_layer_switches, c->transition_layer_shift_max);
     }
     unsigned requested = 0, completed = 0, failed = 0;
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);

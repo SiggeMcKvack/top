@@ -41,6 +41,9 @@ struct OraclesEnhancedView *oracles_enhanced_check_view(OraclesEnhancedCheck *ch
 void oracles_enhanced_check_set_camera_profile(OraclesEnhancedCheck *check, unsigned profile);
 void oracles_enhanced_check_set_link_phase(OraclesEnhancedCheck *check, int enabled);
 void oracles_enhanced_check_set_subpixel(OraclesEnhancedCheck *check, int enabled);
+/* The sub-pixel camera switched during the run, off if on and on if off, before each of these frames is composed
+ * (oracles_enhanced_view_switch_subpixel), up to eight. */
+void oracles_enhanced_check_subpixel_switch_at(OraclesEnhancedCheck *check, const uint32_t *frames, unsigned count);
 /* The drawn-back view's surface, 480x270, before the first frame. */
 void oracles_enhanced_check_set_zoom_out(OraclesEnhancedCheck *check, int enabled);
 /* The surface of a view's level in a screen's shape (oracles_enhanced_view_size), before the first frame. */

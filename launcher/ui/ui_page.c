@@ -369,18 +369,19 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
     text(draw, st->help_note, &l.help_note, t.help_note, oracles_ui_rgb(NOTE_ITALIC));
     if (t.advanced) {
         /* From a game the core, the transitions, Vsync and the workers are the running game's: their rows are dimmed,
-         * label and all, the scaling and the margin staying live.  The transitions carry the Enhanced view: dimmed in
-         * Faithful.  The margin --screen-margin gives for the run: dimmed. */
+         * label and all, the scaling, the camera and the margin staying live.  The transitions and the camera carry the
+         * Enhanced view: dimmed in Faithful.  The margin --screen-margin gives for the run: dimmed. */
         const float core_applied = oracles_display_row_fixed(nav, ORACLES_DISPLAY_CORE) ? ROW_NOT_APPLIED : 1.0f;
         const float workers_applied = oracles_display_row_fixed(nav, ORACLES_DISPLAY_WORKERS) ? ROW_NOT_APPLIED : 1.0f;
         const float vsync_applied = oracles_display_row_fixed(nav, ORACLES_DISPLAY_VSYNC) ? ROW_NOT_APPLIED : 1.0f;
         const float transitions_applied = oracles_display_transitions_apply(nav) && !oracles_display_row_fixed(nav, ORACLES_DISPLAY_TRANSITIONS)
                                           ? 1.0f : ROW_NOT_APPLIED;
         const float margin_applied = oracles_display_row_fixed(nav, ORACLES_DISPLAY_MARGIN) ? ROW_NOT_APPLIED : 1.0f;
+        const float camera_applied = oracles_display_camera_applies(nav) ? 1.0f : ROW_NOT_APPLIED;
         for (unsigned r = ORACLES_DISPLAY_CORE; r < ORACLES_DISPLAY_LETTERS; r++) {
             const float opacity = r == ORACLES_DISPLAY_CORE ? core_applied : r == ORACLES_DISPLAY_WORKERS ? workers_applied
                                 : r == ORACLES_DISPLAY_VSYNC ? vsync_applied : r == ORACLES_DISPLAY_TRANSITIONS ? transitions_applied
-                                : r == ORACLES_DISPLAY_MARGIN ? margin_applied : 1.0f;
+                                : r == ORACLES_DISPLAY_MARGIN ? margin_applied : r == ORACLES_DISPLAY_CAMERA ? camera_applied : 1.0f;
             highlight_dimmed(draw, lk, &l.rows[r], r == row, opacity);
             wrapped(draw, st->row_label, &l.labels[r], oracles_ui_rgba(LABEL, opacity));
         }
@@ -409,6 +410,11 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
         for (int c = 0; c < 2; c++)
             option(draw, st, lk, &l.scaling[c], 0, oracles_display_scaling_choices[c], t.scaling_sizes[c], c == nav->display.scaling,
                    row == ORACLES_DISPLAY_SCALING, accent, CHOICE_OFF, 1.0f);
+        wrapped(draw, st->row_text, &l.camera_explanation, oracles_ui_rgba(NOTE, camera_applied));
+        text(draw, st->row_note, &l.camera_note, t.camera_note, oracles_ui_rgba(NOTE_ITALIC, camera_applied));
+        for (int c = 0; c < 2; c++)
+            option(draw, st, lk, &l.camera[c], 0, oracles_display_camera_choices[c], NULL, c == oracles_display_camera(nav), row == ORACLES_DISPLAY_CAMERA,
+                   accent, CHOICE_OFF, camera_applied);
         wrapped(draw, st->row_text, &l.explanations[7], oracles_ui_rgba(NOTE, margin_applied));
         for (int c = 0; c < ORACLES_DISPLAY_MARGINS; c++)
             option(draw, st, lk, &l.margin[c], 0, oracles_display_margin_choices[c], NULL, c == nav->display.margin, row == ORACLES_DISPLAY_MARGIN, accent,
@@ -499,6 +505,7 @@ int oracles_ui_display_hit(const OraclesHomeNav *nav, float x, float y, int *opt
         for (int c = 0; c < 3; c++) if (inside(&l.vsync[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_VSYNC; }
         for (int c = 0; c < 3; c++) if (inside(&l.workers[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_WORKERS; }
         for (int c = 0; c < 2; c++) if (inside(&l.scaling[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_SCALING; }
+        for (int c = 0; c < 2; c++) if (inside(&l.camera[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_CAMERA; }
         for (int c = 0; c < ORACLES_DISPLAY_MARGINS; c++) if (inside(&l.margin[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_MARGIN; }
         for (int r = ORACLES_DISPLAY_CORE; r < ORACLES_DISPLAY_LETTERS; r++) if (inside(&l.rows[r], x, y)) return r;
         return -1;

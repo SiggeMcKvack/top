@@ -167,6 +167,11 @@ void oracles_enhanced_view_link_phase_counts(const OraclesEnhancedView *view, un
  * his exact place (his position in 256ths of a pixel), so that he does not shake on the screen.  The surface keeps the camera's whole pixels.  Presentation
  * only.  Off by default; it sets the link phase aside. */
 void oracles_enhanced_view_set_subpixel(OraclesEnhancedView *view, int enabled);
+/* The same during a game (Display › Advanced's Camera from the pause), without a jolt: switched on, the band and Link
+ * take their fractions up from the whole pixels by a sixteenth of a pixel a frame; off, they give them back so,
+ * the camera's whole pixels coming back once they have.  On (1) or off (0) as it will be. */
+void oracles_enhanced_view_switch_subpixel(OraclesEnhancedView *view, int enabled);
+int oracles_enhanced_view_subpixel_on(const OraclesEnhancedView *view);
 /* This frame's (the frame just composed): 1 when the band is to be moved, by `x` and `y` 256ths of a pixel left and
  * up (negative: right and down), its lines `band_top` to `band_top + band_height` of the surface, or Link drawn apart;
  * Link's layer (0 alpha where it shows nothing) at `layer_x`, `layer_y` of the surface moved `layer_fx`, `layer_fy`

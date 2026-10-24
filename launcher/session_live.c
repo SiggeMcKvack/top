@@ -99,3 +99,14 @@ void oracles_session_apply_window(session *s, int window)
     if (fullscreen) fprintf(stderr, "oracles: window: fullscreen\n");
     else fprintf(stderr, "oracles: window: scale %u%s\n", scale, window > 0 && scale < (unsigned)window ? ", lowered to what the display holds" : "");
 }
+
+void oracles_session_follow_subpixel(session *s)
+{
+    if (!s->view || !s->subpixel_followed) return;
+    const unsigned scale = oracles_sdl_backend_whole_scale(&s->backend);
+    if (!scale) return;
+    const int on = oracles_settings_subpixel_camera(s->settings, scale);
+    if (on == oracles_enhanced_view_subpixel_on(s->view)) return;
+    oracles_enhanced_view_switch_subpixel(s->view, on);
+    fprintf(stderr, "oracles: camera %s, the view at %ux on the screen\n", on ? "smooth" : "pixel", scale);
+}

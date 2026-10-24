@@ -184,10 +184,33 @@ void ev_overlay_link_phase(OraclesEnhancedView *v, int32_t camera_x, int32_t cam
 void oracles_enhanced_view_set_subpixel(OraclesEnhancedView *v, int enabled)
 {
     v->subpixel = enabled != 0;
+    v->sub_leaving = 0;
     v->sub_have_last = 0;
     oracles_enhanced_camera_set_exact(v->camera, v->subpixel);
     if (v->subpixel) { v->link_phase = 0; v->phase_count = 0; v->phase_latched = 0; v->phase_dy = 0; }
 }
+
+void oracles_enhanced_view_switch_subpixel(OraclesEnhancedView *v, int enabled)
+{
+    enabled = enabled != 0;
+    if (enabled == oracles_enhanced_view_subpixel_on(v)) return;
+    /* The reducers take Link's place to the 256th of a pixel or no longer: their camera follows it at their own
+     * acceleration, never at once, and the whole camera follows his whole pixels either way. */
+    oracles_enhanced_camera_set_exact(v->camera, enabled);
+    if (!enabled) { v->sub_leaving = 1; return; }   /* the fractions given back (ev_subpixel_layer) */
+    if (v->sub_leaving) { v->sub_leaving = 0; return; }   /* not given back yet: taken up again from where they stand */
+    /* From the frame last shown, at whole pixels: no fraction shown, none of his own, the next frame's taken up. */
+    v->subpixel = 1;
+    v->link_phase = 0; v->phase_count = 0; v->phase_latched = 0; v->phase_dy = 0;
+    const OraclesEnhancedObservation *ob = &v->observation;
+    v->sub_have_last = v->have_view; v->sub_last_frame = v->frame; v->sub_last_epoch = ob->epoch;
+    v->sub_live = 0; v->sub_last_x = v->sub_last_y = 0; v->sub_ease_x = v->sub_ease_y = 0;
+    oracles_enhanced_camera_fraction(v->camera, &v->sub_raw_x, &v->sub_raw_y);
+    v->sub_link_live = 0; v->sub_link_last_x = v->sub_link_last_y = 0; v->sub_link_ease_x = v->sub_link_ease_y = 0;
+    v->sub_link_raw_x = ob->drawn_sub_x; v->sub_link_raw_y = ob->drawn_sub_y;
+}
+
+int oracles_enhanced_view_subpixel_on(const OraclesEnhancedView *v) { return v->subpixel && !v->sub_leaving; }
 
 int oracles_enhanced_view_subpixel(const OraclesEnhancedView *v, int32_t *x, int32_t *y, uint32_t *band_top, uint32_t *band_height,
                                    const uint32_t **layer, int32_t *layer_x, int32_t *layer_y, uint32_t *layer_w, uint32_t *layer_h,
@@ -270,6 +293,7 @@ static int32_t band_fraction(int continuous, int live, int was_live, int32_t raw
 void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, int32_t camera_y)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
+    v->sub_ready = 0;
     if (!v->subpixel) return;
     int32_t fx = 0, fy = 0;
     oracles_enhanced_camera_fraction(v->camera, &fx, &fy);
@@ -280,7 +304,7 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
      * sub-pixel camera. */
     if (v->have_wave) v->sub_wave_hold = SUB_WAVE_HOLD;
     else if (v->sub_wave_hold) v->sub_wave_hold--;
-    const int apart = ob->playing && !ob->cutscene && ob->grid && !ob->large && !v->have_wave;
+    const int apart = ob->playing && !ob->cutscene && ob->grid && !ob->large && !v->have_wave && !v->sub_leaving;
     const int live = tracking && apart && !v->sub_wave_hold;
     const int continuous = v->sub_have_last && v->sub_last_frame + 1u == v->frame && v->sub_last_epoch == ob->epoch;
     v->sub_x = band_fraction(continuous, live, v->sub_live, fx, v->sub_raw_x, v->sub_last_x, &v->sub_ease_x);
@@ -289,9 +313,21 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
     v->sub_live = live; v->sub_raw_x = fx; v->sub_raw_y = fy;
     v->sub_last_x = v->sub_x; v->sub_last_y = v->sub_y;
     if (v->sub_x || v->sub_y) v->sub_frames++;
-    /* Link drawn apart: in play or in a scroll, outdoors, his sprites wholly inside the game's window. */
-    if (!tracking || !apart || (ob->in_transition && !ob->in_scroll)) return;
-    if (!v->sub_x && !v->sub_y && !ob->drawn_sub_x && !ob->drawn_sub_y) return;
+    /* Link drawn apart: in play or in a scroll, outdoors, his sprites wholly inside the game's window, at his own
+     * fraction of a pixel.  Where that stops for a stretch (a scroll the game plays as a cutscene, the camera no longer
+     * following him past a scroll), his fraction is given back the same way, by SUB_EASE a frame, his layer kept until
+     * it is: he never jumps by it against the ground, from his exact place to his whole one. */
+    const int loading = ob->in_transition && !ob->in_scroll, own = tracking && apart && !loading && !v->sub_wave_hold;
+    v->sub_link_x = band_fraction(continuous, own, v->sub_link_live, ob->drawn_sub_x, v->sub_link_raw_x, v->sub_link_last_x, &v->sub_link_ease_x);
+    v->sub_link_y = band_fraction(continuous, own, v->sub_link_live, ob->drawn_sub_y, v->sub_link_raw_y, v->sub_link_last_y, &v->sub_link_ease_y);
+    v->sub_link_live = own; v->sub_link_raw_x = ob->drawn_sub_x; v->sub_link_raw_y = ob->drawn_sub_y;
+    v->sub_link_last_x = v->sub_link_x; v->sub_link_last_y = v->sub_link_y;
+    if (v->sub_leaving && !v->sub_x && !v->sub_y && !v->sub_link_x && !v->sub_link_y) {   /* given back: off */
+        v->subpixel = 0; v->sub_leaving = 0;
+        return;
+    }
+    if (loading || (!own && !v->sub_link_x && !v->sub_link_y)) return;
+    if (!v->sub_x && !v->sub_y && !v->sub_link_x && !v->sub_link_y) return;
     const uint8_t *oam = oracles_guest_oam(v->guest), *io = oracles_guest_io(v->guest), *palettes = oracles_guest_obj_palettes(v->guest);
     const uint8_t *vram0 = oracles_guest_vram(v->guest, 0), *vram1 = oracles_guest_vram(v->guest, 1);
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
@@ -307,7 +343,16 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
     v->sub_taken = 0;
     const int height = (io[IO_LCDC] & 0x04u) ? 16 : 8;
     OraclesSpriteTag tags[ORACLES_SPRITE_TAGS];
-    const unsigned count = (io[IO_LCDC] & 0x02u) ? oracles_sprites_tags_for_oam(v->live_sprites, oam, tags, ORACLES_SPRITE_TAGS) : 0u;
+    unsigned count = (io[IO_LCDC] & 0x02u) ? oracles_sprites_tags_for_oam(v->live_sprites, oam, tags, ORACLES_SPRITE_TAGS) : 0u;
+    if (!count && (io[IO_LCDC] & 0x02u)) count = oracles_sprites_tags_for_moved_oam(v->live_sprites, oam, tags, ORACLES_SPRITE_TAGS);
+    /* An OAM no drawing explains (the game moving or writing his entries itself in a scroll): his own, the entries
+     * drawn from his graphics at his place, alone. */
+    if (!count && (io[IO_LCDC] & 0x02u)) {
+        unsigned own = 0;
+        for (unsigned k = 0; k < 40u && own < ORACLES_SPRITE_TAGS; k++)
+            if (ev_link_column(v, oam + k * 4u) >= 0) tags[own++] = (OraclesSpriteTag){ (uint8_t)k, 1u, 0u, 0u, 0u };
+        count = own;
+    }
     uint8_t without[160];
     memcpy(without, oam, sizeof without);
     int left = INT32_MAX, right = INT32_MIN, top = INT32_MAX, bottom = INT32_MIN, any = 0;
@@ -332,7 +377,8 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
             any = 1;
         }
     }
-    if (!any) return;
+    v->sub_layer_fx = v->sub_link_x - v->sub_x; v->sub_layer_fy = v->sub_link_y - v->sub_y;
+    if (!any) { v->sub_ready = 1; return; }   /* none of him in the OAM: the edge overlay may build all of him (ev_subpixel_made) */
     if (right - left > (int)SUB_LAYER_SIZE || bottom - top > (int)SUB_LAYER_SIZE) { v->sub_refused_frames++; return; }
     /* Their sprites' own pixels (the colours other than 0 of their tiles, flipped as they are): what the frame shows
      * there, Link or the background the game draws over him, goes to the layer and moves with him; the window
@@ -426,15 +472,78 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
     v->sub_layer_x = ob->window_left + left - camera_x;
     v->sub_layer_y = (int32_t)ORACLES_ENHANCED_HUD_HEIGHT + ob->window_top + top - camera_y;
     v->sub_layer_w = (uint32_t)(right - left); v->sub_layer_h = (uint32_t)(bottom - top);
-    v->sub_layer_fx = ob->drawn_sub_x - v->sub_x; v->sub_layer_fy = ob->drawn_sub_y - v->sub_y;
     v->sub_layer_frames++;
+    v->sub_ready = 1;
+}
+
+void ev_subpixel_made(OraclesEnhancedView *v, int32_t x, int32_t y, uint32_t under, uint32_t colour)
+{
+    if (!v->subpixel || !v->sub_ready) return;
+    if (v->sub_made_count == SUB_MADE_PIXELS) { v->sub_made_lost = 1; return; }
+    v->sub_made[v->sub_made_count].x = x; v->sub_made[v->sub_made_count].y = y;
+    v->sub_made[v->sub_made_count].under = under; v->sub_made[v->sub_made_count].colour = colour;
+    v->sub_made_count++;
+}
+
+/* His sprites the edge overlay made without the OAM (ev_overlay_edge_sprites) into the layer, which grows to hold them,
+ * the band before it drew them under them: the column it rebuilt beside the one the OAM holds, or the whole of him it
+ * built from his fields where the OAM holds none on the screen (the layer then made of them alone).  0 where they
+ * cannot join it: a column beside no layer, a layer that would outgrow its size, more pixels than were kept. */
+static int take_made(OraclesEnhancedView *v)
+{
+    if (!v->sub_made_count) return 1;
+    /* Built from his fields, the OAM holding nothing of him on the screen: what the layer took of it lags him, past
+     * the screen, and he is the built one alone. */
+    if (v->edge_link_built && v->sub_layer_w && v->sub_layer_h) { v->sub_layer_w = v->sub_layer_h = 0; v->sub_layer_frames--; }
+    const int layered = v->sub_layer_w && v->sub_layer_h;
+    if (!v->sub_ready || v->sub_made_lost || (!layered && !v->edge_link_built)) return 0;
+    int32_t left = layered ? v->sub_layer_x : INT32_MAX, top = layered ? v->sub_layer_y : INT32_MAX;
+    int32_t right = layered ? v->sub_layer_x + (int32_t)v->sub_layer_w : INT32_MIN, bottom = layered ? v->sub_layer_y + (int32_t)v->sub_layer_h : INT32_MIN;
+    for (unsigned i = 0; i < v->sub_made_count; i++) {
+        const int32_t x = v->sub_made[i].x, y = (int32_t)ORACLES_ENHANCED_HUD_HEIGHT + v->sub_made[i].y;
+        if (x < left) left = x;
+        if (x + 1 > right) right = x + 1;
+        if (y < top) top = y;
+        if (y + 1 > bottom) bottom = y + 1;
+    }
+    if (right - left > (int32_t)SUB_LAYER_SIZE || bottom - top > (int32_t)SUB_LAYER_SIZE) return 0;
+    if (layered && (left != v->sub_layer_x || top != v->sub_layer_y)) {   /* the layer moved to the box's new corner */
+        static uint32_t layer[SUB_LAYER_SIZE * SUB_LAYER_SIZE], patch[SUB_LAYER_SIZE * SUB_LAYER_SIZE];
+        static uint8_t pending[SUB_LAYER_SIZE * SUB_LAYER_SIZE];
+        memset(layer, 0, sizeof layer); memset(patch, 0, sizeof patch); memset(pending, 0, sizeof pending);
+        const uint32_t dx = (uint32_t)(v->sub_layer_x - left), dy = (uint32_t)(v->sub_layer_y - top);
+        for (uint32_t row = 0; row < v->sub_layer_h; row++)
+            for (uint32_t col = 0; col < v->sub_layer_w; col++) {
+                const unsigned from = row * SUB_LAYER_SIZE + col, to = (row + dy) * SUB_LAYER_SIZE + col + dx;
+                layer[to] = v->sub_layer[from]; patch[to] = v->sub_patch[from]; pending[to] = v->sub_pending[from];
+            }
+        memcpy(v->sub_layer, layer, sizeof layer); memcpy(v->sub_patch, patch, sizeof patch); memcpy(v->sub_pending, pending, sizeof pending);
+    } else if (!layered) {
+        memset(v->sub_layer, 0, sizeof v->sub_layer); memset(v->sub_patch, 0, sizeof v->sub_patch); memset(v->sub_pending, 0, sizeof v->sub_pending);
+        v->sub_layer_frames++;
+    }
+    v->sub_layer_x = left; v->sub_layer_y = top;
+    v->sub_layer_w = (uint32_t)(right - left); v->sub_layer_h = (uint32_t)(bottom - top);
+    /* In the order drawn: a pixel drawn twice keeps the band's colour from before the first under it. */
+    for (unsigned i = 0; i < v->sub_made_count; i++) {
+        const unsigned at = (unsigned)((int32_t)ORACLES_ENHANCED_HUD_HEIGHT + v->sub_made[i].y - top) * SUB_LAYER_SIZE + (unsigned)(v->sub_made[i].x - left);
+        if (!(v->sub_patch[at] >> 24)) v->sub_patch[at] = v->sub_made[i].under | 0xff000000u;
+        v->sub_layer[at] = v->sub_made[i].colour | 0xff000000u;
+        v->sub_pending[at] = 0;
+    }
+    return 1;
 }
 
 void ev_subpixel_settle(OraclesEnhancedView *v)
 {
+    /* Sprites of his the edge overlay made without the OAM that cannot join the layer: the frame keeps him whole, with
+     * the band. */
+    if (v->edge_link_made && !take_made(v)) {
+        if (v->sub_layer_w && v->sub_layer_h) { v->sub_layer_w = v->sub_layer_h = 0; v->sub_layer_frames--; }
+        v->sub_refused_frames++;
+        return;
+    }
     if (!v->sub_layer_w || !v->sub_layer_h) return;
-    /* Sprites of his the edge overlay made without the OAM: the frame keeps him whole, with the band. */
-    if (v->edge_link_made) { v->sub_layer_w = v->sub_layer_h = 0; v->sub_layer_frames--; v->sub_refused_frames++; return; }
     for (uint32_t row = 0; row < v->sub_layer_h; row++)
         for (uint32_t col = 0; col < v->sub_layer_w; col++) {
             const unsigned in_layer = row * SUB_LAYER_SIZE + col;

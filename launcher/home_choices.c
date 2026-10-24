@@ -37,6 +37,8 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->vsync = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     display->workers = settings->ghosts;
     display->scaling = settings->scaling_fill;
+    display->camera = settings->subpixel_camera;
+    display->camera_from = (int)oracles_settings_subpixel_default_from();
     display->margin = settings->screen_margin;
     display->margin_fixed = 0;
     display->cores = SDL_GetNumLogicalCPUCores();   /* as the session counts them for Auto */
@@ -144,6 +146,7 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     if ((!in_game || display->window_chosen) && display->window >= 0) prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
     prefs->colour_correction = display->colour;
     prefs->scaling_fill = display->scaling;
+    prefs->subpixel_camera = display->camera;   /* absent until chosen; a running game takes it at once (oracles_session_follow_subpixel) */
     if (!display->margin_fixed) prefs->screen_margin = display->margin;   /* never --screen-margin's */
     snprintf(prefs->vsync, sizeof prefs->vsync, "%s", vsync_names[display->vsync]);
 }

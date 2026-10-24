@@ -94,6 +94,15 @@ static void display_stored(void)
     display.hud = 0;
     oracles_home_store_display(&display, 0, &s);
     CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud == 0);
+    /* Camera: absent until chosen, then stored as chosen, from the pause too; the platform's threshold given to the page. */
+    CHECK(display.camera == -1 && s.subpixel_camera == -1 && display.camera_from == (int)oracles_settings_subpixel_default_from());
+    display.camera = 0;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.subpixel_camera == 0);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.camera == 0);
+    display.margin = ORACLES_SCREEN_MARGIN_LARGE;
+    display.hud = 0;
     display.margin_fixed = 0;
     display.workers = 2;
     oracles_home_store_display(&display, 1, &s);
@@ -900,21 +909,30 @@ int main(int argc, char **argv)
     written.view = 0;
     CHECK(!oracles_settings_lighter(&written, &lighter, &lighter_view) && !oracles_settings_slow_hint(&written, 1, 6000, 300));
 
-    /* The sub-pixel camera: absent, the platform's default, on on the desktops and off on Android whatever the Quality,
-     * and not written; set either way, written as it is. */
-    CHECK(oracles_settings_default_subpixel_camera(0) == 1 && oracles_settings_default_subpixel_camera(1) == 0);
+    /* The sub-pixel camera: absent, the platform's default whatever the Quality, on on the desktops at every scale, on
+     * Android from three times on, and not written; set either way, written as it is, at every scale. */
 #ifdef __ANDROID__
-    const int platform_subpixel = 0;
+    CHECK(oracles_settings_subpixel_default_from() == 3u);
 #else
-    const int platform_subpixel = 1;
+    CHECK(oracles_settings_subpixel_default_from() == 0u);
 #endif
+    for (unsigned scale = 1; scale <= 6; scale++)
+        CHECK(oracles_settings_default_subpixel_camera(0, scale) == 1 && oracles_settings_default_subpixel_camera(1, scale) == (scale >= 3));
     oracles_settings defaults_only;
     oracles_settings_defaults(&defaults_only);
     snprintf(defaults_only.path, sizeof defaults_only.path, "%s", path);
-    CHECK(defaults_only.subpixel_camera == -1 && oracles_settings_subpixel_camera(&defaults_only) == platform_subpixel);
-    for (int quality = 0; quality < ORACLES_QUALITIES; quality++) {
-        oracles_settings_apply_quality(&defaults_only, (OraclesQuality)quality);
-        CHECK(oracles_settings_subpixel_camera(&defaults_only) == platform_subpixel);
+    CHECK(defaults_only.subpixel_camera == -1);
+    for (unsigned scale = 1; scale <= 6; scale++) {
+#ifdef __ANDROID__
+        const int platform_subpixel = scale >= 3;
+#else
+        const int platform_subpixel = 1;
+#endif
+        CHECK(oracles_settings_subpixel_camera(&defaults_only, scale) == platform_subpixel);
+        for (int quality = 0; quality < ORACLES_QUALITIES; quality++) {
+            oracles_settings_apply_quality(&defaults_only, (OraclesQuality)quality);
+            CHECK(oracles_settings_subpixel_camera(&defaults_only, scale) == platform_subpixel);
+        }
     }
     oracles_settings_store(&defaults_only);
     CHECK(!file_has_line(path, "subpixel_camera=0\n") && !file_has_line(path, "subpixel_camera=1\n"));
@@ -923,7 +941,8 @@ int main(int argc, char **argv)
         oracles_settings_defaults(&read_back);
         snprintf(read_back.path, sizeof read_back.path, "%s", path);
         oracles_settings_load(&read_back);
-        CHECK(read_back.subpixel_camera == chosen && oracles_settings_subpixel_camera(&read_back) == chosen);
+        CHECK(read_back.subpixel_camera == chosen);
+        for (unsigned scale = 1; scale <= 6; scale++) CHECK(oracles_settings_subpixel_camera(&read_back, scale) == chosen);
         oracles_settings_store(&read_back);
         CHECK(file_has_line(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n"));
     }

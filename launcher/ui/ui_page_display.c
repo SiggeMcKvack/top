@@ -20,7 +20,7 @@ static const char *const profile_notes[ORACLES_PROFILES] = {
 };
 
 const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS] = { "Profile", "Quality", "Window", "View", "HUD", "Text", "Color correction", "Advanced", "Core",
-                                                                   "Continuous transitions", "Vsync", "Neighbor workers", "Scaling", "Screen margin",
+                                                                   "Continuous transitions", "Vsync", "Neighbor workers", "Scaling", "Camera", "Screen margin",
                                                                    "Text", "Text box", "Text size" };
 const char *const oracles_display_view_names[3] = { "Near", "Medium", "Far" };
 const char *const oracles_display_colour_choices[2] = { "Off", "On" };
@@ -30,6 +30,7 @@ const char *const oracles_display_vsync_choices[3] = { "Auto", "On", "Off" };
 const char *const oracles_display_core_choices[2] = { "Accurate (SameBoy)", "Fast (mGBA)" };
 const char *const oracles_display_core_names[2] = { "Accurate", "Fast" };
 const char *const oracles_display_scaling_choices[2] = { "Sharp", "Fill" };
+const char *const oracles_display_camera_choices[2] = { "Pixel", "Smooth" };
 const char *const oracles_display_quality_names[ORACLES_DISPLAY_QUALITIES + 1] = { "Low", "Medium", "High", "Max", "Custom" };
 int oracles_display_transitions_apply(const OraclesHomeNav *nav) { return nav->display.profile == ORACLES_PROFILE_ENHANCED; }
 int oracles_display_hud_applies(const OraclesHomeNav *nav)
@@ -355,6 +356,25 @@ float oracles_display_shown_scale(const OraclesHomeNav *nav)
     return (float)(nav->display.window < 3 && k > fit ? fit : k);   /* as Play reduces it */
 }
 
+int oracles_display_camera_applies(const OraclesHomeNav *nav) { return oracles_display_hud_applies(nav); }
+
+unsigned oracles_display_camera_scale(const OraclesHomeNav *nav)
+{
+    const float k = floorf(oracles_display_band_scale(nav));
+    return k >= 1.0f ? (unsigned)k : 1u;
+}
+
+int oracles_display_camera(const OraclesHomeNav *nav)
+{
+    if (nav->display.camera >= 0) return nav->display.camera != 0;
+    return oracles_display_camera_scale(nav) >= (unsigned)nav->display.camera_from;
+}
+
+const char *oracles_display_camera_note(const OraclesHomeNav *nav)
+{
+    return oracles_display_camera_scale(nav) < 2u ? "No effect at this size: the view fills the screen at 1\xc3\x97." : "";
+}
+
 float oracles_display_band_scale(const OraclesHomeNav *nav)
 {
     const float k = oracles_display_shown_scale(nav);
@@ -425,6 +445,9 @@ const char *oracles_display_explanation(unsigned row)
         case ORACLES_DISPLAY_WORKERS:
             return "Rooms around you are prepared by background workers. Two fill the view faster after a warp or a load, using one more processor core.";
         case ORACLES_DISPLAY_SCALING: return "Sharp: whole steps, every pixel exact. Fill: the whole screen, pixels slightly softer.";
+        case ORACLES_DISPLAY_CAMERA:
+            return "Smooth: the camera moves by fractions of a pixel at your screen's resolution, so diagonal walks and stairs glide. Pixel: "
+                   "whole pixels, as the game does.";
         case ORACLES_DISPLAY_MARGIN:
             return "Keeps the picture clear of screen edges a device hides. Auto follows what the system reports; Small and Large keep a fixed margin at "
                    "the top and bottom.";
@@ -434,20 +457,26 @@ const char *oracles_display_explanation(unsigned row)
 }
 
 /* The value of a row, set to `value` (wrapped to the row's choices); the view and the transitions do not change in
- * Faithful, nor the HUD in Faithful or, from the pause, in a game running in Faithful, nor a Text row where it is not
+ * Faithful, nor the HUD and the camera in Faithful or, from the pause, in a game running in Faithful, nor a Text row where it is not
  * live (oracles_display_text_row_live), nor the core and the workers in a game, nor the window at one size, nor to a
  * window the pause refuses.  Advanced and Text, the links, have no value, nor Quality, which the view, the core and the
  * workers make (quality_set). */
 static OraclesHomeCommand display_set(OraclesHomeNav *nav, unsigned row, int value)
 {
-    static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 3, 0, 2, 0, 2, 2, 3, 3, 2, ORACLES_DISPLAY_MARGINS,
+    static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 3, 0, 2, 0, 2, 2, 3, 3, 2, 2, ORACLES_DISPLAY_MARGINS,
                                                       2, 2, ORACLES_DISPLAY_TEXT_SIZES };
     int profile = (int)nav->display.profile;
     int *fields[ORACLES_DISPLAY_ROWS] = { &profile, NULL, &nav->display.window, &nav->display.view, &nav->display.hud, NULL,
                                           &nav->display.colour, NULL, &nav->display.core, &nav->display.transitions, &nav->display.vsync,
-                                          &nav->display.workers, &nav->display.scaling, &nav->display.margin,
+                                          &nav->display.workers, &nav->display.scaling, NULL, &nav->display.margin,
                                           &nav->display.text, &nav->display.text_box, &nav->display.text_size };
     const int enhanced_only = row == ORACLES_DISPLAY_TRANSITIONS || row == ORACLES_DISPLAY_VIEW;
+    if (row == ORACLES_DISPLAY_CAMERA) {   /* the shown value the platform's default until one is chosen, then written */
+        value = (value % 2 + 2) % 2;
+        if (!oracles_display_camera_applies(nav) || value == oracles_display_camera(nav)) return ORACLES_HOME_STAY;
+        nav->display.camera = value;
+        return ORACLES_HOME_STORE;
+    }
     const int text_row = row >= ORACLES_DISPLAY_LETTERS && row < ORACLES_DISPLAY_ROWS;
     if (row >= ORACLES_DISPLAY_ROWS || !fields[row] || (enhanced_only && !oracles_display_transitions_apply(nav))
         || (row == ORACLES_DISPLAY_HUD && !oracles_display_hud_applies(nav)) || (text_row && !oracles_display_text_row_live(nav, row))
@@ -465,7 +494,7 @@ static int display_value(const OraclesHomeNav *nav, unsigned row)
 {
     const int values[ORACLES_DISPLAY_ROWS] = { (int)nav->display.profile, 0, nav->display.window, nav->display.view, nav->display.hud, 0,
                                                nav->display.colour, 0, nav->display.core, nav->display.transitions, nav->display.vsync, nav->display.workers,
-                                               nav->display.scaling, nav->display.margin, nav->display.text, nav->display.text_box,
+                                               nav->display.scaling, oracles_display_camera(nav), nav->display.margin, nav->display.text, nav->display.text_box,
                                                nav->display.text_size };
     return row < ORACLES_DISPLAY_ROWS ? values[row] : 0;
 }

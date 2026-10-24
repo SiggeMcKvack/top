@@ -155,6 +155,7 @@ typedef struct OraclesUiDisplayTexts {
     const char *view_note, *core_note, *transitions_note, *vsync_note, *workers_note;
     char workers_names[3][16];            /* "Auto · 2", "1", "2" */
     char scaling_sizes[2][24];            /* the image's size in fullscreen with Sharp, with Fill */
+    const char *camera_explanation, *camera_note;   /* Camera's, and its note (NULL: none) where it has no effect */
     char profile_sizes[ORACLES_PROFILES][24], view_sizes[3][24];   /* the sizes of the screen's shape, Enhanced's at the view chosen */
     float diagram_box_w;                  /* the diagram's box, the screen's shape at its height (0: 16:9's) */
     float diagram_w, diagram_h;           /* the window drawn in the diagram's box */
@@ -176,7 +177,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine diagram_label;
     OraclesUiBox panel;
     /* Profile, Quality, Window, View, HUD, Text, Color correction, or Core, Continuous transitions, Vsync, Neighbour workers,
-     * Scaling, Screen margin, or Text, Text box, Text size; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
+     * Scaling, Camera, Screen margin, or Text, Text box, Text size; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
      * framed button beside it in 4:3. */
     OraclesUiWrapped labels[ORACLES_DISPLAY_ROWS];
     OraclesUiBox rows[ORACLES_DISPLAY_ROWS];         /* each row's highlight, the pointer's target */
@@ -215,6 +216,9 @@ typedef struct OraclesUiDisplayLayout {
     float text_x, text_y, pixel;
     OraclesUiLine preview_label, preview_note;
     OraclesUiOptionLayout margin[ORACLES_DISPLAY_MARGINS];   /* 16:9: above its explanation, from the row's left */
+    OraclesUiOptionLayout camera[2];
+    OraclesUiWrapped camera_explanation;              /* 16:9 */
+    OraclesUiLine camera_note;                        /* 16:9: under its explanation */
     OraclesUiLine help, help_note;                   /* 4:3: in the header, the highlighted row's explanation and its note */
 } OraclesUiDisplayLayout;
 

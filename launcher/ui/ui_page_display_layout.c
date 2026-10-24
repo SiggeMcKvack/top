@@ -92,8 +92,8 @@ static void display_16_9(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout 
     if (t->advanced) {
         /* The Advanced rows, two lines kept for each explanation so that none changes height: Core (with its note on
          * savestates), continuous transitions (with theirs), Vsync, the workers (Auto naming its count), the scaling
-         * (each with the image's size in fullscreen, and its note); from a game the four first say why they are dimmed
-         * in place of their notes. */
+         * (each with the image's size in fullscreen, and its note), the camera; from a game the four first say why they
+         * are dimmed in place of their notes. */
         const char *workers[3], *scaling_sizes[2];
         for (int i = 0; i < 3; i++) workers[i] = t->workers_names[i];
         for (int i = 0; i < 2; i++) scaling_sizes[i] = t->scaling_sizes[i];
@@ -116,6 +116,12 @@ static void display_16_9(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout 
         y += oracles_ui_display_row(value_x, y, value_w, oracles_display_labels[ORACLES_DISPLAY_SCALING], left, t->explanations[5], ADVANCED_EXPLANATION_H,
                          scaling_notes, 1, oracles_display_scaling_choices, scaling_sizes, 2, &out->labels[ORACLES_DISPLAY_SCALING], &out->explanations[5],
                          scaling_out, out->scaling, &out->rows[ORACLES_DISPLAY_SCALING]) + DISPLAY_ROW_GAP;
+        /* Camera: its explanation on three lines, its note under it where it has no effect. */
+        const char *const camera_notes[1] = { t->camera_note };
+        OraclesUiLine *const camera_out[1] = { &out->camera_note };
+        y += oracles_ui_display_row(value_x, y, value_w, oracles_display_labels[ORACLES_DISPLAY_CAMERA], left, t->camera_explanation, ADVANCED_EXPLANATION_H,
+                         camera_notes, t->camera_note ? 1 : 0, oracles_display_camera_choices, NULL, 2, &out->labels[ORACLES_DISPLAY_CAMERA],
+                         &out->camera_explanation, camera_out, out->camera, &out->rows[ORACLES_DISPLAY_CAMERA]) + DISPLAY_ROW_GAP;
         /* Screen margin: its explanation too long beside four choices, they stand above it from the row's left, as
          * Quality's do, the explanation under them on the row's width, two lines kept. */
         oracles_ui_wrap(&oracles_ui_row_label, oracles_display_labels[ORACLES_DISPLAY_MARGIN], DISPLAY_LABEL_W, left, y + LABEL_PAD_TOP,
@@ -310,6 +316,7 @@ static void display_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_VSYNC, oracles_display_vsync_choices, NULL, NULL, 3, out->vsync, out) + DISPLAY_ROW_GAP_4_3;
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_WORKERS, workers, NULL, NULL, 3, out->workers, out) + DISPLAY_ROW_GAP_4_3;
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_SCALING, oracles_display_scaling_choices, scaling_sizes, NULL, 2, out->scaling, out) + DISPLAY_ROW_GAP_4_3;
+        y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_CAMERA, oracles_display_camera_choices, NULL, NULL, 2, out->camera, out) + DISPLAY_ROW_GAP_4_3;
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_MARGIN, oracles_display_margin_choices, NULL, NULL, ORACLES_DISPLAY_MARGINS, out->margin, out);
     } else {
         const char *profile_sizes[ORACLES_PROFILES], *quality_sets[ORACLES_DISPLAY_QUALITIES + 1], *names[4], *sizes[4], *view_sizes[3];
@@ -384,6 +391,8 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
     t->explanations[6] = oracles_display_explanation(ORACLES_DISPLAY_HUD);
     t->explanations[7] = oracles_display_explanation(ORACLES_DISPLAY_MARGIN);
     t->explanations[8] = oracles_display_explanation(ORACLES_DISPLAY_TEXT);
+    t->camera_explanation = oracles_display_explanation(ORACLES_DISPLAY_CAMERA);
+    t->camera_note = oracles_display_camera_note(nav)[0] ? oracles_display_camera_note(nav) : NULL;
     oracles_display_text_summary(nav, t->text_summary, sizeof t->text_summary);
     for (unsigned i = 0; i < 3; i++) {
         t->text_explanations[i] = oracles_display_text_explanation(ORACLES_DISPLAY_LETTERS + i, 0);
@@ -411,7 +420,8 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
         NULL, NULL, "Whole multiples of the picture: pixels stay sharp.", "How much of the world shows; farther asks more.",
         "Wide layout: hearts left, items right.", NULL, NULL, "Core, transitions, Vsync, workers, scaling, margin.",
         "Accurate: the reference. Fast: lighter.", "Rooms scroll into one another, swimming too.", VSYNC_SHORT, "Two fill the view faster, on one more core.",
-        "Sharp: exact pixels. Fill: the whole screen.", "Keeps the picture clear of hidden screen edges.", NULL, NULL, NULL,
+        "Sharp: exact pixels. Fill: the whole screen.", "Smooth: diagonal walks glide.", "Keeps the picture clear of hidden screen edges.", NULL, NULL,
+        NULL,
     };
     const unsigned row = nav->row < ORACLES_DISPLAY_ROWS ? nav->row : ORACLES_DISPLAY_PROFILE;
     t->help = row == ORACLES_DISPLAY_COLOUR ? oracles_display_colour_explanation(nav, 1) : help_4_3[row];
@@ -448,6 +458,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
         case ORACLES_DISPLAY_TRANSITIONS: t->help_note = "Savestates with it on need it on."; break;
         case ORACLES_DISPLAY_CORE: t->help_note = oracles_ui_core_note; break;
         case ORACLES_DISPLAY_SCALING: t->help_note = oracles_ui_scaling_note; break;
+        case ORACLES_DISPLAY_CAMERA: t->help_note = t->camera_note; break;
         default: break;
     }
     if (oracles_display_pause_locked(nav, row)) t->help_note = oracles_display_pause_reason;

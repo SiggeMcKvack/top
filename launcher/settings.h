@@ -67,8 +67,8 @@ typedef struct oracles_settings {
     char vsync[8];                /* auto, on, off */
     int camera;                   /* the Enhanced camera profile: 1 or 2 */
     int link_phase;               /* link_phase=1: Link drawn in phase on a diagonal walk (a trial, written only when on) */
-    int subpixel_camera;          /* subpixel_camera=: the Enhanced camera to the 256th of a pixel, 1 or 0 once set either way,
-                                   * -1 absent: the platform's default (oracles_settings_subpixel_camera) */
+    int subpixel_camera;          /* subpixel_camera=: the Enhanced camera to the 256th of a pixel (Camera's Smooth), 1 or 0 once
+                                   * set either way, -1 absent: the platform's default (oracles_settings_subpixel_camera) */
     char key_names[ORACLES_BINDINGS][ORACLES_SETTINGS_NAME_LENGTH];
     char pad_names[4][ORACLES_SETTINGS_NAME_LENGTH];
     char menu_pad[ORACLES_SETTINGS_NAME_LENGTH];   /* menu_pad=: the controller's Escape in a game, Guide's too (leftstick by default; a
@@ -155,11 +155,16 @@ void oracles_settings_load(oracles_settings *settings);
 int oracles_settings_store(const oracles_settings *settings);
 /* The core the games run on: the one chosen, else the build's default. */
 int oracles_settings_core(const oracles_settings *settings);
-/* The sub-pixel camera on (1) or off (0): the player's choice, else the platform's default. */
-int oracles_settings_subpixel_camera(const oracles_settings *settings);
-/* That default: on on the desktops (Windows, macOS, Linux), off where the game is only fullscreen (Android), whatever
- * the Quality. */
-int oracles_settings_default_subpixel_camera(int fullscreen_only);
+/* The sub-pixel camera on (1) or off (0) for a game whose view the screen shows at the whole scale `scale` (Display ›
+ * Advanced's Camera, Smooth or Pixel): the player's choice, else the platform's default. */
+int oracles_settings_subpixel_camera(const oracles_settings *settings, unsigned scale);
+/* That default, whatever the Quality: on on the desktops (Windows, macOS, Linux); where the game is only fullscreen
+ * (Android), on from ORACLES_SETTINGS_SUBPIXEL_SCALE times on, off under it. */
+#define ORACLES_SETTINGS_SUBPIXEL_SCALE 3u
+int oracles_settings_default_subpixel_camera(int fullscreen_only, unsigned scale);
+/* The whole scale from which this platform's default is on: 0 on the desktops (every scale), ORACLES_SETTINGS_SUBPIXEL_SCALE
+ * on Android. */
+unsigned oracles_settings_subpixel_default_from(void);
 /* The profile the view's level, the core the games run on and the neighbour workers make: Custom when none. */
 OraclesQuality oracles_settings_quality(const oracles_settings *settings);
 /* The same for a session's own: its view's level (an OraclesEnhancedLevel), its core (an OraclesCoreKind) and its

@@ -69,7 +69,7 @@ static void frame_direct(OraclesTouchScreen *screen, SDL_Renderer *renderer, SDL
     const int w = part ? (int)part->w : frame->w, h = part ? (int)part->h : frame->h;
     const OraclesTouchBox box = oracles_touch_frame((int)safe->w, (int)safe->h, w, h, fill);
     const SDL_FRect to = { safe->x + box.x, safe->y + box.y, box.w, box.h };
-    SDL_RenderTexture(renderer, frame, part, &to);
+    if (!screen->draw_frame || !screen->draw_frame(screen->draw_frame_opaque, renderer, part, &to)) SDL_RenderTexture(renderer, frame, part, &to);
     if (screen->over_frame) screen->over_frame(screen->over_frame_opaque, renderer, &to);
 }
 

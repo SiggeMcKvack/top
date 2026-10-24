@@ -26,6 +26,7 @@
 #include <string.h>
 
 #define SUB_LAYER_SIZE ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH           /* the largest drawing of Link and what he holds the sub-pixel camera draws apart */
+#define SUB_MADE_PIXELS 1024u   /* his pixels the edge overlay draws without the OAM in a frame, at most: four sprites of 8x16 and more */
 
 #define IO_LCDC 0x40u
 #define IO_SCY 0x42u
@@ -570,6 +571,7 @@ struct OraclesEnhancedView {
     unsigned link_unshown_frames;    /* scroll frames with Link to draw, none of him on the screen nor drawn past its edge */
     unsigned link_built_frames;      /* scroll frames he was drawn from his fields, the game writing none of his sprites */
     int edge_link_made;              /* this frame's edge overlay drew sprites of his the OAM does not hold (a column, or all of him) */
+    int edge_link_built;             /* all of him, from his fields */
     /* The objects of a large room beyond the game's window: at each drawing
      * of the game in a large room, every object's
      * sprites built from its fields and the game's data, kept with the wOam
@@ -666,6 +668,7 @@ struct OraclesEnhancedView {
     /* The sub-pixel camera (view_phase.c): the band moved by the camera's fraction of a pixel at the screen's
      * resolution, Link and what he holds drawn apart, unmoved. */
     int subpixel;                    /* enabled */
+    int sub_leaving;                 /* switched off during the game: on until the band and Link have given their fractions back */
     int32_t sub_x, sub_y;            /* this frame's, in 256ths of a pixel: the band drawn that much left and up */
     /* The fraction shown, kept from frame to frame: where the camera's fraction comes or goes (the reducer tracking or
      * not, Link drawn apart or not for a stretch), the band takes it up or gives it back by SUB_EASE a frame from where
@@ -676,6 +679,9 @@ struct OraclesEnhancedView {
     int32_t sub_last_x, sub_last_y, sub_raw_x, sub_raw_y;   /* the last frame's fraction shown, and the camera's */
     unsigned sub_wave_hold;          /* frames left before the band takes a fraction again after the waves */
     int32_t sub_ease_x, sub_ease_y;  /* the fraction shown less the camera's, given back by SUB_EASE a frame */
+    int32_t sub_link_x, sub_link_y;  /* Link's own fraction shown, his layer's place less his whole one, eased the same way */
+    int sub_link_live;
+    int32_t sub_link_last_x, sub_link_last_y, sub_link_raw_x, sub_link_raw_y, sub_link_ease_x, sub_link_ease_y;
     uint32_t sub_layer[SUB_LAYER_SIZE * SUB_LAYER_SIZE];   /* Link's pixels, 0 where none */
     uint32_t sub_patch[SUB_LAYER_SIZE * SUB_LAYER_SIZE];   /* the window without him under them, 0 elsewhere */
     uint8_t sub_pending[SUB_LAYER_SIZE * SUB_LAYER_SIZE];  /* his pixels past the window, which the edge overlay draws: taken once it has */
@@ -689,6 +695,12 @@ struct OraclesEnhancedView {
     unsigned sub_covered_pixels;     /* his pixels another drawing covered after the layer was taken, left to the band */
     unsigned sub_unexplained_frames; /* frames the window rendered again did not explain around him: left to the band */
     uint64_t sub_taken;              /* the OAM entries the layer took, this frame's */
+    int sub_ready;                   /* this frame may draw him apart: his layer taken, or none of him in the OAM to take it from */
+    /* His sprites the edge overlay made without the OAM this frame (a column, or all of him), each pixel as it drew it:
+     * its place in the band, the band's colour there before and its own; the settling takes them into the layer. */
+    struct { int32_t x, y; uint32_t under, colour; } sub_made[SUB_MADE_PIXELS];
+    unsigned sub_made_count;
+    int sub_made_lost;               /* more than sub_made holds */
     unsigned sub_objects_left;       /* special objects near him at a fraction of their own, left to the band (an object a frame) */
 };
 

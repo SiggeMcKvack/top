@@ -153,7 +153,13 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
 /* A rectangle of the band, in the band's pixels, the sub-pixel camera shows unmoved over the band and Link: what the
  * view draws there stands on the screen, not in the world. */
 void ev_subpixel_fixed(OraclesEnhancedView *v, int32_t x, int32_t y, int32_t w, int32_t h);
-/* Once every drawing is in the band: his pixels another drawing covered go back to the band. */
+/* Whether an OAM entry stands at Link's place, drawn from his own graphics: his left column (0) or his right one (1),
+ * else -1 (view_overlay.c). */
+int ev_link_column(const OraclesEnhancedView *v, const uint8_t entry[4]);
+/* A pixel of his the edge overlay draws without the OAM at (x, y) of the band, over `under`: kept for the layer. */
+void ev_subpixel_made(OraclesEnhancedView *v, int32_t x, int32_t y, uint32_t under, uint32_t colour);
+/* Once every drawing is in the band: his pixels the edge overlay made join the layer, those another drawing covered go
+ * back to the band. */
 void ev_subpixel_settle(OraclesEnhancedView *v);
 void ev_overlay_link_phase(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 /* The host's wide box over the framed core, at the game's box's place, centred on it (view_textbox.c). */
