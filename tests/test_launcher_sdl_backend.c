@@ -630,6 +630,184 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
     SDL_SyncWindow(window);
 }
 
+/* The large menus: a framed screen shown alone at its own scale is shown so by the pause too, its box enlarged, at that
+ * part's size, and not the whole frame at the view's; the pause changing the large menus shows it at once at the view's
+ * scale, as a frame at the view's scale played it, and alone again, from either. */
+/* The window's whole picture, the logical presentation lifted for it. */
+static SDL_Surface *whole_picture(SDL_Renderer *renderer)
+{
+    int w = 0, h = 0;
+    SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
+    SDL_GetRenderLogicalPresentation(renderer, &w, &h, &mode);
+    SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+    SDL_Surface *read = picture(renderer);
+    SDL_SetRenderLogicalPresentation(renderer, w, h, mode);
+    return read;
+}
+
+static void pause_menus(SDL_Window *window, SDL_Renderer *renderer)
+{
+    static uint32_t pixels[480 * 270];
+    for (unsigned y = 0; y < 270; y++)
+        for (unsigned x = 0; x < 480; x++) pixels[y * 480 + x] = 0xff000000u | (x * 7u % 256u) << 16 | (y * 13u % 256u) << 8 | ((x + y) % 256u);
+    SDL_SetWindowSize(window, 1920, 1080);
+    SDL_SyncWindow(window);
+    oracles_sdl_options options = { 0 };
+    options.scale = 4;
+    options.window = window;
+    options.renderer = renderer;
+    options.pause_menu = 1;
+    oracles_host_backend backend;
+    if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+    if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
+        const uint32_t framed[4] = { 160, 63, 160, 144 };
+        const oracles_host_video_frame view = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, NULL, 160, 160, 160, 47, 1, 0,
+                                                ORACLES_TEXT_BOX_ENLARGE_LARGE };
+        oracles_host_video_frame alone = view;
+        alone.crop_x = framed[0]; alone.crop_y = framed[1]; alone.crop_w = framed[2]; alone.crop_h = framed[3];
+        int logical_w = 0, logical_h = 0, out_w = 0, out_h = 0, w = 0, h = 0;
+        SDL_RendererLogicalPresentation presentation = SDL_LOGICAL_PRESENTATION_DISABLED;
+        CHECK(backend.present_frame(backend.opaque, &view));
+        SDL_Surface *played_view = whole_picture(renderer);
+        CHECK(backend.present_frame(backend.opaque, &alone));
+        SDL_Surface *played_alone = whole_picture(renderer);
+        CHECK(differing(played_view, played_alone) > 0);
+        SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
+        SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+        CHECK(SDL_GetRenderOutputSize(renderer, &out_w, &out_h));
+        oracles_sdl_backend_pause_size(&backend, &w, &h);
+        CHECK(w == 160 && h == 144);
+        const OraclesTouchBox part = oracles_touch_frame(out_w, out_h, 160, 144, 0), whole = oracles_touch_frame(out_w, out_h, 480, 270, 0);
+        const SDL_FRect at_part = { part.x, part.y, part.w, part.h }, at_whole = { whole.x, whole.y, whole.w, whole.h };
+        SDL_Window *pw; SDL_Renderer *pr; SDL_Texture *kept; int kw = 0, kh = 0;
+        oracles_sdl_backend_pause_view(&backend, &pw, &pr, &kept, &kw, &kh);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        CHECK(SDL_RenderTexture(renderer, kept, NULL, &at_whole));
+        SDL_Surface *unframed = picture(renderer);
+        CHECK(differing(played_alone, unframed) > 0);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at_part));
+        SDL_Surface *paused = picture(renderer);
+        CHECK(differing(played_alone, paused) == 0);
+        SDL_DestroySurface(paused);
+        oracles_sdl_backend_pause_crop(&backend, NULL);
+        oracles_sdl_backend_pause_size(&backend, &w, &h);
+        CHECK(w == 480 && h == 270);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at_whole));
+        paused = picture(renderer);
+        CHECK(differing(played_view, paused) == 0);
+        SDL_DestroySurface(paused);
+        oracles_sdl_backend_pause_crop(&backend, framed);
+        oracles_sdl_backend_pause_size(&backend, &w, &h);
+        CHECK(w == 160 && h == 144);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at_part));
+        paused = picture(renderer);
+        CHECK(differing(played_alone, paused) == 0);
+        SDL_DestroySurface(paused);
+        /* Played at the view's scale, the pause taking the large menus. */
+        SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
+        CHECK(backend.present_frame(backend.opaque, &view));
+        SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
+        SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+        oracles_sdl_backend_pause_size(&backend, &w, &h);
+        CHECK(w == 480 && h == 270);
+        oracles_sdl_backend_pause_crop(&backend, framed);
+        oracles_sdl_backend_pause_size(&backend, &w, &h);
+        CHECK(w == 160 && h == 144);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at_part));
+        paused = picture(renderer);
+        CHECK(differing(played_alone, paused) == 0);
+        SDL_DestroySurface(paused);
+        SDL_DestroySurface(unframed);
+        SDL_DestroySurface(played_view);
+        SDL_DestroySurface(played_alone);
+    } else CHECK(0);
+    backend.stop(backend.opaque);
+    oracles_sdl_backend_release(&backend);
+    SDL_SetWindowSize(window, 1280, 720);
+    SDL_SyncWindow(window);
+}
+
+/* The pause changing Text size: the box the presenter enlarges taken away from its image at once, and given back, as a
+ * frame played with and without it shows; and changing the status bar's layout, the frame's pixels drawn again, as the
+ * frame played with them shows. */
+static void pause_settings(SDL_Window *window, SDL_Renderer *renderer)
+{
+    static uint32_t pixels[480 * 270], other[480 * 270];
+    for (unsigned y = 0; y < 270; y++)
+        for (unsigned x = 0; x < 480; x++) {
+            pixels[y * 480 + x] = 0xff000000u | (x * 7u % 256u) << 16 | (y * 13u % 256u) << 8 | ((x + y) % 256u);
+            other[y * 480 + x] = y < 16u ? 0xff204060u : pixels[y * 480 + x];
+        }
+    SDL_SetWindowSize(window, 1920, 1080);
+    SDL_SyncWindow(window);
+    oracles_sdl_options options = { 0 };
+    options.scale = 4;
+    options.window = window;
+    options.renderer = renderer;
+    options.pause_menu = 1;
+    oracles_host_backend backend;
+    if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+    if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
+        const uint32_t box[4] = { 160, 160, 160, 47 };
+        const oracles_host_video_frame boxed = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, NULL, box[0], box[1], box[2], box[3], 1, 0,
+                                                 ORACLES_TEXT_BOX_ENLARGE_LARGE };
+        oracles_host_video_frame plain = boxed, laid = boxed;
+        plain.box_w = plain.box_h = 0;
+        laid.pixels = other;
+        CHECK(backend.present_frame(backend.opaque, &plain));
+        SDL_Surface *played_plain = whole_picture(renderer);
+        CHECK(backend.present_frame(backend.opaque, &laid));
+        SDL_Surface *played_laid = whole_picture(renderer);
+        CHECK(backend.present_frame(backend.opaque, &boxed));
+        SDL_Surface *played_boxed = whole_picture(renderer);
+        CHECK(differing(played_plain, played_boxed) > 0 && differing(played_boxed, played_laid) > 0);
+        int logical_w = 0, logical_h = 0, out_w = 0, out_h = 0;
+        SDL_RendererLogicalPresentation presentation = SDL_LOGICAL_PRESENTATION_DISABLED;
+        SDL_GetRenderLogicalPresentation(renderer, &logical_w, &logical_h, &presentation);
+        SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+        CHECK(SDL_GetRenderOutputSize(renderer, &out_w, &out_h));
+        const OraclesTouchBox whole = oracles_touch_frame(out_w, out_h, 480, 270, 0);
+        const SDL_FRect at = { whole.x, whole.y, whole.w, whole.h };
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+        SDL_Surface *paused = picture(renderer);
+        CHECK(differing(played_boxed, paused) == 0);
+        SDL_DestroySurface(paused);
+        oracles_sdl_backend_pause_box(&backend, NULL, 0, 0, ORACLES_TEXT_BOX_ENLARGE_LARGE);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+        paused = picture(renderer);
+        CHECK(differing(played_plain, paused) == 0);
+        SDL_DestroySurface(paused);
+        oracles_sdl_backend_pause_box(&backend, box, 1, 0, ORACLES_TEXT_BOX_ENLARGE_LARGE);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+        paused = picture(renderer);
+        CHECK(differing(played_boxed, paused) == 0);
+        SDL_DestroySurface(paused);
+        oracles_sdl_backend_pause_pixels(&backend, other);
+        SDL_RenderClear(renderer);
+        CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+        paused = picture(renderer);
+        CHECK(differing(played_laid, paused) == 0);
+        SDL_DestroySurface(paused);
+        SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
+        SDL_DestroySurface(played_plain);
+        SDL_DestroySurface(played_laid);
+        SDL_DestroySurface(played_boxed);
+    } else CHECK(0);
+    backend.stop(backend.opaque);
+    oracles_sdl_backend_release(&backend);
+    SDL_SetWindowSize(window, 1280, 720);
+    SDL_SyncWindow(window);
+}
+
 /* Text size Large: the frame's text box shown again above it at whole screen pixels, in the lent window sized for 160x144
  * at five times (800x720): eight screen pixels a frame pixel (5 + 3), centred on the box across, against its top edge,
  * or its bottom; every block the box's pixel, nearest; a box the frame does not hold so left at the frame's scale.  Very
@@ -986,6 +1164,8 @@ int main(int argc, char **argv)
     enlarged_menus(window, renderer);
     subpixel_band(window, renderer);
     pause_image(window, renderer);
+    pause_menus(window, renderer);
+    pause_settings(window, renderer);
     scaling(window, renderer);
     margins(window, renderer);
     enlarged_box(window, renderer);

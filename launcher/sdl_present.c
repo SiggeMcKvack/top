@@ -191,7 +191,50 @@ static void draw_box(sdl_backend *backend, const SDL_FRect *to, int direct)
 
 int sb_draw_shown_box(sdl_backend *backend, const SDL_FRect *to)
 {
-    return draw_box_of(backend, &backend->shown_box, NULL, to, 1);
+    return draw_box_of(backend, &backend->shown_box, backend->shown_cropped ? &backend->shown_part : NULL, to, 1);
+}
+
+/* The part of `frame` shown alone, its crop taking in Text size's box enlarged where the part's own scale holds it; 0
+ * for the whole frame. */
+static int part_of(sdl_backend *backend, const oracles_host_video_frame *frame, SDL_FRect *part)
+{
+    if (!frame->crop_w || !frame->crop_h) return 0;
+    uint32_t crop_x = frame->crop_x, crop_w = frame->crop_w;
+    int output_w = 0, output_h = 0;
+    if (frame->box_reserve_w && SDL_GetRenderOutputSize(backend->renderer, &output_w, &output_h) && output_w > 0 && output_h > 0) {
+        const OraclesTouchBox band = oracles_touch_band(output_w, output_h, &backend->touch.edges);   /* where the frame goes */
+        oracles_text_box_reserve(frame->width, (uint32_t)band.w, (uint32_t)band.h, backend->fill && sb_window_fullscreen(backend), frame->box_reserve_w,
+                                 frame->box_size, &crop_x, &crop_w, frame->crop_h);
+    }
+    *part = (SDL_FRect){ (float)crop_x, (float)frame->crop_y, (float)crop_w, (float)frame->crop_h };
+    return 1;
+}
+
+void sb_show_crop(sdl_backend *backend, const uint32_t rect[4])
+{
+    oracles_host_video_frame *frame = &backend->shown_frame;
+    if (!rect && !backend->shown_cropped) return;
+    frame->crop_x = rect ? rect[0] : 0;
+    frame->crop_y = rect ? rect[1] : 0;
+    frame->crop_w = rect ? rect[2] : 0;
+    frame->crop_h = rect ? rect[3] : 0;
+    backend->shown_cropped = part_of(backend, frame, &backend->shown_part);
+    backend->shown_box = *frame;   /* drawn again where the image holds it */
+}
+
+void sb_show_box(sdl_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size)
+{
+    oracles_host_video_frame *frame = &backend->shown_frame;
+    const int inside = rect && rect[2] && rect[3] && rect[0] + rect[2] <= frame->width && rect[1] + rect[3] <= frame->height;   /* as the host hands a frame's */
+    frame->box_x = inside ? rect[0] : 0;
+    frame->box_y = inside ? rect[1] : 0;
+    frame->box_w = inside ? rect[2] : 0;
+    frame->box_h = inside ? rect[3] : 0;
+    frame->box_bottom = inside && bottom;
+    frame->box_reserve_w = reserve_w <= frame->width ? reserve_w : 0;
+    frame->box_size = size;
+    backend->shown_cropped = part_of(backend, frame, &backend->shown_part);   /* the part widened for the box, or no longer */
+    backend->shown_box = *frame;   /* drawn again where the image holds it */
 }
 
 static void draw_box_direct(void *opaque, SDL_Renderer *renderer, const SDL_FRect *to)
@@ -210,19 +253,10 @@ int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
     /* A part shown alone (the game's menus enlarged) takes its own whole scale: the logical size follows it.  Fill
      * follows the window into fullscreen and out (F11), and a change of Scaling from the pause, whose menu lifted the
      * presentation and set back the one it found. */
-    uint32_t crop_x = frame->crop_x, crop_w = frame->crop_w;
-    const int cropped = frame->crop_w > 0 && frame->crop_h > 0;
+    SDL_FRect part = { 0.0f, 0.0f, 0.0f, 0.0f };
+    const int cropped = part_of(backend, frame, &part);   /* Text size: the part takes in the box enlarged where its own scale holds it */
     const int filled = backend->fill && sb_window_fullscreen(backend);
-    if (cropped && frame->box_reserve_w) {   /* Text size: the part takes in the box enlarged where the part's own scale holds it */
-        int output_w = 0, output_h = 0;
-        if (SDL_GetRenderOutputSize(backend->renderer, &output_w, &output_h) && output_w > 0 && output_h > 0) {
-            const OraclesTouchBox band = oracles_touch_band(output_w, output_h, &backend->touch.edges);   /* where the frame goes */
-            oracles_text_box_reserve(frame->width, (uint32_t)band.w, (uint32_t)band.h, filled, frame->box_reserve_w, frame->box_size, &crop_x, &crop_w,
-                                     frame->crop_h);
-        }
-    }
-    const SDL_FRect part = { (float)crop_x, (float)frame->crop_y, (float)crop_w, (float)frame->crop_h };
-    const int logical_w = cropped ? (int)crop_w : backend->frame_width, logical_h = cropped ? (int)frame->crop_h : backend->frame_height;
+    const int logical_w = cropped ? (int)part.w : backend->frame_width, logical_h = cropped ? (int)part.h : backend->frame_height;
     backend->presenting = frame;
     backend->presenting_part = part;
     backend->presenting_cropped = cropped;
@@ -233,6 +267,11 @@ int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) sb_present_as(backend, logical_w, logical_h);
     backend->shown_subpixel = 0;
     backend->shown_box.box_w = 0;
+    backend->shown_frame = *frame;
+    backend->shown_frame.pixels = NULL;
+    backend->shown_frame.subpixel = NULL;
+    backend->shown_part = part;
+    backend->shown_cropped = cropped;
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
         if (frame->subpixel && !cropped) {

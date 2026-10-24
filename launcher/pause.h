@@ -50,6 +50,9 @@ typedef struct OraclesPauseSession {
     int window, window_w, window_h;
     unsigned windows_refused;
     int has_text_instant;   /* its profile has the instant text: else Display › Text dims Text speed */
+    /* The size of that image, in the game's pixels: its part shown alone (the game's menus enlarged, which Display may
+     * change here), or the whole frame; NULL: the frame's. */
+    void (*game_size)(void *opaque, int *width, int *height);
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {

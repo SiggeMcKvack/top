@@ -441,12 +441,35 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
     *height = state->frame_height;
 }
 
+void oracles_sdl_backend_pause_size(const oracles_host_backend *backend, int *width, int *height)
+{
+    const sdl_backend *state = backend->opaque;
+    *width = state->shown_cropped ? (int)state->shown_part.w : state->frame_width;
+    *height = state->shown_cropped ? (int)state->shown_part.h : state->frame_height;
+}
+
+void oracles_sdl_backend_pause_crop(const oracles_host_backend *backend, const uint32_t rect[4])
+{
+    sb_show_crop(backend->opaque, rect);
+}
+
+void oracles_sdl_backend_pause_box(const oracles_host_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size)
+{
+    sb_show_box(backend->opaque, rect, bottom, reserve_w, size);
+}
+
+void oracles_sdl_backend_pause_pixels(const oracles_host_backend *backend, const uint32_t *pixels)
+{
+    const sdl_backend *state = backend->opaque;
+    if (state->texture) SDL_UpdateTexture(state->texture, NULL, pixels, state->frame_width * (int)sizeof *pixels);
+}
+
 int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image)
 {
     sdl_backend *state = backend->opaque;
     if (!state->texture) return 0;
     if (!state->shown_subpixel) {
-        if (!SDL_RenderTexture(state->renderer, state->texture, NULL, image)) return 0;
+        if (!SDL_RenderTexture(state->renderer, state->texture, state->shown_cropped ? &state->shown_part : NULL, image)) return 0;
         sb_draw_shown_box(state, image);   /* Text size Large's box, which the presenter drew over the frame */
         return 1;
     }

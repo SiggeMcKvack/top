@@ -36,6 +36,7 @@
 #define SMALL_ROOM_W 160
 #define LARGE_ROOM_W 240u            /* LARGE_ROOM_WIDTH * 16 */
 #define LARGE_ROOM_H 176u            /* LARGE_ROOM_HEIGHT * 16 */
+#define BORDER_COLOUR 0xff101010u    /* the framed core's border, and the HUD band's gutters beside the bar centred */
 #define ENTRY_ANIMATION_IMAGES 192u   /* images of a neighbour's animation kept to match the live tiles */
 #define TEXT_BOX_ROWS (LARGE_ROOM_H / 8u)   /* the cells of the largest room, where a text box is looked for */
 #define TEXT_BOX_COLS (LARGE_ROOM_W / 8u)
@@ -449,8 +450,9 @@ struct OraclesEnhancedView {
     unsigned wide_scale;                 /* the scale the last composition drew the host's box at */
     unsigned text_size;                  /* Text size: ORACLES_ENHANCED_TEXT_* */
     int large_menus;                     /* the framed core shown alone (menus=large): its box enlarged by the presenter, at every size */
-    int enlarged_shown, enlarged_bottom; /* Large: the box at its size, the presenter enlarging it, at enlarged_rect in the surface */
-    unsigned enlarged_size;              /* at that size: ORACLES_ENHANCED_TEXT_LARGE, or XLARGE with the large menus */
+    int enlarged_noted, enlarged_bottom; /* the box at its size at enlarged_rect in the surface, which the presenter enlarges with Large */
+    int enlarged_framed;                 /* over the framed core: XLARGE the presenter's too with the large menus */
+    unsigned enlarged_width;             /* the width its scale is chosen for (box_scale, framed_scale) */
     int32_t enlarged_rect[4], enlarged_src[2];   /* (x, y, w, h); the core image's pixels it shows, the game's box */
     int enlarged_from_core;
     unsigned scaled_trail;               /* the frames after a text, the game's box read without the host's lines */

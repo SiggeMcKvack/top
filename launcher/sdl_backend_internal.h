@@ -44,6 +44,9 @@ typedef struct sdl_backend {
     oracles_host_video_subpixel shown;
     int shown_layered, shown_subpixel;
     oracles_host_video_frame shown_box;   /* its text box shown again larger (box_w 0: none), without its pixels */
+    oracles_host_video_frame shown_frame; /* the frame itself, without its pixels: its crop and its box */
+    SDL_FRect shown_part;                 /* the part shown alone (the game's menus enlarged), when `shown_cropped` */
+    int shown_cropped;
     int frame_width, frame_height;   /* the texture's: the session's surface */
     int logical_w, logical_h;        /* the renderer's logical size: the surface's, or the part shown alone */
     int fill;                        /* Scaling's Fill chosen */
@@ -117,6 +120,10 @@ int sb_draw_subpixel(sdl_backend *backend, const oracles_host_video_subpixel *sp
 int sb_draw_subpixel_cut(sdl_backend *backend, const SDL_FRect *to);
 int sb_put(SDL_Renderer *r, SDL_Texture *texture, const SDL_FRect *src, const SDL_FRect *dst, const SDL_FRect *to, float sx, float sy);
 int sb_draw_shown_box(sdl_backend *backend, const SDL_FRect *to);
+/* The pause's image of the last frame shown alone at `rect` (x, y, w, h in the frame) from now on, or whole (NULL). */
+void sb_show_crop(sdl_backend *backend, const uint32_t rect[4]);
+/* The pause's image of the last frame with Text size's box at `rect` (x, y, w, h in the frame) from now on, or none (NULL). */
+void sb_show_box(sdl_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size);
 int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame);
 
 #endif

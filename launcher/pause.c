@@ -171,6 +171,7 @@ int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     /* The game's image as the session shows it: its whole scale, or Fill's size, centred in the drawing's band. */
+    if (session && session->game_size) session->game_size(session->opaque, &width, &height);
     if (frame && width > 0 && height > 0) {
         int band_top, band_height;
         oracles_ui_draw_band_of(draw, out_height, &band_top, &band_height);

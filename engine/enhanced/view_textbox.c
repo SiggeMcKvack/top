@@ -128,13 +128,16 @@ static unsigned box_scale(const OraclesEnhancedView *v, unsigned width) { return
  * the part shown alone. */
 static unsigned framed_scale(const OraclesEnhancedView *v, unsigned width) { return v->large_menus ? 1u : box_scale(v, width); }
 
-/* Text size Large (or Very large where it does not fit): the box drawn at its size at (x, y), which the presenter shows
- * again larger, at whole screen pixels. */
-static void note_enlarged(OraclesEnhancedView *v, int32_t x, int32_t y, unsigned w, unsigned h, int bottom, int from_core, int32_t sx, int32_t sy, int framed)
+/* The box drawn at its size at (x, y), its scale chosen for `width`: with Text size Large (or Very large where it does
+ * not fit), the presenter shows it again larger, at whole screen pixels; with Normal, noted for a change of the size from
+ * the pause, the game not running. */
+static void note_enlarged(OraclesEnhancedView *v, int32_t x, int32_t y, unsigned w, unsigned h, int bottom, int from_core, int32_t sx, int32_t sy, int framed,
+                          unsigned width)
 {
-    if (v->text_size == ORACLES_ENHANCED_TEXT_NORMAL || x < 0 || y < 0 || x + (int32_t)w > (int32_t)v->size.width || y + (int32_t)h > (int32_t)v->size.height) return;
-    v->enlarged_shown = 1;
-    v->enlarged_size = framed && v->large_menus ? v->text_size : ORACLES_ENHANCED_TEXT_LARGE;
+    if (x < 0 || y < 0 || x + (int32_t)w > (int32_t)v->size.width || y + (int32_t)h > (int32_t)v->size.height) return;
+    v->enlarged_noted = 1;
+    v->enlarged_framed = framed;
+    v->enlarged_width = width;
     v->enlarged_rect[0] = x; v->enlarged_rect[1] = y; v->enlarged_rect[2] = (int32_t)w; v->enlarged_rect[3] = (int32_t)h;
     v->enlarged_bottom = bottom;
     v->enlarged_from_core = from_core;
@@ -234,7 +237,7 @@ void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camer
     const int32_t hud = (int32_t)ORACLES_ENHANCED_HUD_HEIGHT;
     if (!wide && scale == 1u) {
         note_enlarged(v, ((int32_t)v->size.width - (rect[2] - rect[0])) / 2, hud + top + dy, (unsigned)(rect[2] - rect[0]), (unsigned)(rect[3] - rect[1]), lower, 1,
-                      rect[0], hud + top, 0);
+                      rect[0], hud + top, 0, 8u * ORACLES_TEXT_BOX_GAME_COLUMNS);
         return;
     }
     v->above = wide ? 2 : 1;
@@ -266,7 +269,7 @@ void ev_overlay_text_box_above(OraclesEnhancedView *v)
     }
     put_host_box(v, &v->above_box, v->above_scale, v->above_at[0], v->above_at[1], 0, (int32_t)v->size.width, hud, hud + (int32_t)v->band_height);
     ev_subpixel_fixed(v, v->above_at[0], v->above_at[1] - hud, (int32_t)(v->above_scale * v->above_size[0]), (int32_t)(v->above_scale * v->above_size[1]));
-    if (v->above_scale == 1u) note_enlarged(v, v->above_at[0], v->above_at[1], v->above_box.width, v->above_box.height, v->above_lower, 0, 0, 0, 0);
+    if (v->above_scale == 1u) note_enlarged(v, v->above_at[0], v->above_at[1], v->above_box.width, v->above_box.height, v->above_lower, 0, 0, 0, 0, v->above_box.width);
     v->wide_frames_world++;
     if (v->above_scale > 1u) v->scaled_frames_world++;
 }
@@ -345,14 +348,14 @@ void ev_overlay_text_box_framed(OraclesEnhancedView *v)
         /* Text size Large, the game's box: its pixels from the core's image, twice as large, centred on it, against the
          * edge of the screen it stands nearer. */
         unsigned map = 0, row = 0, column = 0;
-        if (v->text_size == ORACLES_ENHANCED_TEXT_NORMAL || !core || !standard_box(v, &map, &row, &column)) return;
+        if (!core || !standard_box(v, &map, &row, &column)) return;
         OraclesPpuRegs regs[ORACLES_PPU_HEIGHT];
         line_registers(v, regs);
         int32_t top = 0, left = 0;
         if (!box_on_screen(regs, map, row, column, &top, &left)) return;
         const int lower = top + (int32_t)game_height / 2 >= (int32_t)ORACLES_PPU_HEIGHT / 2;
         if (framed_scale(v, game_width) == 1u) {   /* Large: the core's own box, which the presenter enlarges */
-            note_enlarged(v, frame_x + left, frame_y + top, game_width, game_height, lower, 1, left, top, 1);
+            note_enlarged(v, frame_x + left, frame_y + top, game_width, game_height, lower, 1, left, top, 1, game_width);
             return;
         }
         put_core_box(v, core, left, top, game_width, game_height, 2u, frame_x + left + (int32_t)game_width / 2 - (int32_t)game_width,
@@ -405,7 +408,7 @@ void ev_overlay_text_box_framed(OraclesEnhancedView *v)
     v->wide_x = first_x;
     v->wide_y = first_y;
     v->wide_scale = 1;
-    note_enlarged(v, first_x, first_y, host.width, host.height, first_y - frame_y + (int32_t)game_height / 2 >= (int32_t)ORACLES_PPU_HEIGHT / 2, 0, 0, 0, 1);
+    note_enlarged(v, first_x, first_y, host.width, host.height, first_y - frame_y + (int32_t)game_height / 2 >= (int32_t)ORACLES_PPU_HEIGHT / 2, 0, 0, 0, 1, host.width);
     v->wide_box = host;
     v->wide_frames_framed++;
 }
@@ -421,13 +424,22 @@ unsigned oracles_enhanced_view_text_size(const OraclesEnhancedView *v) { return 
 
 void oracles_enhanced_view_set_large_menus(OraclesEnhancedView *v, int large) { v->large_menus = large != 0; }
 
+/* The box the last composition noted, which the presenter shows again larger at the size now: Large, or Very large where
+ * the view would not draw it twice as large itself; a size the pause changed included. */
+static int enlarged_now(const OraclesEnhancedView *v)
+{
+    return v->enlarged_noted && v->text_size != ORACLES_ENHANCED_TEXT_NORMAL
+        && (v->enlarged_framed ? framed_scale(v, v->enlarged_width) : box_scale(v, v->enlarged_width)) == 1u;
+}
+
 int oracles_enhanced_view_text_box_enlarged(void *opaque, uint32_t rect[4], int *bottom, uint32_t *reserve_w, unsigned *size)
 {
     const OraclesEnhancedView *v = opaque;
     const unsigned width = v->wide_pixels ? v->wide_pixels + 16u : 8u * ORACLES_TEXT_BOX_GAME_COLUMNS;
+    const int shown = enlarged_now(v);
     *reserve_w = v->text_size != ORACLES_ENHANCED_TEXT_NORMAL && framed_scale(v, width) == 1u ? width : 0u;
-    *size = v->enlarged_shown ? v->enlarged_size : v->large_menus ? v->text_size : ORACLES_ENHANCED_TEXT_LARGE;
-    if (!v->enlarged_shown) return 0;
+    *size = (shown ? v->enlarged_framed : 1) && v->large_menus ? v->text_size : ORACLES_ENHANCED_TEXT_LARGE;
+    if (!shown) return 0;
     for (unsigned i = 0; i < 4u; i++) rect[i] = (uint32_t)v->enlarged_rect[i];
     *bottom = v->enlarged_bottom;
     return 1;
@@ -435,7 +447,7 @@ int oracles_enhanced_view_text_box_enlarged(void *opaque, uint32_t rect[4], int 
 
 int oracles_enhanced_view_text_box_enlarged_source(const OraclesEnhancedView *v, int32_t src[2], int *from_core)
 {
-    if (!v->enlarged_shown) return 0;
+    if (!enlarged_now(v)) return 0;
     src[0] = v->enlarged_src[0];
     src[1] = v->enlarged_src[1];
     *from_core = v->enlarged_from_core;

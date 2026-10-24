@@ -248,6 +248,10 @@ int oracles_enhanced_view_hotbar_drawn(const OraclesEnhancedView *view);
 typedef enum OraclesEnhancedHud { ORACLES_ENHANCED_HUD_ORIGINAL = 0, ORACLES_ENHANCED_HUD_FULL, ORACLES_ENHANCED_HUD_WIDE } OraclesEnhancedHud;
 void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int hud);
 int oracles_enhanced_view_hud(const OraclesEnhancedView *view);
+/* The last composed surface's HUD band drawn again for the status bar's setting now, the game not having run since (a
+ * change from the pause): 1 when it was, a world frame or a room's load under the band; 0 for a framed frame, whose bar
+ * stays centred whatever the setting. */
+int oracles_enhanced_view_redraw_hud(OraclesEnhancedView *view);
 void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *lines_kept);
 void oracles_enhanced_view_hud_wide_counts(const OraclesEnhancedView *view, unsigned *laid, unsigned *centred, unsigned *one_row);
 /* A room's load (a door, stairs) drawn under the HUD band the world frames draw, the game area alone where the world

@@ -40,13 +40,13 @@ int ev_status_bar_shown(OraclesEnhancedView *v)
 /* The gutters beside the status bar with the bar drawn full width: in the world band alone, and a room's load drawn
  * under it, the framed core's bar standing in the middle of the drawn-back surface, or being no bar at all (a menu, a
  * cutscene).  The counts are the world frames'. */
-const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode)
+const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode, int counted)
 {
     OraclesEnhancedBar bar;
     const uint32_t *core = oracles_core_pixels(v->core);   /* the bar's lines, which a scroll's redrawn window copies as they are */
     if (v->hud == ORACLES_ENHANCED_HUD_ORIGINAL || mode != ORACLES_ENHANCED_WORLD || !core || !ev_status_bar(v, &bar)) return NULL;
     const unsigned filled = oracles_enhanced_hud_fill(&bar, core_colour, v, core, v->hud_fill);
-    if (!v->load_band) {
+    if (counted && !v->load_band) {
         if (filled) v->hud_frames++;
         v->hud_lines_kept += 2u * ORACLES_ENHANCED_HUD_HEIGHT - filled;
     }
@@ -59,7 +59,7 @@ const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode)
  * the frame, the LCD off, a full fade); else centred.  Biggoron's sword frames B and A as one block, tightened with more
  * than fourteen hearts (in quarters, as loadStatusBarMap counts them), read where the profile binds wLinkMaxHealth,
  * else as the last layout of the bar's own told.  The counts are the world frames'. */
-const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhancedMode mode)
+const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhancedMode mode, int counted)
 {
     OraclesEnhancedBar bar;
     const uint32_t *core = oracles_core_pixels(v->core);
@@ -80,7 +80,7 @@ const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhan
     const int laid = layout != ORACLES_ENHANCED_BAR_NONE && v->hud_tight_known;
     if (laid) v->hud_place = oracles_enhanced_hud_place(v->size.width, v->hud_tight ? ORACLES_ENHANCED_BAR_BUTTONS_TIGHT : ORACLES_ENHANCED_BAR_BUTTONS,
                                                         ORACLES_HOTBAR_SLOTS * ORACLES_HOTBAR_SLOT_WIDTH);
-    if (!v->load_band) {
+    if (counted && !v->load_band) {
         if (laid) v->hud_wide_frames++;
         else v->hud_wide_centred++;
         if (laid && v->hud_place.one_row) v->hud_wide_one_row++;
@@ -94,6 +94,24 @@ void oracles_enhanced_view_set_hud(OraclesEnhancedView *v, int hud)
     v->hud = hud == ORACLES_ENHANCED_HUD_FULL || hud == ORACLES_ENHANCED_HUD_WIDE ? hud : ORACLES_ENHANCED_HUD_ORIGINAL;
 }
 int oracles_enhanced_view_hud(const OraclesEnhancedView *v) { return v->hud; }
+
+int oracles_enhanced_view_redraw_hud(OraclesEnhancedView *v)
+{
+    const uint32_t *core = oracles_core_pixels(v->core);   /* its status bar's lines, which the window drawn again keeps as they are */
+    if ((!v->have_view && !v->load_band) || !core) return 0;
+    OraclesEnhancedCompose in;
+    memset(&in, 0, sizeof in);
+    in.mode = ORACLES_ENHANCED_WORLD;
+    in.border = BORDER_COLOUR;
+    in.size = v->size;
+    in.fade = v->fade_effective;
+    in.colours = v->colours;
+    in.hud_fill = ev_hud_fill(v, in.mode, 0);
+    in.hud_place = ev_hud_place(v, in.mode, 0);
+    oracles_enhanced_compose_hud(core, &in, v->surface);
+    ev_draw_hotbar(v);
+    return 1;
+}
 
 void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *v, unsigned *frames, unsigned *lines_kept)
 {

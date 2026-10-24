@@ -37,7 +37,7 @@ void oracles_session_hotkey_keys(session *s, int on)
 }
 
 /* Controls or Display changed the settings: the keys, the colour correction, vsync, the scaling, the status bar's width,
- * the large menus and the screen margin apply at once, the swim's hold, the text speed and the item hotkeys from the frame the game resumes on (the item
+ * the large menus, the text size and the screen margin apply at once, the swim's hold, the text speed and the item hotkeys from the frame the game resumes on (the item
  * hotkeys turned off once their policy is at rest), the rest at the next Play (the window: pause_window_chosen).  The
  * colour correction, the swim's hold and the item hotkeys apply when the pause changed them: --colour-correction,
  * --swim-hold, --text-speed and --item-hotkeys hold until then; --screen-margin holds for the run. */
@@ -61,15 +61,27 @@ static int pause_settings_changed(void *opaque)
     }
     if (changed & ORACLES_SESSION_CHANGED_HUD) {
         oracles_enhanced_view_set_hud(s->view, applied.hud);
+        if (oracles_enhanced_view_redraw_hud(s->view)) {   /* the pause's image of a world frame, its bar laid out again at once */
+            const uint32_t *pixels = oracles_enhanced_view_surface(s->view);
+            if (s->mod) pixels = oracles_mod_session_screen(s->mod, pixels, oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view));
+            oracles_sdl_backend_pause_pixels(&s->backend, pixels);
+        }
         fprintf(stderr, "oracles: status bar %s\n", oracles_settings_hud_names[applied.hud >= 0 && applied.hud < 3 ? applied.hud : 0]);
     }
     if (changed & ORACLES_SESSION_CHANGED_MENUS) {
         s->menus_large = applied.menus_large;
         oracles_enhanced_view_set_large_menus(s->view, s->menus_large);
+        uint32_t crop[4];   /* the pause's image of a framed screen shown alone, or at the view's scale, at once */
+        oracles_sdl_backend_pause_crop(&s->backend, s->menus_large && oracles_enhanced_view_framed_crop(s->view, crop) ? crop : NULL);
         fprintf(stderr, "oracles: menus %s\n", s->menus_large ? "large" : "at the view's scale");
     }
     if (changed & ORACLES_SESSION_CHANGED_TEXT_SIZE) {
         oracles_enhanced_view_set_text_size(s->view, (unsigned)applied.text_size);
+        uint32_t box[4], reserve = 0;   /* the pause's image of the box the presenter enlarges, at once */
+        int bottom = 0;
+        unsigned size = 0;
+        const int enlarged = oracles_enhanced_view_text_box_enlarged(s->view, box, &bottom, &reserve, &size);
+        oracles_sdl_backend_pause_box(&s->backend, enlarged ? box : NULL, bottom, reserve, size);
         fprintf(stderr, "oracles: text size %s\n", applied.text_size == 2 ? "very large" : applied.text_size ? "large" : "normal");
     }
     if (changed & ORACLES_SESSION_CHANGED_MARGIN) {
@@ -148,6 +160,12 @@ static int pause_game_image(void *opaque, SDL_Renderer *renderer, const SDL_FRec
     return oracles_sdl_backend_pause_image(&s->backend, image);
 }
 
+static void pause_game_size(void *opaque, int *width, int *height)
+{
+    session *s = opaque;
+    oracles_sdl_backend_pause_size(&s->backend, width, height);
+}
+
 /* The window as window_scale= counts it, F11's toggle included; -2 for none; its size in *w x *h. */
 static int window_now(const session *s, SDL_Window *window, int *w, int *h)
 {
@@ -197,7 +215,7 @@ oracles_host_pause_result oracles_session_pause(void *opaque)
     const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, pause_cheats_changed,
                                            pause_window_chosen, (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s),
                                            s->cheats_game >= 0, pause_game_image, s->swim_setting >= 0, s->hotkeys_game >= 0, window_shown, window_w,
-                                           window_h, windows_refused(s, window), s->text_speed_setting >= 0 };
+                                           window_h, windows_refused(s, window), s->text_speed_setting >= 0, pause_game_size };
     const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
     if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
     if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);

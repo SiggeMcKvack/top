@@ -492,7 +492,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
 
     OraclesEnhancedCompose in;
     memset(&in, 0, sizeof in);
-    in.border = 0xff101010u;
+    in.border = BORDER_COLOUR;
     in.size = v->size;
     /* The game's palette fade is in the core's window already; the rest of
      * the band takes it too, the frame's gutters included, so that a flash
@@ -559,15 +559,15 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         }
     } else v->large_was_in_scroll = 0;
     const int load_band = ev_load_band(v, &in, tracking, camera_x, camera_y);
-    in.hud_fill = ev_hud_fill(v, in.mode);
-    in.hud_place = ev_hud_place(v, in.mode);
+    in.hud_fill = ev_hud_fill(v, in.mode, 1);
+    in.hud_place = ev_hud_place(v, in.mode, 1);
     if (in.mode != ORACLES_ENHANCED_WORLD) { v->sway = 0; v->wave_held = 0; }
     v->sub_x = v->sub_y = 0;
     v->sub_layer_w = v->sub_layer_h = 0;
     v->sub_fixed_count = 0;
     v->uncovered = oracles_enhanced_compose(in.mode == ORACLES_ENHANCED_WORLD && v->wave_held ? ev_sway_window(v, ev_scroll_window(v)) : ev_scroll_window(v), &in, v->surface);
     if (load_band) { in.mode = ORACLES_ENHANCED_FRAMED; v->uncovered = 0; }
-    v->wide_shown = v->scaled_shown = v->enlarged_shown = 0;
+    v->wide_shown = v->scaled_shown = v->enlarged_noted = 0;
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {
         ev_overlay_link_phase(v, camera_x, camera_y);

@@ -171,8 +171,19 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
  * logical presentation lifted), as its last frame showed it: the sub-pixel camera's band at its fraction of a pixel,
  * the patch and Link's layer at their places, the fixed rectangles unmoved; the frame as it is when the last frame was
  * shown so (no sub-pixel camera, the touch controls' or the screen margin's drawing); then the text box Text size
- * showed again larger over it, at that size over the image. */
+ * showed again larger over it, at that size over the image.  A part shown alone (the game's menus enlarged) is drawn
+ * alone so, and the image's size is that part's (oracles_sdl_backend_pause_size): the frame's otherwise.  The pause
+ * changing the large menus changes the part the image shows (oracles_sdl_backend_pause_crop: x, y, w, h in the frame,
+ * or NULL for the whole frame). */
 int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image);
+void oracles_sdl_backend_pause_size(const oracles_host_backend *backend, int *width, int *height);
+void oracles_sdl_backend_pause_crop(const oracles_host_backend *backend, const uint32_t rect[4]);
+/* The pause changing Text size changes the box it shows again larger (oracles_sdl_backend_pause_box: x, y, w, h in the
+ * frame, or NULL for none, with the frame's box_bottom, box_reserve_w and box_size), and the part a reserve widens. */
+void oracles_sdl_backend_pause_box(const oracles_host_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size);
+/* The last frame's pixels drawn again (the frame's size, its crop, box and sub-pixel move kept): the pause changing a
+ * setting that the frame's own pixels show (the status bar's layout) shows it in the image at once. */
+void oracles_sdl_backend_pause_pixels(const oracles_host_backend *backend, const uint32_t *pixels);
 /* What asked for the pause menu last: a key (Escape), a controller (Guide, the menu's button or trigger) or a finger
  * (the touch controls' pause); NONE before any, for Android's Back, which a finger or a controller gives too, and for
  * a suspension (Android's background), which no device asked. */

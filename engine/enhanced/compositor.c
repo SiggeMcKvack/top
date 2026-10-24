@@ -196,12 +196,11 @@ static void compose_framed(const uint32_t *core, const OraclesEnhancedCompose *i
             out[y * W + x] = (x >= HUD_X && x < HUD_X + CORE_W && y >= top && y < top + ORACLES_PPU_HEIGHT) ? core[(y - top) * CORE_W + (x - HUD_X)] : gutter;
 }
 
-static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
+/* HUD band: the status bar, centred, gutters in the border colour (faded with the game), or the bar's own background
+ * on the lines it is given; or the bar laid out across it. */
+static void compose_hud(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
 {
-    unsigned uncovered = 0;
-    const unsigned W = size.width, HUD_X = oracles_enhanced_hud_x(size), band_h = oracles_enhanced_band_height(size);
-    /* HUD band: the status bar, centred, gutters in the border colour (faded with the game), or the bar's own
-     * background on the lines it is given; or the bar laid out across it. */
+    const unsigned W = size.width, HUD_X = oracles_enhanced_hud_x(size);
     const uint32_t gutter = gutter_pixel(in, in->border);
     for (unsigned y = 0; y < HUD; y++) {
         const uint32_t left = in->hud_fill && in->hud_fill[y] ? in->hud_fill[y] : gutter;
@@ -210,6 +209,13 @@ static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose
         for (unsigned x = 0; x < W; x++)
             out[y * W + x] = x < HUD_X ? left : x < HUD_X + CORE_W ? core[y * CORE_W + (x - HUD_X)] : right;
     }
+}
+
+static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
+{
+    unsigned uncovered = 0;
+    const unsigned W = size.width, band_h = oracles_enhanced_band_height(size);
+    compose_hud(core, in, size, out);
     /* World band: the game area placed by the camera; uncovered pixels black.
      * A band row shows the LCD line of the window that stands there, and that
      * line's own scroll: the shifts are read by line, not by band row, or the
@@ -241,6 +247,11 @@ unsigned oracles_enhanced_compose(const uint32_t *core, const OraclesEnhancedCom
     const OraclesEnhancedSize size = in->size.width ? in->size : oracles_enhanced_size(0);
     if (in->mode == ORACLES_ENHANCED_FRAMED) { compose_framed(core, in, size, out); return 0; }
     return compose_world(core, in, size, out);
+}
+
+void oracles_enhanced_compose_hud(const uint32_t *core, const OraclesEnhancedCompose *in, uint32_t *out)
+{
+    compose_hud(core, in, in->size.width ? in->size : oracles_enhanced_size(0), out);
 }
 
 void oracles_enhanced_far_fitting_words(unsigned screen_w, unsigned screen_h, char *out, size_t capacity)

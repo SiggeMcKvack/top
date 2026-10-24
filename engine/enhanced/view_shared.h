@@ -181,12 +181,13 @@ void ev_overlay_text_box_above(OraclesEnhancedView *v);
 void ev_draw_hotbar(OraclesEnhancedView *v);
 void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);
 /* view_hud.c: the status bar as the game keeps it (0 where the profile binds no map of it), and the gutters beside it
- * this frame (OraclesEnhancedCompose.hud_fill), counted; NULL: the border. */
+ * this frame (OraclesEnhancedCompose.hud_fill), counted when `counted`; NULL: the border. */
 int ev_status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar);
 int ev_status_bar_shown(OraclesEnhancedView *v);
-const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode);
-/* The status bar's blocks laid out this frame (OraclesEnhancedCompose.hud_place, v->hud_laid), counted; NULL: centred. */
-const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhancedMode mode);
+const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode, int counted);
+/* The status bar's blocks laid out this frame (OraclesEnhancedCompose.hud_place, v->hud_laid), counted when `counted`;
+ * NULL: centred. */
+const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhancedMode mode, int counted);
 /* view_mode.c: the frame's mode, and the ripple the band follows (v->have_wave, v->line_shift). */
 OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking);
 /* A room's load composed under the world's HUD band, the game area alone at the place the camera gives it or the world

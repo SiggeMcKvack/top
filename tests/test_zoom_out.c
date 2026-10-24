@@ -327,6 +327,21 @@ static void view_and_savestate(void)
         frames(&r, zoom, 1, &mode, &cam, &cam_y);
         oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
         CHECK(hud_frames == 1u && shown[0] == border && shown[W - 1u] == border);
+        /* Changed with the game paused: the last surface's band drawn again at once as the next composition draws it,
+         * the world below as it was, nothing counted. */
+        static uint32_t centred[W * H], redrawn[W * H];
+        const size_t band = 16u * W * sizeof *shown;
+        memcpy(centred, shown, sizeof centred);
+        oracles_enhanced_view_set_hud(zoom, 1);
+        CHECK(oracles_enhanced_view_redraw_hud(zoom) == 1);
+        oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
+        CHECK(hud_frames == 1u && shown[0] != border && shown[0] == shown[HUD_X] && !memcmp(shown + 16u * W, centred + 16u * W, sizeof centred - band));
+        memcpy(redrawn, shown, sizeof redrawn);
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
+        CHECK(mode == ORACLES_ENHANCED_WORLD && !memcmp(shown, redrawn, band));
+        oracles_enhanced_view_set_hud(zoom, 0);
+        CHECK(oracles_enhanced_view_redraw_hud(zoom) == 1 && !memcmp(shown, centred, band));
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
     }
 
     /* The state names its size; the other size refuses it, and says why. */
