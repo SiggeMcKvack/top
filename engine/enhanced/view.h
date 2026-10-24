@@ -231,6 +231,10 @@ void oracles_enhanced_view_hotbar_counts(const OraclesEnhancedView *view, unsign
  * the drawing touched anything else. */
 void oracles_enhanced_view_hotbar_verify(OraclesEnhancedView *view, int enabled);
 void oracles_enhanced_view_hotbar_proof(const OraclesEnhancedView *view, unsigned *checked, unsigned *wrong, unsigned *outside);
+/* Of those checks, the ones made in a fade or a flash, each frame, of the icons of B and A against the bar's own. */
+unsigned oracles_enhanced_view_hotbar_fade_checked(const OraclesEnhancedView *view);
+/* The frame just composed drew the hotbar. */
+int oracles_enhanced_view_hotbar_drawn(const OraclesEnhancedView *view);
 /* The status bar in the HUD band (`hud=`).  Drawn full width, the gutters beside it, on its sixteen lines, take the
  * bar's own background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour
  * correction follow), in the world band and a room's load drawn under it; the framed core keeps the border.  Laid out,

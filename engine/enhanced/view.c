@@ -588,6 +588,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
      * surface too, beside the status bar wherever the image stands (centred
      * in the drawn-back surface). */
     v->hud_top = in.mode == ORACLES_ENHANCED_FRAMED && !load_band ? (v->size.height - ORACLES_PPU_HEIGHT) / 2u : 0u;
+    v->hotbar_framed = in.mode == ORACLES_ENHANCED_FRAMED && !load_band;
     ev_draw_hotbar(v);
     ev_measure_black(v, in.mode, camera_x, camera_y);
     v->have_view = in.mode == ORACLES_ENHANCED_WORLD;

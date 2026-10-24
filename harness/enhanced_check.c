@@ -205,6 +205,11 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
     ec_measure_window_darker(c, ob, mode, surface, camera_x, camera_y, blank, frame);
     ec_measure_whole_room(c, ob, mode, surface, camera_x, camera_y);
     ec_measure_alone_rows(c, ob, mode, camera_y);
+    {   /* the hotbar over a menu, a cutscene's picture or in a cutscene, a room's load apart */
+        int32_t left = 0, top = 0;
+        if (oracles_enhanced_view_hotbar_drawn(c->view) && !oracles_enhanced_view_load_band(c->view, &left, &top) && (mode != ORACLES_ENHANCED_WORLD || ob->cutscene)
+            && !(ob->in_transition && !ob->in_scroll)) c->hotbar_cutscene_frames++;
+    }
     {   /* each run is a jump to the large menus' scale and back */
         uint32_t crop[4];
         const int enlarged = oracles_enhanced_view_framed_crop(c->view, crop);

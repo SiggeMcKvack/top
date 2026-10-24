@@ -500,6 +500,10 @@ struct OraclesEnhancedView {
     int hotbar_verify;
     int8_t hotbar_icon_origin[ORACLES_GUEST_ITEM_LABELS][HOTBAR_ICON_VARIANTS][2];   /* where the icon's corner stands from the sprites' left edge, and from the top line */
     unsigned hotbar_icons_checked, hotbar_icon_wrong, hotbar_outside_gutters;
+    int hotbar_drawn;                /* the frame just composed drew it */
+    int hotbar_framed;               /* this frame shows the core's image framed (a menu, a cutscene), a room's load apart */
+    unsigned hotbar_fade_checked;     /* frames of a fade or a flash its icons were checked against the bar's own */
+    OraclesEnhancedBarLayout bar_shown_layout;   /* the status bar's layout last shown (ev_status_bar_shown) */
     /* The status bar drawn full width (hud=full, and laid out): the gutters' colours of the last composition, line by
      * line, the world frames that filled a line at least, and the lines of those frames left to the border. */
     int hud;                         /* OraclesEnhancedHud */

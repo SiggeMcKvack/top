@@ -183,6 +183,7 @@ void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);
 /* view_hud.c: the status bar as the game keeps it (0 where the profile binds no map of it), and the gutters beside it
  * this frame (OraclesEnhancedCompose.hud_fill), counted; NULL: the border. */
 int ev_status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar);
+int ev_status_bar_shown(OraclesEnhancedView *v);
 const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode);
 /* The status bar's blocks laid out this frame (OraclesEnhancedCompose.hud_place, v->hud_laid), counted; NULL: centred. */
 const OraclesEnhancedHudPlace *ev_hud_place(OraclesEnhancedView *v, OraclesEnhancedMode mode);

@@ -23,6 +23,20 @@ int ev_status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar)
 
 static uint32_t core_colour(void *opaque, uint16_t rgb555) { return oracles_core_convert_rgb555(((OraclesEnhancedView *)opaque)->core, rgb555); }
 
+/* The game's status bar on screen in the core's image: a layout its map signs that the image shows, or the one last
+ * shown while its map still signs it (the palettes changed since the frame was drawn, in a fade or a flash; a sprite
+ * over its frame).  Not over the title, the file select, a menu, a cutscene that clears the bar. */
+int ev_status_bar_shown(OraclesEnhancedView *v)
+{
+    OraclesEnhancedBar bar;
+    const uint32_t *core = oracles_core_pixels(v->core);
+    if (!core || !ev_status_bar(v, &bar)) { v->bar_shown_layout = ORACLES_ENHANCED_BAR_NONE; return 0; }
+    const OraclesEnhancedBarLayout map = oracles_enhanced_bar_layout(&bar);
+    const int shown = map != ORACLES_ENHANCED_BAR_NONE && (map == v->bar_shown_layout || oracles_enhanced_bar_layout_shown(&bar, map, core_colour, v, core));
+    v->bar_shown_layout = shown ? map : ORACLES_ENHANCED_BAR_NONE;
+    return shown;
+}
+
 /* The gutters beside the status bar with the bar drawn full width: in the world band alone, and a room's load drawn
  * under it, the framed core's bar standing in the middle of the drawn-back surface, or being no bar at all (a menu, a
  * cutscene).  The counts are the world frames'. */
