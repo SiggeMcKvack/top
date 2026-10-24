@@ -80,6 +80,12 @@ static void on_event(void *opaque, const OraclesGuestEvent *e)
         case ORACLES_EVENT_CHEAT_AMMO:
         case ORACLES_EVENT_CHEAT_RUPEES:
             break;   /* the cheats' points */
+        case ORACLES_EVENT_TEXT_LINE:
+        case ORACLES_EVENT_TEXT_CHARACTER:
+        case ORACLES_EVENT_TEXT_LINE_DRAWN:
+        case ORACLES_EVENT_TEXT_CURSOR_PLACE:
+        case ORACLES_EVENT_TEXT_COLUMN_SHOWN:
+            break;   /* the compact text's points */
         case ORACLES_EVENT_VBLANK:
             if (e->value < 4) d->vblanks[e->value]++;
             break;

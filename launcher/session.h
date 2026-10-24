@@ -48,6 +48,8 @@ typedef struct OraclesSessionOptions {
                                       * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
     unsigned cheats;                 /* --cheats, or settings.txt's cheats_<game>= for a game the home screen starts: a mask of OraclesGuestCheat */
     int cheats_given;                /* --cheats was given: its list wins over the settings' for the games the home screen starts */
+    int compact_text;                /* --text: 1 classic, 2 compact (the text box's lines in the font's own widths, in Enhanced alone);
+                                      * 0 for a game the home screen starts: settings.txt's text= */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
     int camera_profile;              /* 0: the settings' camera; 1 or 2: this one for the session, not stored */
     int pretend_slow;                /* --pretend-slow: the game counts as one that ran slowly, to try the home screen's suggestion */

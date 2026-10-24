@@ -98,6 +98,7 @@ int oracles_rom_read16be(const OraclesRom *rom, size_t offset, unsigned *out);
 #define ORACLES_LANGUAGE_INDEX_CODE_BYTES 8u
 #define ORACLES_LANGUAGE_INDEX_GROUPS 32u
 #define ORACLES_LANGUAGE_KEPT 1u
+#define ORACLES_LANGUAGE_LAID_OUT 0x8000u   /* in an entry's address: the text laid out again for the compact text */
 
 /* A composed image's header: its size byte (6 for 2 MiB, 7 for 4 MiB), and its two sums. */
 void oracles_image_finish(uint8_t *image, size_t size);

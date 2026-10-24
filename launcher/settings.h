@@ -104,6 +104,8 @@ typedef struct oracles_settings {
                                    * with the flippers, A held too; the direction with Ages' mermaid suit);
                                    * off by default, in either profile, for every game the home screen starts: Controls' Swimming,
                                    * Tap or Hold */
+    int compact_text;             /* text=classic|compact: the text box's lines in the font's own widths, in Enhanced alone; classic by
+                                   * default, for every game the home screen starts that qualifies it (Ages and Seasons) */
     int view;                     /* view=near|medium|far, Display's View in Enhanced: an OraclesEnhancedLevel, far by default */
     int core;                     /* an OraclesCoreKind: core=sameboy|mgba, Display's Core; -1 until the player chooses one, the build's default
                                    * (ORACLES_DEFAULT_CORE) then playing, and the file holding no core= line */

@@ -327,6 +327,27 @@ static int failed(OraclesSessionResult *result, const char *format, ...)
     return 0;
 }
 
+/* The compact text lays the texts out again where the language is composed, before the route's replay and the
+ * profile's checks settle the option: decided here as they will settle it, from a replayed route's options (the
+ * compact text and, which turn Enhanced on, the transitions'); English (US) is then composed too.  A compact text the
+ * profile or Faithful refuses lays nothing out: check_profile refuses it or turns it off. */
+static int lay_out_texts(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
+{
+    int compact = s->compact_text, enhanced = s->enhanced;
+    OraclesRoute recorded;
+    char error[256];
+    if (o->play_path && oracles_route_read(o->play_path, &recorded, error, sizeof error) == 0) {
+        compact = oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
+        enhanced |= oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS)
+                  || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM)
+                  || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL);
+        oracles_route_free(&recorded);
+    }
+    if (!compact || !enhanced || !oracles_compat_compact_text(s->profile)) return 1;
+    if (oracles_language_session_lay_out(&s->language, &s->info, error, sizeof error) != 0) return failed(result, "%s", error);
+    return 1;
+}
+
 /* The ROM, the core and the starting SRAM.  A replayed route brings its own
  * copy and never touches the session's save; a recorded route stores a copy next to it. */
 static int load_game(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
@@ -352,6 +373,7 @@ static int load_game(session *s, const OraclesSessionOptions *o, OraclesSessionR
         s->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, s->info.game, s->rom, s->rom_size, error, sizeof error);
         if (!s->mod || oracles_mod_session_compose(s->mod, oracles_rom_is_original(&s->info), &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     }
+    if (!lay_out_texts(s, o, result)) return 0;
     if (s->language && oracles_language_session_compose(s->language, &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     /* The command line's --core, else the core a replayed route was recorded on, else the settings' core= (Display's Core). */
     OraclesCoreKind kind = o->core ? (OraclesCoreKind)(o->core - 1) : (OraclesCoreKind)oracles_settings_core(s->settings);
@@ -474,6 +496,12 @@ static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSess
         fprintf(stderr, "oracles: the cheats are not qualified for %s; this game plays without them\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->cheats = 0;
     }
+    /* The compact text changes what the core draws: never in Faithful, where the core's image is shown as it is. */
+    if (s->compact_text && (!oracles_compat_compact_text(s->profile) || !s->enhanced)) {
+        if (!from_home) return failed(result, "--text compact plays in Enhanced alone, on Ages, Seasons and the fan games made on them");
+        fprintf(stderr, "oracles: the compact text is not qualified for %s; this game plays with the classic text\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->compact_text = 0;
+    }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
     if (s->continuous_transitions && !oracles_compat_continuous_transitions(s->profile))
@@ -510,10 +538,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold || s->cheats || s->cheats_route) {
+        || s->swim_hold || s->cheats || s->cheats_route || s->compact_text) {
         s->guest = oracles_guest_attach(s->core, s->profile);
         const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
-                                   && !s->cheats && !s->cheats_route;
+                                   && !s->cheats && !s->cheats_route && !s->compact_text;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -542,6 +570,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
             return failed(result, "the cheats cannot find their points in this ROM");
         if (s->cheats) fprintf(stderr, "oracles: cheats on: %s\n", oracles_cheats_format(s->cheats, NULL, names, sizeof names));
         s->cheats_used = s->cheats;
+    }
+    if (s->compact_text) {   /* after the language: the font's widths are read in the image it composed */
+        if (oracles_guest_arm_compact_text(s->guest) != 0) return failed(result, "the compact text cannot find its points in this ROM");
+        fprintf(stderr, "oracles: compact text on: the text box's lines in the font's own widths\n");
     }
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
@@ -747,6 +779,11 @@ static void finish(session *s, const OraclesSessionOptions *o)
         fprintf(stderr, "oracles: cheats: %u hits cost no heart, %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
                 c.hits, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
     }
+    if (s->ran && s->compact_text) {
+        OraclesGuestCompactCounts c;
+        oracles_guest_compact_counts(s->guest, &c);
+        fprintf(stderr, "oracles: compact text: %u lines, %u characters in %u tile columns\n", c.lines, c.characters, c.columns);
+    }
     oracles_mod_session_stop(s->mod, NULL);
     if (s->ran) oracles_language_session_report(s->language, s->guest, "oracles: ", stderr);
     oracles_language_session_stop(s->language);
@@ -819,6 +856,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->swim_hold = o->swim_hold;
     s->cheats = o->cheats;
     s->cheats_game = -1;
+    s->compact_text = o->compact_text == 2;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near); its size is the options'
      * shape, the screen's, a window taking the surface's, and far fitted to the screen (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;

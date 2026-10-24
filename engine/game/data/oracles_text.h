@@ -49,6 +49,46 @@ int oracles_text_same_commands(const uint8_t *a, size_t a_length, const uint8_t 
  * which end the text, are another text's. */
 unsigned oracles_text_longest_line(const uint8_t *text, size_t length);
 
+/* The text box's font, as the compact text lays a line out: character c, from ORACLES_TEXT_FIRST_CHARACTER, is a cell of
+ * 8 x 16 pixels at the font's start + 16 c in the ROM, a byte a row, its bit 7 the left column, a clear bit ink
+ * (retrieveTextCharacter).  A character's width is its columns from the first to the last of ink; it moves the pen by
+ * its width and a column, a blank character by ORACLES_TEXT_SPACE_ADVANCE, and one whose ink reaches its cell's right
+ * edge by its width alone: it goes on in the next cell, as the halves of the A and B buttons ($b8 $b9, $ba $bb) do. */
+#define ORACLES_TEXT_FIRST_CHARACTER 0x10u
+#define ORACLES_TEXT_CELL_WIDTH 8u
+#define ORACLES_TEXT_SPACE_ADVANCE 5u
+typedef struct OraclesTextFont {
+    uint8_t left[256];      /* a character's first column of ink in its cell */
+    uint8_t width[256];     /* its columns from the first to the last of ink; 0 for a blank one and below the first character */
+    uint8_t advance[256];   /* how far it moves the pen; 0 below the first character */
+} OraclesTextFont;
+/* The widths of the font at physical offset `font_start` (gfx_font_start's, where character 0 would be);
+ * ORACLES_ERR_RANGE when its characters are not all in the image. */
+int oracles_text_font(const OraclesRom *rom, size_t font_start, OraclesTextFont *font);
+
+/* A line as the compact text lays it out, its characters placed one after the other at a pen, in pixels: a character
+ * moves it by its advance; a whole one (a symbol, $06: an icon or a kanji, or a choice's cursor place) takes a whole tile
+ * from the next tile's edge; a character with ink starts the next tile when the tile it would share holds ink of another
+ * attribute (a tile has one palette).  After a character whose ink reaches its cell's right edge, the next one joins it
+ * when its own ink starts its cell, and keeps a column before it otherwise.  A tile column takes its ink's attribute,
+ * else a blank character's on it.  The
+ * guest's transaction draws a line so and the layout of the texts (language_wrap.c) measures it so: one rule for both. */
+#define ORACLES_TEXT_LINE_TILES 32u   /* a line's tile columns at most, 256 pixels */
+#define ORACLES_TEXT_LINE_CHARACTERS_MAX 64u   /* a line's characters the compact text keeps at most: 128 pixels, two a character */
+typedef struct OraclesTextPen {
+    unsigned pen;                                  /* where the next character goes */
+    unsigned end;                                  /* past the last column drawn */
+    uint8_t attribute[ORACLES_TEXT_LINE_TILES];    /* each tile column's */
+    uint8_t inked[ORACLES_TEXT_LINE_TILES];        /* the tile column holds ink */
+    uint8_t marked[ORACLES_TEXT_LINE_TILES];       /* it has an attribute */
+    int joined;                                    /* the last character's ink reached its cell's right edge */
+} OraclesTextPen;
+/* Character `c` of `attribute` placed at the pen, `whole` for a symbol or a cursor's place: its first column drawn in
+ * *start, the first column of its cell drawn in *from and how many in *drawn (its ink's, 0 for a blank character, a
+ * cell for a whole one); the pen moved on.  The pen starts zeroed. */
+void oracles_text_place(OraclesTextPen *pen, const OraclesTextFont *font, uint8_t c, uint8_t attribute, int whole, unsigned *start, unsigned *from,
+                        unsigned *drawn);
+
 #ifdef __cplusplus
 }
 #endif

@@ -82,6 +82,11 @@ FUNCTIONS = [
     # scripted loss of ammunition, Ages' bomb-upgrade fairy taking every bomb (scriptHelper.s), which stays the game's.
     ("link_apply_damage", "linkApplyDamage"), ("dec_num_bombs", "decNumBombs"),
     ("get_rupee_value", "getRupeeValue"), ("bomb_fairy_lose_all_bombs", "bombUpgradeFairy_loseAllBombs"),
+    # The compact text: the routine that composes a line of the text box before its DMA, the one that keeps each of its
+    # characters in the line's buffers, the one that reveals its next character, and the choices' command, which takes the
+    # column of the cursor (textbox.s).
+    ("draw_line_of_text", "drawLineOfText"), ("set_line_text_buffers", "setLineTextBuffers"),
+    ("display_next_text_character", "displayNextTextCharacter"), ("text_control_code_option", "textControlCodeC_2"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -240,6 +245,16 @@ VARIABLES = [
     ("num_rupees", "wNumRupees"), ("link_health", "wLinkHealth"), ("link_max_health", "wLinkMaxHealth"),
     ("num_gasha_seeds", "wNumGashaSeeds"), ("seed_satchel_level", "wSeedSatchelLevel"), ("num_ember_seeds", "wNumEmberSeeds"),
     ("link_damage_to_apply", "w1Link.damageToApply"),   # the cheats: the damage linkApplyDamage reads
+    # The compact text (WRAM bank 7): the line's graphics, its characters, their attributes, delays, sounds and sound
+    # effects, the column the reveal is at, the line's first tile ($40 the top line's, $60 the bottom's), the box's column
+    # in its map, the text's state and mode (wTextDisplayMode in bank 0), the map's attributes, the cursor's places of a
+    # choice, and the two secrets' texts \secret prints (w7SecretText1 and 2, up to w7SecretGenerationBuffer).
+    ("text_gfx_buffer", "w7TextGfxBuffer"), ("line_text_buffer", "w7LineTextBuffer"), ("line_attributes_buffer", "w7LineAttributesBuffer"),
+    ("line_delays_buffer", "w7LineDelaysBuffer"), ("line_sounds_buffer", "w7LineSoundsBuffer"), ("line_sound_effects_buffer", "w7LineSoundEffectsBuffer"),
+    ("next_text_column", "w7NextTextColumnToDisplay"), ("text_line_tiles", "w7d0d3"), ("textbox_column", "w7d0cc"),
+    ("text_display_state", "w7TextDisplayState"), ("text_display_mode", "wTextDisplayMode"),
+    ("textbox_attributes", "w7TextboxAttributes"), ("textbox_option_positions", "w7TextboxOptionPositions"),
+    ("secret_text", "w7SecretText1"), ("secret_text_end", "w7SecretGenerationBuffer"),
     ("general_purpose_hram", "hFF8A"), ("general_purpose_hram_end", "hRng1"), ("tmp_cec0", "wTmpcec0"), ("tmp_cec0_end", "wRoomLayout"),
 ]
 # Defines of wram.s expressed as symbol + offset.

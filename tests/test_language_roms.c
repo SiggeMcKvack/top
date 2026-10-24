@@ -6,8 +6,11 @@
  * game loads it in the language, and nothing else of the US ROM changed but the font and the header's sums; every row of
  * the corrections changing every text it names; and each fan game made on the US ROM by a BPS patch of the directory,
  * its texts that are US texts translated, its own in its English, each language composed in the banks its profile
- * leaves to it.  Exit 77 when the directory holds no game's ROMs. */
+ * leaves to it; each language, English (US) included, laid out for the compact text, every text laid out again
+ * checked and the boxes counted; and each fan game's compact text: its routines the US ones, its English laid out
+ * and checked the same way.  Exit 77 when the directory holds no game's ROMs. */
 #include "bps.h"
+#include "guest.h"
 #include "language_internal.h"
 #include "profile.h"
 
@@ -323,7 +326,7 @@ static void check_graphics(const char *name, OraclesGame game, const OraclesLang
         size_t size = 0;
         OraclesLanguageReport report;
         char error[256];
-        CHECK(oracles_language_compose(pack, language, us->data, us->size, &image, &size, &report, error, sizeof error) == 0);
+        CHECK(oracles_language_compose(pack, language, us->data, us->size, NULL, &image, &size, &report, error, sizeof error) == 0);
         if (!image) continue;
         unsigned headers = 0, compared = 0, mismatched = 0, repointed = 0, left = 0;
         for (unsigned h = 0; h < GFX_HEADERS; h++) {
@@ -391,9 +394,9 @@ static void check_composed(const char *name, OraclesGame game, const OraclesLang
     uint8_t *image = NULL;
     size_t size = 0;
     OraclesLanguageReport report;
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH, us->data, us->size, &image, &size, &report, error, sizeof error) == -1 && !image);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH, us->data, us->size, NULL, &image, &size, &report, error, sizeof error) == -1 && !image);
     for (OraclesLanguage language = ORACLES_LANGUAGE_ENGLISH_EU; language < ORACLES_LANGUAGE_COUNT; language++) {
-        CHECK(oracles_language_compose(pack, language, us->data, us->size, &image, &size, &report, error, sizeof error) == 0);
+        CHECK(oracles_language_compose(pack, language, us->data, us->size, NULL, &image, &size, &report, error, sizeof error) == 0);
         if (!image) continue;
         CHECK(size == 2u * us->size && us->size == sizeof allowed);
         memset(allowed, 0, sizeof allowed);
@@ -436,6 +439,184 @@ static void check_composed(const char *name, OraclesGame game, const OraclesLang
     }
 }
 
+/* The compact text's layout of a game's six languages, as measured: the texts laid out again, those kept by the table
+ * or a call within a line, those that did not hold, the boxes of all the texts before and after, and the hyphens the
+ * texts laid out again dropped, those of the words joined at a line's end. */
+typedef struct expected_layout { unsigned laid_out, kept, failed, boxes, boxes_laid_out, joined; } expected_layout;
+static const expected_layout layouts_expected[2][ORACLES_LANGUAGE_COUNT] = {
+    { { 1638, 18, 0, 7911, 6318, 18 }, { 1643, 18, 0, 7922, 6326, 18 }, { 1756, 16, 0, 8481, 6431, 10 },
+      { 1764, 17, 0, 8875, 7244, 1125 }, { 1658, 17, 0, 7806, 6106, 129 }, { 1729, 18, 0, 8595, 6733, 0 } },
+    { { 929, 24, 0, 4833, 4038, 3 }, { 940, 24, 0, 4853, 4053, 3 }, { 1025, 18, 0, 5391, 4212, 6 },
+      { 1044, 23, 0, 5487, 4532, 700 }, { 968, 23, 0, 4946, 3985, 165 }, { 1001, 23, 0, 5241, 4269, 0 } },
+};
+
+/* The length of the text stored at `at`, its terminator included. */
+static size_t stored_length(const uint8_t *image, size_t size, size_t at)
+{
+    size_t n = 0;
+    while (at + n < size && image[at + n]) n += image[at + n] >= 0x10u || image[at + n] == 0x01u ? 1u : 2u;
+    return n + 1u;
+}
+
+/* Whether a text is one the layout leaves to its rules: a choice, a call, a secret, a jump, a cmd8. */
+static int with_structure(const uint8_t *text, size_t length)
+{
+    for (size_t at = 0; at + 1u < length; at += text[at] >= 0x10u || text[at] <= 0x01u ? 1u : 2u) {
+        const uint8_t c = text[at], p = text[at + 1u];
+        if (c == 0x07 || c == 0x08 || c == 0x0f || (c == 0x0a && p >= 2u) || (c == 0x0c && p >> 3 == 2u)) return 1;
+    }
+    return 0;
+}
+
+typedef struct layout_count { unsigned flagged, unheld, boxes, boxes_laid_out, joined; } layout_count;
+
+static unsigned hyphens(const uint8_t *text, size_t length)
+{
+    unsigned n = 0;
+    for (size_t at = 0; at < length; at += text[at] >= 0x10u || text[at] <= 0x01u ? 1u : 2u) n += text[at] == '-';
+    return n;
+}
+
+/* The texts whose hyphen at a line's end the layout keeps, a compound's, or drops, joining a word broken by syllables or
+ * that the language writes whole elsewhere: what each laid out holds. */
+static const struct { OraclesGame game; OraclesLanguage language; unsigned id; const char *holds; } hyphens_expected[] = {
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x2464, "hot lava-like passion" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x0a67, "real-looking" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH_EU, 0x0a67, "real-looking" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x0564, "something" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x3306, "without" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_FRENCH, 0x1d08, "grand-chose" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_FRENCH, 0x2f13, "sous-estim" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_FRENCH, 0x2490, "Rouleroche" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_GERMAN, 0x000a, "Vergangenheit" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ITALIAN, 0x001c, "coraggio" },
+    { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_ENGLISH, 0x2701, "nice-sized" }, { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_ENGLISH, 0x3703, "year-round" },
+    { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_FRENCH, 0x3a10, "pensent-ils" }, { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_FRENCH, 0x002b, "donneront" },
+    { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_GERMAN, 0x000a, "herbeizurufen" },
+};
+
+/* The text TX_`id` the index composed at `first` serves laid out again, its terminator included; NULL when it is not. */
+static const uint8_t *laid_text(const uint8_t *image, size_t size, size_t first, unsigned id, size_t *length)
+{
+    const uint8_t *index = image + first, *row = index + ORACLES_LANGUAGE_INDEX_GROUPS + 4u * (ORACLES_TEXT_DICTIONARY_GROUPS + (id >> 8));
+    const unsigned entries = row[0] | row[1] << 8, count = row[2] | row[3] << 8;
+    if ((id & 0xffu) >= count) return NULL;
+    const uint8_t *entry = index + entries + 3u * (id & 0xffu);
+    const unsigned addr = entry[1] | entry[2] << 8;
+    if (!(addr & ORACLES_LANGUAGE_LAID_OUT)) return NULL;
+    const size_t at = (size_t)entry[0] * 0x4000u + ((addr & ~ORACLES_LANGUAGE_LAID_OUT) - 0x4000u);
+    *length = stored_length(image, size, at);
+    return image + at;
+}
+
+/* Whether `text` holds the characters `holds`, its line breaks read as spaces. */
+static int holds_words(const uint8_t *text, size_t length, const char *holds)
+{
+    const size_t n = strlen(holds);
+    for (size_t at = 0; at + n <= length; at++) {
+        size_t k = 0;
+        while (k < n && (text[at + k] == (uint8_t)holds[k] || (text[at + k] == 0x01u && holds[k] == ' '))) k++;
+        if (k == n) return 1;
+    }
+    return 0;
+}
+
+/* The texts of the index composed at `first` in `image` for `language`: those laid out again (flagged), checked against
+ * the text they stand for (English's decoded from `rom` by `source`, a language's in `pack`): within the layout's width,
+ * the same commands, no more boxes; and the study's boxes, before and after. */
+static layout_count count_layout(const uint8_t *image, size_t size, size_t first, const OraclesRom *rom, const OraclesTextSource *source, unsigned groups,
+                                 const OraclesLanguagePack *pack, OraclesLanguage language, const language_wrap *wrap)
+{
+    layout_count n = { 0, 0, 0, 0, 0 };
+    const uint8_t *index = image + first;
+    for (unsigned group = ORACLES_TEXT_DICTIONARY_GROUPS; group < groups && wrap; group++) {
+        const uint8_t *row = index + ORACLES_LANGUAGE_INDEX_GROUPS + 4u * group;
+        const unsigned entries = row[0] | row[1] << 8, count = row[2] | row[3] << 8;
+        for (unsigned i = 0; i < count; i++) {
+            const unsigned id = (group - ORACLES_TEXT_DICTIONARY_GROUPS) << 8 | i;
+            const uint8_t *entry = index + entries + 3u * i;
+            const unsigned addr = entry[1] | entry[2] << 8;
+            uint8_t decoded[ORACLES_TEXT_MAX];
+            size_t length = 0;
+            const uint8_t *text = language == ORACLES_LANGUAGE_ENGLISH
+                ? (oracles_text_decode(rom, source, group, i, decoded, sizeof decoded, &length) == ORACLES_OK ? decoded : NULL)
+                : oracles_language_pack_text(pack, language, id, &length);
+            if (!text) continue;
+            const uint8_t *served = text;
+            size_t served_length = length;
+            if (addr & ORACLES_LANGUAGE_LAID_OUT) {
+                n.flagged++;
+                const size_t at = (size_t)entry[0] * 0x4000u + ((addr & ~ORACLES_LANGUAGE_LAID_OUT) - 0x4000u);
+                served = image + at;
+                served_length = stored_length(image, size, at);
+                if (!language_wrap_fits(wrap, served, served_length) || !oracles_text_same_commands(text, length, served, served_length)
+                    || language_text_boxes(served, served_length) > language_text_boxes(text, length)) n.unheld++;
+                n.joined += hyphens(text, length) - hyphens(served, served_length);
+            }
+            /* The study's measure: the boxes of the texts the text box shows, but those the layout leaves to their rules. */
+            if (group != ORACLES_TEXT_DICTIONARY_GROUPS + 9u && !with_structure(text, length)) {
+                n.boxes += language_text_boxes(text, length);
+                n.boxes_laid_out += language_text_boxes(served, served_length);
+            }
+        }
+    }
+    return n;
+}
+
+/* Each language laid out for the compact text, English (US) included: every text laid out again in the image fits a
+ * line of 128 pixels in the image's font, gives the commands of the text it stands for and shows no more boxes; the
+ * image differs from the one composed without the layout in the language's banks only; the boxes as measured. */
+static void check_layout(const char *name, OraclesGame game, const OraclesLanguagePack *pack, const rom_file *us)
+{
+    const OraclesLanguageLayout layout = { 128 };
+    const OraclesRom us_rom = { us->data, us->size };
+    OraclesTextSource source;
+    CHECK(language_source_us(&us_rom, game, &source) == 0);
+    const unsigned groups = oracles_text_groups(&us_rom, &source);
+    OraclesRomInfo info;
+    char error[256];
+    CHECK(oracles_rom_identify(us->data, us->size, &info, error, sizeof error) == 0);
+    for (OraclesLanguage language = ORACLES_LANGUAGE_ENGLISH; language < ORACLES_LANGUAGE_COUNT; language++) {
+        uint8_t *image = NULL, *classic = NULL;
+        size_t size = 0, classic_size = 0;
+        OraclesLanguageReport report, plain;
+        if (language == ORACLES_LANGUAGE_ENGLISH)
+            CHECK(oracles_language_compose_english(info.sha1, us->data, us->size, &layout, &image, &size, &report, error, sizeof error) == 0);
+        else {
+            CHECK(oracles_language_compose(pack, language, us->data, us->size, &layout, &image, &size, &report, error, sizeof error) == 0);
+            CHECK(oracles_language_compose(pack, language, us->data, us->size, NULL, &classic, &classic_size, &plain, error, sizeof error) == 0);
+        }
+        if (!image) { free(classic); continue; }
+        const size_t first = (size_t)ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u;
+        if (classic) {
+            unsigned outside = 0;
+            for (size_t i = 0; i < first && i < classic_size; i++) outside += image[i] != classic[i] && i != 0x14eu && i != 0x14fu;
+            CHECK(classic_size == size && outside == 0);
+        }
+        const OraclesRom rom = { image, size };
+        const OraclesGuestTables *t = game == ORACLES_GAME_AGES ? &oracles_guest_tables_ages : &oracles_guest_tables_seasons;
+        OraclesTextFont font;
+        CHECK(oracles_text_font(&rom, oracles_rom_offset(t->font_start.bank, t->font_start.addr), &font) == ORACLES_OK);
+        language_wrap *wrap = language_wrap_new(&font, layout.width, language);
+        const layout_count n = count_layout(image, size, first, &us_rom, &source, groups, pack, language, wrap);
+        const expected_layout *e = &layouts_expected[game == ORACLES_GAME_SEASONS][language];
+        printf("%s %s laid out for the compact text: %u texts laid out again (%u in the index), %u kept by the table or a call, %u that did not hold; "
+               "%u boxes for %u, %.1f %%; the texts of the box without a choice, a call, a secret or a jump: %u boxes for %u, %.1f %%; %u hyphens joined\n",
+               name, oracles_language_code(language), report.laid_out, n.flagged, report.layout_kept, report.layout_failed, report.boxes_laid_out, report.boxes,
+               100.0 * ((double)report.boxes_laid_out - report.boxes) / (report.boxes ? report.boxes : 1u), n.boxes_laid_out, n.boxes,
+               100.0 * ((double)n.boxes_laid_out - n.boxes) / (n.boxes ? n.boxes : 1u), n.joined);
+        CHECK(wrap && n.flagged == report.laid_out && n.unheld == 0);
+        CHECK(report.laid_out == e->laid_out && report.layout_kept == e->kept && report.layout_failed == e->failed);
+        CHECK(report.boxes == e->boxes && report.boxes_laid_out == e->boxes_laid_out && n.joined == e->joined);
+        for (unsigned h = 0; h < sizeof hyphens_expected / sizeof hyphens_expected[0]; h++) {
+            if (hyphens_expected[h].game != game || hyphens_expected[h].language != language) continue;
+            size_t laid_length = 0;
+            const uint8_t *laid = laid_text(image, size, first, hyphens_expected[h].id, &laid_length);
+            if (!laid || !holds_words(laid, laid_length, hyphens_expected[h].holds))
+                fprintf(stderr, "%s %s: TX_%04x laid out does not hold \"%s\"\n", name, oracles_language_code(language), hyphens_expected[h].id, hyphens_expected[h].holds);
+            CHECK(laid && holds_words(laid, laid_length, hyphens_expected[h].holds));
+        }
+        language_wrap_free(wrap);
+        free(image);
+        free(classic);
+    }
+}
+
 /* Every row of config/language_corrections.tsv changed every text it names in every language it names, and every
  * corrected text held. */
 static void check_corrections_used(const char *name, const language_corrections *corrections)
@@ -455,7 +636,8 @@ static void check_corrections_used(const char *name, const language_corrections 
 /* ---- the fan games ------------------------------------------------------------------------------------------------ */
 
 /* What a fan game's image holds, as measured: its texts, those that are the US text of their identifier, of another
- * identifier, and its own; per language, the texts translated and those left in its English. */
+ * identifier, and its own; per language, the texts translated and those left in its English; its English laid out for
+ * the compact text. */
 typedef struct expected_fan {
     OraclesRomRevision revision;
     OraclesGame game;
@@ -463,12 +645,16 @@ typedef struct expected_fan {
     unsigned texts, same_id, elsewhere, own;
     unsigned translated[ORACLES_LANGUAGE_COUNT], english[ORACLES_LANGUAGE_COUNT];
     unsigned glyphs;
+    expected_layout layout;
 } expected_fan;
 
 static const expected_fan fans[] = {
-    { ORACLES_ROM_REVISION_MOONRISE_1_0_6, ORACLES_GAME_AGES, "moonrise", 2838, 2534, 33, 271, { 0, 2567, 2567, 2567, 2567, 2567 }, { 0, 271, 271, 271, 271, 271 }, 35 },
-    { ORACLES_ROM_REVISION_KINOMI_1_1_2, ORACLES_GAME_AGES, "kinomi", 2953, 2453, 4, 496, { 0, 2457, 2457, 2457, 2457, 2457 }, { 0, 496, 496, 496, 496, 496 }, 35 },
-    { ORACLES_ROM_REVISION_TEMPLE_1_073, ORACLES_GAME_SEASONS, "temple", 1906, 1521, 37, 348, { 0, 1558, 1558, 1558, 1558, 1558 }, { 0, 348, 348, 348, 348, 348 }, 35 },
+    { ORACLES_ROM_REVISION_MOONRISE_1_0_6, ORACLES_GAME_AGES, "moonrise", 2838, 2534, 33, 271, { 0, 2567, 2567, 2567, 2567, 2567 }, { 0, 271, 271, 271, 271, 271 }, 35,
+      { 1637, 18, 0, 8075, 6474, 17 } },
+    { ORACLES_ROM_REVISION_KINOMI_1_1_2, ORACLES_GAME_AGES, "kinomi", 2953, 2453, 4, 496, { 0, 2457, 2457, 2457, 2457, 2457 }, { 0, 496, 496, 496, 496, 496 }, 35,
+      { 1726, 24, 0, 8918, 7074, 32 } },
+    { ORACLES_ROM_REVISION_TEMPLE_1_073, ORACLES_GAME_SEASONS, "temple", 1906, 1521, 37, 348, { 0, 1558, 1558, 1558, 1558, 1558 }, { 0, 348, 348, 348, 348, 348 }, 35,
+      { 919, 24, 0, 4927, 4120, 3 } },
 };
 
 /* The image of fan game `revision`: a BPS patch of `dir` applied to the US ROM. */
@@ -510,6 +696,118 @@ static void check_hook(const char *name, const uint8_t *rom, const OraclesGuestT
     CHECK(bound);
 }
 
+/* The bytes of the SM83 instruction that starts with `op`. */
+static unsigned instruction_bytes(uint8_t op)
+{
+    switch (op) {
+    case 0x01: case 0x11: case 0x21: case 0x31: case 0x08: case 0xc2: case 0xc3: case 0xca: case 0xd2: case 0xda:
+    case 0xc4: case 0xcc: case 0xcd: case 0xd4: case 0xdc: case 0xea: case 0xfa:
+        return 3;
+    case 0x06: case 0x0e: case 0x16: case 0x1e: case 0x26: case 0x2e: case 0x36: case 0x3e: case 0x18: case 0x20: case 0x28:
+    case 0x30: case 0x38: case 0xc6: case 0xce: case 0xd6: case 0xde: case 0xe6: case 0xee: case 0xf6: case 0xfe: case 0xe0:
+    case 0xf0: case 0xe8: case 0xf8: case 0xcb: case 0x10:
+        return 2;
+    default:
+        return 1;
+    }
+}
+
+/* Whether a fan game's routine at `fan` is the US routine at `us` of `length` bytes, instruction for instruction: the
+ * same bytes but the addresses in the ROM its calls, jumps and loads name (the code moved), the WRAM it reads and writes
+ * the US routine's. */
+static int same_routine(const uint8_t *us, const uint8_t *fan, size_t length)
+{
+    for (size_t at = 0; at < length;) {
+        const unsigned n = instruction_bytes(us[at]);
+        if (at + n > length || fan[at] != us[at]) return 0;
+        if (n == 3u && (us[at + 2u] < 0x80u) != (fan[at + 2u] < 0x80u)) return 0;
+        if (n == 3u && us[at + 2u] >= 0x80u && (fan[at + 1u] != us[at + 1u] || fan[at + 2u] != us[at + 2u])) return 0;
+        if (n == 2u && fan[at + 1u] != us[at + 1u]) return 0;
+        at += n;
+    }
+    return 1;
+}
+
+/* The compact text's points in a fan game (`fan`, profile tables `t`), against the US ROM of its Oracle (`us`, tables
+ * `u`): drawLineOfText, setLineTextBuffers, displayNextTextCharacter up to its sound and textControlCodeC_2 up to its
+ * search of a free place, each the US routine (textbox.s); the WRAM the transaction reads and writes the US one; the
+ * reveal's and the cursor place's points found in them as in the US. */
+static void check_compact_points(const char *name, const uint8_t *fan, size_t fan_size, const uint8_t *us, const OraclesGuestTables *t,
+                                 const OraclesGuestTables *u)
+{
+    const struct { const OraclesGuestSym *fan, *us; size_t length; } routines[] = {
+        { &t->draw_line_of_text, &u->draw_line_of_text, 0x3c }, { &t->set_line_text_buffers, &u->set_line_text_buffers, 0x26 },
+        { &t->display_next_text_character, &u->display_next_text_character, 0x59 }, { &t->text_control_code_option, &u->text_control_code_option, 0x1c },
+    };
+    unsigned same = 0;
+    for (size_t r = 0; r < sizeof routines / sizeof routines[0]; r++)
+        same += routines[r].fan->bank == routines[r].us->bank
+                && same_routine(us + oracles_rom_offset(routines[r].us->bank, routines[r].us->addr),
+                                fan + oracles_rom_offset(routines[r].fan->bank, routines[r].fan->addr), routines[r].length);
+    const OraclesGuestSym *wram[][2] = {
+        { &t->text_gfx_buffer, &u->text_gfx_buffer }, { &t->line_text_buffer, &u->line_text_buffer },
+        { &t->line_attributes_buffer, &u->line_attributes_buffer }, { &t->line_delays_buffer, &u->line_delays_buffer },
+        { &t->line_sounds_buffer, &u->line_sounds_buffer }, { &t->line_sound_effects_buffer, &u->line_sound_effects_buffer },
+        { &t->next_text_column, &u->next_text_column }, { &t->text_line_tiles, &u->text_line_tiles }, { &t->textbox_column, &u->textbox_column },
+        { &t->text_display_state, &u->text_display_state }, { &t->text_display_mode, &u->text_display_mode },
+        { &t->textbox_attributes, &u->textbox_attributes }, { &t->textbox_option_positions, &u->textbox_option_positions },
+        { &t->text_is_active, &u->text_is_active }, { &t->textbox_map, &u->textbox_map }, { &t->font_start, &u->font_start },
+        { &t->secret_text, &u->secret_text }, { &t->secret_text_end, &u->secret_text_end },
+    };
+    const unsigned symbols = (unsigned)(sizeof wram / sizeof wram[0]);
+    unsigned bound = 0;
+    for (unsigned w = 0; w < symbols; w++) bound += wram[w][0]->bank == wram[w][1]->bank && wram[w][0]->addr == wram[w][1]->addr;
+    const int points = oracles_guest_find_reveal_point(t, fan, fan_size) == t->display_next_text_character.addr + 0x3du
+                       && oracles_guest_find_cursor_place_point(t, fan, fan_size) == t->text_control_code_option.addr + 0x11u;
+    printf("%s: the compact text's routines %02x:%04x, %02x:%04x, %02x:%04x, %02x:%04x: %u of 4 the US code; %u of %u symbols of the WRAM and the font "
+           "the US ones; its points %s\n", name, t->draw_line_of_text.bank, t->draw_line_of_text.addr, t->set_line_text_buffers.bank,
+           t->set_line_text_buffers.addr, t->display_next_text_character.bank, t->display_next_text_character.addr, t->text_control_code_option.bank,
+           t->text_control_code_option.addr, same, bound, symbols, points ? "found" : "NOT found");
+    CHECK(same == 4u && bound == symbols && points);
+}
+
+/* A fan game's English laid out for the compact text in the banks its profile leaves to a language: every text laid out
+ * again fits a line of 128 pixels in the image's font, gives the commands of its text and shows no more boxes; nothing
+ * else of the image changed but the header's sums; the boxes as measured.  A translation of it is not laid out. */
+static void check_fan_layout(const expected_fan *e, const rom_file *fan, const OraclesRomInfo *info, const OraclesCompatProfile *profile,
+                             const OraclesLanguagePack *pack)
+{
+    const OraclesLanguageLayout layout = { 128 };
+    const OraclesGuestTables *t = oracles_compat_guest_tables(profile);
+    const OraclesRom fan_rom = { fan->data, fan->size };
+    OraclesTextSource source;
+    CHECK(language_source_tables(&fan_rom, t, &source) == 0);
+    const unsigned groups = oracles_text_groups(&fan_rom, &source);
+    uint8_t *image = NULL;
+    size_t size = 0;
+    OraclesLanguageReport report;
+    char error[256];
+    CHECK(oracles_language_compose_english(info->sha1, fan->data, fan->size, &layout, &image, &size, &report, error, sizeof error) == 0);
+    if (!image) { fprintf(stderr, "%s: %s\n", e->name, error); return; }
+    const size_t first = (size_t)oracles_compat_language_bank(profile) * 0x4000u, end = (LANGUAGE_LAST_BANK + 1u) * 0x4000u;
+    unsigned changed = 0;
+    for (size_t i = 0; i < size && i < fan->size; i++) changed += image[i] != fan->data[i] && !(i >= first && i < end) && !(i >= 0x14du && i <= 0x14fu);
+    const OraclesRom rom = { image, size };
+    OraclesTextFont font;
+    CHECK(oracles_text_font(&rom, oracles_rom_offset(t->font_start.bank, t->font_start.addr), &font) == ORACLES_OK);
+    language_wrap *wrap = language_wrap_new(&font, layout.width, ORACLES_LANGUAGE_ENGLISH);
+    const layout_count n = count_layout(image, size, first, &fan_rom, &source, groups, NULL, ORACLES_LANGUAGE_ENGLISH, wrap);
+    printf("%s en laid out for the compact text: %u texts laid out again (%u in the index), %u kept by the table or a call, %u that did not hold; "
+           "%u boxes for %u, %.1f %%; the texts of the box without a choice, a call, a secret or a jump: %u boxes for %u, %.1f %%; %u hyphens joined; "
+           "%u bytes changed outside its language's banks and the header's sums\n",
+           e->name, report.laid_out, n.flagged, report.layout_kept, report.layout_failed, report.boxes_laid_out, report.boxes,
+           100.0 * ((double)report.boxes_laid_out - report.boxes) / (report.boxes ? report.boxes : 1u), n.boxes_laid_out, n.boxes,
+           100.0 * ((double)n.boxes_laid_out - n.boxes) / (n.boxes ? n.boxes : 1u), n.joined, changed);
+    CHECK(size == fan->size && changed == 0 && wrap && n.flagged == report.laid_out && n.unheld == 0 && report.missing == 0);
+    CHECK(report.laid_out == e->layout.laid_out && report.layout_kept == e->layout.kept && report.layout_failed == e->layout.failed);
+    CHECK(report.boxes == e->layout.boxes && report.boxes_laid_out == e->layout.boxes_laid_out && n.joined == e->layout.joined);
+    language_wrap_free(wrap);
+    free(image);
+    image = NULL;
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, fan->data, fan->size, &layout, &image, &size, &report, error, sizeof error) == -1);
+    free(image);
+}
+
 /* Each fan game made on `us`: the profile's text symbols, its pack derived from the game's, the counts per language,
  * every text translated holding the fan game's text's commands, each language composed into its image in the banks
  * its profile leaves to it, the rest of the image unchanged but the font's glyphs and the header's sums; and its pack's
@@ -527,6 +825,7 @@ static void check_fans(const char *dir, const char *work, const OraclesLanguageP
         const OraclesCompatProfile *profile = oracles_compat_find(&info);
         const OraclesGuestTables *t = oracles_compat_guest_tables(profile);
         check_hook(e->name, fan.data, t);
+        check_compact_points(e->name, fan.data, fan.size, us->data, t, base->game == ORACLES_GAME_AGES ? &oracles_guest_tables_ages : &oracles_guest_tables_seasons);
         OraclesLanguagePack *pack = oracles_language_pack_derive(base, us->data, us->size, fan.data, fan.size, error, sizeof error);
         CHECK(pack != NULL);
         if (!pack) { fprintf(stderr, "%s: %s\n", e->name, error); free(fan.data); continue; }
@@ -586,7 +885,7 @@ static void check_fans(const char *dir, const char *work, const OraclesLanguageP
             uint8_t *image = NULL;
             size_t size = 0;
             OraclesLanguageReport report;
-            CHECK(oracles_language_compose(pack, language, fan.data, fan.size, &image, &size, &report, error, sizeof error) == 0);
+            CHECK(oracles_language_compose(pack, language, fan.data, fan.size, NULL, &image, &size, &report, error, sizeof error) == 0);
             unsigned changed = 0, banks = 0;
             if (image) {
                 for (size_t i = 0; i < first; i++)
@@ -608,12 +907,13 @@ static void check_fans(const char *dir, const char *work, const OraclesLanguageP
             CHECK(report.served == translated && report.english == english && report.missing == 0);
             free(image);
         }
+        check_fan_layout(e, &fan, &info, profile, pack);
         /* The fan game's pack plays on its image only. */
         uint8_t *image = NULL;
         size_t size = 0;
         OraclesLanguageReport report;
-        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, us->data, us->size, &image, &size, &report, error, sizeof error) == -1);
-        CHECK(oracles_language_compose(base, ORACLES_LANGUAGE_FRENCH, fan.data, fan.size, &image, &size, &report, error, sizeof error) == -1);
+        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, us->data, us->size, NULL, &image, &size, &report, error, sizeof error) == -1);
+        CHECK(oracles_language_compose(base, ORACLES_LANGUAGE_FRENCH, fan.data, fan.size, NULL, &image, &size, &report, error, sizeof error) == -1);
         CHECK(oracles_language_pack_derive(base, fan.data, fan.size, fan.data, fan.size, error, sizeof error) == NULL);
         /* Its file, read back. */
         char path[1024];
@@ -624,8 +924,8 @@ static void check_fans(const char *dir, const char *work, const OraclesLanguageP
         if (back) {
             uint8_t *a = NULL, *b = NULL;
             size_t a_size = 0, b_size = 0;
-            CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, fan.data, fan.size, &a, &a_size, &report, error, sizeof error) == 0);
-            CHECK(oracles_language_compose(back, ORACLES_LANGUAGE_GERMAN, fan.data, fan.size, &b, &b_size, &report, error, sizeof error) == 0);
+            CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, fan.data, fan.size, NULL, &a, &a_size, &report, error, sizeof error) == 0);
+            CHECK(oracles_language_compose(back, ORACLES_LANGUAGE_GERMAN, fan.data, fan.size, NULL, &b, &b_size, &report, error, sizeof error) == 0);
             CHECK(a && b && a_size == b_size && !memcmp(a, b, a_size));
             free(a);
             free(b);
@@ -720,7 +1020,7 @@ static int check_game(const char *dir, const char *work, const expected *e)
         uint8_t *image = NULL;
         size_t size = 0;
         OraclesLanguageReport report;
-        CHECK(oracles_language_compose(pack, language, us.data, us.size, &image, &size, &report, error, sizeof error) == 0);
+        CHECK(oracles_language_compose(pack, language, us.data, us.size, NULL, &image, &size, &report, error, sizeof error) == 0);
         printf("%s %s: %u texts: %u same, %u moved, %u adapted, %u own, %u kept, %u refused, %u missing: %.2f %% translated, %.2f %% official; "
                "%u lines over 16; composed: %u served, %u in English, %u missing, %u bytes\n  not the same: %s\n",
                name, oracles_language_code(language), count, counts[ORACLES_LANGUAGE_SOURCE_SAME], counts[ORACLES_LANGUAGE_SOURCE_MOVED],
@@ -737,6 +1037,7 @@ static int check_game(const char *dir, const char *work, const expected *e)
     }
     check_graphics(name, game, pack, &us, &eu, &graphics_expected[e - games]);
     check_composed(name, game, pack, &us);
+    check_layout(name, game, pack, &us);
     check_hook(name, us.data, game == ORACLES_GAME_AGES ? &oracles_guest_tables_ages : &oracles_guest_tables_seasons);
     check_fans(dir, work, pack, &us);
     /* The pack's file: read back, it composes the same image. */
@@ -749,8 +1050,8 @@ static int check_game(const char *dir, const char *work, const expected *e)
         uint8_t *a = NULL, *b = NULL;
         size_t a_size = 0, b_size = 0;
         OraclesLanguageReport report;
-        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, us.data, us.size, &a, &a_size, &report, error, sizeof error) == 0);
-        CHECK(oracles_language_compose(back, ORACLES_LANGUAGE_FRENCH, us.data, us.size, &b, &b_size, &report, error, sizeof error) == 0);
+        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, us.data, us.size, NULL, &a, &a_size, &report, error, sizeof error) == 0);
+        CHECK(oracles_language_compose(back, ORACLES_LANGUAGE_FRENCH, us.data, us.size, NULL, &b, &b_size, &report, error, sizeof error) == 0);
         CHECK(a && b && a_size == b_size && !memcmp(a, b, a_size));
         free(a);
         free(b);

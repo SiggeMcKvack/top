@@ -10,10 +10,11 @@
  *   - the live-WRAM fingerprint of the harness, which excludes only the dead
  *     stack bytes below each thread's stack pointer.
  *
- * Observation hooks never write to the guest.  The write paths are six closed
+ * Observation hooks never write to the guest.  The write paths are seven closed
  * transactions: the call's (a mod's host scene, further below), the
  * inventory's (the item hotkeys, further below), the language's, the swim's
- * hold and the cheats (further below), and the transition's: at the return of
+ * hold, the cheats and the compact text (further below), and the
+ * transition's: at the return of
  * drawAllSprites, a policy may ask for a bounded change of the scroll
  * machine's step and of Link's position and walking animation, applied here
  * after its own checks; it never receives a writable view of the RAM.
@@ -25,6 +26,7 @@
 #include "core.h"
 #include "profile.h"
 #include "guest_tables.h"
+#include "oracles_text.h"
 #include "rom.h"
 
 #include <stddef.h>
@@ -80,7 +82,12 @@ typedef enum OraclesGuestEventType {
     ORACLES_EVENT_FLIPPERS_STROKE,         /* the `and` after linkUpdateFlippersSpeed@flippersState0's read of wGameKeysJustPressed, the same */
     ORACLES_EVENT_CHEAT_DAMAGE,            /* linkApplyDamage's `or a` of the damage it read, with a cheat armed: the cheats' transaction runs here */
     ORACLES_EVENT_CHEAT_AMMO,              /* the `ld (hl),a` of decNumBombs' end, the same */
-    ORACLES_EVENT_CHEAT_RUPEES             /* removeRupeeValue's `call getRupeeValue`, the same */
+    ORACLES_EVENT_CHEAT_RUPEES,            /* removeRupeeValue's `call getRupeeValue`, the same */
+    ORACLES_EVENT_TEXT_LINE,               /* entry of drawLineOfText, with the compact text armed: its transaction runs here, */
+    ORACLES_EVENT_TEXT_CHARACTER,          /* at setLineTextBuffers' entry, */
+    ORACLES_EVENT_TEXT_LINE_DRAWN,         /* at drawLineOfText's return, */
+    ORACLES_EVENT_TEXT_CURSOR_PLACE,       /* at textControlCodeC_2's `ld (hl),b`, which keeps a choice's cursor place, */
+    ORACLES_EVENT_TEXT_COLUMN_SHOWN        /* and at displayNextTextCharacter's `ld d,>w7NextTextColumnToDisplay`, a column written */
 } OraclesGuestEventType;
 
 typedef struct OraclesGuestEvent {
@@ -350,6 +357,8 @@ int oracles_guest_arm_language(OraclesGuest *guest);
 const char *oracles_guest_language(const OraclesGuest *guest);
 /* The texts the game looked up since the attach: served in the language, kept in English by it, absent from it. */
 void oracles_guest_language_counts(const OraclesGuest *guest, unsigned *served, unsigned *english, unsigned *missing);
+/* Of those served, the texts laid out again for the compact text (ORACLES_LANGUAGE_LAID_OUT in their entry). */
+unsigned oracles_guest_language_laid_out(const OraclesGuest *guest);
 
 /* ---- the swim's hold ------------------------------------------------------------------
  *
@@ -437,6 +446,109 @@ typedef struct OraclesGuestCheatCounts {
     unsigned calls_charged;              /* payments of the call transaction (a mod's game.pay) left to the game */
 } OraclesGuestCheatCounts;
 void oracles_guest_cheat_counts(const OraclesGuest *guest, OraclesGuestCheatCounts *counts);
+
+/* ---- the compact text -------------------------------------------------------------------
+ *
+ * drawLineOfText (textbox.s) composes a line of the text box whole, in one frame: for each character setLineTextBuffers
+ * keeps its character, attribute, delay and sounds at column e of the line's sixteen-byte buffers, and
+ * retrieveTextCharacter draws its 8 x 16 cell at bc in w7TextGfxBuffer, which dmaTextGfxBuffer copies to the VRAM after
+ * it; displayNextTextCharacter then reveals a column at a time, writing its two tiles and their attribute in
+ * w7TextboxMap.  The compact text keeps the line's characters, their delays and sounds, its commands, its choices and its
+ * pages, and draws it in the font's own widths (oracles_text_font), more than sixteen characters when its 128 pixels
+ * hold them (the texts laid out again for it, language.h):
+ *   - at setLineTextBuffers' entry, the host keeps the character before, its cell and its buffers as the game wrote them,
+ *     and has the game write this one at the line's last column and cell, which the next one overwrites; a secret's
+ *     character (\secret, read from w7SecretText1 or 2) takes a whole tile, as a symbol does;
+ *   - at textControlCodeC_2's `ld (hl),b`, the cursor's place a choice keeps, the tile of column e, becomes the tile
+ *     column the place will start at, the next tile's edge after the characters before it; the place takes that whole
+ *     tile;
+ *   - at drawLineOfText's return, the line's tiles are composed again from the cells the game drew, each character's
+ *     ink at the pen (oracles_text_place), and the line's buffers become its reveal's steps: a character each, sixteen at
+ *     most, a blank character joining the one before it, then the narrowest neighbours, when the line holds more; a
+ *     step's delay is the sum of its characters' delays, its sound its first character's that is not a space, its
+ *     sound effect its first character's, and its character the pixel where the next step starts, past the last one's
+ *     ink for the last (ORACLES_GUEST_COMPACT_STEP); the attributes buffer holds each tile column's attribute;
+ *   - at displayNextTextCharacter's `ld d,>w7NextTextColumnToDisplay`, once it wrote step k's column, the line's columns
+ *     in the map become the tile columns step k's characters reach, with their attributes, and the others up to k the
+ *     blank of the box's margin;
+ *   - at the vblank (oracles_guest_compact_vblank), while the game reveals the line, its tiles in the VRAM become the
+ *     ones whole once the last step shown is, and the one the next step starts in with only the pixels before it: every
+ *     character shown whole, none not yet shown, at the game's pace, its characters per second and its sounds.
+ * Only the open line's characters, kept by the host within drawLineOfText's call, are not in the WRAM: a savestate taken
+ * within the call carries them (oracles_guest_compact_save_state), and its load gives them back with the call's return,
+ * so that the line goes on as if no load had come between; what the reveal needs is in the line's buffers. */
+#define ORACLES_GUEST_LINE_COLUMNS 16u        /* a line's buffers' columns, and its tile columns */
+#define ORACLES_GUEST_LINE_GFX_BYTES 0x200u   /* w7TextGfxBuffer: a column's two tiles, 32 bytes */
+#define ORACLES_GUEST_LINE_CHARACTERS ORACLES_TEXT_LINE_CHARACTERS_MAX   /* a line's characters at most */
+#define ORACLES_GUEST_COMPACT_STEP 0x80u      /* in w7LineTextBuffer, a step: the pixel the next one starts at in the low bits */
+typedef struct OraclesGuestCompactCharacter {
+    uint8_t character;      /* as setLineTextBuffers received it ($06 a symbol) */
+    uint8_t whole;          /* a symbol, a cursor's place or a secret's character: a whole tile */
+    uint8_t attribute, delay, sound, effect;   /* the line's buffers, as the game wrote them */
+    uint8_t cell[32];       /* its 8 x 16 cell, as retrieveTextCharacter drew it */
+} OraclesGuestCompactCharacter;
+typedef struct OraclesGuestCompactLine {
+    unsigned count;                                     /* characters laid out: those the line's 128 pixels hold */
+    unsigned overflows;                                 /* those after them, not drawn */
+    unsigned pen;                                       /* where the next character would go */
+    unsigned columns;                                   /* the tile columns the drawn pixels take */
+    uint8_t start[ORACLES_GUEST_LINE_CHARACTERS];       /* where each character's first column drawn goes */
+    uint8_t from[ORACLES_GUEST_LINE_CHARACTERS];        /* the first column of its cell drawn, */
+    uint8_t drawn[ORACLES_GUEST_LINE_CHARACTERS];       /* and how many: its ink's, 0 for a blank character, a cell for a whole one */
+    uint8_t attribute[ORACLES_GUEST_LINE_COLUMNS];      /* each tile column's attribute */
+    unsigned steps;                                     /* the reveal's steps, sixteen at most */
+    uint8_t first[ORACLES_GUEST_LINE_COLUMNS + 1u];     /* step s: characters first[s] to first[s + 1] - 1 */
+} OraclesGuestCompactLine;
+/* Pure: `count` characters laid out in `font` (oracles_text_place) up to the first the line's 128 pixels do not hold,
+ * and grouped in steps.  A tile column's attribute is its ink's, else a blank character's on it, else the column's
+ * before it. */
+void oracles_guest_compact_layout(const OraclesGuestCompactCharacter *characters, unsigned count, const OraclesTextFont *font, OraclesGuestCompactLine *line);
+/* Pure: the line's tiles composed from its characters' cells into `out` (ORACLES_GUEST_LINE_GFX_BYTES), blank where
+ * nothing is drawn. */
+void oracles_guest_compact_compose(const OraclesGuestCompactLine *line, const OraclesGuestCompactCharacter *characters, uint8_t *out);
+/* Pure: the tile columns whole once step `shown` is: those the next step's first character does not reach, all of them
+ * past the last step. */
+unsigned oracles_guest_compact_shown(const OraclesGuestCompactLine *line, unsigned shown);
+/* Pure: the pixel step `shown`'s characters end before: where the next step's first character starts, past the drawn
+ * pixels after the last step (a tile column's edge); what its byte in the line's buffers holds, 127 at most. */
+unsigned oracles_guest_compact_boundary(const OraclesGuestCompactLine *line, unsigned shown);
+/* Pure: from a step's byte, the tile columns whole once it is shown and those it reaches (one more when the next step
+ * starts within a tile); `last` for the line's last step, whose byte rounds the line's end down to 127. */
+void oracles_guest_compact_step_columns(uint8_t step, int last, unsigned *whole, unsigned *shown);
+/* Pure: a 32-byte tile column of the line with its first `pixels` columns kept, the others blank. */
+void oracles_guest_compact_mask(const uint8_t *tile, unsigned pixels, uint8_t *out);
+/* The vblank's part of the transaction (guest.c calls it at every vblank, after the hosts that read the frame just
+ * scanned): the line being revealed in the VRAM, $9400 the top line's, $9600 the bottom's, as the steps shown allow. */
+void oracles_guest_compact_vblank(OraclesGuest *guest);
+/* Pure: displayNextTextCharacter's `ld d,>w7NextTextColumnToDisplay`, after `ld a,e / sub $20 / ld e,a / ld a,(hl) /
+ * ld (de),a`, and textControlCodeC_2's `ld (hl),b`, after `ld a,e / add a / or $60 / ld b,a / inc b`, each starting
+ * within its routine's first $40 bytes in `rom` (the flat image); 0 when not found once. */
+uint16_t oracles_guest_find_reveal_point(const OraclesGuestTables *tables, const uint8_t *rom, size_t size);
+uint16_t oracles_guest_find_cursor_place_point(const OraclesGuestTables *tables, const uint8_t *rom, size_t size);
+/* Arms the transaction, the font's widths read in the image the core runs (a language's glyphs included); -1 when the
+ * profile does not qualify it, a point is not found once, or the hook table is full. */
+int oracles_guest_arm_compact_text(OraclesGuest *guest);
+typedef struct OraclesGuestCompactCounts {
+    unsigned lines, characters;   /* lines composed, and their characters */
+    unsigned columns;             /* the tile columns they took, where the game takes one a character */
+    unsigned places;              /* choices' cursor places moved */
+    unsigned long_lines;          /* lines of more than sixteen characters, more than the game's buffers hold */
+    unsigned overflows;           /* characters past a line's 128 pixels, not drawn */
+    unsigned reveal_frames;       /* vblanks of a line being revealed */
+    unsigned partial_writes;      /* tile columns written in the VRAM with only their pixels revealed */
+    unsigned cut_frames;          /* of those vblanks, those whose screen would show a revealed character cut */
+    unsigned early_frames;        /* and those that would show a character not revealed yet */
+    unsigned resumed;             /* lines a savestate's load gave back within drawLineOfText's call */
+} OraclesGuestCompactCounts;
+void oracles_guest_compact_counts(const OraclesGuest *guest, OraclesGuestCompactCounts *counts);
+/* The line drawLineOfText is composing, for a savestate taken within its call: its bytes in `out`, at most
+ * ORACLES_GUEST_COMPACT_STATE_SIZE; 0 outside a call, or without the compact text. */
+#define ORACLES_GUEST_COMPACT_STATE_SIZE (7u + ORACLES_GUEST_LINE_CHARACTERS * sizeof(OraclesGuestCompactCharacter))
+size_t oracles_guest_compact_save_state(const OraclesGuest *guest, uint8_t *out, size_t capacity);
+/* That line given back after the load of the state it was saved with, once oracles_guest_reset_execution_state has run:
+ * its characters, and the call's return, where it is composed.  0, or -1 for bytes that are not such a state, or a
+ * guest without the compact text. */
+int oracles_guest_compact_load_state(OraclesGuest *guest, const uint8_t *data, size_t size);
 
 typedef struct OraclesGuestRegWrite {
     uint8_t ly;

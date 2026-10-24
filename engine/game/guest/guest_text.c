@@ -37,6 +37,8 @@ void oracles_guest_language_counts(const OraclesGuest *guest, unsigned *served, 
     if (missing) *missing = guest ? guest->language_missing : 0;
 }
 
+unsigned oracles_guest_language_laid_out(const OraclesGuest *guest) { return guest ? guest->language_laid_out : 0; }
+
 void oracles_guest_serve_text(OraclesGuest *guest)
 {
     const uint8_t *index = guest->language_index;
@@ -49,7 +51,7 @@ void oracles_guest_serve_text(OraclesGuest *guest)
     const unsigned entries = row[0] | row[1] << 8, count = row[2] | row[3] << 8;
     if (text >= count || entries + 3u * count > 0x4000u) { guest->language_missing++; return; }
     const uint8_t *entry = index + entries + 3u * text;
-    const unsigned bank = entry[0], addr = entry[1] | entry[2] << 8;
+    const unsigned bank = entry[0], addr = (entry[1] | entry[2] << 8) & ~ORACLES_LANGUAGE_LAID_OUT;
     if (!bank) {
         if (addr == ORACLES_LANGUAGE_KEPT) guest->language_english++;
         else guest->language_missing++;
@@ -63,4 +65,5 @@ void oracles_guest_serve_text(OraclesGuest *guest)
     r.af = (uint16_t)(bank << 8 | (r.af & 0xffu));
     oracles_core_set_registers(guest->core, &r);
     guest->language_served++;
+    if (entry[2] << 8 & ORACLES_LANGUAGE_LAID_OUT) guest->language_laid_out++;
 }

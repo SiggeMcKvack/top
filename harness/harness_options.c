@@ -24,12 +24,15 @@ int harness_usage(void)
                     "                       [--mods DIR]... [--mod-trace FILE]   (the mods the route was recorded with, and their state after every frame, to --compare with the session's ROUTE.mod.tsv)\n"
                     "                       [--language en|en-eu|fr|de|it|es [--eu-rom FILE|DIR] [--language-pack FILE]]   (the European ROM's English or a translation, from that ROM or its pack, served at getTextAddress; a fan game's too, with --patch)\n"
                     "                       (--enhanced-paced holds each frame to the Game Boy's period by a busy wait: a core a replay, as in play)\n"
+                    );
+    fprintf(stderr,
                     "                       [--continuous-transitions]   (the gameplay policy of the continuous transitions, both games; on by itself for a route recorded with it)\n"
                     "                       [--continuous-swim]   (the same with Link swimming at the surface too, implies --continuous-transitions; on by itself for a route recorded with it)\n"
                     "                       [--continuous-diagonal]   (a diagonal held carries Link across the transitions' axis too, implies --continuous-transitions; on by itself for a route recorded with it)\n"
                     "                       [--swim-hold]   (the swim's strokes from a held button: the mermaid suit's direction, the flippers' A; on by itself for a route recorded with it)\n"
                     "                       [--cheats no-damage,ammo,rupees]   (the cheats, Ages and Seasons: Link loses no heart, seeds and bombs are not used up, buying costs nothing\n"
-                    "                                                (a mod's game.pay still charges); with those a route was recorded with, which are on by themselves)\n");
+                    "                                                (a mod's game.pay still charges); with those a route was recorded with, which are on by themselves)\n"
+                    "                       [--text classic|compact]   (the text box's lines in the font's own widths, Oracles, fan games, with --enhanced-check alone; on by itself for a route recorded with it)\n");
     fprintf(stderr,
                     "                       [--neighbour-objects-check DIR] [--neighbour-objects-lead FRAMES] [--neighbour-capture]   (the objects of every neighbour, ghost against the real entry)\n"
                     "                       [--hotkeys-check DIR]   (item hotkeys: the inventory frame by frame in DIR; a route's exchanges are applied either way)\n"
@@ -134,6 +137,11 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         else if (!strcmp(argv[i], "--swim-hold")) o->swim_hold = 1;
         else if (!strcmp(argv[i], "--cheats") && i + 1 < argc) {
             if (oracles_cheats_parse(argv[++i], NULL, &o->cheats) != 0) { fprintf(stderr, "harness: --cheats names no-damage, ammo or rupees, not %s\n", argv[i]); return -1; }
+        }
+        else if (!strcmp(argv[i], "--text") && i + 1 < argc) {
+            const char *v = argv[++i];
+            if (strcmp(v, "classic") != 0 && strcmp(v, "compact") != 0) { fprintf(stderr, "harness: --text is classic or compact, not %s\n", v); return -1; }
+            o->compact_text = !strcmp(v, "compact");
         }
         else if (!strcmp(argv[i], "--hotkeys-check") && i + 1 < argc) o->hotkeys_dir = argv[++i];
         else if (!strcmp(argv[i], "--hotkeys-live") && i + 1 < argc) { o->hotkeys_live.mode = argv[++i]; if (strcmp(o->hotkeys_live.mode, "use") != 0 && strcmp(o->hotkeys_live.mode, "equip") != 0) return -1; }

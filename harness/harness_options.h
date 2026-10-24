@@ -39,6 +39,7 @@ typedef struct harness_options {
     int objects_capture, enhanced_objects, enhanced_threaded, enhanced_paced, enhanced_zoom_out, continuous_transitions, continuous_swim, continuous_diagonal;
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
     unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */
+    int compact_text;                      /* --text compact: the text box's lines in the font's own widths */
     int enhanced_level, enhanced_aspect;      /* --view (near unless --zoom-out) and --aspect: an OraclesEnhancedLevel and OraclesEnhancedAspect */
     int aspect_given;                         /* --aspect named the shape */
     unsigned screen_w, screen_h;              /* --screen: the screen the view's shape comes from, which far fits to; 0: none */

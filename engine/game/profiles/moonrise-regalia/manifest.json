@@ -1179,7 +1179,83 @@
     "link_damage_to_apply": null,
     "dec_num_bombs": null,
     "get_rupee_value": null,
-    "bomb_fairy_lose_all_bombs": null
+    "bomb_fairy_lose_all_bombs": null,
+    "draw_line_of_text": {
+      "bank": 63,
+      "address": "0x505f"
+    },
+    "set_line_text_buffers": {
+      "bank": 63,
+      "address": "0x50b0"
+    },
+    "display_next_text_character": {
+      "bank": 63,
+      "address": "0x51e5"
+    },
+    "text_control_code_option": {
+      "bank": 63,
+      "address": "0x5909"
+    },
+    "text_gfx_buffer": {
+      "bank": 7,
+      "address": "0xd200"
+    },
+    "line_text_buffer": {
+      "bank": 7,
+      "address": "0xd400"
+    },
+    "line_attributes_buffer": {
+      "bank": 7,
+      "address": "0xd410"
+    },
+    "line_delays_buffer": {
+      "bank": 7,
+      "address": "0xd420"
+    },
+    "line_sounds_buffer": {
+      "bank": 7,
+      "address": "0xd430"
+    },
+    "line_sound_effects_buffer": {
+      "bank": 7,
+      "address": "0xd440"
+    },
+    "next_text_column": {
+      "bank": 7,
+      "address": "0xd0d0"
+    },
+    "text_line_tiles": {
+      "bank": 7,
+      "address": "0xd0d3"
+    },
+    "textbox_column": {
+      "bank": 7,
+      "address": "0xd0cc"
+    },
+    "text_display_state": {
+      "bank": 7,
+      "address": "0xd0c0"
+    },
+    "text_display_mode": {
+      "bank": 0,
+      "address": "0xcba1"
+    },
+    "textbox_attributes": {
+      "bank": 7,
+      "address": "0xd100"
+    },
+    "textbox_option_positions": {
+      "bank": 7,
+      "address": "0xd0e0"
+    },
+    "secret_text": {
+      "bank": 7,
+      "address": "0xd460"
+    },
+    "secret_text_end": {
+      "bank": 7,
+      "address": "0xd478"
+    }
   },
   "guest_table_absent": {
     "num_placed_slates": "a symbol of another fan game: this game's engine has none",

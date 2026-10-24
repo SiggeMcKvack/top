@@ -258,6 +258,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->profile = ORACLES_PROFILE_ENHANCED;
     s->transitions = 1;
     s->swim_hold = 0;   /* the game's own taps */
+    s->compact_text = 0;   /* the game's own fixed width */
     s->view = 2;   /* far: the view drawn back, as Enhanced was before the levels */
     s->aspect = ORACLES_ASPECT_AUTO;
     s->far_fixed = 0;   /* fitted to the screen */
@@ -284,7 +285,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
@@ -298,6 +299,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "swim_hold")) {
         if (!strcmp(value, "on") || !strcmp(value, "off")) s->swim_hold = !strcmp(value, "on");
+        return 1;
+    }
+    if (!strcmp(name, "text")) {
+        if (!strcmp(value, "classic") || !strcmp(value, "compact")) s->compact_text = !strcmp(value, "compact");
         return 1;
     }
     if (!strcmp(name, "view")) {
@@ -531,6 +536,9 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# Swimming: off (a stroke for each tap, of A with the flippers, of a direction with Ages' mermaid suit, as the\n"
                "# game plays) or on (a direction held swims as the best tapping does, A held too with the flippers), in both profiles.\n");
     fprintf(f, "swim_hold=%s\n", s->swim_hold ? "on" : "off");
+    fprintf(f, "# The text box: classic (the game's fixed width) or compact (its lines in the font's own widths, at the game's\n"
+               "# pace), in enhanced on Ages and Seasons.\n");
+    fprintf(f, "text=%s\n", s->compact_text ? "compact" : "classic");
     if (s->window_scale) fprintf(f, "window_scale=%d\n", s->window_scale); else fprintf(f, "window_scale=full\n");
     fprintf(f, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
                "# proportions, sampled for pixel art); a window keeps its whole scales.\n");

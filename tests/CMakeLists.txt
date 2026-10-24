@@ -53,11 +53,22 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-cheats)
     add_test(NAME oracles-cheats COMMAND oracles-test-cheats)
 
+    add_executable(oracles-test-compact-text test_compact_text.c)
+    target_link_libraries(oracles-test-compact-text PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-compact-text)
+    add_test(NAME oracles-compact-text COMMAND oracles-test-compact-text)
+
     add_executable(oracles-test-language test_language.c)
     target_include_directories(oracles-test-language PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
     target_link_libraries(oracles-test-language PRIVATE oracles_language)
     oracles_set_warnings(oracles-test-language)
     add_test(NAME oracles-language COMMAND oracles-test-language ${CMAKE_CURRENT_BINARY_DIR})
+    # The texts laid out again for the compact text, on texts built by the test.
+    add_executable(oracles-test-language-wrap test_language_wrap.c)
+    target_include_directories(oracles-test-language-wrap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
+    target_link_libraries(oracles-test-language-wrap PRIVATE oracles_language)
+    oracles_set_warnings(oracles-test-language-wrap)
+    add_test(NAME oracles-language-wrap COMMAND oracles-test-language-wrap)
     # The same on the user's ROMs: skipped unless ORACLES_ROM_DIR names a directory with them.
     add_executable(oracles-test-language-roms test_language_roms.c)
     target_include_directories(oracles-test-language-roms PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)

@@ -27,6 +27,7 @@ typedef struct OraclesCoreOps {
     int (*load_state)(OraclesCore *core, const uint8_t *buffer, size_t size);
     uint8_t *(*memory)(OraclesCore *core, OraclesCoreRegion region, size_t *size, uint16_t *bank);
     uint8_t (*peek)(OraclesCore *core, uint16_t address);
+    void (*write_vram)(OraclesCore *core, size_t offset, const uint8_t *bytes, size_t count);
     OraclesCoreRegisters (*registers)(const OraclesCore *core);
     void (*set_registers)(OraclesCore *core, const OraclesCoreRegisters *registers);
     /* Called after core->hooks changed: arms the core's own callbacks for the members set, disarms the others. */

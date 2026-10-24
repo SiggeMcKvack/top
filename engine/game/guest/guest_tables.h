@@ -107,6 +107,16 @@ typedef struct OraclesGuestTables {
      * decNumBombchus share) and the rupees taken away (removeRupeeValue's call of getRupeeValue; remove_rupee_value is
      * above); the routine of Ages' bomb-upgrade fairy that takes every bomb through decNumBombs (absent in Seasons). */
     OraclesGuestSym link_apply_damage, link_damage_to_apply, dec_num_bombs, get_rupee_value, bomb_fairy_lose_all_bombs;
+    /* The compact text: the routine that composes a line of the text box before its DMA, the one that keeps each of its
+     * characters in the line's buffers, the one that reveals its next character, the choices' command, which takes the
+     * column of the cursor (textbox.s); in WRAM bank 7 the line's graphics, characters, attributes, delays, sounds and
+     * sound effects, the column the reveal is at, the line's first tile, the box's column in its map, the text's state and
+     * mode, the map's attributes, the cursor's places of a choice (textbox_map is above), and the two secrets' texts, from
+ * w7SecretText1 to w7SecretGenerationBuffer, which \secret prints. */
+    OraclesGuestSym draw_line_of_text, set_line_text_buffers, display_next_text_character, text_control_code_option,
+        text_gfx_buffer, line_text_buffer, line_attributes_buffer, line_delays_buffer, line_sounds_buffer, line_sound_effects_buffer,
+        next_text_column, text_line_tiles, textbox_column, text_display_state, text_display_mode, textbox_attributes, textbox_option_positions,
+        secret_text, secret_text_end;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */

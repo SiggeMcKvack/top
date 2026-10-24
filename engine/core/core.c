@@ -109,6 +109,8 @@ uint8_t *oracles_core_memory(OraclesCore *core, OraclesCoreRegion region, size_t
 
 uint8_t oracles_core_peek(OraclesCore *core, uint16_t address) { return core->ops->peek(core, address); }
 
+void oracles_core_write_vram(OraclesCore *core, size_t offset, const uint8_t *bytes, size_t count) { core->ops->write_vram(core, offset, bytes, count); }
+
 OraclesCoreRegisters oracles_core_registers(const OraclesCore *core) { return core->ops->registers(core); }
 
 void oracles_core_set_registers(OraclesCore *core, const OraclesCoreRegisters *registers)

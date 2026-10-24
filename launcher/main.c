@@ -6,7 +6,7 @@
  *                       [--mute] [--frames N] [--no-window]
  *                       [--screenshot PATH.ppm] [--record ROUTE] [--play ROUTE] [--continuous-transitions] [--continuous-swim] [--item-hotkeys=off|use|equip]
  *                       [--continuous-diagonal]
- *                       [--swim-hold] [--cheats LIST]
+ *                       [--swim-hold] [--cheats LIST] [--text classic|compact]
  *                       [--zoom-out]
  *   the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,...]
  *
@@ -112,7 +112,8 @@ static int usage(void)
                     "                           [--continuous-diagonal]   (the continuous transitions with a diagonal held carrying Link across their axis too; implies --continuous-transitions)\n"
                     "                           [--swim-hold]   (swimming, a direction held swims at full speed where the game wants A tapped with the flippers, the direction with Ages' mermaid suit)\n"
                     "                           [--cheats no-damage,ammo,rupees]   (Ages and Seasons: Link loses no heart, seeds and bombs are not used up, buying costs nothing;\n"
-                    "                           a mod's prices still apply; an empty list for none)\n");
+                    "                           a mod's prices still apply; an empty list for none)\n"
+                    "                           [--text classic|compact]   (Enhanced, the Oracles and their fan games: the text box's lines in the font's own widths, at the game's pace)\n");
     fprintf(stderr, "                           [--zoom-out]   (Enhanced drawn back, 480x270 or 480x360 in 4:3, three rooms across outdoors; --fullscreen --scale 4 fills 1920x1080; --view far)\n"
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
                     "                           [--core sameboy|mgba]   (the core: Accurate, the reference, or Fast, lighter)\n"
@@ -188,6 +189,11 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
         else if (!strcmp(argv[i], "--cheats") && more) {
             if (oracles_cheats_parse(argv[++i], NULL, &o->cheats) != 0) return 1;
             o->cheats_given = 1;
+        }
+        else if (!strcmp(argv[i], "--text") && more) {
+            const char *text = argv[++i];
+            o->compact_text = !strcmp(text, "classic") ? 1 : !strcmp(text, "compact") ? 2 : 0;
+            if (!o->compact_text) return 1;
         }
         else if (!strcmp(argv[i], "--zoom-out")) { o->zoom_out = 1; o->enhanced = 1; o->view = 3; }
         else if (!strcmp(argv[i], "--view") && more) {

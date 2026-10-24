@@ -2,8 +2,9 @@
  * control codes kept, a list and a text across a bank, two bases and three), the comparison of the commands, the
  * tables of exceptions, the rules on constructed texts, the port's own texts and their syntax, the pack's file, the
  * composition into a synthetic US image (the index, the texts kept in English, the glyphs), the graphics' compression
- * both ways, their place in the pack and their headers repointed in a synthetic image, and the guest's transaction on
- * a synthetic program that calls getTextAddress. */
+ * both ways, their place in the pack and their headers repointed in a synthetic image, the guest's transaction on a
+ * synthetic program that calls getTextAddress (a text laid out again for the compact text served and counted), and
+ * English (US) composed laid out for the compact text. */
 #include "core.h"
 #include "guest.h"
 #include "language_internal.h"
@@ -632,7 +633,7 @@ static uint8_t *test_compose(void)
     size_t size = 0, other = 0;
     OraclesLanguageReport report;
     char error[256];
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB, &image, &size, &report, error, sizeof error) == 0);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == 0);
     CHECK(size == 2u * MIB);
     CHECK(report.served == 3 && report.english == 2 && report.missing == 0x40 - 3);
     CHECK(report.bytes == 12u + 3u);
@@ -652,18 +653,63 @@ static uint8_t *test_compose(void)
         const size_t font = oracles_rom_offset(t->font_start.bank, t->font_start.addr);
         CHECK(image[font + 0xc8u * 16u] == 0xa0 && image[font + 0x33u * 16u + 15u] == 0xbf);
         CHECK(image[0x148] == 0x06);
-        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, image, size, &again, &other, &report, error, sizeof error) == -1);   /* its banks are taken */
+        CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, image, size, NULL, &again, &other, &report, error, sizeof error) == -1);   /* its banks are taken */
     }
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH_EU, rom, MIB, &again, &other, &report, error, sizeof error) == 0);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH_EU, rom, MIB, NULL, &again, &other, &report, error, sizeof error) == 0);
     CHECK(again && !memcmp(again + ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u + 18u, "en-eu\0\0\0", 8) && report.served == 1);
     free(again);
     again = NULL;
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH, rom, MIB, &again, &other, &report, error, sizeof error) == -1);
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB / 2u, &again, &other, &report, error, sizeof error) == -1);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ENGLISH, rom, MIB, NULL, &again, &other, &report, error, sizeof error) == -1);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB / 2u, NULL, &again, &other, &report, error, sizeof error) == -1);
     free(again);
     free(rom);
     oracles_language_pack_free(pack);
     return image;
+}
+
+/* English (US) laid out again for the compact text, on the synthetic image: a font of letters five pixels wide and a
+ * blank space, TX_0002 four lines that one holds (two boxes for one), the others a single box each, kept in English. */
+static void test_compose_layout(void)
+{
+    uint8_t *rom = us_image();
+    const OraclesGuestTables *t = &oracles_guest_tables_ages;
+    const size_t font = oracles_rom_offset(t->font_start.bank, t->font_start.addr), table = 0x1du * 0x4000u;
+    for (unsigned c = 0x10; c < 0x100u; c++) memset(rom + font + 16u * c, c == ' ' ? 0xff : 0x83, 16);
+    static const uint8_t lines[] = { 'H', 'i', 0x01, 'y', 'o', 'u', 0x01, 'a', 'l', 'l', 0x01, 't', 'h', 'r', 'e', 'e', 0 };
+    const unsigned g4 = 2u * 6u + 2u, base = g4 + 2u * 0x40u + 4u;
+    memcpy(rom + table + base + 0xa00u, lines, sizeof lines);
+    put16(rom + table + g4 + 2u * 2u, 0xa00u);
+    const OraclesLanguageLayout layout = { 128 };
+    uint8_t *image = NULL;
+    size_t size = 0;
+    OraclesLanguageReport report;
+    char error[256];
+    const char *ages = "880374fb978b18af4aa529e2e32f7ffb4d7dd2f4";
+    CHECK(oracles_language_compose_english(ages, rom, MIB, &layout, &image, &size, &report, error, sizeof error) == 0 && size == 2u * MIB);
+    CHECK(report.laid_out == 1 && report.served == 1 && report.layout_failed == 0 && report.layout_kept == 1);   /* TX_0003, which TX_0001 jumps to within a line */
+    CHECK(report.english == 0x40u + 2u - 1u && report.boxes == 0x40u + 2u + 1u && report.boxes_laid_out == 0x40u + 2u);
+    if (image) {
+        const uint8_t *index = image + ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u;
+        CHECK(!memcmp(index + 18, "en\0\0\0\0\0\0", 8));
+        const uint8_t *e2 = index + (index[ORACLES_LANGUAGE_INDEX_GROUPS + 16u] | index[ORACLES_LANGUAGE_INDEX_GROUPS + 17u] << 8) + 6u;
+        const unsigned addr = e2[1] | e2[2] << 8;
+        CHECK(e2[0] == ORACLES_IMAGE_LANGUAGE_BANK && (addr & ORACLES_LANGUAGE_LAID_OUT));
+        CHECK(!memcmp(image + (size_t)e2[0] * 0x4000u + ((addr & ~ORACLES_LANGUAGE_LAID_OUT) - 0x4000u), "Hi you all three", 17));
+        const uint8_t *e0 = e2 - 6u;
+        CHECK(e0[0] == 0 && (e0[1] | e0[2] << 8) == ORACLES_LANGUAGE_KEPT);
+    }
+    free(image);
+    image = NULL;
+    /* Without a layout, or for a fan game's image: refused. */
+    CHECK(oracles_language_compose_english(ages, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == -1 && !image);
+    CHECK(oracles_language_compose_english("013cf1fd3149f87990cf341f2973f1d11a28e55f", rom, MIB, &layout, &image, &size, &report, error, sizeof error) == -1);
+    /* The digest of the layout follows its width. */
+    char a[41], b[41];
+    oracles_language_layout_digest(&layout, ORACLES_ROM_REVISION_AGES_US, a);
+    const OraclesLanguageLayout wider = { 208 };
+    oracles_language_layout_digest(&wider, ORACLES_ROM_REVISION_AGES_US, b);
+    CHECK(strlen(a) == 40u && strcmp(a, b) != 0);
+    free(rom);
 }
 
 static void emit16(uint8_t **at, uint8_t opcode, unsigned address) { *(*at)++ = opcode; *(*at)++ = (uint8_t)address; *(*at)++ = (uint8_t)(address >> 8); }
@@ -691,6 +737,10 @@ static void test_transaction(uint8_t *image, OraclesCoreKind kind)
     emit16(&routine, 0xea, t->active_text_bank.addr);                  /* ld (w7ActiveBank),a */
     *routine = 0xc9;                                                   /* ret */
 
+    /* TX_0000 marked laid out again for the compact text: served the same, and counted. */
+    uint8_t *flagged = image + ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u;
+    flagged += (flagged[ORACLES_LANGUAGE_INDEX_GROUPS + 16u] | flagged[ORACLES_LANGUAGE_INDEX_GROUPS + 17u] << 8) + 2u;
+    *flagged |= ORACLES_LANGUAGE_LAID_OUT >> 8;
     const OraclesCoreOptions options = { 0, 0, kind, 0 };
     OraclesCore *core = oracles_core_create(image, 2u * MIB, &options);
     CHECK(core != NULL);
@@ -712,12 +762,13 @@ static void test_transaction(uint8_t *image, OraclesCoreKind kind)
         wram[t->text_index_h.addr - 0xc000u] = (uint8_t)cases[i].group;
         wram[t->text_index_l.addr - 0xc000u] = (uint8_t)cases[i].index;
         for (unsigned f = 0; f < (i ? 2u : 200u); f++) oracles_core_run_frame(core);   /* the boot ROM first */
-        const unsigned hl = wram[0x10] | wram[0x11] << 8, expected = cases[i].hl ? cases[i].hl : (unsigned)(entry[1] | entry[2] << 8);
+        const unsigned hl = wram[0x10] | wram[0x11] << 8, expected = cases[i].hl ? cases[i].hl : (unsigned)(entry[1] | entry[2] << 8) & ~ORACLES_LANGUAGE_LAID_OUT;
         CHECK(hl == expected && wram[0x12] == cases[i].a && wram[0x13] == cases[i].a);
     }
     unsigned served = 0, english = 0, missing = 0;
     oracles_guest_language_counts(guest, &served, &english, &missing);
     CHECK(served > 100 && english > 100 && missing > 100);
+    CHECK(oracles_guest_language_laid_out(guest) > 100 && oracles_guest_language_laid_out(guest) <= served);
     oracles_guest_detach(guest);
     oracles_core_destroy(core);
 }
@@ -844,7 +895,7 @@ static void test_gfx_compose(void)
     size_t size = 0;
     OraclesLanguageReport report;
     char error[256];
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB, &image, &size, &report, error, sizeof error) == 0);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_FRENCH, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == 0);
     CHECK(report.graphics == 1 && report.graphics_bytes == length);
     if (image) {
         const OraclesGuestTables *t = &oracles_guest_tables_ages;
@@ -860,7 +911,7 @@ static void test_gfx_compose(void)
         free(image);
     }
     /* German has no graphic: the headers stay the US ones. */
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, rom, MIB, &image, &size, &report, error, sizeof error) == 0);
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_GERMAN, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == 0);
     if (image) {
         const OraclesGuestTables *t = &oracles_guest_tables_ages;
         const size_t table = oracles_rom_offset(t->gfx_header_table.bank, t->gfx_header_table.addr);
@@ -873,7 +924,7 @@ static void test_gfx_compose(void)
     CHECK(language_pack_add_graphic(pack, ORACLES_LANGUAGE_ITALIAN, &stray) == 0);
     pack->count[ORACLES_LANGUAGE_ITALIAN] = pack->count[ORACLES_LANGUAGE_FRENCH];
     pack->texts[ORACLES_LANGUAGE_ITALIAN] = pack->texts[ORACLES_LANGUAGE_FRENCH];
-    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ITALIAN, rom, MIB, &image, &size, &report, error, sizeof error) == -1 && strstr(error, "do not load"));
+    CHECK(oracles_language_compose(pack, ORACLES_LANGUAGE_ITALIAN, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == -1 && strstr(error, "do not load"));
     pack->count[ORACLES_LANGUAGE_ITALIAN] = 0;
     pack->texts[ORACLES_LANGUAGE_ITALIAN] = NULL;
     oracles_language_pack_free(pack);
@@ -899,6 +950,7 @@ int main(int argc, char **argv)
         test_transaction(image, ORACLES_CORE_MGBA);
     }
     free(image);
+    test_compose_layout();
     if (failures) fprintf(stderr, "%d failure(s)\n", failures);
     else printf("language: ok\n");
     return failures ? 1 : 0;

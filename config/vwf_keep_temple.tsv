@@ -1,0 +1,9 @@
+# Temple of Seasons' texts the compact text leaves as the game lays them out (engine/language/language_wrap.c), beyond
+# the pages its rules keep by themselves (a choice, a secret, a call, the piece of heart, lines aligned with spaces, a
+# single box). A row: the texts (the four hexadecimal digits of their TX_GGII, or a range first-last, space-separated),
+# the languages (en, the fan game's English, the only one laid out), and why. Only their identifiers: the texts stay in
+# the image the player makes from his ROM and the fan game's patch.
+# texts	languages	why
+2702 4c4a 520a	en	a song, a verse a line, Seasons' own text
+2e08	en	a sign, each direction an arrow and lines of its own
+4e10	en	a word broken at a line's end by its syllables, one of whose parts the language writes alone and never the word whole: laid out, it would keep its hyphen

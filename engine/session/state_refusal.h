@@ -1,6 +1,6 @@
 /* Why a savestate does not load in this session, as the launcher and the command line say it: the continuous
  * transitions a state was taken with must be those of the session that loads it, and they come only with
- * Enhanced. */
+ * Enhanced; so must its core and its text, classic or compact. */
 #ifndef ORACLES_STATE_REFUSAL_H
 #define ORACLES_STATE_REFUSAL_H
 
@@ -17,5 +17,11 @@ int oracles_state_transitions_refusal(int taken_with_transitions, int enhanced, 
  * on Fast (mGBA)"), *detail the core to choose, in Display's Core or with --core.  0, both empty, for the same core
  * (another version of it is refused by the load itself). */
 int oracles_state_core_refusal(const char *taken_on, const char *now, char *message, size_t message_capacity, char *detail, size_t detail_capacity);
+
+/* 1 when a state whose set of mods and gameplay options is `taken_mods` is refused by a session whose set is `mods`
+ * because of the text: one has the compact text and the other the classic one (*message names the one it was taken
+ * with and where to choose it, "Refused: taken with the Compact text: choose Compact in Display's Text"), or both have
+ * it laid out by another version of it.  0, both empty, when their texts agree. */
+int oracles_state_text_refusal(const char *taken_mods, const char *mods, char *message, size_t message_capacity, char *detail, size_t detail_capacity);
 
 #endif

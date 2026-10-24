@@ -19,6 +19,10 @@
  *                                              progress (engine/gameplay, oracles_room_transition_save_state),
  *                                              empty without them; absent from the states written before it, which
  *                                              read as empty
+ *   compact text's line: u32 length, bytes     the line the compact text composes when the state is taken within
+ *                                              drawLineOfText (engine/game/guest, oracles_guest_compact_save_state),
+ *                                              empty outside it or without the compact text; absent from the states
+ *                                              written before it, which read as empty
  */
 #ifndef ORACLES_STATE_H
 #define ORACLES_STATE_H
@@ -44,6 +48,8 @@ typedef struct OraclesStateInfo {
     size_t mods_storage_size;
     const uint8_t *transition_state;   /* written only: read back by oracles_state_transition_state */
     size_t transition_state_size;
+    const uint8_t *compact_text_state;   /* written only: read back by oracles_state_compact_text_state */
+    size_t compact_text_state_size;
 } OraclesStateInfo;
 
 /* Serialises a composite savestate into a buffer the caller frees. Returns 0, or -1 with a message. */
@@ -77,6 +83,8 @@ int oracles_state_core_version(const uint8_t *data, size_t size, char *version, 
 int oracles_state_mods_storage(const uint8_t *data, size_t size, const uint8_t **storage, size_t *storage_size);
 /* The transitions' state of a composite savestate, read in place the same way. */
 int oracles_state_transition_state(const uint8_t *data, size_t size, const uint8_t **transition_state, size_t *transition_state_size);
+/* The compact text's open line of a composite savestate, read in place the same way. */
+int oracles_state_compact_text_state(const uint8_t *data, size_t size, const uint8_t **compact_text_state, size_t *compact_text_state_size);
 
 #ifdef __cplusplus
 }

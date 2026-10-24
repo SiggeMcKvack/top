@@ -123,3 +123,5 @@ diagonal-crossings.route	enhanced	--enhanced-subpixel	enhanced.link_jumps=0;enha
 shop.route	faithful	-	-	-	-
 shop.route	faithful	--cheats no-damage,rupees	cheats.damage_cancelled=1;cheats.health_kept=4;cheats.payments_cancelled=1;cheats.rupees_kept=20	-	-
 shop.route	faithful	--cheats ammo	cheats.ammo_kept=1;cheats.payments_cancelled=0	-	-
+# The compact text (--text compact, Enhanced alone), English (US) laid out (the counters of ages/checks.tsv): shop.route's price and its choice, OK or No thanks, which keep their layout, and the bombs bought.
+shop.route	enhanced	--text compact	language.code=en;text.laid_out=929;text.layout_kept=24;text.layout_failed=0;text.boxes=4833;text.boxes_laid_out=4038;text.laid_out_served=0;text.compact_lines=5;text.compact_characters=51;text.compact_columns=42;text.compact_places=2;text.compact_long_lines=0;text.compact_overflows=0;text.reveal_frames=171;text.reveal_partial_writes=72;text.reveal_cut_frames=0;text.reveal_early_frames=0;enhanced.text_box_frames_wrong=0;enhanced.text_box_pixels_wrong=0	sameboy:7bf5ff51ff6f2e3e,mgba:68e8b16de2e7077b	-

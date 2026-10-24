@@ -22,6 +22,11 @@ typedef struct OraclesLanguageSession OraclesLanguageSession;
 int oracles_language_session_start(OraclesLanguageSession **out, const char *code, const char *european, const char *pack_path,
                                    const char *base_path, const OraclesRomInfo *info, const uint8_t *rom, size_t rom_size, char *error,
                                    size_t capacity);
+/* The texts laid out again for the compact text when the language is composed, on a line of the game's text box
+ * (language.h, OraclesLanguageLayout): for English (US), *session NULL, a session of its own, whose index serves the US
+ * texts laid out again.  The US ROM of Ages or Seasons in any language, or a fan game made on it in its English alone
+ * (`info`, as read).  0, or -1 with the reason. */
+int oracles_language_session_lay_out(OraclesLanguageSession **session, const OraclesRomInfo *info, char *error, size_t capacity);
 /* The language composed into the image (after the mods' houses), which it replaces. */
 int oracles_language_session_compose(OraclesLanguageSession *session, uint8_t **rom, size_t *rom_size, char *error, size_t capacity);
 /* Arms the guest's transaction on the composed image. */
@@ -37,6 +42,10 @@ const char *oracles_language_session_identity(const OraclesLanguageSession *sess
 void oracles_language_session_report(const OraclesLanguageSession *session, const OraclesGuest *guest, const char *prefix, FILE *out);
 /* The graphics that carry text the composition wrote in the language (0 before it, or without a language). */
 unsigned oracles_language_session_graphics(const OraclesLanguageSession *session);
+/* Whether the session serves a translation: a pack's language, not English (US) laid out alone. */
+int oracles_language_session_translated(const OraclesLanguageSession *session);
+/* What the composition did (NULL without a language). */
+const OraclesLanguageReport *oracles_language_session_composed(const OraclesLanguageSession *session);
 void oracles_language_session_stop(OraclesLanguageSession *session);
 
 #endif

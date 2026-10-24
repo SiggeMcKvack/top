@@ -47,6 +47,7 @@ struct OraclesLanguagePack {
  * text's tables, its font and the first of the banks it leaves empty for a language). */
 typedef struct language_target {
     OraclesGame game;                    /* the family, whose European ROM the translations come from */
+    OraclesRomRevision revision;         /* the image's: an original's US ROM, or the fan game's */
     const OraclesGuestTables *tables;
     unsigned first_bank;                 /* the language's index and texts, from it to LANGUAGE_LAST_BANK */
     int original;                        /* an original US ROM: the image may hold the mods' houses, and grows to 2 MiB */
@@ -181,6 +182,44 @@ const char *language_table_rom(const language_table *table);
 int language_table_find(const language_table *table, OraclesLanguage language, unsigned id, language_exception *exception);
 /* The number of (text, language) the table names, by source: counts[ORACLES_LANGUAGE_SOURCE_COUNT]. */
 void language_table_tally(const language_table *table, unsigned counts[ORACLES_LANGUAGE_SOURCE_COUNT]);
+
+/* ---- the layout of the compact text (language_wrap.c) -------------------------------------------------------- */
+
+/* A layout of `width` pixels a line in `font` (from 1 to ORACLES_TEXT_LINE_TILES cells) for the texts of `language`;
+ * NULL out of that range or of memory. */
+typedef struct language_wrap language_wrap;
+language_wrap *language_wrap_new(const OraclesTextFont *font, unsigned width, OraclesLanguage language);
+void language_wrap_free(language_wrap *wrap);
+/* The words a language's text writes with a hyphen inside a line, learned from it: a word broken by a hyphen at a line's
+ * end is joined with it when it is one of them.  In a language whose hyphens at a line's end are its compounds' (English,
+ * French, Spanish), the words it writes whole too: a word broken by a hyphen at a line's end is joined without it when
+ * the language writes it whole, or neither of its parts alone, the others keeping theirs; German and Italian break their
+ * words by syllables, and join them without it. */
+void language_wrap_learn(language_wrap *wrap, const uint8_t *text, size_t length);
+typedef enum language_wrap_result {
+    WRAP_SAME,     /* nothing to lay out again: a single box, or every page kept as it is */
+    WRAP_DONE,     /* laid out again, into `out` */
+    WRAP_FAILED    /* laid out again, it did not hold: the text keeps its layout */
+} language_wrap_result;
+/* A decoded text laid out again into `out` (`capacity` bytes, ORACLES_TEXT_MAX at least), its terminator included. */
+language_wrap_result language_wrap_text(const language_wrap *wrap, const uint8_t *text, size_t length, uint8_t *out, size_t capacity, size_t *out_length);
+/* Whether every line of a text fits the layout's width, measured as the compact text draws it, a name and a number at
+ * their widest, from either attribute a box opens with. */
+int language_wrap_fits(const language_wrap *wrap, const uint8_t *text, size_t length);
+/* The boxes a text shows, two lines a box, a \stop or \heartpiece opening the next; up to its first \jump or cmd8. */
+unsigned language_text_boxes(const uint8_t *text, size_t length);
+/* The texts of its group a text calls or jumps to within a line, by their index, at most `capacity`: those go on a
+ * line the text started, and keep their layout. */
+unsigned language_text_inline_targets(const uint8_t *text, size_t length, uint8_t *targets, unsigned capacity);
+/* The texts the compact text leaves as the game lays them out, config/vwf_keep_<game>.tsv embedded at configure, of
+ * the image of `revision`: an original's (ages, seasons) or a fan game's (moonrise, kinomi, temple); the table's text,
+ * empty for another, and the table read; NULL with the reason when a row is not one. */
+typedef struct language_keep language_keep;
+const char *language_keep_table(OraclesRomRevision revision);
+language_keep *language_keep_load(OraclesRomRevision revision, char *error, size_t capacity);
+language_keep *language_keep_parse(const char *table, char *error, size_t capacity);
+int language_keep_has(const language_keep *keep, OraclesLanguage language, unsigned id);
+void language_keep_free(language_keep *keep);
 
 /* ---- the port's own texts (language_own.c) -------------------------------------------------------------------- */
 

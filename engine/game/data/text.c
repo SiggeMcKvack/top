@@ -1,5 +1,7 @@
 #include "oracles_text.h"
 
+#include <string.h>
+
 #define DICTIONARY_DEPTH 4u   /* fragments inserted in fragments, at most */
 #define CODE_NEWLINE 0x01u
 #define CODE_DICTIONARY_FIRST 0x02u
@@ -143,4 +145,47 @@ unsigned oracles_text_longest_line(const uint8_t *text, size_t length)
         if (line > longest) longest = line;
     }
     return longest;
+}
+
+int oracles_text_font(const OraclesRom *rom, size_t font_start, OraclesTextFont *font)
+{
+    memset(font, 0, sizeof *font);
+    if (font_start + 16u * 0x100u > rom->size) return ORACLES_ERR_RANGE;
+    for (unsigned c = ORACLES_TEXT_FIRST_CHARACTER; c < 0x100u; c++) {
+        unsigned ink = 0;
+        for (unsigned row = 0; row < 16u; row++) ink |= rom->data[font_start + 16u * c + row] ^ 0xffu;
+        if (!ink) { font->advance[c] = ORACLES_TEXT_SPACE_ADVANCE; continue; }
+        unsigned left = 0, right = ORACLES_TEXT_CELL_WIDTH - 1u;
+        while (!(ink & 0x80u >> left)) left++;
+        while (!(ink & 0x80u >> right)) right--;
+        font->left[c] = (uint8_t)left;
+        font->width[c] = (uint8_t)(right - left + 1u);
+        font->advance[c] = (uint8_t)(right == ORACLES_TEXT_CELL_WIDTH - 1u ? font->width[c] : font->width[c] + 1u);
+    }
+    return ORACLES_OK;
+}
+
+void oracles_text_place(OraclesTextPen *pen, const OraclesTextFont *font, uint8_t c, uint8_t attribute, int whole, unsigned *start, unsigned *from,
+                        unsigned *drawn)
+{
+    const unsigned cell = ORACLES_TEXT_CELL_WIDTH, tiles = ORACLES_TEXT_LINE_TILES;
+    whole = whole || c < ORACLES_TEXT_FIRST_CHARACTER;
+    const unsigned width = whole ? cell : font->width[c];
+    if (pen->joined && !whole && width && font->left[c]) pen->pen++;   /* after a glyph that reached its cell's edge, the column this one's cell left */
+    pen->joined = !whole && width && font->left[c] + width == cell;
+    const unsigned tile = pen->pen / cell;
+    if (pen->pen % cell && (whole || (width && tile < tiles && pen->inked[tile] && pen->attribute[tile] != attribute))) pen->pen = (tile + 1u) * cell;
+    *start = pen->pen;
+    *from = whole ? 0 : font->left[c];
+    *drawn = width;
+    for (unsigned t = pen->pen / cell; width && t <= (pen->pen + width - 1u) / cell && t < tiles; t++) {
+        pen->attribute[t] = attribute;
+        pen->inked[t] = pen->marked[t] = 1;
+    }
+    if (!width && pen->pen / cell < tiles && !pen->inked[pen->pen / cell]) {
+        pen->attribute[pen->pen / cell] = attribute;
+        pen->marked[pen->pen / cell] = 1;
+    }
+    if (width) pen->end = pen->pen + width;
+    pen->pen += whole ? cell : font->advance[c];
 }

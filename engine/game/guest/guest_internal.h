@@ -88,11 +88,18 @@ struct OraclesGuest {
     uint16_t call_watch_sp;                          /* 0, or SP at the entry of the checkReloadStatusBarGraphics a call returns through */
     const uint8_t *language_index;                   /* the language transaction (guest_text.c): the index in the core's ROM, or NULL */
     char language[ORACLES_LANGUAGE_INDEX_CODE_BYTES];
-    unsigned language_served, language_english, language_missing;
+    unsigned language_served, language_english, language_missing, language_laid_out;
     unsigned mermaid_strokes, flippers_strokes;      /* the swim's hold (guest_swim.c): strokes it started */
     unsigned cheats, cheats_armed;                   /* the cheats (guest_cheats.c): those on, those whose point is armed */
     OraclesGuestSym ammo_scripted_return;            /* where the bomb-upgrade fairy's call of decNumBombs returns; bank ABSENT: none */
     OraclesGuestCheatCounts cheat_counts;
+    int compact_armed, compact_open;                 /* the compact text (guest_compact_text.c): armed; within a drawLineOfText call */
+    int compact_pending, compact_place_next;         /* the open line's last character not kept yet; the next is a cursor's place */
+    unsigned compact_count;                          /* the open line's characters kept */
+    uint16_t compact_return, compact_return_sp;      /* where its drawLineOfText call returns, and SP once it has */
+    OraclesGuestCompactCharacter compact_line[ORACLES_GUEST_LINE_CHARACTERS];
+    OraclesGuestCompactCounts compact_counts;
+    OraclesTextFont compact_font;                    /* the image's font, read when it arms */
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
     uint16_t link_shown_x, link_shown_y;             /* Link (8.8) where the OAM the frame just scanned drew him (oracles_guest_link_shown) */
@@ -115,5 +122,7 @@ void oracles_guest_mermaid_stroke(OraclesGuest *guest);
 void oracles_guest_flippers_stroke(OraclesGuest *guest);
 /* guest_cheats.c: at a cheat's point. */
 void oracles_guest_cheat_point(OraclesGuest *guest, OraclesGuestEventType type);
+/* guest_compact_text.c: at the compact text's points. */
+void oracles_guest_compact_text_point(OraclesGuest *guest, OraclesGuestEventType type);
 
 #endif

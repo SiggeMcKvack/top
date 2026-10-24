@@ -16,6 +16,7 @@
 #define ORACLES_ROUTE_FORMAT_DIAGONAL 6    /* written with the transitions' diagonal among the options: the same */
 #define ORACLES_ROUTE_FORMAT_CHEATS 7      /* written with a cheat among the options: the same */
 #define ORACLES_ROUTE_FORMAT_CHEAT_VERB 8  /* written with a `cheat` line, a cheat changed during the session: a verb a reader before it does not know */
+#define ORACLES_ROUTE_FORMAT_TEXT_COMPACT 9   /* written with the compact text among the options: a reader before it would replay without */
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
@@ -33,6 +34,7 @@ typedef struct OraclesRouteHeader {
 #define ORACLES_ROUTE_OPTION_LANGUAGE "language-"   /* and the language's code ("language-fr"): the texts the route was played in */
 #define ORACLES_ROUTE_OPTION_SWIM_HOLD "swim-hold"   /* the swim's strokes started by a held button */
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL "continuous-diagonal"   /* with the transitions: a diagonal held carries Link across their axis too */
+#define ORACLES_ROUTE_OPTION_TEXT_COMPACT "text-compact"   /* the text box's lines drawn in the font's own widths (--text compact) */
 #define ORACLES_ROUTE_OPTION_CHEAT "cheat-"   /* and a cheat's name ("cheat-no-damage"): a cheat on from the start; a `cheat` line changes one later */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);

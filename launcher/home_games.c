@@ -655,6 +655,10 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
     /* The cheats of the game's Oracle: the command line's, else settings.txt's cheats_<game>=; none for a fan game. */
     if (fan) o.cheats = 0;
     else if (!o.cheats_given) o.cheats = games->settings->cheats[g];
+    /* The compact text, in Enhanced alone: the command line's, else settings.txt's text=, a fan game's too (in its
+     * English, the only language the launcher starts it in); an image no profile qualifies plays without (check_profile). */
+    if (!o.compact_text) o.compact_text = games->settings->compact_text ? 2 : 1;
+    if (profile == ORACLES_PROFILE_FAITHFUL) o.compact_text = 1;
     /* No fan game's profile allows the item hotkeys yet: off, whatever the command line gave for the Oracles. */
     if (fan) o.hotkeys_option = hotkey_names[0];
     else if (!o.hotkeys_option) o.hotkeys_option = hotkey_names[state.hotkeys];

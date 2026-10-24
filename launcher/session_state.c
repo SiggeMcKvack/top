@@ -88,6 +88,10 @@ int oracles_session_save_state(session *s, char *message, size_t capacity)
     uint8_t transition[ORACLES_ROOM_TRANSITION_STATE_SIZE];
     s->state_info.transition_state = transition;
     s->state_info.transition_state_size = oracles_room_transition_save_state(s->transition, transition, sizeof transition);
+    /* The compact text's line, when the state falls within its drawLineOfText call. */
+    uint8_t line[ORACLES_GUEST_COMPACT_STATE_SIZE];
+    s->state_info.compact_text_state = line;
+    s->state_info.compact_text_state_size = oracles_guest_compact_save_state(s->guest, line, sizeof line);
     int ok = 0;
     if (oracles_state_serialize(s->core, &s->state_info, &data, &size, error, sizeof error) != 0) {
         fprintf(stderr, "oracles: %s\n", error);
@@ -103,6 +107,8 @@ int oracles_session_save_state(session *s, char *message, size_t capacity)
     s->state_info.mods_storage_size = 0;
     s->state_info.transition_state = NULL;
     s->state_info.transition_state_size = 0;
+    s->state_info.compact_text_state = NULL;
+    s->state_info.compact_text_state_size = 0;
     free(storage);
     free(data);
     return ok;
@@ -129,13 +135,18 @@ int oracles_session_load_state(session *s, char *message, size_t capacity)
         free(data);
         return 0;
     }
-    /* A state taken with the transitions and loaded without them, or the other way round, or taken on the other
-     * surface, is refused whole before the core is touched, with the options (and the launcher's choices) that
-     * make each: a player of the launcher and one of the command line meet the same refusals. */
+    /* A state taken with the transitions and loaded without them, or the other way round, with the other text, or
+     * taken on the other surface, is refused whole before the core is touched, with the options (and the launcher's
+     * choices) that make each: a player of the launcher and one of the command line meet the same refusals. */
     int refused = 0;
     char saved_mods[1100], detail[320];
     if (oracles_state_mods(data, size, saved_mods, sizeof saved_mods) == 0
         && oracles_state_transitions_refusal(has_transitions(saved_mods), s->enhanced, s->continuous_transitions, message, capacity, detail, sizeof detail)) {
+        fprintf(stderr, "oracles: %s\n", detail);
+        refused = 1;
+    }
+    if (!refused && oracles_state_mods(data, size, saved_mods, sizeof saved_mods) == 0
+        && oracles_state_text_refusal(saved_mods, s->state_info.mods, message, capacity, detail, sizeof detail)) {
         fprintf(stderr, "oracles: %s\n", detail);
         refused = 1;
     }
@@ -157,6 +168,11 @@ int oracles_session_load_state(session *s, char *message, size_t capacity)
         if (s->transition && oracles_state_transition_state(data, size, &transition, &transition_size) == 0 && transition_size
             && oracles_room_transition_load_state(s->transition, transition, transition_size) != 0)
             fprintf(stderr, "oracles: the savestate's transitions' state is refused: a transition it was saved in is left to the game's scroll\n");
+        const uint8_t *line = NULL;
+        size_t line_size = 0;
+        if (s->guest && oracles_state_compact_text_state(data, size, &line, &line_size) == 0 && line_size
+            && oracles_guest_compact_load_state(s->guest, line, line_size) != 0)
+            fprintf(stderr, "oracles: the savestate's compact text's line is refused\n");
         oracles_mod_session_reset(s->mod);   /* no conversation survives a load */
         const uint8_t *storage = NULL;
         size_t storage_size = 0;

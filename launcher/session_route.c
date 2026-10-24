@@ -60,6 +60,11 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
     if (route_swim_hold != s->swim_hold)
         fprintf(stderr, "oracles: the route was recorded %s --swim-hold: the replay plays %s it\n", route_swim_hold ? "with" : "without", route_swim_hold ? "with" : "without");
     s->swim_hold = route_swim_hold;
+    /* The compact text, a setting of every game: the route's, whatever it is (check_profile refuses it in Faithful). */
+    const int route_compact = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
+    if (route_compact != s->compact_text)
+        fprintf(stderr, "oracles: the route was recorded with the %s text: the replay plays with it\n", route_compact ? "compact" : "classic");
+    s->compact_text = route_compact;
     /* The cheats, a setting of each game: the route's, whatever they are. */
     unsigned route_cheats = 0;
     char names[64];
@@ -122,13 +127,17 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL, used ? "," : "");
     }
-    if (s->language) {   /* the texts' lengths pace the dialogues: a replay plays in the same language */
+    if (oracles_language_session_translated(s->language)) {   /* the texts' lengths pace the dialogues: a replay plays in the same language */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_LANGUAGE "%s", used ? "," : "", o->language);
     }
     if (s->swim_hold) {   /* a stroke started by the hold is not in the keys: a replay starts it too */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_SWIM_HOLD, used ? "," : "");
+    }
+    if (s->compact_text) {   /* its pages pace the dialogues: a replay plays with it */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_TEXT_COMPACT, used ? "," : "");
     }
     if (s->cheats) {   /* a cheat's answers are not in the keys: a replay gives them too */
         const size_t used = strlen(header.options);

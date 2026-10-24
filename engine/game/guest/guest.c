@@ -113,6 +113,7 @@ static void emit(OraclesGuest *guest, OraclesGuestEventType type, uint16_t pc, u
     if (type == ORACLES_EVENT_MERMAID_STROKE) oracles_guest_mermaid_stroke(guest);
     if (type == ORACLES_EVENT_FLIPPERS_STROKE) oracles_guest_flippers_stroke(guest);
     if (type == ORACLES_EVENT_CHEAT_DAMAGE || type == ORACLES_EVENT_CHEAT_AMMO || type == ORACLES_EVENT_CHEAT_RUPEES) oracles_guest_cheat_point(guest, type);
+    if (type >= ORACLES_EVENT_TEXT_LINE && type <= ORACLES_EVENT_TEXT_COLUMN_SHOWN) oracles_guest_compact_text_point(guest, type);
     if (!guest->sink && !guest->listener_count) return;
     const OraclesCoreRegisters r = oracles_core_registers(guest->core);
     OraclesGuestEvent event;
@@ -345,6 +346,9 @@ void oracles_guest_reset_execution_state(OraclesGuest *guest)
     guest->policy_not_asked = 0;
     guest->call_count = 0;      /* the calls queued belong to the execution the load replaced */
     guest->call_watch_sp = 0;
+    guest->compact_open = 0;    /* a line the load interrupted is given back by oracles_guest_compact_load_state */
+    guest->compact_pending = guest->compact_place_next = 0;
+    guest->compact_count = 0;
     if (guest->transition_reset) guest->transition_reset(guest->transition_opaque);
     if (guest->inventory_reset) guest->inventory_reset(guest->inventory_opaque);
 }
@@ -402,6 +406,9 @@ static void on_vblank(void *opaque, OraclesVblankType type)
     guest->link_shown_x = guest->link_next_x; guest->link_shown_y = guest->link_next_y;
     if (guest->link_shown_vblanks < 2u) guest->link_shown_vblanks++;
     if (guest->vblank_hook) guest->vblank_hook(guest->vblank_opaque, type);
+    /* The compact text's reveal in the VRAM, after the hosts read the frame just scanned and before the game's vblank
+     * handler copies the map the text thread wrote: the next frame shows both. */
+    if (guest->compact_armed) oracles_guest_compact_vblank(guest);
     /* A frame the game's logic did not finish (a room load spans a few): the
      * transaction runs at the vblank instead, so that Link walks through the
      * load as well; it writes only while the transition loads the room

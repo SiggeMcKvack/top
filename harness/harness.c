@@ -476,6 +476,18 @@ static void report_checks(run *r, const harness_options *o, FILE *summary, uint8
         if (summary) fprintf(summary, "cheats.damage_cancelled=%u\ncheats.health_kept=%u\ncheats.ammo_kept=%u\ncheats.payments_cancelled=%u\ncheats.rupees_kept=%u\ncheats.mod_payments=%u\n",
                              c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
     }
+    if (o->compact_text) {
+        OraclesGuestCompactCounts c;
+        oracles_guest_compact_counts(r->guest, &c);
+        fprintf(stderr, "compact text: %u lines, %u characters in %u tile columns, %u cursor places moved, %u lines of more than sixteen characters, %u characters past a line\n",
+                c.lines, c.characters, c.columns, c.places, c.long_lines, c.overflows);
+        if (summary) fprintf(summary, "text.compact_lines=%u\ntext.compact_characters=%u\ntext.compact_columns=%u\ntext.compact_places=%u\ntext.compact_long_lines=%u\ntext.compact_overflows=%u\n",
+                             c.lines, c.characters, c.columns, c.places, c.long_lines, c.overflows);
+        fprintf(stderr, "compact text's reveal: %u vblanks of a line revealed, %u tile columns written with the pixels revealed alone, %u that would show a letter cut, "
+                        "%u a letter early\n", c.reveal_frames, c.partial_writes, c.cut_frames, c.early_frames);
+        if (summary) fprintf(summary, "text.reveal_frames=%u\ntext.reveal_partial_writes=%u\ntext.reveal_cut_frames=%u\ntext.reveal_early_frames=%u\n",
+                             c.reveal_frames, c.partial_writes, c.cut_frames, c.early_frames);
+    }
     if (r->guest) {
         unsigned overflow = 0, purged = 0;
         oracles_guest_dropped_returns(r->guest, &overflow, &purged);
@@ -564,6 +576,11 @@ static void report_language(run *r, FILE *summary)
     oracles_guest_language_counts(r->guest, &served, &english, &missing);
     if (summary) fprintf(summary, "language.code=%s\nlanguage.texts_served=%u\nlanguage.texts_english=%u\nlanguage.texts_missing=%u\nlanguage.graphics=%u\n",
                          oracles_guest_language(r->guest), served, english, missing, oracles_language_session_graphics(r->language));
+    /* The compact text's layout of the language's texts, and those of them the game looked up. */
+    const OraclesLanguageReport *c = oracles_language_session_composed(r->language);
+    if (summary && c && (c->laid_out || c->layout_kept || c->layout_failed))
+        fprintf(summary, "text.laid_out=%u\ntext.layout_kept=%u\ntext.layout_failed=%u\ntext.boxes=%u\ntext.boxes_laid_out=%u\ntext.laid_out_served=%u\n",
+                c->laid_out, c->layout_kept, c->layout_failed, c->boxes, c->boxes_laid_out, oracles_guest_language_laid_out(r->guest));
     oracles_language_session_stop(r->language);
 }
 
@@ -587,6 +604,18 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
     }
     if (oracles_language_session_note(r->language)[0]) fprintf(stderr, "harness: %s\n", oracles_language_session_note(r->language));
     if (r->language && !o->hooks) { fprintf(stderr, "harness: --language needs the hooks on\n"); free(rom); return 1; }
+    if (oracles_route_read(o->route_path, &r->route, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
+    /* The compact text lays the texts out again where the language is composed: decided before it. */
+    if (oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) && !o->compact_text) {
+        o->compact_text = 1;
+        fprintf(stderr, "harness: the route was recorded with --text compact: the option is on\n");
+    }
+    if (o->compact_text && (!oracles_compat_compact_text(oracles_compat_find(&info)) || !o->enhanced_dir)) {   /* never armed in Faithful: it changes what the core draws */
+        fprintf(stderr, "harness: the compact text plays in Enhanced alone (--enhanced-check), on Ages, Seasons and the fan games made on them; refusing the request and route option\n");
+        free(rom);
+        return 1;
+    }
+    if (o->compact_text && oracles_language_session_lay_out(&r->language, &info, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     /* A mod's houses are in the image before the core exists. */
     if (o->mods_count) {
         r->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, info.game, rom, rom_size, error, sizeof error);
@@ -598,7 +627,6 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         }
     }
     if (r->language && oracles_language_session_compose(r->language, &rom, &rom_size, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
-    if (oracles_route_read(o->route_path, &r->route, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     /* The core: --core's, else the one the route was recorded on. */
     const OraclesCoreKind kind = o->core_given ? (OraclesCoreKind)o->core_kind : oracles_route_core_mgba(&r->route.header) ? ORACLES_CORE_MGBA : ORACLES_CORE_SAMEBOY;
     const OraclesCoreOptions options = { o->sample_rate_hz, o->colour_correction, kind, 0 };   /* no audio unless asked: --sample-rate proves the state does not depend on it */
@@ -731,6 +759,10 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     if ((o->cheats || r->cheats_changed)
         && (!r->guest || oracles_guest_set_cheats(r->guest, o->cheats | r->cheats_changed) != 0 || oracles_guest_set_cheats(r->guest, o->cheats) != 0)) {
         fprintf(stderr, "harness: --cheats and a route's cheat lines need the hooks on, and the cheats' points found in the ROM\n");
+        return 1;
+    }
+    if (o->compact_text && (!r->guest || oracles_guest_arm_compact_text(r->guest) != 0)) {
+        fprintf(stderr, "harness: --text compact needs the hooks on, and its points found in the ROM\n");
         return 1;
     }
     if (o->hotkeys_live.mode) {
