@@ -43,7 +43,7 @@ long ev_key_offset(const OraclesEnhancedView *v, uint16_t a)
 
 void ev_drop_entry(entry *e)
 {
-    e->valid = 0; e->failed = 0; e->not_a_start = 0; e->waits_start = 0; e->retry_when_link_moves = 0; e->retry_after_fade = 0; e->live_valid = 0; e->settled_size = 0; e->refresh = 0; e->refresh_season = 0; e->refresh_failures = 0; e->rerun = 0;
+    e->valid = 0; e->failed = 0; e->not_a_start = 0; e->waits_start = 0; e->strict_parent = 0; e->retry_when_link_moves = 0; e->retry_after_fade = 0; e->live_valid = 0; e->settled_size = 0; e->refresh = 0; e->refresh_season = 0; e->refresh_failures = 0; e->rerun = 0;
 }
 
 void ev_invalidate_all(OraclesEnhancedView *v)

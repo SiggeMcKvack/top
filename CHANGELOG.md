@@ -20,6 +20,10 @@ What changed in each version of The Oracles Project, the newest first. The relea
 
 - **Smoother diagonal transitions.** With **Continuous transitions**, crossing a room edge diagonally, walking or swimming, no longer stalls for a moment while the next room loads. It works in Ages and Seasons.
 
+### Fixed
+
+- In the drawn-back view (Medium and Far), the farthest rooms no longer stay black for a moment each time Link walks into ground he has not been to yet, nor a room beside one that starts a scene after a savestate is loaded next to it.
+
 ## 1.2.0 (2026-10-18)
 
 Most of this release answers what players asked for after 1.1.0, many of them on Retroid, AYN and Anbernic handhelds. Thank you for every report, screenshot and log, and to everyone who tested the builds and posted feedback: they shaped this version.

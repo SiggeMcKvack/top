@@ -90,6 +90,7 @@ typedef struct OraclesGhostResult {
     uint8_t key[ORACLES_GHOST_KEY_BYTES];
     size_t key_len;
     unsigned prerun_frames;
+    int settled_primeable;                        /* the settled state kept is in normal play (oracles_ghost_primeable): a run from it primes at once */
     unsigned probe_frames;                        /* the capture's probe: the frames it ran after the settled state */
     uint8_t from_group, from_room;                /* the room the ghost primed in (after a pre-run, the room the load reached) */
     /* The objects of the room entered, as they stand when the run settles, with

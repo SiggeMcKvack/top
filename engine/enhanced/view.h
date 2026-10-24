@@ -551,6 +551,12 @@ const char *oracles_enhanced_view_black_log(const OraclesEnhancedView *view);
  * ghost (a cutscene): its key the live one but for the flags of other rooms
  * (the room flags' pages at `flags_at` in the key, `flags_length` long). */
 int oracles_enhanced_parent_key_holds(const uint8_t *parent_key, const uint8_t *live_key, size_t length, long flags_at, size_t flags_length, long own);
+/* Whether a parent's key is the live one for a room chained from it: but for
+ * the visited bit (`visited`) of the parent's own flags (at `own` in the key),
+ * and, `visits` not NULL, of the other rooms' flags (the pages at `flags_at`,
+ * `flags_length` long), `*visits` then set when one of those differs. */
+int oracles_enhanced_parent_key_current(const uint8_t *parent_key, const uint8_t *live_key, size_t length, long flags_at, size_t flags_length, long own,
+                                        uint8_t visited, int *visits);
 /* Whether the `count` bytes a run read, at `addresses`, as it saw them
  * (`seen`) are the live ones: the visited bit (`visited`) of the room's own
  * flags (`own_flags`) aside, which the entry into it sets and no load reads.

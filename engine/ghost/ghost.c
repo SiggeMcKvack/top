@@ -456,6 +456,7 @@ static void capture_settled(OraclesGhost *g, OraclesGhostResult *result)
     oracles_animation_read(g->guest, &result->animation);
     if (!g->settled_state) g->settled_state = malloc(g->state_size);
     g->settled_size = g->settled_state && oracles_core_save_state(g->core, g->settled_state, g->state_size) == 0 ? g->state_size : 0;
+    result->settled_primeable = oracles_ghost_primeable(g->guest, NULL);
 }
 
 /* The warp a dive into the sea or a return to its surface sets, where Link

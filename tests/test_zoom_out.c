@@ -865,6 +865,34 @@ static void parent_keys(void)
     CHECK(oracles_enhanced_parent_key_holds(parent, live, 64u, -1, 0u, -1));
 }
 
+/* A parent judged for a room chained from it: its key the live one but for
+ * its own visited bit, and, in the drawn-back band, the other rooms' visited
+ * bits (Link's first entry into a room, the rooms the ghost's chain crossed),
+ * said so that the run's reads are checked on delivery. */
+static void parent_visits(void)
+{
+    uint8_t parent[64], live[64];
+    for (unsigned i = 0; i < 64u; i++) parent[i] = live[i] = (uint8_t)(i * 7u);
+    const long flags_at = 16, own = 16 + 0x17;
+    int visits = 0;
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && !visits);
+    live[own] ^= 0x10u;                          /* its own visited bit: holds, nothing to check */
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && !visits);
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, -1, 0u, own, 0x10u, NULL));
+    live[16 + 0x18] ^= 0x10u;                    /* another room's visited bit: holds, its reads to check */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, NULL));   /* not judged so: not */
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && visits);
+    visits = 0;
+    live[16 + 0x19] ^= 0x20u;                    /* another flag of another room: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[16 + 0x19] ^= 0x20u; live[own] ^= 0x01u;   /* another bit of its own flags: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[own] ^= 0x01u; live[3] ^= 0x10u;        /* bit 4 of a byte outside the flags: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[3] ^= 0x10u; live[16 + 32] ^= 0x10u;    /* the byte just past them: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+}
+
 /* A room run from beside during a cutscene, kept only if the bytes its run
  * read are the live ones, the visited bit of its own flags aside. */
 static void beside_reads(void)
@@ -1105,6 +1133,7 @@ int main(void)
     black_count();
     black_kinds();
     parent_keys();
+    parent_visits();
     beside_reads();
     waiting_on_a_start();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

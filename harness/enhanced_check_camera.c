@@ -94,6 +94,7 @@ void ec_reload_step(OraclesEnhancedCheck *c, uint32_t frame, int32_t camera_x, c
         if (!reload_load_state(c, shown, room)) return;
         c->reload_done = 1;
         c->reload_frame = frame;
+        c->have_camera = 0;   /* the load puts the camera back where it stood at the save, as a teleport snaps it */
         return;
     }
     if (c->reload_done && !c->reload_settled) {

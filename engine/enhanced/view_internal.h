@@ -152,6 +152,8 @@ typedef struct entry {
     uint32_t waits_since;               /* since when */
     unsigned waits_parent, waits_ref;   /* that parent and the reference room then, group << 8 | room: the mark holds for them alone */
     int corner_asked;                   /* a corner beyond it asked for that, and it has not held for the key since (view_schedule.c) */
+    int strict_parent;                  /* a run from a parent judged with other rooms' visited bits aside read one of them: its parents judged on the whole key until it is delivered */
+    int settled_primeable;              /* its settled state was in normal play when kept: a run from it primes at once, without a pre-run that may go to another room */
     uint8_t season;                     /* the season it was loaded in */
     uint8_t collisions[ORACLES_GHOST_LAYOUT_BYTES];
     uint8_t tiles[2u * ORACLES_GHOST_TILE_BYTES];   /* its own tile data: tileset, unique graphics, one animation frame */
@@ -331,7 +333,8 @@ struct OraclesEnhancedView {
     unsigned pending_generation;
     int pending_pipeline;            /* the colour pipeline the run renders in */
     int pending_chained;             /* from a parent's settled state */
-    int pending_beside;              /* from a room beside it, a cutscene holding the game (view_schedule.c, run_from_beside) */
+    int pending_beside;              /* from a room beside it, a cutscene holding the game (view_schedule.c, run_from_beside), or from a parent judged with other rooms' visited bits aside: its reads checked on delivery */
+    int pending_visits;              /* that parent judged so (view_schedule.c, run_from_parent) */
     uint8_t pending_killed_list[16]; /* the live wEnemiesKilledList the pending run stands for */
     unsigned pending_parent;
     uint8_t pending_parent_room;
@@ -358,7 +361,7 @@ struct OraclesEnhancedView {
         uint8_t pending_group, pending_room;
         unsigned pending_generation;
         int pending_pipeline;
-        int pending_chained, pending_beside;
+        int pending_chained, pending_beside, pending_visits;
         uint8_t pending_killed_list[16];
         unsigned pending_parent;
         uint8_t pending_parent_room;
