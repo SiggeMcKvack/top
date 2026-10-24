@@ -1,6 +1,7 @@
 /* The hotbar's drawing, without a ROM: where the four
  * slots stand, that nothing is ever written in the game's 160 columns nor
- * under the HUD band, and what each state of a slot puts on screen. */
+ * under the HUD band, and what each state of a slot puts on screen; from a
+ * column, with the status bar laid out. */
 #include "hotbar.h"
 
 #include <stdio.h>
@@ -78,6 +79,17 @@ int main(void)
     CHECK(count(surface, 208, 0xff100000u | 0x1234u) == 0 && count(surface, 208, REFUSED) == 60u);
     /* slot 4: a dotted frame, half the pixels of a whole one */
     CHECK(count(surface, 232, FAINT) == 31u && count(surface, 232, BADGE) == 0);   /* every other pixel of the sixty, one corner shared */
+    /* From a column, the status bar laid out: the four slots side by side there, the rest untouched. */
+    for (unsigned i = 0; i < W * H; i++) surface[i] = UNTOUCHED;
+    oracles_hotbar_draw_at(surface, W, 80u, slots, &palette);
+    wrong = unpainted = 0;
+    for (unsigned y = 0; y < H; y++) for (unsigned x = 0; x < W; x++) {
+        const int in_slots = y < 16u && x >= 80u && x < 80u + 4u * ORACLES_HOTBAR_SLOT_WIDTH;
+        if (!in_slots && surface[y * W + x] != UNTOUCHED) wrong++;
+        if (in_slots && surface[y * W + x] == UNTOUCHED) unpainted++;
+    }
+    CHECK(wrong == 0 && unpainted == 0);
+    CHECK(count(surface, 80u, BADGE) > 20u && count(surface, 104u, INK) > 30u && count(surface, 128u, REFUSED) == 60u && count(surface, 152u, FAINT) == 31u);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("test_hotbar: ok\n");
     return 0;

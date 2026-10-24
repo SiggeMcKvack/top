@@ -24,7 +24,7 @@ const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS] = { "Profile", "Q
                                                                    "Text", "Text box", "Text size" };
 const char *const oracles_display_view_names[3] = { "Near", "Medium", "Far" };
 const char *const oracles_display_colour_choices[2] = { "Off", "On" };
-const char *const oracles_display_hud_choices[2] = { "Original", "Full width" };
+const char *const oracles_display_hud_choices[3] = { "Original", "Full width", "Wide layout" };
 const char *const oracles_display_margin_choices[ORACLES_DISPLAY_MARGINS] = { "Off", "Auto", "Small", "Large" };
 const char *const oracles_display_vsync_choices[3] = { "Auto", "On", "Off" };
 const char *const oracles_display_core_choices[2] = { "Accurate (SameBoy)", "Fast (mGBA)" };
@@ -410,7 +410,7 @@ const char *oracles_display_explanation(unsigned row)
 {
     switch (row) {
         case ORACLES_DISPLAY_VIEW: return "How much of the world the Enhanced view shows; farther asks more of the device.";
-        case ORACLES_DISPLAY_HUD: return "Full width paints the status bar's color across the screen; Original keeps it as the game draws it.";
+        case ORACLES_DISPLAY_HUD: return "Wide layout: hearts left, items right. Full width: the bar's color across.";
         case ORACLES_DISPLAY_TEXT:
         case ORACLES_DISPLAY_LETTERS:
         case ORACLES_DISPLAY_TEXT_BOX:
@@ -440,7 +440,7 @@ const char *oracles_display_explanation(unsigned row)
  * workers make (quality_set). */
 static OraclesHomeCommand display_set(OraclesHomeNav *nav, unsigned row, int value)
 {
-    static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 2, 0, 2, 0, 2, 2, 3, 3, 2, ORACLES_DISPLAY_MARGINS,
+    static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 3, 0, 2, 0, 2, 2, 3, 3, 2, ORACLES_DISPLAY_MARGINS,
                                                       2, 2, ORACLES_DISPLAY_TEXT_SIZES };
     int profile = (int)nav->display.profile;
     int *fields[ORACLES_DISPLAY_ROWS] = { &profile, NULL, &nav->display.window, &nav->display.view, &nav->display.hud, NULL,

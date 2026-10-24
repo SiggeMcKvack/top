@@ -60,7 +60,7 @@ static int pause_settings_changed(void *opaque)
     }
     if (changed & ORACLES_SESSION_CHANGED_HUD) {
         oracles_enhanced_view_set_hud(s->view, applied.hud);
-        fprintf(stderr, "oracles: status bar %s\n", applied.hud ? "full width" : "original");
+        fprintf(stderr, "oracles: status bar %s\n", oracles_settings_hud_names[applied.hud >= 0 && applied.hud < 3 ? applied.hud : 0]);
     }
     if (changed & ORACLES_SESSION_CHANGED_TEXT_SIZE) {
         oracles_enhanced_view_set_text_size(s->view, (unsigned)applied.text_size);

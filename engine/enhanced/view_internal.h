@@ -6,7 +6,7 @@
  * view_schedule.c (which room the ghost runs next),
  * view_render.c (the neighbours' pixels, the fade, the large rooms),
  * view_overlay.c (the sprites drawn beyond the game's window), view_poses.c (a
- * neighbour's objects animated in place). */
+ * neighbour's objects animated in place), view_hud.c (the HUD band). */
 #ifndef ORACLES_ENHANCED_VIEW_INTERNAL_H
 #define ORACLES_ENHANCED_VIEW_INTERNAL_H
 
@@ -499,11 +499,18 @@ struct OraclesEnhancedView {
     int hotbar_verify;
     int8_t hotbar_icon_origin[ORACLES_GUEST_ITEM_LABELS][HOTBAR_ICON_VARIANTS][2];   /* where the icon's corner stands from the sprites' left edge, and from the top line */
     unsigned hotbar_icons_checked, hotbar_icon_wrong, hotbar_outside_gutters;
-    /* The status bar drawn full width (hud=full): the gutters' colours of the last composition, line by line, the world
-     * frames that filled a line at least, and the lines of those frames left to the border. */
-    int hud_full;
+    /* The status bar drawn full width (hud=full, and laid out): the gutters' colours of the last composition, line by
+     * line, the world frames that filled a line at least, and the lines of those frames left to the border. */
+    int hud;                         /* OraclesEnhancedHud */
     uint32_t hud_fill[2u * ORACLES_ENHANCED_HUD_HEIGHT];
     unsigned hud_frames, hud_lines_kept;
+    /* The status bar laid out (hud=wide, view_hud.c): the last composition's blocks, the layout last laid out, whether
+     * the tightened B and A are known (Biggoron's sword frames them either way), and the world frames counted. */
+    int hud_laid;
+    OraclesEnhancedHudPlace hud_place;
+    OraclesEnhancedBarLayout hud_layout;
+    int hud_tight_known, hud_tight;
+    unsigned hud_wide_frames, hud_wide_centred, hud_wide_one_row;
     /* The Maku tree stands in the reference room (an INTERAC_MAKU_TREE, $87, both games), sampled in normal play. */
     int ref_maku;
     uint8_t ref_maku_group, ref_maku_room;

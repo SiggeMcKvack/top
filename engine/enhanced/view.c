@@ -487,6 +487,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     } else v->large_was_in_scroll = 0;
     const int load_band = ev_load_band(v, &in, tracking, camera_x, camera_y);
     in.hud_fill = ev_hud_fill(v, in.mode);
+    in.hud_place = ev_hud_place(v, in.mode);
     v->sub_x = v->sub_y = 0;
     v->sub_layer_w = v->sub_layer_h = 0;
     v->sub_fixed_count = 0;

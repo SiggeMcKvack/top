@@ -215,7 +215,7 @@ typedef struct OraclesHomeGame {
 typedef struct OraclesHomeDisplay {
     OraclesProfile profile;     /* the one chosen; a game whose ROM allows only Faithful plays in Faithful */
     int transitions;            /* continuous transitions, on by default, in Enhanced only */
-    int hud;                    /* the HUD: 0 Original, 1 Full width (the default), the settings' hud=; in Enhanced only, from a game
+    int hud;                    /* the HUD: 0 Original, 1 Full width (the default), 2 Wide layout, the settings' hud=; in Enhanced only, from a game
                                  * too, where it applies at once */
     int text;                   /* the text: 0 Classic (the default), 1 Compact, the settings' text=; in Enhanced only; not from a
                                  * game, which keeps the texts it laid out at its start */

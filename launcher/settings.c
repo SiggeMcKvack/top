@@ -125,6 +125,7 @@ int oracles_settings_subpixel_camera(const oracles_settings *s)
 }
 
 const char *const oracles_settings_aspect_names[3] = { "auto", "16:9", "4:3" };   /* ORACLES_ASPECT_AUTO's order */
+const char *const oracles_settings_hud_names[3] = { "original", "full", "wide" };
 /* The launcher window at its first opening. */
 #define LAUNCHER_WIDTH 1280
 #define LAUNCHER_HEIGHT 720
@@ -270,7 +271,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->aspect = ORACLES_ASPECT_AUTO;
     s->far_fixed = 0;   /* fitted to the screen */
     s->ghosts = 0;   /* auto */
-    s->hud_full = 1;   /* the bar across the whole view, not a strip between two dark bands */
+    s->hud = 1;   /* full: the bar across the whole view, not a strip between two dark bands */
 #ifdef __ANDROID__
     s->menus_large = 1;   /* a small screen: the framed core at the view's scale, often 1 or 2, is hard to read */
 #else
@@ -335,7 +336,7 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         return 1;
     }
     if (!strcmp(name, "hud")) {
-        if (!strcmp(value, "original") || !strcmp(value, "full")) s->hud_full = !strcmp(value, "full");
+        for (int i = 0; i < 3; i++) if (!strcmp(value, oracles_settings_hud_names[i])) s->hud = i;
         return 1;
     }
     if (!strcmp(name, "menu_toast")) {
@@ -533,9 +534,10 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# The game's menus, its map and its cutscenes in Enhanced: large (at their own largest whole scale, as Faithful\n"
                "# shows them) or view (framed at the view's scale).\n");
     fprintf(f, "menus=%s\n", s->menus_large ? "large" : "view");
-    fprintf(f, "# The status bar in Enhanced: original (as the game draws it, dark beside it) or full (across the whole view,\n"
-               "# beside it its own background, which follows the game's colours).\n");
-    fprintf(f, "hud=%s\n", s->hud_full ? "full" : "original");
+    fprintf(f, "# The status bar in Enhanced: original (as the game draws it, dark beside it), full (across the whole view,\n"
+               "# beside it its own background, which follows the game's colours) or wide (on that background, the hearts\n"
+               "# and the money at the left corner, the items at the right).\n");
+    fprintf(f, "hud=%s\n", oracles_settings_hud_names[s->hud >= 0 && s->hud < 3 ? s->hud : 1]);
     fprintf(f, "# The view's shape: auto (the screen's, nearer 4:3 or 16:9), 16:9 or 4:3, whatever the screen.\n");
     fprintf(f, "aspect=%s\n", oracles_settings_aspect_names[s->aspect >= 0 && s->aspect < 3 ? s->aspect : 0]);
     fprintf(f, "# The far view: screen (fitted to a screen its size fills badly, 426x320 on 1280x960 and 412x360 on 1240x1080,\n"

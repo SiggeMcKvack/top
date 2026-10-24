@@ -1,6 +1,7 @@
 /* The hotbar of the item hotkeys: four slots of 24 x 16
  * in the two gutters of the HUD band, 1 and 2 on the left, 3 and 4 on the
- * right, never in the 160 columns of the game.  A slot shows the item's icon
+ * right, never in the 160 columns of the game; or, the status bar laid out
+ * across the band, side by side against B.  A slot shows the item's icon
  * as the game draws it (or a label of four letters until one is captured),
  * its key at the top right, and under it, on a badge, the button the item
  * sits on when it does.
@@ -44,5 +45,7 @@ unsigned oracles_hotbar_slot_x(unsigned n, unsigned width, unsigned core_width);
 int oracles_hotbar_fits(unsigned width, unsigned core_width);
 /* Draws the four slots in the top sixteen lines of `surface` (`width` pixels a line). */
 void oracles_hotbar_draw(uint32_t *surface, unsigned width, unsigned core_width, const OraclesHotbarSlotView slots[ORACLES_HOTBAR_SLOTS], const OraclesHotbarPalette *palette);
+/* The same, the four slots side by side from column `x`. */
+void oracles_hotbar_draw_at(uint32_t *surface, unsigned width, unsigned x, const OraclesHotbarSlotView slots[ORACLES_HOTBAR_SLOTS], const OraclesHotbarPalette *palette);
 
 #endif

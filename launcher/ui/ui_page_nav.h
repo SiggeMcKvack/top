@@ -24,8 +24,8 @@
  * Enhanced), the quality (Low to Max: the view, the core and the neighbour
  * workers set at once; Custom when they make none, which is shown and never
  * chosen; dimmed and inert in Faithful and from a game), the window (the profile's surface at 2x, 3x, 4x, or fullscreen
- * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, or its colour
- * across the whole view; dimmed and inert in Faithful), Text (the link to Display › Text, ui_page_text.h, its
+ * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, its colour
+ * across the whole view, or laid out on it, hearts left and items right; dimmed and inert in Faithful), Text (the link to Display › Text, ui_page_text.h, its
  * settings summed up beside it, "Compact · Wide · Normal"; dimmed in Faithful, and it opens all the same), color
  * correction, then Advanced
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
@@ -246,7 +246,7 @@ void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h
 const char *oracles_display_profile_note(const OraclesHomeNav *nav);
 extern const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS];
 extern const char *const oracles_display_colour_choices[2];
-extern const char *const oracles_display_hud_choices[2];    /* "Original", "Full width": settings.txt's hud= original, full */
+extern const char *const oracles_display_hud_choices[3];    /* "Original", "Full width", "Wide layout": settings.txt's hud= original, full, wide */
 /* "Off", "Auto", "Small", "Large": settings.txt's screen_margin=, an OraclesScreenMargin. */
 #define ORACLES_DISPLAY_MARGINS 4
 extern const char *const oracles_display_margin_choices[ORACLES_DISPLAY_MARGINS];

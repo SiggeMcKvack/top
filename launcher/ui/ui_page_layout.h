@@ -199,7 +199,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiOptionLayout transitions[2];
     OraclesUiWrapped explanations[9];
     OraclesUiOptionLayout colour[2], vsync[3], core[2], workers[3], scaling[2];   /* each scaling with its size */
-    OraclesUiOptionLayout hud[2];
+    OraclesUiOptionLayout hud[3];
     /* The Text link: its summary and its arrow at the right of its row, both in `text_link`, the summary's box. */
     OraclesUiLine text_summary;
     OraclesUiBox text_arrow, text_link;

@@ -97,8 +97,8 @@ struct OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions
 int oracles_session_screen_margin(int option, const oracles_settings *settings);
 
 /* What a running game shows of the settings the pause applies while it runs: the colour correction as the settings
- * had it when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws
- * it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
+ * had it when the game last took it, Scaling's Fill, the HUD (OraclesEnhancedHud, -1 without the Enhanced view, which alone
+ * draws it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
  * took them, the swim's hold (-1 where the game's profile has none), the item hotkeys' mode (an OraclesHotkeysMode) of
  * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none).  The window is not among
  * them: the pause applies it when its row is chosen (OraclesPauseSession's window_chosen). */

@@ -226,16 +226,21 @@ void oracles_enhanced_view_hotbar_counts(const OraclesEnhancedView *view, unsign
  * the drawing touched anything else. */
 void oracles_enhanced_view_hotbar_verify(OraclesEnhancedView *view, int enabled);
 void oracles_enhanced_view_hotbar_proof(const OraclesEnhancedView *view, unsigned *checked, unsigned *wrong, unsigned *outside);
-/* The status bar drawn full width (`hud=full`): the gutters beside it, on its sixteen lines, take the bar's own
- * background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour correction
- * follow), in the world band and a room's load drawn under it; the framed core keeps the border.  Off by default
- * (`hud=original`, the border).  It may change between two compositions: it is presentation alone.  The counts: world
- * frames that filled a line at least, and the gutters' lines that kept the border in every world frame with the bar,
- * filled or not, the left's and the right's sixteen each (32 a frame at most), the core's image showing there something
- * else than the bar. */
-void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int full);
+/* The status bar in the HUD band (`hud=`).  Drawn full width, the gutters beside it, on its sixteen lines, take the
+ * bar's own background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour
+ * correction follow), in the world band and a room's load drawn under it; the framed core keeps the border.  Laid out,
+ * the bar is cut into its blocks on that background (OraclesEnhancedHudPlace): the hearts and the money at the left
+ * corner, the hotbar then B and A at the right, wherever the game's map signs one of its layouts and the core's image
+ * shows it; else, and in the framed core, the bar stays centred.  Original by default (the border).  It may change
+ * between two compositions: it is presentation alone.  The counts: world frames that filled a line at least, and the
+ * gutters' lines that kept the border in every world frame with the bar, filled or not, the left's and the right's
+ * sixteen each (32 a frame at most), the core's image showing there something else than the bar; laid out, the world
+ * frames laid out, those left centred, and those with the hearts on one row. */
+typedef enum OraclesEnhancedHud { ORACLES_ENHANCED_HUD_ORIGINAL = 0, ORACLES_ENHANCED_HUD_FULL, ORACLES_ENHANCED_HUD_WIDE } OraclesEnhancedHud;
+void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int hud);
 int oracles_enhanced_view_hud(const OraclesEnhancedView *view);
 void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *lines_kept);
+void oracles_enhanced_view_hud_wide_counts(const OraclesEnhancedView *view, unsigned *laid, unsigned *centred, unsigned *one_row);
 /* A room's load (a door, stairs) drawn under the HUD band the world frames draw, the game area alone where the world
  * shows it: whether the last composition drew one, and the surface's place of the game area's top-left pixel there or in
  * the last world frame.  The counts: the load's frames drawn so, and those left framed whole for showing one colour

@@ -524,7 +524,7 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
         const int frozen = oracles_settings_quality_of(s->view_level, (int)oracles_core_kind(s->core), s->ghosts) == ORACLES_QUALITY_LOW;
         oracles_enhanced_view_set_neighbour_animation(s->view, !frozen);   /* the Low quality leaves them in their captured poses */
-        oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
+        oracles_enhanced_view_set_hud(s->view, s->settings->hud);
         if (s->text_box_wide) oracles_enhanced_view_set_text_box(s->view, ORACLES_TEXT_BOX_WIDE_PIXELS, ORACLES_TEXT_BOX_GAME_LINES);
         /* Text size: the command line's, else the settings'; presentation alone, which the pause changes at once.  A
          * fan game keeps the game's box at its size, as it keeps the box standard. */

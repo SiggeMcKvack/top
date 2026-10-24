@@ -412,12 +412,12 @@ static void display_in_game(void)
     oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
     nav.screen = ORACLES_SCREEN_DISPLAY;
     nav.row = ORACLES_DISPLAY_HUD;
-    CHECK(oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.hud == 0);
+    CHECK(oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.hud == 2);
     oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_FAITHFUL, 0);
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
     nav.screen = ORACLES_SCREEN_DISPLAY;
     nav.row = ORACLES_DISPLAY_HUD;
-    CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 0);
+    CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 2);
     CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
     /* Advanced opens on its first row that changes: Scaling from a game, which keeps the core, the transitions, Vsync and
      * the workers, in either profile chosen; Core on the home screen. */

@@ -35,6 +35,7 @@ typedef enum OraclesAspect {
 } OraclesAspect;
 /* Their names in settings.txt and on the command line: "auto", "16:9", "4:3". */
 extern const char *const oracles_settings_aspect_names[3];
+extern const char *const oracles_settings_hud_names[3];   /* hud=, by the value of oracles_settings.hud */
 /* The cores' names in settings.txt and on the command line, by OraclesCoreKind: "sameboy", "mgba". */
 extern const char *const oracles_settings_core_names[2];
 
@@ -116,8 +117,9 @@ typedef struct oracles_settings {
                                    * (ORACLES_DEFAULT_CORE) then playing, and the file holding no core= line */
     int menus_large;              /* menus=large|view: the game's menus, its map and its cutscenes, which the Enhanced view shows
                                    * framed, at their own largest whole scale (large) or the view's (view); large on Android */
-    int hud_full;                 /* hud=original|full: the status bar in Enhanced as the game draws it, dark beside it (original), or
-                                   * full width, beside it its own background (full, the default); it applies at once, from the pause too */
+    int hud;                      /* hud=original|full|wide, 0 to 2 as OraclesEnhancedHud: the status bar in Enhanced as the game draws
+                                   * it, dark beside it (original), full width, beside it its own background (full, the default), or laid
+                                   * out on that background, hearts left and items right (wide); it applies at once, from the pause too */
     int ghosts;                   /* ghosts=auto|1|2: the ghosts that prepare the rooms around, each on its own thread; 0 (auto, the
                                    * default) two on a device of four processor threads or more, else one; Display's Neighbour
                                    * workers, in its Advanced rows */

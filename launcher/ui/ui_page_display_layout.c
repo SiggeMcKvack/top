@@ -182,7 +182,7 @@ static void display_16_9(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout 
                      t->view_note ? 1 : 0, oracles_display_view_names, view_sizes, 3, &out->labels[ORACLES_DISPLAY_VIEW], &out->view_explanation, view_out,
                      out->views, &out->rows[ORACLES_DISPLAY_VIEW]) + DISPLAY_ROW_GAP;
     y += oracles_ui_display_row(value_x, y, value_w, oracles_display_labels[ORACLES_DISPLAY_HUD], left, t->explanations[6], 0.0f, NULL, 0, oracles_display_hud_choices,
-                     NULL, 2, &out->labels[ORACLES_DISPLAY_HUD], &out->explanations[6], NULL, out->hud, &out->rows[ORACLES_DISPLAY_HUD]) + DISPLAY_ROW_GAP;
+                     NULL, 3, &out->labels[ORACLES_DISPLAY_HUD], &out->explanations[6], NULL, out->hud, &out->rows[ORACLES_DISPLAY_HUD]) + DISPLAY_ROW_GAP;
     y += oracles_ui_text_link_16_9(t, value_x, y, value_w, left, out) + DISPLAY_ROW_GAP;
     y += oracles_ui_display_row(value_x, y, value_w, oracles_display_labels[ORACLES_DISPLAY_COLOUR], left, t->explanations[0], 0.0f, NULL, 0, oracles_display_colour_choices,
                      NULL, 2, &out->labels[ORACLES_DISPLAY_COLOUR], &out->explanations[0], NULL, out->colour, &out->rows[ORACLES_DISPLAY_COLOUR]);
@@ -337,7 +337,7 @@ static void display_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *
             y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_WINDOW, names, sizes, t->window_size_length, 4, out->windows, out) + DISPLAY_ROW_GAP_4_3;
         }
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_VIEW, oracles_display_view_names, view_sizes, NULL, 3, out->views, out) + DISPLAY_ROW_GAP_4_3;
-        y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_HUD, oracles_display_hud_choices, NULL, NULL, 2, out->hud, out) + DISPLAY_ROW_GAP_4_3;
+        y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_HUD, oracles_display_hud_choices, NULL, NULL, 3, out->hud, out) + DISPLAY_ROW_GAP_4_3;
         y = oracles_ui_text_link_4_3(t, y, out) + DISPLAY_ROW_GAP_4_3;
         oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_COLOUR, oracles_display_colour_choices, NULL, NULL, 2, out->colour, out);
     }
@@ -409,7 +409,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
      * game plays in Faithful), Window's with the line on its size or the diagram's, the quality in effect. */
     static const char *const help_4_3[ORACLES_DISPLAY_ROWS] = {
         NULL, NULL, "Whole multiples of the picture: pixels stay sharp.", "How much of the world shows; farther asks more.",
-        "Full width: the status bar's color edge to edge.", NULL, NULL, "Core, transitions, Vsync, workers, scaling, margin.",
+        "Wide layout: hearts left, items right.", NULL, NULL, "Core, transitions, Vsync, workers, scaling, margin.",
         "Accurate: the reference. Fast: lighter.", "Rooms scroll into one another, swimming too.", VSYNC_SHORT, "Two fill the view faster, on one more core.",
         "Sharp: exact pixels. Fill: the whole screen.", "Keeps the picture clear of hidden screen edges.", NULL, NULL, NULL,
     };

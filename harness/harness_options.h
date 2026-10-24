@@ -50,7 +50,7 @@ typedef struct harness_options {
     int enhanced_level, enhanced_aspect;      /* --view (near unless --zoom-out) and --aspect: an OraclesEnhancedLevel and OraclesEnhancedAspect */
     int aspect_given;                         /* --aspect named the shape */
     unsigned screen_w, screen_h;              /* --screen: the screen the view's shape comes from, which far fits to; 0: none */
-    int enhanced_hud_full;                    /* --hud full: the status bar drawn full width; original (0) by default, which every row hashed before it keeps */
+    int enhanced_hud;                         /* --hud full|wide: the status bar drawn full width, or laid out (OraclesEnhancedHud); original (0) by default, which every row hashed before it keeps */
     int hooks, colour_correction, ghost_threaded, ghost_trace, ghost_trace_load, compare_session;
     int core_kind;                            /* --core: an OraclesCoreKind; without it, the route's (SameBoy, or mGBA for a route that says so) */
     int core_given;

@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "guest.h"
+#include "view.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@ int harness_usage(void)
                     "                       [--zoom-out]   (with --enhanced-check: the drawn-back view's 480x270 surface, 480x360 with --aspect 4:3, as the launcher's --zoom-out; --view far)\n"
                     "                       [--view near|medium|far] [--aspect 16:9|4:3]   (with --enhanced-check: the view's level and the screen's shape, docs/PLAYING.md)\n"
                     "                       [--screen WxH]   (with --enhanced-check: the screen's shape, unless --aspect names one, and the far view fitted to that screen, as the launcher's far=screen)\n"
-                    "                       [--hud original|full]   (with --enhanced-check: the gutters beside the status bar dark, or the bar's own background, as the launcher's hud=; original by default)\n"
+                    "                       [--hud original|full|wide]   (with --enhanced-check: the gutters beside the status bar dark, or the bar's own background, or the bar laid out on it, as the launcher's hud=; original by default)\n"
                     "                       [--mods DIR]... [--mod-trace FILE]   (the mods the route was recorded with, and their state after every frame, to --compare with the session's ROUTE.mod.tsv)\n"
                     "                       [--language en|en-eu|fr|de|it|es [--eu-rom FILE|DIR] [--language-pack FILE]]   (the European ROM's English or a translation, from that ROM or its pack, served at getTextAddress; a fan game's too, with --patch)\n"
                     "                       (--enhanced-paced holds each frame to the Game Boy's period by a busy wait: a core a replay, as in play)\n"
@@ -133,8 +134,10 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
         }
         else if (!strcmp(argv[i], "--hud") && i + 1 < argc) {
             const char *name = argv[++i];
-            if (!strcmp(name, "original") || !strcmp(name, "full")) o->enhanced_hud_full = !strcmp(name, "full");
-            else { fprintf(stderr, "harness: --hud is original or full, not %s\n", name); return -1; }
+            if (!strcmp(name, "original")) o->enhanced_hud = ORACLES_ENHANCED_HUD_ORIGINAL;
+            else if (!strcmp(name, "full")) o->enhanced_hud = ORACLES_ENHANCED_HUD_FULL;
+            else if (!strcmp(name, "wide")) o->enhanced_hud = ORACLES_ENHANCED_HUD_WIDE;
+            else { fprintf(stderr, "harness: --hud is original, full or wide, not %s\n", name); return -1; }
         }
         else if (!strcmp(argv[i], "--enhanced-camera") && i + 1 < argc) o->enhanced_camera = (unsigned)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(argv[i], "--enhanced-link-phase")) o->enhanced_link_phase = 1;

@@ -106,6 +106,11 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
         oracles_enhanced_view_hud_counts(c->view, &frames, &kept);
         fprintf(out, "enhanced.hud_full_frames=%u\nenhanced.hud_lines_kept=%u\n", frames, kept);
     }
+    {   /* the status bar laid out, when the run asks it */
+        unsigned laid = 0, centred = 0, one_row = 0;
+        oracles_enhanced_view_hud_wide_counts(c->view, &laid, &centred, &one_row);
+        fprintf(out, "enhanced.hud_wide_frames=%u\nenhanced.hud_wide_centred=%u\nenhanced.hud_wide_one_row=%u\n", laid, centred, one_row);
+    }
     {   /* a room's load drawn under the world's HUD band */
         unsigned band = 0, blank = 0;
         oracles_enhanced_view_load_counts(c->view, &band, &blank);

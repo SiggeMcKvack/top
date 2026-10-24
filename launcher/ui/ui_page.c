@@ -463,7 +463,7 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
         option(draw, st, lk, &l.views[v], 0, oracles_display_view_names[v], t.view_sizes[v], v == nav->display.view,
                row == ORACLES_DISPLAY_VIEW, accent, CHOICE_OFF, applied);
     wrapped(draw, st->row_text, &l.explanations[6], oracles_ui_rgba(NOTE, hud));
-    for (int c = 0; c < 2; c++)
+    for (int c = 0; c < 3; c++)
         option(draw, st, lk, &l.hud[c], 0, oracles_display_hud_choices[c], NULL, c == nav->display.hud, row == ORACLES_DISPLAY_HUD, accent, CHOICE_OFF,
                hud);
     /* The Text link: its summary and its arrow, in the accent while highlighted. */
@@ -508,7 +508,7 @@ int oracles_ui_display_hit(const OraclesHomeNav *nav, float x, float y, int *opt
     for (int q = 0; q < ORACLES_DISPLAY_QUALITIES; q++) if (inside(&l.qualities[q].box, x, y)) { *option = q; return ORACLES_DISPLAY_QUALITY; }
     for (int i = 0; i < 4; i++) if (inside(&l.windows[i].box, x, y)) { *option = i; return ORACLES_DISPLAY_WINDOW; }
     for (int v = 0; v < 3; v++) if (inside(&l.views[v].box, x, y)) { *option = v; return ORACLES_DISPLAY_VIEW; }
-    for (int c = 0; c < 2; c++) if (inside(&l.hud[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_HUD; }
+    for (int c = 0; c < 3; c++) if (inside(&l.hud[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_HUD; }
     for (int c = 0; c < 2; c++) if (inside(&l.colour[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_COLOUR; }
     for (int r = 0; r <= ORACLES_DISPLAY_ADVANCED; r++) if (inside(&l.rows[r], x, y)) return r;
     return -1;

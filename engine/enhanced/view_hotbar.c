@@ -8,10 +8,7 @@
  * their object palette, and keeps the opaque pixels, centred in 16 x 16, as
  * the icon of that item and variant.  None of the game's display logic is
  * redone (treasureDisplayData and its level tables stay the game's), so an
- * item that changes level, or a modified ROM, is followed by itself.
- *
- * The same gutters take the status bar's own background with the bar drawn
- * full width (hud=full), read from the bar as the game keeps it. */
+ * item that changes level, or a modified ROM, is followed by itself. */
 #include "view_internal.h"
 
 #include "hotbar.h"
@@ -118,56 +115,14 @@ static int capture_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, u
 
 static uint32_t screen_colour(void *opaque, uint16_t rgb555);
 
-/* The status bar as the game keeps it: the maps of its bar, the LCDC it gives those lines, the VRAM and the palettes on
- * screen (oracles_enhanced_bar_pixel). */
-static int status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar)
-{
-    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
-    const uint8_t *regs = oracles_guest_ptr(v->guest, t->gfx_regs1, 1u);
-    bar->tiles = oracles_guest_ptr(v->guest, t->status_bar_tile_map, 0x40u);
-    bar->attributes = oracles_guest_ptr(v->guest, t->status_bar_attribute_map, 0x40u);
-    bar->vram0 = oracles_guest_vram(v->guest, 0);
-    bar->vram1 = oracles_guest_vram(v->guest, 1);
-    bar->palettes = oracles_guest_bg_palettes(v->guest);
-    bar->lcdc = regs ? regs[0] : 0u;
-    return regs && bar->tiles && bar->attributes && bar->vram0 && bar->vram1 && bar->palettes;
-}
-
 /* The status bar's own pixel on its sixteen lines, and whether it hides a sprite there: the tile's priority bit set and
  * its colour not 0, as the hardware decides it.  The bar writes an item's count over its icon this way. */
 static int bar_pixel(OraclesEnhancedView *v, unsigned x, unsigned y, uint16_t *rgb555, int *hides_sprite)
 {
     OraclesEnhancedBar bar;
-    if (!status_bar(v, &bar)) return 0;
+    if (!ev_status_bar(v, &bar)) return 0;
     *rgb555 = oracles_enhanced_bar_pixel(&bar, x, y, hides_sprite);
     return 1;
-}
-
-static uint32_t core_colour(void *opaque, uint16_t rgb555) { return oracles_core_convert_rgb555(((OraclesEnhancedView *)opaque)->core, rgb555); }
-
-/* The gutters beside the status bar with the bar drawn full width: in the world band alone, and a room's load drawn
- * under it, the framed core's bar standing in the middle of the drawn-back surface, or being no bar at all (a menu, a
- * cutscene).  The counts are the world frames'. */
-const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode)
-{
-    OraclesEnhancedBar bar;
-    const uint32_t *core = oracles_core_pixels(v->core);   /* the bar's lines, which a scroll's redrawn window copies as they are */
-    if (!v->hud_full || mode != ORACLES_ENHANCED_WORLD || !core || !status_bar(v, &bar)) return NULL;
-    const unsigned filled = oracles_enhanced_hud_fill(&bar, core_colour, v, core, v->hud_fill);
-    if (!v->load_band) {
-        if (filled) v->hud_frames++;
-        v->hud_lines_kept += 2u * ORACLES_ENHANCED_HUD_HEIGHT - filled;
-    }
-    return filled ? v->hud_fill : NULL;
-}
-
-void oracles_enhanced_view_set_hud(OraclesEnhancedView *v, int full) { v->hud_full = full != 0; }
-int oracles_enhanced_view_hud(const OraclesEnhancedView *v) { return v->hud_full; }
-
-void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *v, unsigned *frames, unsigned *lines_kept)
-{
-    if (frames) *frames = v->hud_frames;
-    if (lines_kept) *lines_kept = v->hud_lines_kept;
 }
 
 int oracles_enhanced_view_load_band(const OraclesEnhancedView *v, int32_t *area_left, int32_t *area_top)
@@ -252,10 +207,11 @@ static uint32_t screen_colour(void *opaque, uint16_t rgb555)
 
 #define RGB555(r, g, b) ((uint16_t)((r) | ((g) << 5) | ((b) << 10)))
 
-/* The status bar's own background, where it stands now: the colour most of its top line has, fade and all. */
+/* The status bar's own background: the colour most of its top line has, fade and all, where it stands centred, or in
+ * the core's image where it is laid out. */
 static uint32_t status_bar_background(const OraclesEnhancedView *v)
 {
-    const uint32_t *line = v->surface + v->hud_top * v->size.width + oracles_enhanced_hud_x(v->size);
+    const uint32_t *line = v->hud_laid ? oracles_core_pixels(v->core) : v->surface + v->hud_top * v->size.width + oracles_enhanced_hud_x(v->size);
     uint32_t best = line[0];
     unsigned best_count = 0;
     for (unsigned x = 0; x < ORACLES_ENHANCED_CORE_WIDTH; x += 8u) {
@@ -266,15 +222,20 @@ static uint32_t status_bar_background(const OraclesEnhancedView *v)
     return best;
 }
 
-/* The surface but for the four slots: what drawing them must leave as it was. */
+/* The surface but for the four slots: what drawing them must leave as it was (beside the bar centred, the bar's own
+ * columns; laid out, the band's but the slots'). */
 static uint64_t hash_outside_slots(const OraclesEnhancedView *v)
 {
     uint64_t h = ORACLES_HASH_SEED;
     const uint32_t *surface = v->surface;
     const unsigned width = v->size.width, gutter = oracles_enhanced_hud_x(v->size), core = ORACLES_ENHANCED_CORE_WIDTH, top = v->hud_top;
+    const unsigned slots_at = v->hud_place.hotbar_at, slots_end = slots_at + ORACLES_HOTBAR_SLOTS * ORACLES_HOTBAR_SLOT_WIDTH;
     h = oracles_guest_hash((const uint8_t *)surface, (size_t)top * width * sizeof *surface, h);   /* above the status bar: the framed drawn-back surface's border */
-    for (unsigned y = top; y < top + ORACLES_ENHANCED_HUD_HEIGHT; y++)
-        h = oracles_guest_hash((const uint8_t *)(surface + y * width + gutter), core * sizeof *surface, h);
+    for (unsigned y = top; y < top + ORACLES_ENHANCED_HUD_HEIGHT; y++) {
+        if (!v->hud_laid) { h = oracles_guest_hash((const uint8_t *)(surface + y * width + gutter), core * sizeof *surface, h); continue; }
+        h = oracles_guest_hash((const uint8_t *)(surface + y * width), slots_at * sizeof *surface, h);
+        h = oracles_guest_hash((const uint8_t *)(surface + y * width + slots_end), (width - slots_end) * sizeof *surface, h);
+    }
     return oracles_guest_hash((const uint8_t *)(surface + (top + ORACLES_ENHANCED_HUD_HEIGHT) * width),
                               (size_t)(v->size.height - top - ORACLES_ENHANCED_HUD_HEIGHT) * width * sizeof *surface, h);
 }
@@ -290,7 +251,7 @@ static int bar_blank(const OraclesEnhancedView *v)
 
 void ev_draw_hotbar(OraclesEnhancedView *v)
 {
-    if (!v->hotbar_shown || !oracles_hotbar_fits(v->size.width, ORACLES_ENHANCED_CORE_WIDTH)) return;
+    if (!v->hotbar_shown || !(v->hud_laid ? v->hud_place.hotbar : oracles_hotbar_fits(v->size.width, ORACLES_ENHANCED_CORE_WIDTH))) return;
     OraclesGuestInventoryState s;
     oracles_guest_inventory_state(v->guest, &s);
     capture_icons(v, &s);
@@ -344,6 +305,7 @@ void ev_draw_hotbar(OraclesEnhancedView *v)
         status_bar_background(v), screen_colour(v, RGB555(3, 3, 3)), screen_colour(v, RGB555(19, 16, 11)),
         screen_colour(v, RGB555(25, 5, 5)), screen_colour(v, RGB555(31, 30, 27)), screen_colour(v, RGB555(29, 5, 5)), screen_colour, v };
     const uint64_t before = v->hotbar_verify ? hash_outside_slots(v) : 0;
-    oracles_hotbar_draw(v->surface + v->hud_top * v->size.width, v->size.width, ORACLES_ENHANCED_CORE_WIDTH, views, &palette);
+    if (v->hud_laid) oracles_hotbar_draw_at(v->surface + v->hud_top * v->size.width, v->size.width, v->hud_place.hotbar_at, views, &palette);
+    else oracles_hotbar_draw(v->surface + v->hud_top * v->size.width, v->size.width, ORACLES_ENHANCED_CORE_WIDTH, views, &palette);
     if (v->hotbar_verify && hash_outside_slots(v) != before) v->hotbar_outside_gutters++;
 }

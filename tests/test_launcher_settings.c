@@ -93,7 +93,7 @@ static void display_stored(void)
     display.margin_fixed = 1;
     display.hud = 0;
     oracles_home_store_display(&display, 0, &s);
-    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud_full == 0);
+    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud == 0);
     display.margin_fixed = 0;
     display.workers = 2;
     oracles_home_store_display(&display, 1, &s);
@@ -132,13 +132,15 @@ static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, -1, -1, 0 };
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0 };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
-    s.hud_full = !s.hud_full;
+    s.hud = !s.hud;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
-    CHECK(applied.hud == s.hud_full && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
+    CHECK(applied.hud == s.hud && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.hud = 2;   /* the wide layout, at once too */
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HUD && applied.hud == 2);
     /* --screen-margin large for the run: the settings' margin changes nothing, the option's is applied once. */
     s.screen_margin = ORACLES_SCREEN_MARGIN_AUTO;
     CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
@@ -161,7 +163,7 @@ static void pause_changes(void)
     applied.hud = -1;
     applied.text_size = -1;
     s.text_size = 0;
-    s.hud_full = !s.hud_full;
+    s.hud = !s.hud;
     s.colour_correction = !s.colour_correction;
     s.scaling_fill = !s.scaling_fill;
     CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
@@ -190,7 +192,7 @@ static void pause_live_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
                                       (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS] };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.swim_hold = !s.swim_hold;
@@ -237,7 +239,7 @@ static void pause_live_changes(void)
     display.window = 3;
     display.hud = !display.hud;
     oracles_home_store_display(&display, 1, &s);
-    CHECK(s.window_scale == 2 && s.hud_full == display.hud);
+    CHECK(s.window_scale == 2 && s.hud == display.hud);
     display.window_chosen = 1;
     oracles_home_store_display(&display, 1, &s);
     CHECK(s.window_scale == 0);
@@ -682,24 +684,30 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.menus_large == 0);
-    /* The status bar: full width at the first opening, written; original written and read back; an unknown value
-     * leaves the default. */
+    /* The status bar: full width at the first opening, written; original and the wide layout written and read back; an
+     * unknown value leaves the default. */
     oracles_settings_defaults(&read_back);
-    CHECK(read_back.hud_full == 1);
+    CHECK(read_back.hud == 1);
     oracles_settings_store(&read_back);
     CHECK(file_has_line(path, "hud=full\n"));
     write_text(path, "hud=original\n");
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 0);
+    CHECK(read_back.hud == 0);
     oracles_settings_store(&read_back);
     CHECK(file_has_line(path, "hud=original\n"));
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 0);
+    CHECK(read_back.hud == 0);
     write_text(path, "hud=wide\n");
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 1);
+    CHECK(read_back.hud == 2);
+    oracles_settings_store(&read_back);
+    CHECK(file_has_line(path, "hud=wide\n"));
+    write_text(path, "hud=split\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.hud == 1);
     /* The core: none chosen at the first opening, the build's default playing (SameBoy in the tests' build) and no core=
      * line written, so that another build's default plays its own; a core chosen is written and read by its name; an
      * unknown name leaves none chosen. */
