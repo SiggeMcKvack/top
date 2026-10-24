@@ -365,3 +365,16 @@ void ec_measure_whole_room(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
     if (world) measure_ripple(c, &c->water, ob, surface, camera_x, camera_y);
     else c->water.have_edge = 0;
 }
+
+/* At a scroll's start out of a room the band showed whole, the game's window still, the game in that room still: the
+ * part of the band shown (the rest black) holds the room's top line, the camera where it stood; a camera a pixel further
+ * cuts it, and the band moved back by its fraction shows a black line over the room (enhanced.alone_scroll_cut_frames). */
+void ec_measure_alone_rows(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_y)
+{
+    if (mode != ORACLES_ENHANCED_WORLD || !c->alone_whole || !ob->in_scroll || !ob->world.alone || ob->window_left != ob->scroll_start_left
+        || ob->window_top != ob->scroll_start_top || ob->group != c->alone_group || ob->room != c->alone_room) return;
+    unsigned shown_w = 0, shown_h = 0;
+    oracles_enhanced_view_shown(c->view, &shown_w, &shown_h);
+    const int32_t band = (int32_t)(oracles_enhanced_view_height(c->view) - ORACLES_ENHANCED_HUD_HEIGHT);
+    if (camera_y + (band - (int32_t)shown_h) / 2 > ob->world.origin_y) c->alone_scroll_cut_frames++;
+}

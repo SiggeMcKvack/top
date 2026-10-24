@@ -331,6 +331,22 @@ static void measure_switch_jolts(OraclesEnhancedCheck *c, uint32_t frame, const 
     const int state = (ob->in_transition ? 1 : 0) | (oracles_guest_read8(c->guest, t->text_is_active) ? 2 : 0) | (layer ? 4 : 0);
     int32_t band[2], link[2];
     shown_places(c, world, camera_x, camera_y, band, link);
+    /* An interior's room shown whole, or the band still in it, its edge opened by a scroll's start (a door left through
+     * the edge), the game's window still, the game in that room still: the band as shown stands where it stood
+     * (enhanced.alone_scroll_band_moves, of enhanced.alone_scroll_frames). */
+    if (!ob->in_transition) {
+        c->alone_whole = oracles_enhanced_view_room_whole(c->view);
+        c->alone_play = c->alone_whole || (ob->world.alone && c->alone_have && c->alone_frame + 1u == frame && c->alone_epoch == ob->epoch
+                                           && band[0] == c->alone_band[0] && band[1] == c->alone_band[1]);
+        c->alone_group = ob->group; c->alone_room = ob->room;
+    }
+    if (c->alone_play && ob->group == c->alone_group && ob->room == c->alone_room && ob->in_scroll && ob->world.alone && ob->window_left == ob->scroll_start_left && ob->window_top == ob->scroll_start_top) {
+        if (c->alone_have && c->alone_frame + 1u == frame && c->alone_epoch == ob->epoch) {
+            c->alone_scroll_frames++;
+            if (band[0] != c->alone_band[0] || band[1] != c->alone_band[1]) c->alone_scroll_band_moves++;
+        }
+    }
+    c->alone_have = 1; c->alone_frame = frame; c->alone_epoch = ob->epoch; c->alone_band[0] = band[0]; c->alone_band[1] = band[1];
     /* A camera that jumps (enhanced.camera_jumps, a place the view cuts to), Link put elsewhere, start a new measure. */
     const int32_t largest = MAX_CAMERA_STEP * MEASURE_SCALE;
     int contiguous = c->jolt_have && c->jolt_frame + 1u == frame && c->jolt_epoch == ob->epoch;

@@ -448,6 +448,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         tracking = 1;
     }
     oracles_enhanced_camera_shown(v->camera, &v->shown_width, &v->shown_height);
+    ev_hold_camera(v, &camera_x, &camera_y);
     v->frame++;
     ev_update_neighbours(v);
     /* The first frame of a transition: the room in play becomes a neighbour,
@@ -570,6 +571,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {
         ev_overlay_link_phase(v, camera_x, camera_y);
+        ev_hold_note(v, camera_x, camera_y);
         ev_subpixel_layer(v, reducer_tracking, camera_x, camera_y);
         ev_fade_vanishing(v, camera_x, camera_y);
         ev_overlay_large_objects(v, camera_x, camera_y);

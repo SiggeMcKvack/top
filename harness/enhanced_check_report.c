@@ -73,6 +73,8 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
                 oracles_enhanced_view_subpixel_objects_left(c->view));
         fprintf(out, "enhanced.switch_edges=%u\nenhanced.switch_band_jolt_max=%" PRId32 "\nenhanced.switch_link_jolt_max=%" PRId32 "\nenhanced.band_jolt_max=%" PRId32 "\nenhanced.link_jolt_max=%" PRId32 "\n",
                 c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->band_jolt_max, c->link_jolt_max);
+        fprintf(out, "enhanced.alone_scroll_frames=%u\nenhanced.alone_scroll_band_moves=%u\nenhanced.alone_scroll_cut_frames=%u\n", c->alone_scroll_frames, c->alone_scroll_band_moves,
+                c->alone_scroll_cut_frames);
         fprintf(out, "enhanced.transition_layer_switches=%u\nenhanced.transition_layer_shift_max=%" PRId32 "\nenhanced.subpixel_switched=%u\n", c->transition_layer_switches,
                 c->transition_layer_shift_max, c->subpixel_switched);
     }

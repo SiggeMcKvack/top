@@ -91,6 +91,14 @@ struct OraclesEnhancedCheck {
     /* a room shown whole under the waves: its edge on the screen, line by line */
     EcRipple whole, water;            /* a room shown whole under the waves; any frame under the waves */
     unsigned whole_last_waves;
+    /* a scroll's start that opens a room shown alone, the game's window still: the band as shown must stand still */
+    unsigned alone_scroll_frames, alone_scroll_band_moves, alone_scroll_cut_frames;
+    int alone_have, alone_whole;   /* the last frame in play showed the room whole */
+    int alone_play;                  /* the last frame in play showed the room whole, or the band still in an interior's room */
+    uint8_t alone_group, alone_room;  /* the room of the last frame in play */
+    uint32_t alone_frame;
+    uint64_t alone_epoch;
+    int32_t alone_band[2];
     unsigned window_lines_checked, window_lines_wrong;   /* the window's own lines found in the band where the camera puts them */
     char window_lines_list[256];
     int have_last_offset, last_offset_x, last_offset_y;
@@ -317,6 +325,7 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
 void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y,
                            uint8_t box[ORACLES_ENHANCED_AREA_HEIGHT][ORACLES_ENHANCED_CORE_WIDTH], uint32_t frame);
 void ec_check_curtain(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y, uint32_t frame);
+void ec_measure_alone_rows(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_y);
 /* The game's window and the ring of the band around it, compared in luminance on a world frame. */
 void ec_measure_whole_room(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
                            int32_t camera_x, int32_t camera_y);

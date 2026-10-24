@@ -156,6 +156,8 @@ void ev_overlay_warp_curtain(OraclesEnhancedView *v, int32_t camera_x, int32_t c
 /* A dialogue's text box, drawn again at the middle of the band (view_textbox.c): the core's, or the host's wide box. */
 void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 void ev_phase_observe(OraclesEnhancedView *v);
+void ev_hold_camera(OraclesEnhancedView *v, int32_t *camera_x, int32_t *camera_y);
+void ev_hold_note(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, int32_t camera_y);
 /* A rectangle of the band, in the band's pixels, the sub-pixel camera shows unmoved over the band and Link: what the
  * view draws there stands on the screen, not in the world. */

@@ -687,6 +687,15 @@ struct OraclesEnhancedView {
     int sub_have_last, sub_live;
     int32_t sub_last_x, sub_last_y, sub_raw_x, sub_raw_y;   /* the last frame's fraction shown, and the camera's */
     unsigned sub_shake_hold;         /* frames left before the band takes a fraction again after a shake of the screen */
+    /* The camera held where it stood at a scroll's start that opens an interior's room (ev_hold_camera), and what the
+     * last frame composed in the world left for it (ev_hold_note). */
+    int camera_held;
+    int hold_have, hold_was_whole;   /* the last frame showed a room whole, in play */
+    int hold_was_still;              /* the last frame stood in an interior's room, in play, the camera as on the frame before */
+    uint8_t hold_group, hold_room;   /* the room of the last frame in play */
+    uint32_t hold_frame;
+    uint64_t hold_epoch;
+    int32_t hold_camera_x, hold_camera_y;   /* the last frame's camera, whole pixels */
     int32_t sub_ease_x, sub_ease_y;  /* the fraction shown less the camera's, given back by SUB_EASE a frame */
     int32_t sub_link_x, sub_link_y;  /* Link's own fraction shown, his layer's place less his whole one, eased the same way */
     int sub_link_live;

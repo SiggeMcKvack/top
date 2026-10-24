@@ -290,6 +290,36 @@ static int32_t band_fraction(int continuous, int live, int was_live, int32_t raw
     return shown;
 }
 
+/* An interior's room keeps the band where it stood through a scroll's start that opens one of its edges (a door left
+ * through the room's edge, to the outside): the bounds widen and the camera would move toward Link by a pixel before the
+ * game's window moves, or the warp cuts in.  The band is composed at the camera of the frame before and keeps its
+ * fraction, until the game's window moves.  So from a room shown whole, or from one the camera stood still in (the
+ * room beside it in the bounds), while the game is still in that room: a scroll to the room beside it changes the room
+ * at once and the camera goes on following Link through it, a room shown whole as any other (held, the band jumped by
+ * the pixels it missed once the window moved).  With the sub-pixel camera or without it.  Before the frame's count
+ * moves on. */
+void ev_hold_camera(OraclesEnhancedView *v, int32_t *camera_x, int32_t *camera_y)
+{
+    const OraclesEnhancedObservation *ob = &v->observation;
+    const int continuous = v->hold_have && v->hold_frame == v->frame && v->hold_epoch == ob->epoch;
+    const int same_room = ob->group == v->hold_group && ob->room == v->hold_room;
+    v->camera_held = !v->sub_leaving && continuous && (v->camera_held || v->hold_was_whole || v->hold_was_still) && ob->in_scroll && ob->world.alone
+        && ob->window_left == ob->scroll_start_left && ob->window_top == ob->scroll_start_top && same_room;
+    if (v->camera_held) { *camera_x = v->hold_camera_x; *camera_y = v->hold_camera_y; }
+}
+
+/* The frame composed in the world, at the camera shown: what the hold reads at the next one. */
+void ev_hold_note(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y)
+{
+    const OraclesEnhancedObservation *ob = &v->observation;
+    const int continuous = v->hold_have && v->hold_frame + 1u == v->frame && v->hold_epoch == ob->epoch;
+    v->hold_was_whole = ev_room_whole(v) && !ob->in_transition;
+    v->hold_was_still = ob->world.alone && !ob->in_transition && continuous && camera_x == v->hold_camera_x && camera_y == v->hold_camera_y;
+    if (!ob->in_transition) { v->hold_group = ob->group; v->hold_room = ob->room; }
+    v->hold_camera_x = camera_x; v->hold_camera_y = camera_y;
+    v->hold_have = 1; v->hold_frame = v->frame; v->hold_epoch = ob->epoch;
+}
+
 void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, int32_t camera_y)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
@@ -307,8 +337,11 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
     if (v->have_wave && !ripple) v->sub_shake_hold = SUB_SHAKE_HOLD;
     else if (v->sub_shake_hold) v->sub_shake_hold--;
     const int apart = ob->playing && !ob->cutscene && ob->grid && !ob->large && (!v->have_wave || ripple) && !v->sub_leaving;
-    const int live = tracking && apart && !v->sub_shake_hold;
     const int continuous = v->sub_have_last && v->sub_last_frame + 1u == v->frame && v->sub_last_epoch == ob->epoch;
+    /* The band held through a scroll's start out of an interior's room (ev_hold_camera): its fraction kept. */
+    const int held = v->camera_held;
+    if (held) { fx = v->sub_last_x; fy = v->sub_last_y; }
+    const int live = (tracking || held) && apart && !v->sub_shake_hold;
     v->sub_x = band_fraction(continuous, live, v->sub_live, fx, v->sub_raw_x, v->sub_last_x, &v->sub_ease_x);
     v->sub_y = band_fraction(continuous, live, v->sub_live, fy, v->sub_raw_y, v->sub_last_y, &v->sub_ease_y);
     v->sub_have_last = 1; v->sub_last_frame = v->frame; v->sub_last_epoch = ob->epoch;
