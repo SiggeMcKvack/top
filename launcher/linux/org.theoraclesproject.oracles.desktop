@@ -1,0 +1,12 @@
+[Desktop Entry]
+# The AppImage's desktop entry (tools/make_linux_appimage.sh), which a desktop's AppImage integration installs with the
+# icon; the Linux archive's own is written by tools/make_linux_tarball.sh.  StartupWMClass is the name SDL gives the
+# windows, the executable's.
+Type=Application
+Name=The Oracles Project
+Comment=A port of Oracle of Ages and Oracle of Seasons
+Exec=the-oracles-project
+Icon=the-oracles-project
+Terminal=false
+Categories=Game;
+StartupWMClass=the-oracles-project

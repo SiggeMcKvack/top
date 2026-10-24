@@ -63,7 +63,7 @@ if (versionParts.size() != 3 || versionParts[1] > 99 || versionParts[2] > 99) {
 def productVersionCode = versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
 
 // The licences that go with the application, as beside the desktop's executable: the embedded fonts' (OFL), SameBoy's,
-// mGBA's with its notice and inih's, and SDL's; in the APK's assets, under licences/.
+// mGBA's with its notice and inih's, Lua's, and SDL's; in the APK's assets, under licences/.
 def licenceFolder = layout.buildDirectory.dir("generated/licences").get().asFile
 def copyLicences = tasks.register("copyLicences", Copy) {
     dependsOn fetchSdl3
@@ -75,6 +75,7 @@ def copyLicences = tasks.register("copyLicences", Copy) {
     from(new File(repository, "third_party/mgba/NOTICE.txt")) { rename { "mGBA-NOTICE.txt" } }
     from(new File(repository, "third_party/mgba/boot-rom.patch")) { rename { "mGBA-boot-rom.patch" } }
     from(new File(repository, "third_party/mgba/core/src/third-party/inih/LICENSE.txt")) { rename { "inih-LICENSE.txt" } }
+    from(new File(repository, "third_party/lua/LICENSE")) { rename { "Lua-LICENSE.txt" } }
     from(new File(sdlSource, "LICENSE.txt")) { rename { "SDL3-LICENSE.txt" } }
     into new File(licenceFolder, "licences")
 }

@@ -6,8 +6,8 @@ a save, a build output or a binary. The audit walks the files git tracks and
 refuses:
 
 - a ROM, save or state extension (.gb, .gbc, .gba, .rom, .sav, .srm, .state);
-- a binary or archive extension (.exe, .dll, .so and a versioned .so.N, .dylib, .o, .a, .apk, .zip, .tar, .gz, .7z,
-  .xz, .bz2): what a build or a release makes;
+- a binary or archive extension (.exe, .dll, .so and a versioned .so.N, .dylib, .o, .a, .apk, .AppImage, .zip, .tar,
+  .gz, .7z, .xz, .bz2): what a build or a release makes;
 - a path with a build or private component (generated, cache, build, build-*, dist, output);
 - a file starting with a Game Boy cartridge header (the Nintendo logo at $104);
 - a file larger than 4 MiB, except the vendored SameBoy sources;
@@ -36,7 +36,7 @@ ALLOWED_TOP = {".github", ".gitattributes", ".gitignore", "README.md", "CONTRIBU
                "android", "config", "docs", "engine", "harness", "launcher", "mods", "routes",
                "tests", "third_party", "tools"}
 ROM_EXTENSIONS = {".gb", ".gbc", ".gba", ".rom", ".sav", ".srm", ".state"}
-BINARY_EXTENSIONS = {".exe", ".dll", ".so", ".dylib", ".o", ".a", ".obj", ".lib", ".apk",
+BINARY_EXTENSIONS = {".exe", ".dll", ".so", ".dylib", ".o", ".a", ".obj", ".lib", ".apk", ".appimage",
                      ".zip", ".tar", ".gz", ".tgz", ".7z", ".xz", ".bz2"}
 VERSIONED_LIBRARY = re.compile(r"\.so(\.[0-9]+)+$", re.IGNORECASE)   # libSDL3.so.0, beside a Linux release's executable
 PRIVATE_COMPONENTS = {"generated", "cache", "build", "dist", "output", "results"}

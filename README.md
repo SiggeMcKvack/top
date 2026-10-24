@@ -15,6 +15,10 @@ A faithful, moddable port of Oracle of Ages and Oracle of Seasons for PC, macOS 
 
 Nothing of the game's code is rewritten: the game runs as it is, and the host reads its state. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) says why.
 
+## Download
+
+The [latest release](https://github.com/thibautbus/top/releases/latest) has the port ready to play with your own ROM, for Windows, macOS (Apple Silicon and Intel), Linux and Android 10 or later. On Linux, take the AppImage, `the-oracles-project-X.Y.Z-linux-x86_64.AppImage`: make it executable (`chmod +x`) and run it. If the AppImage does not start, use the `.tar.gz`, a folder that runs once extracted, or run the AppImage with `--appimage-extract-and-run`. Linux ARM64 (Raspberry Pi 5, Asahi Linux...) has the same two files, `-linux-arm64`: experimental, not yet tried on real hardware; feedback welcome. The release notes say how to install each file.
+
 ## Quick start
 
 On Linux, with a C11 compiler, CMake 3.19 or later and the development packages SDL 3 builds against (or an installed SDL 3):

@@ -104,7 +104,8 @@ if(ORACLES_BUILD_LAUNCHER)
     # The fonts are embedded, and their licence goes with them: each OFL.txt beside the executable;
     # so does SameBoy's, the core compiled in, whose Expat licence asks that its notice go with copies; so do mGBA's and
     # inih's, with the notice that says where their source is and the one change made to mGBA, in source form (the
-    # Mozilla Public License asks both of a binary).
+    # Mozilla Public License asks both of a binary); so does Lua's, the mods' runtime compiled in, whose MIT licence asks
+    # that its notice go with copies.
     set(ORACLES_LICENCES
         ${ORACLES_THIRD_PARTY_DIR}/fonts/marcellus/OFL.txt Marcellus-OFL.txt
         ${ORACLES_THIRD_PARTY_DIR}/fonts/alegreya-sans/OFL.txt AlegreyaSans-OFL.txt
@@ -113,7 +114,8 @@ if(ORACLES_BUILD_LAUNCHER)
         ${ORACLES_THIRD_PARTY_DIR}/mgba/LICENSE mGBA-LICENSE.txt
         ${ORACLES_THIRD_PARTY_DIR}/mgba/NOTICE.txt mGBA-NOTICE.txt
         ${ORACLES_THIRD_PARTY_DIR}/mgba/boot-rom.patch mGBA-boot-rom.patch
-        ${ORACLES_THIRD_PARTY_DIR}/mgba/core/src/third-party/inih/LICENSE.txt inih-LICENSE.txt)
+        ${ORACLES_THIRD_PARTY_DIR}/mgba/core/src/third-party/inih/LICENSE.txt inih-LICENSE.txt
+        ${ORACLES_THIRD_PARTY_DIR}/lua/LICENSE Lua-LICENSE.txt)
     if(ORACLES_SDL3_BUILT)
         list(APPEND ORACLES_LICENCES ${sdl3_SOURCE_DIR}/LICENSE.txt SDL3-LICENSE.txt)   # the library built here goes with it
     endif()

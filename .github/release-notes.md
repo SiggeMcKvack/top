@@ -6,7 +6,9 @@ The game needs your own ROM of Oracle of Ages or Oracle of Seasons (US), and a f
 
 - **Windows** (`the-oracles-project-X.Y.Z-windows.zip`, 64-bit): unzip the folder and run `the-oracles-project.exe`. The executable is not signed, so SmartScreen may warn the first time: More info, then Run anyway.
 - **macOS** (`the-oracles-project-X.Y.Z-macos.zip`, one application for Apple Silicon and Intel, macOS 11 or later): unzip and move The Oracles Project to Applications. The application is not notarised: open it the first time by right-clicking it and choosing Open, or run `xattr -dr com.apple.quarantine "The Oracles Project.app"`.
-- **Linux** (`the-oracles-project-X.Y.Z-linux-x86_64.tar.gz`): extract the folder and run `./the-oracles-project`; SDL 3 comes with it. The `the-oracles-project.desktop` file inside is optional: set its two paths, then copy it to `~/.local/share/applications/`.
+- **Linux** (`the-oracles-project-X.Y.Z-linux-x86_64.AppImage`): make the file executable (`chmod +x the-oracles-project-X.Y.Z-linux-x86_64.AppImage`, or in the file's properties) and run it; SDL 3 comes with it. If the AppImage does not start, use the `.tar.gz`, or run the AppImage with `--appimage-extract-and-run`: a system without FUSE (some containers and minimal installs) cannot mount it.
+- **Linux, archive** (`the-oracles-project-X.Y.Z-linux-x86_64.tar.gz`): extract the folder and run `./the-oracles-project`; SDL 3 comes with it. The `the-oracles-project.desktop` file inside is optional: set its two paths, then copy it to `~/.local/share/applications/`.
+- **Linux ARM64** (`the-oracles-project-X.Y.Z-linux-arm64.AppImage` and `the-oracles-project-X.Y.Z-linux-arm64.tar.gz`; Raspberry Pi 5, Asahi Linux...): experimental, not yet tried on real hardware; feedback welcome. They install as the two files above.
 - **Android** (`the-oracles-project-X.Y.Z-android.apk`, Android 10 or later): install the APK, allowing its installation from your browser or file manager when Android asks.
 
 `SHA256SUMS.txt` holds the SHA-256 of each file.

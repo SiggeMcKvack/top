@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The AppImage's AppStream metadata (tools/make_linux_appimage.sh), in usr/share/metainfo/ beside the desktop entry
+     it names: appimagetool looks for it under this name, the desktop entry's, and validates both with appstreamcli
+     when the machine has it. -->
+<component type="desktop-application">
+  <id>org.theoraclesproject.oracles</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>The Oracles Project</name>
+  <summary>A port of Oracle of Ages and Oracle of Seasons</summary>
+  <description>
+    <p>A faithful, moddable port of Oracle of Ages and Oracle of Seasons. Your own ROM runs in an emulator core, SameBoy or mGBA's Game Boy core; around it, a native host presents the game: the original image, or a widescreen view with the neighbouring rooms. Gameplay options, Lua mods and fan games from their BPS patch come with it.</p>
+    <p>The game needs your own ROM of Oracle of Ages or Oracle of Seasons (US), and a fan game its BPS patch; none is included.</p>
+  </description>
+  <launchable type="desktop-id">org.theoraclesproject.oracles.desktop</launchable>
+  <url type="homepage">https://github.com/thibautbus/top</url>
+  <url type="bugtracker">https://github.com/thibautbus/top/issues</url>
+  <provides>
+    <binary>the-oracles-project</binary>
+  </provides>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">mild</content_attribute>
+  </content_rating>
+</component>
