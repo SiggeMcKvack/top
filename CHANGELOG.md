@@ -13,6 +13,10 @@ What changed in each version of The Oracles Project, the newest first. The relea
 - **Living neighbouring rooms.** In Enhanced, the people and things in the rooms around Link now move as the game moves them, instead of standing still in the pose the view captured. What the game itself keeps still stays still. The Low quality keeps them still, as before.
 - **Settings while you play.** From the pause, **Swimming**, **Item hotkeys** and **Window** now apply at once, without going back to the home screen. What a running game cannot change (the text, the text box, the core) is greyed in the pause, which says to change it from the home screen.
 
+### Improved
+
+- **Smoother diagonal transitions.** With **Continuous transitions**, crossing a room edge diagonally, walking or swimming, no longer stalls for a moment while the next room loads. It works in Ages and Seasons.
+
 ## 1.2.0 (2026-10-18)
 
 Most of this release answers what players asked for after 1.1.0, many of them on Retroid, AYN and Anbernic handhelds. Thank you for every report, screenshot and log, and to everyone who tested the builds and posted feedback: they shaped this version.

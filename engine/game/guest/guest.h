@@ -152,6 +152,22 @@ typedef struct OraclesGuestTransitionState {
     uint8_t map_width, map_height;                                            /* the overworld's (OVERWORLD_WIDTH/HEIGHT) */
     uint8_t animation_data_bank;
     uint8_t palette_thread_mode, tileset_palette, loaded_tileset_palette;   /* wPaletteThread_mode, wTilesetPalette, wLoadedTilesetPalette */
+    /* What the load of the room entered reads besides the fields above (active_group, active_room, tileset_flags,
+     * active_collisions) to build its layout and collisions, each written before wScrollMode is 8 or left alone by the
+     * load: the prediction of them (room_predict.h). */
+    struct {
+        uint8_t tileset_layout, tileset_layout_group;   /* wTilesetLayout, wTilesetLayoutGroup (loadTilesetData) */
+        uint8_t room_flags;                             /* the room's own flags (getThisRoomFlags) */
+        uint8_t room_state_modifier;                    /* the season (Seasons) */
+        uint8_t is_linked_game;                         /* applySingleTileChanges (Ages) */
+        uint8_t portal_group, portal_room, portal_pos;  /* replaceBreakableTileOverPortal (Ages) */
+        uint8_t warp_transition, warp_dest_pos, link_time_warp_tile;   /* the time warp's arrival and return (Ages) */
+        const uint8_t *global_flags, *gasha_spots_planted;   /* wGlobalFlags, wGashaSpotsPlantedBitset */
+        uint16_t global_flags_size, gasha_spots_planted_size;
+        /* the game's constants (generated tables), 0xff for none */
+        uint8_t chest_opened_tile, roomflag_item, timewarp_transition, pollution_fixed_flag, finished_game_flag, temple_lava_flag,
+            pirate_ship_flag, intro_done_flag;
+    } load;
     uint32_t frame;
     uint32_t frames_not_asked;             /* frames since the policy was last asked where it was not (a vblank of an unfinished frame outside a load): no break in the frames */
 } OraclesGuestTransitionState;

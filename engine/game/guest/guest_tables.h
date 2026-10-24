@@ -63,7 +63,7 @@ typedef struct OraclesGuestTables {
         room_width, room_height, tileset_unique_gfx, active_collisions, dungeon_floor, dungeon_map_position, dungeon_layout,
         warp_transition, warp_dest_pos, warp_dest_group, warp_dest_room, warp_transition2, active_tile_pos, lost_woods_transition_counter1, lost_woods_transition_counter2, link_time_warp_tile, is_linked_game, switch_state, rom_bank, jabu_water_level, gameboy_type,
         twinrova_tile_replacement_mode, seed_tree_refilled_bitset, ricky_state, essences_obtained, animal_companion, num_placed_slates,
-        changed_tile_queue_head, changed_tile_queue_tail, tileset_layout_group, gasha_spots_planted,
+        changed_tile_queue_head, changed_tile_queue_tail, tileset_layout_group, tileset_layout, gasha_spots_planted,
         tileset_gfx, tileset_palette, loaded_tileset_unique_gfx,
         loaded_tileset_palette, dirty_bg_palettes, room_pack, loading_room_pack, room_pack_data, map_transition_group_table,
         season_reload, link_angle, hole_or_conveyor,
@@ -147,6 +147,8 @@ typedef struct OraclesGuestTables {
         interac_wild_tokay_controller, interac_golden_cave_subrosian,
         tilesetflag_bit_sidescroll, tilesetflag_bit_underwater, menu_inventory, specialobject_minecart, specialobject_raft,
         first_dynamic_interaction_index, roomflag_visited,
+        /* the prediction of a scroll's room: the opened chest's tile and its room flag, the time warp's arrival, the pollution's flag (Ages) */
+        tileindex_chest_opened, roomflag_item, transition_dest_timewarp, globalflag_water_pollution_fixed,
         /* the call transaction: the treasures the high-level prizes give, and the number of rings */
         treasure_rupees, treasure_heart_refill, treasure_ring, treasure_ring_box, treasure_gasha_seed, treasure_seed_satchel,
         num_rings,

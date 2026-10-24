@@ -119,6 +119,16 @@ ALWAYS["enhanced-zoom-threaded"] = ALWAYS["enhanced-threaded"]   # a run the thr
 # core) holds that figure instead on the cores it names, the reason in a comment above it (a route played whose ghost runs
 # astray where nothing is shown wrong).
 SIZED = {"enhanced": ["enhanced.ghost_wrong_room=0", "enhanced.cold_fill_frames>=0"]}
+# On every row whose transitions are continuous (their counters in the summary), in every mode: the collisions of the
+# room a scroll enters, predicted while the game loads them, are byte for byte what it then loads, every prediction
+# compared (transitions.predicted, predicted_matched).
+PREDICTION = ["transitions.predicted_mismatched=0"]
+
+
+def prediction_rules(values: dict) -> list:
+    if "transitions.predicted" not in values:
+        return []
+    return PREDICTION + [f"transitions.predicted_matched={values['transitions.predicted']}"]
 MODE_FLAGS = {
     "faithful": lambda w: ["--render-check", str(w / "render"), "--colour-correction", "off", "--ghost-check", str(w / "ghost"), "--ghost-trace",
                            "--out", str(w / "fingerprints.tsv")],
@@ -377,7 +387,7 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_d
     if not values:
         violations.append(f"no summary written (harness exit {proc.returncode}{retried}; see {w / 'harness.log'})")
     sized = sized_rules(row["mode"], row["options"], row["expect"], core)
-    for rule in ALWAYS[row["mode"]] + sized + row["expect"]:
+    for rule in ALWAYS[row["mode"]] + sized + prediction_rules(values) + row["expect"]:
         on, colon, rest = rule.partition(":")
         if colon and on in CORES:
             if on != core:

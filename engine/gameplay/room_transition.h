@@ -45,15 +45,18 @@
  * him;
  * swimming, or on Ages' sea floor, his motion goes on at its own angle and
  * speed, which the game freezes through the scroll and takes up after it,
- * across the axis only into water swimming; the carry the room's load
- * withholds, its collisions not known yet, is caught up once they are, at
- * his own ratio across and along, within the bus's bound a frame; a route
+ * across the axis only into water swimming; while the room entered loads,
+ * onto its collisions as predicted from the ROM's tables (room_predict.h),
+ * and where they are not predicted the carry the load withholds is caught
+ * up once they are known, at his own ratio across and along, within the
+ * bus's bound a frame; a route
  * recorded without it replays without it, its diagonal crossings elsewhere
  * otherwise. */
 #ifndef ORACLES_GAMEPLAY_ROOM_TRANSITION_H
 #define ORACLES_GAMEPLAY_ROOM_TRANSITION_H
 
 #include "guest.h"
+#include "room_predict.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -85,10 +88,20 @@ typedef struct OraclesRoomTransitionStats {
     unsigned palette_refreshes;  /* palettes refreshed after a palette transition's fade outlived the doubled scroll */
     unsigned carry_asked_frames; /* frames the policy asked to move Link across the axis too (--continuous-diagonal): a diagonal held on foot, his motion in the water; those the bus applied are oracles_guest_transition_carried */
     unsigned carry_withheld_frames; /* frames it did not: a collision across in the room entered, or its collisions not loaded */
+    unsigned carry_unknown_frames;  /* of them, those the room entered's collisions were neither loaded nor predicted */
+    unsigned carry_unnamed_frames;  /* of those, the ones before the game named the room (wScrollMode not 8 yet), predicted a frame later */
+    unsigned carry_predicted_frames; /* frames a carry was tested on the room entered's collisions as predicted, the game not having loaded them yet */
+    /* The prediction of the room entered's collisions (room_predict.h), at the first frame of a transition the policy takes
+     * over whose load the game has not finished: */
+    unsigned predicted_transitions; /* those it predicted */
+    unsigned predicted_matched;     /* of them, those whose layout and collisions are, byte for byte, what the game then loaded */
+    unsigned predicted_mismatched;  /* and those whose are not */
+    unsigned predict_fallbacks;     /* those left to the game's load, its collisions unknown until it ends */
+    unsigned predict_fallback_by[ORACLES_ROOM_PREDICT_VERDICTS];   /* by reason (OraclesRoomPredictVerdict) */
 } OraclesRoomTransitionStats;
 /* The policy's progress through the transition in progress, for a savestate: ORACLES_ROOM_TRANSITION_STATE_SIZE bytes
  * written into `out`, their count returned; 0 when `capacity` is short. */
-#define ORACLES_ROOM_TRANSITION_STATE_SIZE 53u
+#define ORACLES_ROOM_TRANSITION_STATE_SIZE (57u + 2u * ORACLES_ROOM_LAYOUT_BYTES)
 size_t oracles_room_transition_save_state(const OraclesRoomTransition *transition, uint8_t *out, size_t capacity);
 /* That progress given back after a savestate's load reset the guest (oracles_guest_reset_execution_state): the policy
  * goes on with the transition the state was saved in as if no load had come between.  0, or -1 for data of another

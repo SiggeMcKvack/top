@@ -67,6 +67,16 @@ void harness_report_transitions(run *r, FILE *summary, uint8_t *rom)
         fprintf(stderr, "continuous transitions: a diagonal held (--continuous-diagonal) carried Link across the axis on %u frames, withheld on %u (a collision across, the room's collisions not loaded)\n", oracles_guest_transition_carried(r->guest), stats.carry_withheld_frames);
         if (summary) fprintf(summary, "transitions.carried_frames=%u\ntransitions.carry_asked_frames=%u\ntransitions.carry_withheld_frames=%u\n", oracles_guest_transition_carried(r->guest), stats.carry_asked_frames, stats.carry_withheld_frames);
         if (summary) fprintf(summary, "transitions.resumed_frames=%u\n", stats.refused_by[10]);
+        fprintf(stderr, "continuous transitions: the room entered's collisions predicted at %u transitions while the game loaded them (%u the same as the game's, %u not), "
+                        "%u left to the load (", stats.predicted_transitions, stats.predicted_matched, stats.predicted_mismatched, stats.predict_fallbacks);
+        for (unsigned v = 1, listed = 0; v < ORACLES_ROOM_PREDICT_VERDICTS; v++)
+            if (stats.predict_fallback_by[v]) fprintf(stderr, "%s%s %u", listed++ ? ", " : "", oracles_room_predict_verdict_name((OraclesRoomPredictVerdict)v), stats.predict_fallback_by[v]);
+        fprintf(stderr, "); a carry tested on them on %u frames, withheld for want of them on %u (%u before the game named the room)\n", stats.carry_predicted_frames,
+                stats.carry_unknown_frames, stats.carry_unnamed_frames);
+        if (summary) fprintf(summary, "transitions.predicted=%u\ntransitions.predicted_matched=%u\ntransitions.predicted_mismatched=%u\ntransitions.predict_fallbacks=%u\n"
+                                      "transitions.carry_predicted_frames=%u\ntransitions.carry_unknown_frames=%u\n",
+                             stats.predicted_transitions, stats.predicted_matched, stats.predicted_mismatched, stats.predict_fallbacks,
+                             stats.carry_predicted_frames, stats.carry_unknown_frames);
         if (summary) fprintf(summary, "transitions.taken=%u\ntransitions.walked_frames=%u\ntransitions.refused_frames=%u\ntransitions.unanimated_frames=%u\ntransitions.palette_refreshes=%u\ntransitions.vblank_load_writes=%u\ntransitions.vblank_scroll_writes=%u\ntransitions.vblank_other_writes=%u\n",
                              stats.transitions, stats.walked_frames, stats.refused_frames, stats.unanimated_frames, stats.palette_refreshes,
                              by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);

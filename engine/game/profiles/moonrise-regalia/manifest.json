@@ -1120,6 +1120,7 @@
       "bank": 0,
       "address": "0xcd24"
     },
+    "tileset_layout": null,
     "tmp_cec0": {
       "bank": 0,
       "address": "0xcec0"
@@ -1358,7 +1359,8 @@
     "vblank_dma_function": "the host's text box not qualified for this revision",
     "textbox_vram_pos": "the host's text box not qualified for this revision",
     "character_display_timer": "the host's text box not qualified for this revision",
-    "text_address": "the host's text box not qualified for this revision"
+    "text_address": "the host's text box not qualified for this revision",
+    "tileset_layout": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load"
   },
   "guest_table_sizes": {
     "global_flags_size": 16,
@@ -1378,6 +1380,10 @@
     "shutter_tile_last": "0x7f",
     "first_dynamic_interaction_index": "0xd2",
     "roomflag_visited": "0x10",
+    "tileindex_chest_opened": "0xff",
+    "roomflag_item": "0xff",
+    "transition_dest_timewarp": "0xff",
+    "globalflag_water_pollution_fixed": "0xff",
     "coarse_flag_finished_game": "0x14",
     "coarse_flag_temple_lava": "0xff",
     "coarse_flag_moblins_keep": "0xff",
@@ -1468,6 +1474,14 @@
     "num_gfx_headers": "a count of a table no reader takes for this game",
     "num_unique_gfx_headers": "a count of a table no reader takes for this game",
     "num_palette_headers": "a count of a table no reader takes for this game",
-    "num_tileset_layouts": "a count of a table no reader takes for this game"
+    "num_tileset_layouts": "a count of a table no reader takes for this game",
+    "single_tile_change_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "standard_tile_substitutions": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "chest_data_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "room_tile_changer_code_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "tile_changes_after_gfx_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "gasha_spot_rooms": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "timewarp_entry_tile_replacement_dict": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "timewarp_return_tile_replacement_dict": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load"
   }
 }

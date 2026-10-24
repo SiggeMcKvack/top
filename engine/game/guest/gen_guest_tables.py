@@ -162,6 +162,9 @@ VARIABLES = [
     ("num_placed_slates", "wNumPlacedSlates"),
     ("changed_tile_queue_head", "wChangedTileQueueHead"), ("changed_tile_queue_tail", "wChangedTileQueueTail"),
     ("tileset_layout_group", "wTilesetLayoutGroup"),
+    # Continuous transitions: the tileset layout the room entered loads its collisions from (loadTilesetAndRoomLayout),
+    # written by loadTilesetData before wScrollMode is 8, which the prediction of those collisions reads.
+    ("tileset_layout", "wTilesetLayout"),
     # Ghost: the load around the substitutions (the coarse list, ghost_key.c): the Gasha seeds planted.
     ("gasha_spots_planted", "wGashaSpotsPlantedBitset"),
     # Enhanced: the tileset a room has loaded, to render a neighbour's map with the live tiles when they are the same.
@@ -364,6 +367,12 @@ DISASM_CONSTANTS = [
     ("first_dynamic_interaction_index", "../include/wram.s", "FIRST_DYNAMIC_INTERACTION_INDEX"),
     # The coarse list's comparison: the bit the entry into a room sets in its flags, which no load reads.
     ("roomflag_visited", "common/roomFlags.s", "ROOMFLAG_VISITED"),
+    # The prediction of the collisions of the room a scroll enters (room_predict.c): the opened chest's tile and the room's
+    # flag replaceOpenedChest tests, the time warp's arrival replaceBreakableTileOverLinkTimeWarpingIn tests, and the
+    # flag replacePollutionWithWaterIfPollutionFixed tests (Ages).
+    ("tileindex_chest_opened", "common/tileIndices.s", "TILEINDEX_CHEST_OPENED"), ("roomflag_item", "common/roomFlags.s", "ROOMFLAG_ITEM"),
+    ("transition_dest_timewarp", "common/transitions.s", "TRANSITION_DEST_TIMEWARP"),
+    ("globalflag_water_pollution_fixed", "common/globalFlags.s", "GLOBALFLAG_WATER_POLLUTION_FIXED", "ages"),
     # The call transaction: the treasures a mod may give through giveTreasure, and the rupee values of removeRupeeValue.
     ("treasure_rupees", "common/treasure.s", "TREASURE_RUPEES"), ("treasure_heart_refill", "common/treasure.s", "TREASURE_HEART_REFILL"),
     ("treasure_ring", "common/treasure.s", "TREASURE_RING"), ("treasure_ring_box", "common/treasure.s", "TREASURE_RING_BOX"),

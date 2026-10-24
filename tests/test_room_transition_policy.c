@@ -9,6 +9,7 @@
  * counter decremented on each landing on a multiple of 8, the scroll over on
  * the one after it reaches zero), and frames finishing it. */
 #include "room_transition.h"
+#include "room_predict_fixture.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,9 @@ const OraclesCompatProfile *oracles_guest_profile(const OraclesGuest *guest) { (
 int oracles_compat_continuous_transitions(const OraclesCompatProfile *profile) { (void)profile; return 1; }
 int oracles_compat_continuous_swim(const OraclesCompatProfile *profile) { (void)profile; return 1; }
 int oracles_compat_continuous_diagonal(const OraclesCompatProfile *profile) { (void)profile; return 1; }
+static const OraclesTables *predict_tables;   /* the tables the prediction reads, NULL: the profile does not qualify it */
+int oracles_compat_predict_collisions(const OraclesCompatProfile *profile) { (void)profile; return predict_tables != NULL; }
+const OraclesTables *oracles_compat_data_tables(const OraclesCompatProfile *profile) { (void)profile; return predict_tables; }
 void oracles_guest_set_transition_swim(OraclesGuest *guest, int on) { (void)guest; (void)on; }
 void oracles_guest_set_transition_policy(OraclesGuest *guest, OraclesGuestTransitionFn policy, OraclesGuestTransitionResetFn reset, void *opaque)
 {
@@ -44,6 +48,9 @@ typedef struct run {
     int blind;                  /* the first frames of the load given no collisions (0: the first alone) */
     uint8_t speed;
     int restore;                /* the savestate carries the policy's progress, saved before the frame `reset_at` */
+    const uint8_t *layout;      /* the room entered's tiles, given with its collisions */
+    uint8_t room;               /* the room entered (wActiveRoom), group 0 */
+    int unnamed;                /* the load's first frames before the game names the room (wScrollMode 4) */
 } run;
 
 static OraclesRoomTransition *policy_under_test;
@@ -60,6 +67,7 @@ static void play(const run *r, int *out_x, int *out_y)
     s.game = ORACLES_GAME_AGES; s.game_state = 2; s.cutscene_index = 1; s.scroll_mode = 8;
     s.transition_direction = (uint8_t)r->dir; s.link_object_index = 0xd0; s.link_state = 1; s.link_visible = 0x80;
     s.link_anim_mode = 0x10; s.animation_data_bank = 6; s.link_anim_pointer = 0x4000;
+    s.active_room = r->room;
     s.link_input_angle = r->angle; s.link_move_angle = r->sea_floor ? r->move_angle : r->angle; s.tile_types_bank = 0xff;
     if (r->sea_floor) { s.tileset_flags = ORACLES_TILESETFLAG_UNDERWATER; s.link_var2f = 0xc0; s.link_speed = r->speed ? r->speed : 0x28; }
     int x = r->x, y = r->y;
@@ -91,7 +99,9 @@ static void play(const run *r, int *out_x, int *out_y)
         s.frame = frame_counter++;
         s.link_anim_counter = 3;
         s.room_collisions = r->unknown ? NULL : r->collisions;
-        if (f < r->loading) { s.transition_state = 3; if (f < (r->blind ? r->blind : 1)) s.room_collisions = NULL; }
+        s.room_layout = s.room_collisions ? r->layout : NULL;
+        s.scroll_mode = f < r->unnamed ? 4 : 8;
+        if (f < r->loading) { s.transition_state = 3; if (f < (r->blind ? r->blind : 1)) s.room_collisions = s.room_layout = NULL; }
         else if (f == r->loading) { s.transition_state = 5; s.transition_substate = horizontal ? 2 : 1; phase = 1; }
         else if (phase == 1) { phase = 2; counter--; }
         else if (phase == 2) {
@@ -135,7 +145,7 @@ int main(void)
     /* Down from y=121 at x=40, straight, twelve frames of load: a pixel a frame up to the game's 16 px, the machine's
      * 8 px of the doubled scroll counted, and beyond them only where nothing is in his way. */
     memset(collisions, 0, sizeof collisions);
-    run r = { 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0 };
+    run r = { 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0, NULL, 0, 0 };
     play(&r, &x, &y);
     CHECK(y - (121 << 8) == (12 + 2 + 16 + 2) << 8 && scroll_steps == 16);   /* a pixel a frame, the room clear */
     /* While the room entered's collisions are not known nothing says what lies beyond: the pixel the game's distance
@@ -177,7 +187,7 @@ int main(void)
 
     /* On foot, down and right, the room's collisions unknown for three frames: the carry they withheld is caught up
      * once they are known, at most a pixel a frame across, the bus's bound; and in the water at most $160. */
-    r = (run){ 2u, 12u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 3, 0, 0 };
+    r = (run){ 2u, 12u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 3, 0, 0, NULL, 0, 0 };
     memset(collisions, 0, sizeof collisions);
     play(&r, &x, &y);
     CHECK(x - (40 << 8) == 32 * 0xb5 && y - (121 << 8) == 32 * 0xb5 && largest_across == 0x100);
@@ -194,7 +204,7 @@ int main(void)
     {
         OraclesRoomTransitionStats before, after;
         for (unsigned c = 3; c < 10u; c++) collisions[0 * 16 + c] = 0x0f;
-        r = (run){ 2u, 12u, 43 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 3, 0, 0 };   /* his right side (x+4) at 47, column 2 */
+        r = (run){ 2u, 12u, 43 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 3, 0, 0, NULL, 0, 0 };   /* his right side (x+4) at 47, column 2 */
         oracles_room_transition_stats(tr, &before);
         play(&r, &x, &y);
         oracles_room_transition_stats(tr, &after);
@@ -206,7 +216,7 @@ int main(void)
     /* Slower than the machine's $80 a step ($0a, $40 a frame), straight down on the sea floor: the doubled scroll's
      * steps, his own short of them, would leave him 9.75 px on; what they leave of the game's 16 px is spread over its
      * steps, as far as those 16 px, and his own step goes on after the scroll. */
-    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 4, 2, collisions, 0, -1, 1, 16u, 0, 0x0a, 0 };
+    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 4, 2, collisions, 0, -1, 1, 16u, 0, 0x0a, 0, NULL, 0, 0 };
     play(&r, &x, &y);
     CHECK(y - (121 << 8) == (16 << 8) + 2 * 0x40 && x == 40 << 8);
 
@@ -215,19 +225,96 @@ int main(void)
      * (137.80, his steps of $80 in the scroll). */
     memset(collisions, 0, sizeof collisions);
     for (unsigned c = 0; c < 10u; c++) collisions[1 * 16 + c] = 0x0f;
-    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0 };
+    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0, NULL, 0, 0 };
     play(&r, &x, &y);
     CHECK(y == (137 << 8) + 0x80);
     /* Carried down and right, a hole in row 1 under the carried path's tile (y+5) beyond the game's distance and not
      * under the straight path's: the cap holds him where his tile stays clear of it. */
     memset(collisions, 0, sizeof collisions);
     collisions[1 * 16 + 3] = 0x10;
-    r = (run){ 2u, 12u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0 };
+    r = (run){ 2u, 12u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0, NULL, 0, 0 };
     play(&r, &x, &y);
     CHECK(x == 0x3ea0 && y == 0x89e6);                             /* x=62.63 in column 3, y=9.90: his tile (14) still in row 0 */
     r.angle = 16u;
     play(&r, &x, &y);
     CHECK(x == 40 << 8 && (y >> 8) - 128 == 121 + 32 - 128);      /* straight, column 2: nothing in his way */
+
+    /* The room entered's collisions predicted while the game loads them (room_predict.h): on foot down and right, the
+     * load's first three frames without them, the carry goes on from the first frame at Link's own step, nothing withheld
+     * nor caught up, the prediction what the game then loads; the room 0:05 of the fixture, its tiles and collisions 0. */
+    {
+        fixture f;
+        fixture_init(&f, rom);
+        predict_tables = &f.tables;
+        uint8_t layout[ORACLES_ROOM_LAYOUT_BYTES], table[ORACLES_TILESET_COLLISIONS_BYTES], expected[ORACLES_ROOM_LAYOUT_BYTES];
+        memset(layout, 0, sizeof layout);
+        memset(table, 0, sizeof table);
+        oracles_room_predict_collisions(table, layout, 1, expected);
+        oracles_room_transition_stop(tr);
+        tr = oracles_room_transition_start((OraclesGuest *)rom, rom, rom_size, 1);
+        CHECK(tr != NULL && oracles_room_transition_set_diagonal(tr, 1));
+        if (!tr) return 1;
+        policy_under_test = tr;
+        OraclesRoomTransitionStats before, after;
+        r = (run){ 2u, 12u, 40 << 8, 121 << 8, 12, 2, expected, 0, -1, 0, 0, 3, 0, 0, layout, 0x05, 0 };
+        oracles_room_transition_stats(tr, &before);
+        play(&r, &x, &y);
+        oracles_room_transition_stats(tr, &after);
+        CHECK(x - (40 << 8) == 32 * 0xb5 && y - (121 << 8) == 32 * 0xb5 && largest_across == 0xb5);
+        CHECK(after.carry_predicted_frames - before.carry_predicted_frames == 3 && after.carry_unknown_frames == before.carry_unknown_frames);
+        CHECK(after.carry_withheld_frames == before.carry_withheld_frames);
+        CHECK(after.predicted_transitions - before.predicted_transitions == 1 && after.predicted_matched - before.predicted_matched == 1);
+        /* A vblank before the game names the room: that frame's carry withheld, the next ones on the prediction, what was
+         * withheld caught up. */
+        r.unnamed = 1;
+        oracles_room_transition_stats(tr, &before);
+        play(&r, &x, &y);
+        oracles_room_transition_stats(tr, &after);
+        CHECK(x - (40 << 8) == 32 * 0xb5 && largest_across == 0x100);
+        CHECK(after.carry_unnamed_frames - before.carry_unnamed_frames == 1 && after.carry_predicted_frames - before.carry_predicted_frames == 2);
+        CHECK(after.predicted_matched - before.predicted_matched == 1);
+        r.unnamed = 0;
+        /* A savestate loaded in the load keeps the prediction: the same carry. */
+        r.reset_at = 2; r.restore = 1;
+        play(&r, &x, &y);
+        CHECK(x - (40 << 8) == 32 * 0xb5 && largest_across == 0xb5);
+        r.reset_at = -1; r.restore = 0;
+        /* A state of the first version, saved before the prediction, still loads. */
+        {
+            uint8_t first_version[53];
+            memset(first_version, 0, sizeof first_version);
+            first_version[0] = 1;
+            CHECK(oracles_room_transition_load_state(tr, first_version, sizeof first_version) == 0);
+            first_version[0] = 2;
+            CHECK(oracles_room_transition_load_state(tr, first_version, sizeof first_version) == -1);
+            installed_reset(installed_opaque);
+        }
+        /* What the game loads otherwise than predicted is counted (a wall in its row 6, off Link's path). */
+        uint8_t walled[ORACLES_ROOM_LAYOUT_BYTES];
+        memcpy(walled, expected, sizeof walled);
+        walled[6 * 16 + 8] = 0x0f;
+        r.collisions = walled;
+        oracles_room_transition_stats(tr, &before);
+        play(&r, &x, &y);
+        oracles_room_transition_stats(tr, &after);
+        CHECK(after.predicted_mismatched - before.predicted_mismatched == 1 && after.predicted_matched == before.predicted_matched);
+        /* A room whose own code changes its tiles is left to the game's load: the carry withheld, then caught up. */
+        const uint8_t code[] = { 0x05, 0x08, 0x00 };
+        fixture_group_lists(&f, f.tables.room_tile_changer_code_group_table.addr, (const uint8_t[]){ 0 }, 1, 0, code, sizeof code);
+        r.collisions = expected;
+        oracles_room_transition_stats(tr, &before);
+        play(&r, &x, &y);
+        oracles_room_transition_stats(tr, &after);
+        CHECK(x - (40 << 8) == 32 * 0xb5 && largest_across == 0x100);
+        CHECK(after.carry_unknown_frames - before.carry_unknown_frames == 3 && after.carry_predicted_frames == before.carry_predicted_frames);
+        CHECK(after.predict_fallbacks - before.predict_fallbacks == 1 && after.predict_fallback_by[ORACLES_ROOM_PREDICT_ROOM_CODE] - before.predict_fallback_by[ORACLES_ROOM_PREDICT_ROOM_CODE] == 1);
+        predict_tables = NULL;
+        oracles_room_transition_stop(tr);
+        tr = oracles_room_transition_start((OraclesGuest *)rom, rom, rom_size, 1);
+        CHECK(tr != NULL);
+        if (!tr) return 1;
+        policy_under_test = tr;
+    }
 
     /* With the transitions alone, the cap the routes recorded with them were played with: past the game's distance in
      * 8.8, his middle and 4 px ahead, the machine's steps not counted (the wall of row 1 under his feet from y=9, under
@@ -239,7 +326,7 @@ int main(void)
     policy_under_test = tr;
     memset(collisions, 0, sizeof collisions);
     for (unsigned c = 0; c < 10u; c++) collisions[1 * 16 + c] = 0x0f;
-    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0 };
+    r = (run){ 2u, 16u, 40 << 8, 121 << 8, 12, 2, collisions, 0, -1, 0, 0, 0, 0, 0, NULL, 0, 0 };
     play(&r, &x, &y);
     CHECK(y == 145 << 8);                                          /* 17 in the room entered, his feet in the wall */
 

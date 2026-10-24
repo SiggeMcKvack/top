@@ -122,7 +122,7 @@ target_include_directories(oracles_language PUBLIC language)
 target_link_libraries(oracles_language PUBLIC oracles_guest oracles_data oracles_core)
 oracles_set_warnings(oracles_language)
 
-add_library(oracles_gameplay STATIC gameplay/room_transition.c gameplay/item_hotkeys.c gameplay/item_hotkeys_policy.c)
+add_library(oracles_gameplay STATIC gameplay/room_transition.c gameplay/room_predict.c gameplay/item_hotkeys.c gameplay/item_hotkeys_policy.c)
 target_include_directories(oracles_gameplay PUBLIC gameplay)
 target_link_libraries(oracles_gameplay PUBLIC oracles_guest)
 oracles_set_warnings(oracles_gameplay)

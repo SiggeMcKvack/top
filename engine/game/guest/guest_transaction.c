@@ -193,6 +193,33 @@ static void read_transition_state(OraclesGuest *guest, OraclesGuestTransitionSta
     s->palette_thread_mode = oracles_guest_read8(guest, t->palette_thread_mode);
     s->tileset_palette = oracles_guest_read8(guest, t->tileset_palette);
     s->loaded_tileset_palette = oracles_guest_read8(guest, t->loaded_tileset_palette);
+    s->load.tileset_layout = oracles_guest_read8(guest, t->tileset_layout);
+    s->load.tileset_layout_group = oracles_guest_read8(guest, t->tileset_layout_group);
+    /* getThisRoomFlags: the page of flagLocationGroupTable the group's rooms keep their flags in. */
+    const unsigned page = oracles_compat_room_flag_page(oracles_guest_profile(guest), s->active_group);
+    if (t->group0_room_flags.bank != ORACLES_GUEST_ABSENT && page * 0x100u + s->active_room < t->room_flags_size)
+        s->load.room_flags = oracles_guest_read8(guest, (OraclesGuestSym){ t->group0_room_flags.bank, (uint16_t)(t->group0_room_flags.addr + page * 0x100u + s->active_room) });
+    s->load.room_state_modifier = oracles_guest_read8(guest, t->room_state_modifier);
+    s->load.is_linked_game = oracles_guest_read8(guest, t->is_linked_game);
+    if (t->portal_group.bank != ORACLES_GUEST_ABSENT) {
+        const uint8_t *portal = oracles_guest_ptr(guest, t->portal_group, 3);   /* wPortalGroup, wPortalRoom, wPortalPos */
+        if (portal) { s->load.portal_group = portal[0]; s->load.portal_room = portal[1]; s->load.portal_pos = portal[2]; }
+    }
+    s->load.warp_transition = oracles_guest_read8(guest, t->warp_transition);
+    s->load.warp_dest_pos = oracles_guest_read8(guest, t->warp_dest_pos);
+    s->load.link_time_warp_tile = oracles_guest_read8(guest, t->link_time_warp_tile);
+    s->load.global_flags = oracles_guest_ptr(guest, t->global_flags, t->global_flags_size);
+    s->load.global_flags_size = s->load.global_flags ? t->global_flags_size : 0;
+    s->load.gasha_spots_planted = oracles_guest_ptr(guest, t->gasha_spots_planted, t->gasha_spots_planted_size);
+    s->load.gasha_spots_planted_size = s->load.gasha_spots_planted ? t->gasha_spots_planted_size : 0;
+    s->load.chest_opened_tile = t->tileindex_chest_opened;
+    s->load.roomflag_item = t->roomflag_item;
+    s->load.timewarp_transition = t->transition_dest_timewarp;
+    s->load.pollution_fixed_flag = t->globalflag_water_pollution_fixed;
+    s->load.finished_game_flag = t->coarse_flag_finished_game;
+    s->load.temple_lava_flag = t->coarse_flag_temple_lava;
+    s->load.pirate_ship_flag = t->coarse_flag_pirate_ship;
+    s->load.intro_done_flag = t->coarse_flag_intro_done;
     s->frame = guest->frame;
 }
 

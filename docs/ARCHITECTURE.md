@@ -53,7 +53,7 @@ The tree:
 | `engine/render` | the software PPU and its per-class comparison with the core |
 | `engine/ghost`, `engine/neighbours` | the ghost instance and its cache key; the objects, sprites and tile animation of a neighbour |
 | `engine/enhanced` | the camera, the compositor and the Enhanced view |
-| `engine/gameplay` | the continuous transitions and the item hotkeys, the only code that asks the bus to write |
+| `engine/gameplay` | the continuous transitions (with the prediction of the collisions of the room a scroll enters, from the ROM's tables, while the game loads it) and the item hotkeys, the only code that asks the bus to write |
 | `engine/mods` | the Lua runtime, the houses' composition, the mods' storage |
 | `engine/language` | the official translations: a European ROM's pack, extracted (the tables of exceptions, the rules that adapt a European text to the US code, the port's own texts) and read, and a language composed into the image |
 | `engine/session`, `engine/host` | what a session shares between the launcher and the harness (routes, route effects, the hotbar's model, mods and language of a session); the host facade and its backend without a window |
