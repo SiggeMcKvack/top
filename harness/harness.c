@@ -23,6 +23,7 @@
 #include "harness_options.h"
 #include "coverage.h"
 #include "neighbour_check.h"
+#include "object_animation_check.h"
 #include "frame_check.h"
 #include "ghost_check.h"
 #include "guest.h"
@@ -56,7 +57,8 @@ typedef struct run {
     OraclesCoverage *coverage; /* what the route covers, with a guest */
     OraclesAnimationCheck *animation; /* the neighbours' animation reader against the live game, with the Enhanced check */
     OraclesObjectSpritesCheck *object_sprites; /* the objects' sprites built from the game's data against the live OAM, with the Enhanced check */
-    OraclesNeighbourCheck *neighbours; /* NULL without --neighbour-objects-check */
+    OraclesNeighbourCheck *neighbours; /* NULL without --neighbour-objects-check or --object-animation-check */
+    OraclesObjectAnimationCheck *object_animation; /* NULL without --object-animation-check */
     OraclesHotkeysCheck *hotkeys; /* with --hotkeys-check, or when the route carries inventory exchanges */
     OraclesHotkeysLive *hotkeys_live; /* with --hotkeys-live: scripted keys over the route's inputs */
     unsigned dumps;               /* --dump-at, as many times as wanted */
@@ -363,9 +365,14 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
     char error[256];
     if (r->language && oracles_language_session_attach(r->language, r->guest, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); return 1; }
     r->coverage = oracles_coverage_create(r->guest);   /* what the route covers, written to the summary */
-    if (o->objects_dir) {
+    if (o->objects_dir || o->object_animation) {
         r->neighbours = oracles_neighbour_check_start(rom, rom_size, r->profile, r->core, r->guest, o->objects_dir, o->objects_lead, o->objects_capture);
         if (!r->neighbours) { fprintf(stderr, "harness: the neighbour objects check could not start\n"); return 1; }
+    }
+    if (o->object_animation) {
+        r->object_animation = oracles_object_animation_check_start(r->guest, rom, rom_size, o->objects_dir);
+        if (!r->object_animation) { fprintf(stderr, "harness: the objects' animation check could not start\n"); return 1; }
+        oracles_neighbour_check_set_animation(r->neighbours, r->object_animation);
     }
     if (o->samples_dir) r->check = oracles_frame_check_start(r->guest, r->core, o->samples_dir, 10);
     if (o->ghost_dir) {
@@ -396,6 +403,7 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
         if (o->enhanced_ghosts > 1u) oracles_enhanced_view_set_ghosts(oracles_enhanced_check_view(r->enhanced), o->enhanced_ghosts);
         oracles_enhanced_check_set_paced(r->enhanced, o->enhanced_paced);
         if (o->enhanced_objects) oracles_enhanced_check_set_neighbour_objects(r->enhanced, 1);
+        oracles_enhanced_view_set_neighbour_animation(oracles_enhanced_check_view(r->enhanced), !o->enhanced_frozen);
         r->animation = oracles_animation_check_start(r->guest, rom, rom_size);
         r->object_sprites = oracles_object_sprites_check_start(r->guest, rom, rom_size);
     }
@@ -518,6 +526,11 @@ static void report_checks(run *r, const harness_options *o, FILE *summary, uint8
         oracles_neighbour_check_report(r->neighbours, stdout);
         if (summary) oracles_neighbour_check_summary(r->neighbours, summary);
         oracles_neighbour_check_stop(r->neighbours);
+    }
+    if (r->object_animation) {
+        oracles_object_animation_check_report(r->object_animation, stdout);
+        if (summary) oracles_object_animation_check_summary(r->object_animation, summary);
+        oracles_object_animation_check_stop(r->object_animation);
     }
     if (r->animation) {
         oracles_animation_check_report(r->animation, stderr);

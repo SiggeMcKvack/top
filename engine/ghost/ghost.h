@@ -90,6 +90,7 @@ typedef struct OraclesGhostResult {
     uint8_t key[ORACLES_GHOST_KEY_BYTES];
     size_t key_len;
     unsigned prerun_frames;
+    unsigned probe_frames;                        /* the capture's probe: the frames it ran after the settled state */
     uint8_t from_group, from_room;                /* the room the ghost primed in (after a pre-run, the room the load reached) */
     /* The objects of the room entered, as they stand when the run settles, with
      * the number each received at the room's initialisation: what a
@@ -152,8 +153,22 @@ typedef struct OraclesGhost OraclesGhost;
  * companion, so that the room settles with its objects in the state the game
  * creates them in; the result then carries them, their tagged sprites and the
  * palettes to draw them.  Both are restored before the settled state is kept,
- * so a chained run starts from a normal state.  Off by default. */
+ * so a chained run starts from a normal state.  Off by default.
+ *
+ * Once that state is kept, the capture's probe: the room's interactions and
+ * parts run on (its enemies frozen) for ORACLES_GHOST_PROBE_UPDATES updates of
+ * the objects, ORACLES_GHOST_PROBE_FRAMES frames at most, and each record's
+ * animated_by_code says whether the object's own code advanced its animation
+ * by one call of the step at each (oracles_object_animation_one_step): what
+ * the game does with it in the state captured, which a neighbour animates or
+ * keeps still by (oracles_object_animation_animated).  The frames run after
+ * the run's result and its settled state, which they leave as they were. */
+#define ORACLES_GHOST_PROBE_UPDATES 2u
+#define ORACLES_GHOST_PROBE_FRAMES 4u
 void oracles_ghost_set_capture(OraclesGhost *ghost, int enabled);
+/* The capture's probe, on by default; off, a capture runs no frame after its settled state and its records' animated_by_code
+ * stay 0: for a view that keeps its neighbours' objects in their captured poses. */
+void oracles_ghost_set_probe(OraclesGhost *ghost, int enabled);
 /* The check of the tagging inside the ghost, over the frames it has drawn. */
 void oracles_ghost_sprite_stats(const OraclesGhost *ghost, unsigned *frames, unsigned *frames_uncovered, unsigned *worst_gap, unsigned *tags_dropped);
 unsigned oracles_ghost_frames_oam_full(const OraclesGhost *ghost);

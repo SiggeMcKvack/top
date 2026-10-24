@@ -37,11 +37,16 @@ static int default_core(void)
 #endif
 }
 
-OraclesQuality oracles_settings_quality(const oracles_settings *s)
+OraclesQuality oracles_settings_quality_of(int view, int core, int ghosts)
 {
     for (int q = 0; q < ORACLES_QUALITIES; q++)
-        if (s->view == qualities[q].view && oracles_settings_core(s) == qualities[q].core && s->ghosts == qualities[q].ghosts) return (OraclesQuality)q;
+        if (view == qualities[q].view && core == qualities[q].core && ghosts == qualities[q].ghosts) return (OraclesQuality)q;
     return ORACLES_QUALITY_CUSTOM;
+}
+
+OraclesQuality oracles_settings_quality(const oracles_settings *s)
+{
+    return oracles_settings_quality_of(s->view, oracles_settings_core(s), s->ghosts);
 }
 
 void oracles_settings_apply_quality(oracles_settings *s, OraclesQuality quality)

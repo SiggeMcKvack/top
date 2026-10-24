@@ -156,6 +156,16 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
             oracles_enhanced_view_coarse_drops(c->view));
     fprintf(out, "enhanced.beside_refused=%u\n", oracles_enhanced_view_beside_refused(c->view));
     fprintf(out, "enhanced.render_wait_max=%u\nenhanced.renders_forced=%u\n", oracles_enhanced_view_render_wait_max(c->view), oracles_enhanced_view_renders_forced(c->view));   /* a neighbour's own-animation render: the most frames it waited for the frame's budget, and those made past it */
+    {   /* a neighbour's objects animated in place */
+        OraclesEnhancedPoseCounts p;
+        oracles_enhanced_view_pose_counts(c->view, &p);
+        fprintf(out, "enhanced.poses_animated=%u\nenhanced.poses_frozen_code=%u\nenhanced.poses_frozen_enemies=%u\nenhanced.poses_frozen_low=%u\nenhanced.poses_frozen_unplaced=%u\n"
+                     "enhanced.poses_frozen_unreadable=%u\nenhanced.pose_steps=%u\nenhanced.pose_changes=%u\nenhanced.pose_changes_drawn=%u\nenhanced.pose_renders=%u\n"
+                     "enhanced.pose_lines=%u\nenhanced.pose_resets=%u\nenhanced.poses_drawn_wrong=%u\nenhanced.pose_lines_wrong=%u\nenhanced.pose_lag_max=%u\n"
+                     "enhanced.pose_probes=%u\nenhanced.pose_probe_frames=%u\n",
+                p.animated, p.frozen_code, p.frozen_enemies, p.frozen_low, p.frozen_unplaced, p.frozen_unreadable, p.steps, p.changes, p.changes_drawn,
+                p.renders, p.lines, p.resets, p.drawn_wrong, p.lines_wrong, p.lag_max, p.probes, p.probe_frames);
+    }
     if (c->reload_at)
         fprintf(out, "enhanced.reload=%s\nenhanced.reload_camera_delta=%" PRId32 "\nenhanced.reload_camera_frozen=%u\nenhanced.reload_transition_frames=%u\nenhanced.reload_transition_differing=%u\n",
                 !c->reload_done ? "not-performed" : c->reload_settled == 1 ? "neighbours-back" : "neighbours-not-back", c->reload_camera_delta,

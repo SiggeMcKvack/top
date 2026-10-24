@@ -160,6 +160,9 @@ int oracles_settings_subpixel_camera(const oracles_settings *settings);
 int oracles_settings_default_subpixel_camera(int fullscreen_only);
 /* The profile the view's level, the core the games run on and the neighbour workers make: Custom when none. */
 OraclesQuality oracles_settings_quality(const oracles_settings *settings);
+/* The same for a session's own: its view's level (an OraclesEnhancedLevel), its core (an OraclesCoreKind) and its
+ * workers (0 auto, 1, 2), the command line's over the settings'.  The Low quality leaves a neighbour's objects frozen. */
+OraclesQuality oracles_settings_quality_of(int view, int core, int ghosts);
 /* Sets the view's level, the core and the neighbour workers of `quality` (Custom changes nothing).  The core is
  * written only when it is not the build's default, the player having chosen none: a later build keeps its own. */
 void oracles_settings_apply_quality(oracles_settings *settings, OraclesQuality quality);

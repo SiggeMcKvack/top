@@ -145,6 +145,7 @@ int oracles_enhanced_view_set_ghosts(OraclesEnhancedView *v, unsigned count)
         oracles_ghost_set_trace(lane->ghost, 1);
         oracles_ghost_set_prerun(lane->ghost, GHOST_PRERUN_FRAMES);
         oracles_ghost_set_capture(lane->ghost, v->neighbour_objects);
+        oracles_ghost_set_probe(lane->ghost, !v->poses_off);
         v->lane_count++;
     }
     return (int)v->lane_count;
@@ -434,6 +435,10 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
      * sequence's step unchanged, ev_check_routing_keys). */
     if (v->observation.in_transition && !v->was_in_transition) {
         ev_drop_routed_entries(v);
+        /* The objects of the room entered in the poses the game freezes them in during the scroll; the game has
+         * already made it its active room on this frame (getNextActiveRoom). */
+        const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+        ev_poses_reset(v, ev_find_entry(v, oracles_guest_read8(v->guest, t->active_group), oracles_guest_read8(v->guest, t->active_room)));
         v->scroll_from_valid = v->source_valid;   /* the capture of the room in play: the room being left */
         v->scroll_from_group = v->source_group;
         v->scroll_from_room = v->source_room;

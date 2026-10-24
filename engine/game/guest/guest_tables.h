@@ -48,6 +48,8 @@ typedef struct OraclesGuestTables {
         vram_tiles, vram_attributes,
         tileset_animation, animation_counters, animation_queue, animation_queue_head, animation_queue_tail,
         animation_group_table, animation_gfx_headers,
+        /* ROM: the objects' animations and their poses by id, for each kind (interactionAnimate, enemyAnimate, partAnimate) */
+        interaction_animation_table, interaction_oam_data_table, enemy_animation_table, enemy_oam_data_table, part_animation_table, part_oam_data_table,
         link_grab_state, link_swimming_state, magnet_glove_state, link_immobilized, link_pushing_direction,
         pegasus_seed_counter, link_playing_instrument, link_turning_disabled, force_link_push_animation, using_shield,
         link_id, link_state, link_visible, link_anim_counter, link_anim_parameter, link_anim_pointer, link_anim_mode,

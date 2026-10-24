@@ -949,6 +949,30 @@
       "address": "0xcd31"
     },
     "animation_gfx_headers": "sites.animation_gfx_headers",
+    "interaction_animation_table": {
+      "bank": 22,
+      "address": "0x597a"
+    },
+    "interaction_oam_data_table": {
+      "bank": 22,
+      "address": "0x5b48"
+    },
+    "enemy_animation_table": {
+      "bank": 28,
+      "address": "0x5dc0"
+    },
+    "enemy_oam_data_table": {
+      "bank": 28,
+      "address": "0x5ec0"
+    },
+    "part_animation_table": {
+      "bank": 22,
+      "address": "0x7798"
+    },
+    "part_oam_data_table": {
+      "bank": 22,
+      "address": "0x784e"
+    },
     "animation_group_table": "sites.animation_group_table",
     "animation_queue": {
       "bank": 2,

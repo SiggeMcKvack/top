@@ -27,6 +27,7 @@ OraclesEnhancedCheck *oracles_enhanced_check_start(OraclesCore *core, OraclesGue
     c->view = oracles_enhanced_view_start(core, guest, rom, rom_size);
     if (!c->view) { free(c); return NULL; }
     oracles_enhanced_view_set_sync_budget(c->view, ghost_budget);
+    oracles_enhanced_view_pose_verify(c->view, 1);   /* each render of a neighbour's poses against the step and a whole render */
     c->threaded = ghost_budget == 0;
     c->run_hash = ORACLES_HASH_SEED;
     c->width = oracles_enhanced_view_width(c->view);

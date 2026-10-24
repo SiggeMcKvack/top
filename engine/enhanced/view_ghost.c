@@ -162,6 +162,8 @@ static void accept_result(OraclesEnhancedView *v, entry *e, const OraclesGhostRe
     e->valid = 1; e->failed = 0; e->not_a_start = 0; e->waits_start = 0; e->live_valid = 0; e->refresh = 0; e->refresh_season = 0; e->refresh_failures = 0; e->rerun = 0;
     e->accepted_at = v->frame;
     e->render_wanted_at = 0;
+    ev_poses_deliver(v, e);
+    if (r->probe_frames) { v->poses.probes++; v->poses.probe_frames += r->probe_frames; }
     v->completed++;
 }
 

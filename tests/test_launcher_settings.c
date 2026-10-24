@@ -673,6 +673,10 @@ int main(int argc, char **argv)
     CHECK(written.ghosts == 1 && written.view == 2);
     oracles_settings_defaults(&written);   /* a player of before: far, the default core, auto: Custom on a desktop build */
     CHECK(oracles_settings_quality(&written) == ORACLES_QUALITY_CUSTOM);
+    /* A session's own: Low (near, Fast, auto) leaves a neighbour's objects frozen; near on the other core is no profile. */
+    CHECK(oracles_settings_quality_of(0, ORACLES_CORE_MGBA, 0) == ORACLES_QUALITY_LOW);
+    CHECK(oracles_settings_quality_of(0, ORACLES_CORE_SAMEBOY, 0) == ORACLES_QUALITY_CUSTOM);
+    CHECK(oracles_settings_quality_of(2, ORACLES_CORE_SAMEBOY, 2) == ORACLES_QUALITY_MAX);
     CHECK(oracles_settings_default_quality(0, 4, 8192) == ORACLES_QUALITY_MAX);
     CHECK(oracles_settings_default_quality(1, 4, 4096) == ORACLES_QUALITY_MEDIUM);    /* the RG DS */
     CHECK(oracles_settings_default_quality(1, 8, 5800) == ORACLES_QUALITY_HIGH);      /* a "6 GB" device */

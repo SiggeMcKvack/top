@@ -18,6 +18,7 @@ typedef struct appearing { unsigned oam_index; unsigned alpha_256; } appearing;
 void ev_objects_event(OraclesEnhancedView *v, const OraclesGuestEvent *event)
 {
     oracles_objects_event(v->live_objects, event);
+    ev_poses_event(v, event);
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
     if (event->type == ORACLES_EVENT_ROOM_ENTER) {
         /* A room entered by a scrolling transition, the only entry where it was

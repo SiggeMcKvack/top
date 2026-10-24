@@ -153,6 +153,9 @@ static int read_object(const OraclesObjects *o, unsigned kind, unsigned slot, Or
     r->xh = p[ORACLES_OBJ_XH];
     r->zh = p[ORACLES_OBJ_ZH];
     r->oam_data_address = (uint16_t)(p[ORACLES_OBJ_OAM_DATA_ADDRESS] | (p[ORACLES_OBJ_OAM_DATA_ADDRESS + 1] << 8));
+    r->anim_counter = p[ORACLES_OBJ_ANIM_COUNTER];
+    r->anim_parameter = p[ORACLES_OBJ_ANIM_PARAMETER];
+    r->anim_pointer = (uint16_t)(p[ORACLES_OBJ_ANIM_POINTER] | (p[ORACLES_OBJ_ANIM_POINTER + 1] << 8));
     return 1;
 }
 
@@ -224,7 +227,32 @@ void oracles_objects_note_drawn(const OraclesObjects *o, OraclesObjectRecord rec
         r->drawn_yh = alive ? now.yh : r->yh;
         r->drawn_x = alive ? now.x : r->x;
         r->drawn_xh = alive ? now.xh : r->xh;
+        const OraclesObjectRecord *look = alive ? &now : r;
+        r->drawn = (OraclesObjectLook){ look->visible, look->zh, look->oam_flags, look->oam_tile_base, look->anim_counter, look->anim_parameter,
+                                        look->oam_data_address, look->anim_pointer };
     }
+}
+
+OraclesObjectRecord oracles_objects_as_drawn(const OraclesObjectRecord *r)
+{
+    OraclesObjectRecord d = *r;
+    d.y = r->drawn_y;
+    d.yh = r->drawn_yh;
+    d.x = r->drawn_x;
+    d.xh = r->drawn_xh;
+    d.visible = r->drawn.visible;
+    d.zh = r->drawn.zh;
+    d.oam_flags = r->drawn.oam_flags;
+    d.oam_tile_base = r->drawn.oam_tile_base;
+    /* Its animation as latched, the state the game animates it from once a
+     * scroll into its room ends; the drawn one when it had none then. */
+    if (!r->anim_pointer) {
+        d.oam_data_address = r->drawn.oam_data_address;
+        d.anim_counter = r->drawn.anim_counter;
+        d.anim_parameter = r->drawn.anim_parameter;
+        d.anim_pointer = r->drawn.anim_pointer;
+    }
+    return d;
 }
 
 uint8_t oracles_objects_killed_in_list(const uint8_t list[16], uint8_t room)

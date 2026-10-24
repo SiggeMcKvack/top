@@ -5,7 +5,6 @@
  * ROM in ghost_data.c. */
 #include "ghost_internal.h"
 
-static int bank0_symbol(OraclesGuestSym sym);
 static void freeze_objects(OraclesGhost *g);
 static void unfreeze_objects(OraclesGhost *g);
 
@@ -18,6 +17,9 @@ static void on_event(void *opaque, const OraclesGuestEvent *event)
     oracles_objects_event(g->objects, event);
     oracles_sprites_event(g->sprites, event);
     switch (event->type) {
+    case ORACLES_EVENT_OBJECTS_UPDATED:
+        if (g->probing) oracles_ghost_probe_update(g);
+        break;
     case ORACLES_EVENT_TILE_SUBSTITUTIONS:
         g->in_substitutions = 1;
         if (g->tracing) { oracles_ghost_trace_stack_of_entry(g); oracles_guest_enable_read_trace(g->guest, 1); }
@@ -47,7 +49,7 @@ static void on_event(void *opaque, const OraclesGuestEvent *event)
          * flash into the area's season, and the band follows then. */
         if (!g->active || !g->primed || g->primed_hold < 0) break;
         uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
-        if (!wram || !bank0_symbol(t->room_pack) || !bank0_symbol(t->loading_room_pack) || !bank0_symbol(t->active_group)) break;
+        if (!wram || !oracles_ghost_bank0_symbol(t->room_pack) || !oracles_ghost_bank0_symbol(t->loading_room_pack) || !oracles_ghost_bank0_symbol(t->active_group)) break;
         if (wram[t->active_group.addr - WRAM_BANK0_BASE] != 0) break;
         /* Not into an area whose season never changes (oracles_ghost_area_holds_season):
          * the game's own fade sets it, and the band shows what the game will. */
@@ -223,7 +225,7 @@ int oracles_ghost_primeable(OraclesGuest *guest, const char **reason)
 
 static const OraclesGuestTables *t_of(const OraclesGhost *g) { return oracles_guest_tables(g->guest); }
 
-static int bank0_symbol(OraclesGuestSym sym)
+int oracles_ghost_bank0_symbol(OraclesGuestSym sym)
 {
     return sym.bank != ORACLES_GUEST_ABSENT && sym.addr >= WRAM_BANK0_BASE && sym.addr < WRAM_BANKED_BASE;
 }
@@ -239,7 +241,7 @@ static int prime(OraclesGhost *g, OraclesGhostDirection direction)
 {
     const OraclesGuestTables *t = oracles_guest_tables(g->guest);
     const OraclesGuestSym sym = t->screen_transition_direction, warp = t->disable_warp_tiles;
-    if (!bank0_symbol(sym) || !bank0_symbol(warp)) return -1;
+    if (!oracles_ghost_bank0_symbol(sym) || !oracles_ghost_bank0_symbol(warp)) return -1;
     uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
     if (!wram) return -1;
     g->prior_warp_tiles = wram[warp.addr - WRAM_BANK0_BASE];
@@ -253,7 +255,7 @@ static int prime(OraclesGhost *g, OraclesGhostDirection direction)
      * 3, clears both), and the room he scrolls into is loaded without it.  Run
      * with it, the room would lose the breakable tile at the arrival's spot
      * (replaceBreakableTileOverLinkTimeWarpingIn), which no key byte says. */
-    if (t->link_time_warp_tile.bank != ORACLES_GUEST_ABSENT && bank0_symbol(t->warp_transition) && bank0_symbol(t->link_time_warp_tile)
+    if (t->link_time_warp_tile.bank != ORACLES_GUEST_ABSENT && oracles_ghost_bank0_symbol(t->warp_transition) && oracles_ghost_bank0_symbol(t->link_time_warp_tile)
         && (wram[t->warp_transition.addr - WRAM_BANK0_BASE] & 0x0fu) == TRANSITION_DEST_TIMEWARP) {
         wram[t->warp_transition.addr - WRAM_BANK0_BASE] = 0;
         wram[t->link_time_warp_tile.addr - WRAM_BANK0_BASE] = 0;
@@ -264,8 +266,8 @@ static int prime(OraclesGhost *g, OraclesGhostDirection direction)
      * (ORACLES_EVENT_CHECK_ROOM_PACK), a fixed one takes its own by the game's fade. */
     g->primed_hold = -1;
     if (g->run_hold != -1 && oracles_compat_seasons_rules(oracles_guest_profile(g->guest))
-        && bank0_symbol(t->room_state_modifier) && bank0_symbol(t->active_group)
-        && bank0_symbol(t->active_room) && wram[t->active_group.addr - WRAM_BANK0_BASE] == 0) {
+        && oracles_ghost_bank0_symbol(t->room_state_modifier) && oracles_ghost_bank0_symbol(t->active_group)
+        && oracles_ghost_bank0_symbol(t->active_room) && wram[t->active_group.addr - WRAM_BANK0_BASE] == 0) {
         const unsigned room = wram[t->active_room.addr - WRAM_BANK0_BASE];
         const int step = direction == ORACLES_DIR_UP ? -16 : direction == ORACLES_DIR_DOWN ? 16 : direction == ORACLES_DIR_LEFT ? -1 : 1;
         const unsigned destination = (unsigned)((int)room + step) & 0xffu;
@@ -293,10 +295,10 @@ static int prime(OraclesGhost *g, OraclesGhostDirection direction)
      * Link never stands on (Ages 0:57, a house's door at its top). */
     const OraclesGuestSym large = t->room_is_large, index = t->link_object_index;
     /* The object the game moves is the one at wLinkObjectIndex: Link, or what he rides ($d1). */
-    const unsigned object = bank0_symbol(index) ? wram[index.addr - WRAM_BANK0_BASE] : 0u;
+    const unsigned object = oracles_ghost_bank0_symbol(index) ? wram[index.addr - WRAM_BANK0_BASE] : 0u;
     uint8_t *objects = oracles_guest_wram_writable(g->guest, ORACLES_OBJECTS_BANK);
     const OraclesGuestSym boundary = (direction & 1u) ? t->screen_transition_boundary_x : t->screen_transition_boundary_y;
-    if (objects && bank0_symbol(boundary) && bank0_symbol(large) && object >= (ORACLES_OBJECTS_BASE >> 8) && object <= 0xdfu) {
+    if (objects && oracles_ghost_bank0_symbol(boundary) && oracles_ghost_bank0_symbol(large) && object >= (ORACLES_OBJECTS_BASE >> 8) && object <= 0xdfu) {
         uint8_t *axis = &objects[(object - (ORACLES_OBJECTS_BASE >> 8)) * 0x100u + ((direction & 1u) ? ORACLES_OBJ_XH : ORACLES_OBJ_YH)];
         const unsigned edge = (direction == ORACLES_DIR_UP || direction == ORACLES_DIR_LEFT) ? 6u : wram[boundary.addr - WRAM_BANK0_BASE];
         int place = wram[large.addr - WRAM_BANK0_BASE] != 0;
@@ -311,8 +313,8 @@ static int prime(OraclesGhost *g, OraclesGhostDirection direction)
             const int past = land <= 5u || land > wram[boundary.addr - WRAM_BANK0_BASE];
             const uint8_t *companion = oracles_guest_object(g->guest, 1, 0);
             const int minecart = companion && companion[ORACLES_OBJ_ID] == SPECIALOBJECT_MINECART;
-            const unsigned ground = bank0_symbol(t->hole_or_conveyor) ? wram[t->hole_or_conveyor.addr - WRAM_BANK0_BASE] : 0x80u;
-            const int in_air = bank0_symbol(t->link_in_air) && (wram[t->link_in_air.addr - WRAM_BANK0_BASE] & 0x80u);
+            const unsigned ground = oracles_ghost_bank0_symbol(t->hole_or_conveyor) ? wram[t->hole_or_conveyor.addr - WRAM_BANK0_BASE] : 0x80u;
+            const int in_air = oracles_ghost_bank0_symbol(t->link_in_air) && (wram[t->link_in_air.addr - WRAM_BANK0_BASE] & 0x80u);
             const int knocked = oracles_guest_read8(g->guest, t->link_knockback_counter) != 0;
             place = past && (minecart || (!(ground & 0x80u) && (in_air || (!knocked && (ground & 0x7fu)))));
         }
@@ -332,7 +334,7 @@ static void freeze_objects(OraclesGhost *g)
 {
     const OraclesGuestTables *t = oracles_guest_tables(g->guest);
     uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
-    if (!wram || !bank0_symbol(t->disabled_objects) || g->frozen) return;
+    if (!wram || !oracles_ghost_bank0_symbol(t->disabled_objects) || g->frozen) return;
     g->prior_disabled_objects = wram[t->disabled_objects.addr - WRAM_BANK0_BASE];
     wram[t->disabled_objects.addr - WRAM_BANK0_BASE] = (uint8_t)(g->prior_disabled_objects | DISABLE_OBJECTS_MASK);
     uint8_t *objects = oracles_guest_wram_writable(g->guest, ORACLES_OBJECTS_BANK);
@@ -350,13 +352,14 @@ static void unfreeze_objects(OraclesGhost *g)
     if (!g->frozen) return;
     const OraclesGuestTables *t = oracles_guest_tables(g->guest);
     uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
-    if (wram && bank0_symbol(t->disabled_objects)) wram[t->disabled_objects.addr - WRAM_BANK0_BASE] = g->prior_disabled_objects;
+    if (wram && oracles_ghost_bank0_symbol(t->disabled_objects)) wram[t->disabled_objects.addr - WRAM_BANK0_BASE] = g->prior_disabled_objects;
     uint8_t *objects = oracles_guest_wram_writable(g->guest, ORACLES_OBJECTS_BANK);
     if (objects) for (unsigned slot = 0; slot < 2u; slot++) objects[slot * 0x100u + ORACLES_OBJ_VISIBLE] = g->prior_visible[slot];
     g->frozen = 0;
 }
 
 void oracles_ghost_set_capture(OraclesGhost *g, int enabled) { g->capture = enabled != 0; }
+void oracles_ghost_set_probe(OraclesGhost *g, int enabled) { g->no_probe = !enabled; }
 
 void oracles_ghost_sprite_stats(const OraclesGhost *g, unsigned *frames, unsigned *frames_uncovered, unsigned *worst_gap, unsigned *tags_dropped)
 {
@@ -370,7 +373,7 @@ static void restore_warp_tiles(OraclesGhost *g)
     if (!g->warp_tiles_guarded) return;
     const OraclesGuestSym warp = oracles_guest_tables(g->guest)->disable_warp_tiles;
     uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
-    if (wram && bank0_symbol(warp)) wram[warp.addr - WRAM_BANK0_BASE] = g->prior_warp_tiles;
+    if (wram && oracles_ghost_bank0_symbol(warp)) wram[warp.addr - WRAM_BANK0_BASE] = g->prior_warp_tiles;
     g->warp_tiles_guarded = 0;
 }
 
@@ -464,8 +467,8 @@ static int set_level_change(OraclesGhost *g)
     const OraclesGuestTables *t = oracles_guest_tables(g->guest);
     const OraclesGuestSym dest_group = t->warp_dest_group, dest_room = t->warp_dest_room, dest_pos = t->warp_dest_pos,
                           transition = t->warp_transition, transition2 = t->warp_transition2, room = t->active_room, tile = t->active_tile_pos;
-    if (!bank0_symbol(dest_group) || !bank0_symbol(dest_room) || !bank0_symbol(dest_pos) || !bank0_symbol(transition)
-        || !bank0_symbol(transition2) || !bank0_symbol(room) || !bank0_symbol(tile)) return -1;
+    if (!oracles_ghost_bank0_symbol(dest_group) || !oracles_ghost_bank0_symbol(dest_room) || !oracles_ghost_bank0_symbol(dest_pos) || !oracles_ghost_bank0_symbol(transition)
+        || !oracles_ghost_bank0_symbol(transition2) || !oracles_ghost_bank0_symbol(room) || !oracles_ghost_bank0_symbol(tile)) return -1;
     uint8_t *wram = oracles_guest_wram_writable(g->guest, 0);
     if (!wram) return -1;
     wram[dest_room.addr - WRAM_BANK0_BASE] = wram[room.addr - WRAM_BANK0_BASE];
@@ -619,6 +622,7 @@ int oracles_ghost_step(OraclesGhost *g, unsigned frame_budget, unsigned max_fram
                 g->settled = 1;
                 render_terrain(g, result->game_area);
                 capture_settled(g, result);
+                if (g->capture && !g->no_probe) oracles_ghost_probe_animation(g, result);
                 result->settled = 1;
             } else if (!g->settle_pending
                        && (oracles_guest_read8(g->guest, t->scroll_mode) & 0x7fu) == NORMAL_PLAY_SCROLL_MODE

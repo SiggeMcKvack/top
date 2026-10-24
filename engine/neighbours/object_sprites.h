@@ -53,6 +53,24 @@ typedef struct OraclesObjectSprite {
 int oracles_object_sprites_build(OraclesGuest *guest, const uint8_t *object, const uint8_t *rom, size_t rom_size,
                                  OraclesObjectSprite out[], unsigned max);
 
+/* What places an object's own sprites, given rather than read in an instance. */
+typedef struct OraclesObjectPlace {
+    uint8_t yh, xh;
+    uint8_t zh;                    /* a puddle's pixel added: @drawObject lowers an object standing in one */
+    uint8_t camera_y, camera_x;
+    uint8_t oam_flags, tile_base;
+} OraclesObjectPlace;
+
+/* The object's own sprites for the block at `oam_data_address` (one of its
+ * poses), in the order of the block, as @drawObject writes them at that
+ * place; its terrain effects are not among them.  The build above takes them
+ * from here; a neighbour, whose objects were captured with their camera and
+ * their terrain, draws another pose of one of them by it, without reading
+ * the live instance.  Returns how many were written, -1 when the data cannot
+ * be read. */
+int oracles_object_sprites_pose(const OraclesGuestTables *t, const uint8_t *rom, size_t rom_size, const OraclesObjectPlace *place,
+                                uint16_t oam_data_address, OraclesObjectSprite out[], unsigned max);
+
 typedef struct OraclesDrawnObject {
     uint8_t kind;          /* the object's place in its slot: 0 item or special, 1 interaction, 2 enemy, 3 part */
     uint8_t slot;          /* 0 to 15 */

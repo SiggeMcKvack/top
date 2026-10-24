@@ -209,6 +209,11 @@ VARIABLES = [
     ("tileset_animation", "wTilesetAnimation"), ("animation_counters", "wAnimationCounter1"),
     ("animation_queue", "w2AnimationQueue"), ("animation_queue_head", "wAnimationQueueHead"), ("animation_queue_tail", "wAnimationQueueTail"),
     ("animation_group_table", "animationGroupTable"), ("animation_gfx_headers", "animationGfxHeaders"),
+    # An object's animation, to advance a neighbour's objects from the game's data: the animations and the poses (OAM
+    # blocks) of each id, by kind; each routine reads both tables in its animation table's bank.
+    ("interaction_animation_table", "interactionAnimationTable"), ("interaction_oam_data_table", "interactionOamDataTable"),
+    ("enemy_animation_table", "enemyAnimationTable"), ("enemy_oam_data_table", "enemyOamDataTable"),
+    ("part_animation_table", "partAnimationTable"), ("part_oam_data_table", "partOamDataTable"),
     ("gfx_regs1", "wGfxRegs1"), ("gfx_regs2", "wGfxRegs2"), ("gfx_regs3", "wGfxRegs3"),
     ("vblank_checker", "wVBlankChecker"), ("lcd_interrupt_behaviour", "hLcdInterruptBehaviour"),
     ("big_buffer", "wBigBuffer"),

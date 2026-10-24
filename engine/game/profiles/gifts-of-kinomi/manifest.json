@@ -710,6 +710,30 @@
       "bank": 4,
       "address": "0x77fd"
     },
+    "interaction_animation_table": {
+      "bank": 22,
+      "address": "0x5875"
+    },
+    "interaction_oam_data_table": {
+      "bank": 22,
+      "address": "0x5a4f"
+    },
+    "enemy_animation_table": {
+      "bank": 28,
+      "address": "0x5dc0"
+    },
+    "enemy_oam_data_table": {
+      "bank": 28,
+      "address": "0x5ec0"
+    },
+    "part_animation_table": {
+      "bank": 22,
+      "address": "0x77b1"
+    },
+    "part_oam_data_table": {
+      "bank": 22,
+      "address": "0x786b"
+    },
     "gfx_regs1": {
       "bank": 0,
       "address": "0xc485"

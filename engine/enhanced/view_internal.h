@@ -5,7 +5,8 @@
  * rooms are neighbours), view_ghost.c (the ghost's runs and their results),
  * view_schedule.c (which room the ghost runs next),
  * view_render.c (the neighbours' pixels, the fade, the large rooms),
- * view_overlay.c (the sprites drawn beyond the game's window). */
+ * view_overlay.c (the sprites drawn beyond the game's window), view_poses.c (a
+ * neighbour's objects animated in place). */
 #ifndef ORACLES_ENHANCED_VIEW_INTERNAL_H
 #define ORACLES_ENHANCED_VIEW_INTERNAL_H
 
@@ -15,6 +16,7 @@
 #include "objects.h"
 #include "sprites.h"
 #include "object_sprites.h"
+#include "object_animation.h"
 #include "ppu.h"
 #include "guest_struct_offsets.h"
 #include "text_box.h"
@@ -85,6 +87,17 @@ typedef struct EvScrollClock {
     unsigned per_step;       /* the frames a step takes, 1 with the step doubled, 2 without */
     int continuous;          /* the continuous transitions on: Link walks during the load, and the streams run */
 } EvScrollClock;
+
+/* An object of a neighbour animated in place (view_poses.c): its animation as captured and as stepped since, its
+ * record, the pixel a puddle lowers it by, its own sprites among its tag's entries in the two frames captured and the
+ * pose those entries show (as the capture drew them: a pose or two past the captured one for an object the game
+ * animated while the ghost settled), and the pose the entry's last render drew. */
+typedef struct ev_pose {
+    uint8_t kind, slot, record, lower, own[2];
+    OraclesObjectAnimation captured, now;
+    uint16_t shown[2];
+    uint16_t drawn;
+} ev_pose;
 
 /* One room's terrain in the cache. */
 typedef struct entry {
@@ -160,6 +173,13 @@ typedef struct entry {
      * a room's own entry may leave it on the way. */
     uint8_t killed_list[16];
     uint8_t obj_palettes[64];
+    /* Its objects animated in place (view_poses.c); back to their captured poses when a transition enters its room,
+     * the render that shows them so taking a render of the frame's budget kept for it; the first frame it was shown
+     * behind its poses, plus one. */
+    ev_pose poses[ORACLES_OBJECT_RECORDS];
+    unsigned pose_count;
+    int poses_reset;
+    uint32_t pose_lag_since;
     int16_t camera_x, camera_y;      /* the game's camera when the ghost settled: the registers' origin in the room */
     int large;                       /* a 240x176 room */
     /* A room whose transitions the game routes itself: the entry
@@ -192,6 +212,7 @@ typedef struct entry {
      * next one draws again only the lines whose tiles have changed since. */
     uint8_t rendered_tiles[2u * ORACLES_GHOST_TILE_BYTES];
     uint64_t rendered_rest;
+    uint8_t rendered_oam[160];         /* and its objects' OAM: an entry changed since, a pose, draws its lines again */
     int live_valid;
     int in_flight;                     /* a run of its room is under way in one of the ghosts (ev_lane) */
     uint32_t run_serial;               /* that run's: its result is this entry's only while the serials agree */
@@ -383,7 +404,14 @@ struct OraclesEnhancedView {
     /* The ROM, kept for the neighbours' animation data (the launcher frees its own copy early). */
     uint8_t *rom;
     size_t rom_size;
-    unsigned animation_renders;       /* this frame's renders for a neighbour's own animation alone */
+    unsigned animation_renders;       /* this frame's renders for a neighbour's own animation alone, its objects' poses included */
+    /* A neighbour's objects animated in place (view_poses.c): off in the Low quality, the harness's check of the
+     * renders, the live game's updates of its objects since the last composition, where the last OAM composed put
+     * each pose's sprites, and the counts. */
+    int poses_off, pose_verify;
+    unsigned object_updates;
+    uint8_t pose_at[ORACLES_OBJECT_RECORDS], pose_count_at[ORACLES_OBJECT_RECORDS];
+    OraclesEnhancedPoseCounts poses;
     unsigned render_wait_max;         /* the most frames in a row a neighbour's own-animation render waited, the frame it was made past the budget counted */
     unsigned renders_forced;          /* such renders made past the frame's budget, having waited RENDER_WAIT_LIMIT frames */
     unsigned image_live_tiles;        /* tiles a neighbour of another animation took live, the live room showing one of its images */
@@ -733,6 +761,18 @@ void ev_hand_live_animation(OraclesEnhancedView *v, entry *e);
 void ev_track_fade(OraclesEnhancedView *v);
 /* A scene's tint on the live room's base palettes, after ev_track_fade. */
 void ev_track_scene_tint(OraclesEnhancedView *v);
+/* view_poses.c: a delivery's objects that animate, the live updates that step them, a step per update at each
+ * composition, every pose back to its capture at a transition's start; the OAM a neighbour is drawn with, as captured
+ * and with its poses (returns 0 when it shows no object); a render that drew it, a frame that showed it; the harness's
+ * check of a render of some lines. */
+void ev_poses_deliver(OraclesEnhancedView *v, entry *e);
+void ev_poses_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);
+void ev_poses_advance(OraclesEnhancedView *v);
+void ev_poses_reset(OraclesEnhancedView *v, entry *entered);
+int ev_neighbour_oam(OraclesEnhancedView *v, entry *e, uint8_t captured[160], uint8_t posed[160]);
+void ev_poses_drawn(OraclesEnhancedView *v, entry *e, const uint8_t posed[160], int moved);
+void ev_poses_shown(OraclesEnhancedView *v, entry *e, int drawing);
+void ev_poses_check_lines(OraclesEnhancedView *v, entry *e, const OraclesPpuInput *in, unsigned width);
 /* view_scroll.c: a scroll's animation run by the view, once a composition after the live tiles are tracked; the tiles and
  * the mask of animated tiles the band draws the live tileset with; the game's window and the captures drawn with them. */
 void ev_scroll_animation(OraclesEnhancedView *v);

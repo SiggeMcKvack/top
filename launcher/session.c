@@ -615,6 +615,8 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         oracles_enhanced_view_set_subpixel(s->view, oracles_settings_subpixel_camera(s->settings));
         oracles_enhanced_view_set_link_phase(s->view, s->settings->link_phase);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
+        const int frozen = oracles_settings_quality_of(s->view_level, (int)oracles_core_kind(s->core), s->ghosts) == ORACLES_QUALITY_LOW;
+        oracles_enhanced_view_set_neighbour_animation(s->view, !frozen);   /* the Low quality leaves them in their captured poses */
         oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
         if (s->text_box_wide) oracles_enhanced_view_set_text_box(s->view, ORACLES_TEXT_BOX_WIDE_PIXELS, ORACLES_TEXT_BOX_GAME_LINES);
         /* Text size: the command line's, else the settings'; presentation alone, which the pause changes at once.  A
@@ -632,7 +634,7 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         fprintf(stderr, "oracles: neighbour ghosts: %d (%s, %d processor cores)\n", oracles_enhanced_view_set_ghosts(s->view, (unsigned)wanted),
                 ghosts == 1 || ghosts == 2 ? "chosen" : "auto", cores);
         fprintf(stderr, "oracles: Enhanced profile on screen (%ux%u): the wide world band, neighbours from the ghost instance with their objects%s, the framed fallback; F3 switches to the framed core; camera profile %d\n",
-                oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view), o->neighbour_objects ? "" : " off", camera);
+                oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view), !o->neighbour_objects ? " off" : frozen ? " frozen (Low quality)" : " animated in place", camera);
     }
     if (s->continuous_transitions && s->guest) {
         s->transition = oracles_room_transition_start(s->guest, s->rom, s->rom_size, s->continuous_swim);

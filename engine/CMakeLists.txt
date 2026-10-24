@@ -41,18 +41,18 @@ target_link_libraries(oracles_guest PUBLIC oracles_data)
 
 # The objects of a room and the number each received at its creation:
 # read from any instance's bus, the live one or a ghost's.
-add_library(oracles_neighbours STATIC neighbours/objects.c neighbours/sprites.c neighbours/animation.c neighbours/object_sprites.c)
+add_library(oracles_neighbours STATIC neighbours/objects.c neighbours/sprites.c neighbours/animation.c neighbours/object_sprites.c neighbours/object_animation.c)
 target_include_directories(oracles_neighbours PUBLIC neighbours)
 target_link_libraries(oracles_neighbours PUBLIC oracles_guest)
 oracles_set_warnings(oracles_neighbours)
 
-add_library(oracles_ghost STATIC ghost/ghost.c ghost/ghost_key.c ghost/ghost_data.c)
+add_library(oracles_ghost STATIC ghost/ghost.c ghost/ghost_probe.c ghost/ghost_key.c ghost/ghost_data.c)
 target_include_directories(oracles_ghost PUBLIC ghost)
 target_link_libraries(oracles_ghost PUBLIC oracles_guest oracles_render oracles_data oracles_neighbours Threads::Threads)
 oracles_set_warnings(oracles_ghost)
 
 # Enhanced presentation: the smooth camera reducer fed from the guest bus.
-add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_textbox.c enhanced/text_box.c enhanced/view_hotbar.c enhanced/view_scroll.c enhanced/view_phase.c enhanced/hotbar.c)
+add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_poses.c enhanced/view_textbox.c enhanced/text_box.c enhanced/view_hotbar.c enhanced/view_scroll.c enhanced/view_phase.c enhanced/hotbar.c)
 target_include_directories(oracles_enhanced PUBLIC enhanced)
 target_link_libraries(oracles_enhanced PUBLIC oracles_guest oracles_core oracles_ghost)
 oracles_set_warnings(oracles_enhanced)

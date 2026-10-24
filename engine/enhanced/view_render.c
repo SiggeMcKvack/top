@@ -206,6 +206,7 @@ void ev_track_animated_tiles(OraclesEnhancedView *v)
  * advanced too, its render taking the live tiles meanwhile. */
 void ev_advance_neighbour_animations(OraclesEnhancedView *v)
 {
+    ev_poses_advance(v);   /* their objects' poses, at the live game's updates of its own (view_poses.c) */
     /* As many steps as the game took since the last composition: none on a
      * frame whose logic ran long past the vblank, two on the next. */
     unsigned steps = v->animation_steps_counted ? v->animation_steps : 1u;
@@ -646,46 +647,6 @@ static int neighbour_takes_live_palettes(OraclesEnhancedView *v, const entry *e,
  * one), the palettes carrying the fade the game displays.  Under the same
  * tileset as the live room, the tiles the live VRAM animates are taken
  * live, so that the water and the flowers move in step. */
-/* The OAM a neighbour is drawn with: the sprites of the objects it may show.
- * Left out, by the tags the capture carries: Link, his companion and his items
- * (the live instance draws its own), the objects placed at random on entry and
- * those another object created, whose place the real entry would not reproduce
- *, and the blurb of the era or the season, which the view draws
- * itself at the top of the band.  Returns 0 when nothing is left to draw. */
-static int neighbour_oam(OraclesEnhancedView *v, const entry *e, uint8_t out[160])
-{
-    memset(out, 0, 160);
-    if (!v->neighbour_objects || !e->tag_count) return 0;
-    /* A full fade hides the rooms with their objects: the game shows only the
-     * sprites it keeps (Link, while the Maku Tree speaks from afar). */
-    if (v->fade_effective <= -32 || v->fade_effective >= 31) return 0;
-    /* The two frames captured in turn, one a frame: an object the game draws
-     * one frame in two (a fountain's spurt) flickers in the neighbour as it
-     * does in the room, instead of being there or not depending on the frame
-     * the capture fell on.  The others are the same in both, frozen. */
-    const int before = e->tag_count_before && (v->frame & 1u);
-    const uint8_t *oam = before ? e->oam_before : e->oam;
-    const OraclesSpriteTag *tags = before ? e->tags_before : e->tags;
-    const unsigned tag_count = before ? e->tag_count_before : e->tag_count;
-    int any = 0;
-    for (unsigned i = 0; i < tag_count; i++) {
-        const OraclesSpriteTag *tag = &tags[i];
-        if (tag->kind == 0) continue;   /* Link, the companion, an item */
-        const OraclesObjectRecord *object = NULL;
-        for (unsigned k = 0; k < e->object_count; k++)
-            if (e->objects[k].kind == tag->kind && e->objects[k].slot == tag->slot) { object = &e->objects[k]; break; }
-        if (!object || !object->number || object->randomly_placed) continue;
-        if (object->kind == ORACLES_OBJECT_KIND_INTERACTION && object->id == INTERAC_ERA_OR_SEASON_INFO) continue;
-        for (unsigned n = 0; n < tag->count; n++) {
-            const unsigned index = (unsigned)tag->first + n;
-            if (index >= 40u) break;
-            memcpy(out + index * 4u, oam + index * 4u, 4u);
-            any = 1;
-        }
-    }
-    return any;
-}
-
 /* The tiles a neighbour's map draws with, once for its map: what its render
  * takes from the live tiles is among them. */
 void ev_entry_used_tiles(entry *e)
@@ -742,10 +703,11 @@ static uint64_t render_inputs(const OraclesEnhancedView *v, const entry *e, int 
 
 /* The lines of a small room's render (0 to its height) that show one of the
  * `changed` tiles: in its map, at the place its registers show, or in one of its
- * objects.  Every other line reads the same tiles, palettes and objects as when it
- * was drawn, and would be drawn the same. */
+ * objects; and those an OAM entry changed since `drawn` covered or covers (an
+ * object's pose).  Every other line reads the same tiles, palettes and objects
+ * as when it was drawn, and would be drawn the same. */
 static unsigned changed_lines(const entry *e, const uint8_t *oam, int draw_objects, uint8_t lcdc, const uint8_t changed[2u * 384u / 8u],
-                              uint8_t lines[ORACLES_GHOST_AREA_HEIGHT])
+                              const uint8_t drawn[160], uint8_t lines[ORACLES_GHOST_AREA_HEIGHT])
 {
     memset(lines, 0, ORACLES_GHOST_AREA_HEIGHT);
     const unsigned scy = (uint8_t)(e->regs3[1] - e->camera_y), scx = (uint8_t)(e->regs3[2] - e->camera_x), unsigned_tiles = (e->regs3[0] & 0x10u) != 0;
@@ -773,6 +735,13 @@ static unsigned changed_lines(const entry *e, const uint8_t *oam, int draw_objec
             if (y >= 0 && y < (int)ORACLES_GHOST_AREA_HEIGHT && !lines[y]) { lines[y] = 1; count++; }
         }
     }
+    for (unsigned i = 0; i < 40u; i++) {
+        if (memcmp(drawn + i * 4u, oam + i * 4u, 4u) == 0) continue;
+        for (unsigned k = 0; k < 2u * height; k++) {
+            const int y = (int)(k < height ? drawn : oam)[i * 4u] - 16 + (int)(k % height) - (int)ORACLES_ENHANCED_HUD_HEIGHT;
+            if (y >= 0 && y < (int)ORACLES_GHOST_AREA_HEIGHT && !lines[y]) { lines[y] = 1; count++; }
+        }
+    }
     return count;
 }
 
@@ -795,8 +764,12 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
         hash = live_tiles;
         hash = oracles_guest_hash(animated, sizeof v->animated, hash);
     }
-    uint8_t oam[160];
-    const int draw_objects = neighbour_oam(v, e, oam);
+    /* Its objects as captured, and in their poses (view_poses.c): the latter count
+     * once they have left the former, a render they alone ask for waiting on the
+     * frame's budget as the tiles' does. */
+    uint8_t oam[160], posed[160];
+    const int draw_objects = ev_neighbour_oam(v, e, oam, posed);
+    const int moved = draw_objects && memcmp(oam, posed, sizeof oam) != 0;
     if (draw_objects) hash = oracles_guest_hash(oam, sizeof oam, hash);
     const uint8_t fade_byte = (uint8_t)v->fade_effective, pipeline = (uint8_t)v->colours_pipeline;
     hash = oracles_guest_hash(&fade_byte, 1, hash);
@@ -829,18 +802,23 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
             hash = oracles_guest_hash(live, sizeof live, hash);
         }
     }
-    const int animation_only = e->live_valid && !in_step && e->live_base_hash == base && e->live_tiles_hash != hash;
+    if (moved) hash = oracles_guest_hash(posed, sizeof posed, hash);
+    /* The render that shows the room entered back in its captured poses has its place in the frame's budget kept
+     * (ev_poses_reset): it waits for none. */
+    const int animation_only = e->live_valid && e->live_base_hash == base && e->live_tiles_hash != hash && !e->poses_reset;
     if (!e->live_valid || e->live_tiles_hash != hash) {
         /* The live tiles change every frame the game streams its objects' in:
          * a render reads few of them, and is made again only when they change.
          * That check costs none of the frame's renders: counted before it, the
          * first neighbours of another animation spent them every frame and the
          * others were never drawn again, their water left at an old step. */
-        const uint64_t inputs = render_inputs(v, e, in_step, vram0, vram1, animated, draw_objects, oam, use_live, live_palettes);
+        const uint64_t inputs = render_inputs(v, e, in_step, vram0, vram1, animated, draw_objects, posed, use_live, live_palettes);
         if (e->live_valid && e->live_inputs == inputs) {
             e->live_base_hash = base;
             e->live_tiles_hash = hash;
             v->live_renders_kept++;
+            if (draw_objects) ev_poses_drawn(v, e, posed, 0);
+            ev_poses_shown(v, e, draw_objects);
             return e->live_area;
         }
         /* The frame's budget spent, the render waits; past RENDER_WAIT_LIMIT frames it is made anyway: the
@@ -853,12 +831,15 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
             if (waited > v->render_wait_max) v->render_wait_max = waited;
             if (waited <= RENDER_WAIT_LIMIT) {
                 e->render_put_off_at = v->frame;
+                ev_poses_shown(v, e, draw_objects);
                 return e->live_area;
             }
             v->renders_forced++;
         }
         e->render_wanted_at = 0;
         if (animation_only) v->animation_renders++;
+        const int pose_lines = draw_objects && memcmp(posed, e->rendered_oam, sizeof posed) != 0;
+        if (animation_only && pose_lines) v->poses.renders++;
         e->live_base_hash = base;
         e->live_inputs = inputs;
         memcpy(v->hybrid_vram, e->tiles, TILE_DATA_BYTES);
@@ -899,7 +880,7 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
         } else faded_palettes(e->bg_palettes, v->fade_effective, palettes);
         OraclesPpuInput in;
         in.vram = v->hybrid_vram;
-        in.oam = draw_objects ? oam : oracles_guest_oam(v->guest);
+        in.oam = draw_objects ? posed : oracles_guest_oam(v->guest);
         in.bg_palettes = palettes;
         /* The neighbour's own sprite palettes while it draws its own objects;
          * the live ones while the game fades, as for the background. */
@@ -925,9 +906,10 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
                 for (unsigned tile = 0; tile < 384u; tile++)
                     if (memcmp(v->hybrid_vram + bank * 0x2000u + tile * 16u, e->rendered_tiles + bank * ORACLES_GHOST_TILE_BYTES + tile * 16u, 16u) != 0)
                         changed[(bank * 384u + tile) >> 3] |= (uint8_t)(1u << ((bank * 384u + tile) & 7u));
-            count = changed_lines(e, oam, draw_objects, lcdc, changed, lines);
+            count = changed_lines(e, posed, draw_objects, lcdc, changed, e->rendered_oam, lines);
         } else memset(lines, 1, sizeof lines);
         e->rendered_rest = rest;
+        memcpy(e->rendered_oam, posed, sizeof posed);
         memcpy(e->rendered_tiles, v->hybrid_vram, ORACLES_GHOST_TILE_BYTES);
         memcpy(e->rendered_tiles + ORACLES_GHOST_TILE_BYTES, v->hybrid_vram + 0x2000u, ORACLES_GHOST_TILE_BYTES);
         if (count < ORACLES_GHOST_AREA_HEIGHT) {
@@ -942,6 +924,7 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
                 memcpy(e->live_area + y * width, v->strip + (ORACLES_ENHANCED_HUD_HEIGHT + y) * width, (end - y) * width * sizeof *v->strip);
                 y = end;
             }
+            if (pose_lines) ev_poses_check_lines(v, e, &in, width);
         } else for (unsigned pass = 0; pass * ORACLES_ENHANCED_AREA_HEIGHT < height; pass++) {
             const OraclesPpuRegs r = { lcdc, (uint8_t)(e->regs3[1] - e->camera_y + pass * ORACLES_ENHANCED_AREA_HEIGHT), (uint8_t)(e->regs3[2] - e->camera_x), e->regs3[3], e->regs3[4] };
             for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) in.lines[ly] = r;
@@ -974,7 +957,10 @@ const uint32_t *ev_neighbour_pixels(OraclesEnhancedView *v, entry *e)
         e->live_tiles_hash = hash;
         e->live_valid = 1;
         v->live_renders++;
+        if (animation_only && pose_lines) v->poses.lines += count;
+        if (draw_objects) ev_poses_drawn(v, e, posed, moved);
     }
+    ev_poses_shown(v, e, draw_objects);
     return e->live_area;
 }
 

@@ -299,6 +299,30 @@ unsigned oracles_enhanced_view_live_renders_kept(const OraclesEnhancedView *view
 unsigned oracles_enhanced_view_render_wait_max(const OraclesEnhancedView *view);
 /* Those renders made past the frame's budget once they had waited the most it allows. */
 unsigned oracles_enhanced_view_renders_forced(const OraclesEnhancedView *view);
+/* A neighbour's objects animated in place: the interactions and parts whose animation loops over several poses go
+ * through it at the live game's updates of its objects, back to their captured poses at each transition's start; on
+ * by default, off in the Low quality (`enabled` 0), from the next delivery of each neighbour. */
+void oracles_enhanced_view_set_neighbour_animation(OraclesEnhancedView *view, int enabled);
+/* The harness's check: each render of a pose checked against the step and against a render of the whole area. */
+void oracles_enhanced_view_pose_verify(OraclesEnhancedView *view, int enabled);
+typedef struct OraclesEnhancedPoseCounts {
+    unsigned animated;            /* objects of the captures delivered that their neighbour animates */
+    unsigned frozen_code;         /* of several poses, frozen: their code did not advance their animation by one step an update at the capture's probe */
+    unsigned frozen_enemies;      /* of several poses, frozen: enemies */
+    unsigned frozen_low;          /* that would animate, frozen: the Low quality */
+    unsigned frozen_unplaced;     /* that would animate, frozen: the captured pose, built at their place, is not what the capture drew */
+    unsigned frozen_unreadable;   /* their animation's data cannot be read */
+    unsigned steps;               /* updates of the live objects the neighbours stepped */
+    unsigned changes;             /* pose changes stepped */
+    unsigned changes_drawn;       /* pose changes a render drew */
+    unsigned renders, lines;      /* renders made for poses alone (under the frame's budget), and their lines */
+    unsigned resets;              /* objects put back in their captured pose as a transition enters their room */
+    unsigned drawn_wrong;         /* with the check: objects a render drew otherwise than their step's pose builds */
+    unsigned lines_wrong;         /* with the check: lines of a render of some lines that differ from a render of the whole area */
+    unsigned lag_max;             /* the most frames in a row a neighbour shown drew a pose behind its step */
+    unsigned probes, probe_frames;   /* captures delivered after their probe, and the guest frames those probes ran */
+} OraclesEnhancedPoseCounts;
+void oracles_enhanced_view_pose_counts(const OraclesEnhancedView *view, OraclesEnhancedPoseCounts *out);
 /* The lines of the renders made that were not drawn again, their tiles unchanged since the last render (ev_neighbour_pixels). */
 unsigned oracles_enhanced_view_live_lines_kept(const OraclesEnhancedView *view);
 /* The most 8x8 blocks of tiles the live VRAM does not animate that a live render differed from the ghost's render of the same room by: none if the live render is right. */

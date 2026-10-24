@@ -51,7 +51,8 @@ lowers the black and never raised without naming why.
 Besides the rows, the live-state fingerprints (--out) of the faithful row of
 a route and of each of its enhanced rows, the ghost synchronous and threaded,
 at both sizes, are compared: the presentation writes nothing into the live instance
-(ARCHITECTURE.md), on every route and in the mode that is played.
+(ARCHITECTURE.md), on every route and in the mode that is played; so are those of
+its faithful rows with a check that only reads (READING_CHECKS).
 
 The ROMs are found by the SHA-1 of the route's header in $ORACLES_ROM_DIR,
 a fan game's as the image a BPS patch there makes of a ROM there, replayed
@@ -81,6 +82,11 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DEFAULT_JOBS = 8   # eight replays keep a desktop responsive; a machine that fails under a heavier parallel load is not a bug of the routes
 
+# A neighbour's objects animated in place: each render of a pose draws the pose its step holds, its lines drawn alone
+# are those a whole render draws, every object of several poses has its animation's data, and a pose shown waits at
+# most the frames the render budget lets a render wait (view_render.c), the frame it is drawn counted.  An object its
+# capture drew otherwise than its record says (enhanced.poses_frozen_unplaced) stays frozen: counted, not refused.
+POSES = ["enhanced.poses_drawn_wrong=0", "enhanced.pose_lines_wrong=0", "enhanced.poses_frozen_unreadable=0", "enhanced.pose_lag_max<=5"]
 ALWAYS = {
     # The floors say the check ran at all: a check that stopped measuring counts
     # zero difference and would satisfy every rule above it.  What a
@@ -97,12 +103,12 @@ ALWAYS = {
                  "object_sprites.frames_checked>=1", "animation.frames_checked>=1", "enhanced.transitions_other_room=0",
                  # a scroll's animation, run by the view alone, lands on the game's step, image for image, at the frame its plan
                  # spread the loops over (a jump at the landing is a landing off that frame)
-                 "enhanced.scroll_animation_landed_off=0", "enhanced.scroll_animation_gaps=0", "enhanced.scroll_animation_gap_max=0", "enhanced.scroll_animation_tiles_off=0"],
+                 "enhanced.scroll_animation_landed_off=0", "enhanced.scroll_animation_gaps=0", "enhanced.scroll_animation_gap_max=0", "enhanced.scroll_animation_tiles_off=0"] + POSES,
     "enhanced-threaded": ["result=ok", "enhanced.camera_jumps=0", "enhanced.window_misplaced=0", "enhanced.terrains_different=0",
                           "enhanced.live_diff_max=0", "enhanced.plain_shown_frames=0", "enhanced.text_box_frames_at_origin=0",
                           "enhanced.blurb_frames_in_window=0",
                           "enhanced.transitions_other_room=0",   # never a room drawn that way other than the one entered
-                          "enhanced.scroll_animation_landed_off=0", "enhanced.scroll_animation_gaps=0", "enhanced.scroll_animation_gap_max=0", "enhanced.scroll_animation_tiles_off=0"],
+                          "enhanced.scroll_animation_landed_off=0", "enhanced.scroll_animation_gaps=0", "enhanced.scroll_animation_gap_max=0", "enhanced.scroll_animation_tiles_off=0"] + POSES,
 }
 # The band must fill at least once: the black is counted from its first full frame, and a route whose band never fills
 # would count none and pass any ceiling.
@@ -396,18 +402,24 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_d
             "fingerprints": fingerprints if fingerprints.exists() else None}
 
 
+# Checks that only read the live instance: a faithful row with one of them is compared with its route's faithful row.
+READING_CHECKS = ("--object-animation-check",)
+
+
 def view_free(options: list) -> list:
     """The options less the view's level and shape (--view, --aspect), the screen far is fitted to (--screen), the
-    status bar's width (--hud), the text box's size (--text-size) and the large menus (--menus-large), which do not
-    change the game: a row of a size, of the bar drawn full width or of the box twice as large, is compared with the
-    faithful row of its route, or without a faithful row (the compact text, the wide box) with its row without them."""
+    status bar's width (--hud), the text box's size (--text-size), the neighbours' objects frozen (--neighbour-animation)
+    and the large menus (--menus-large), which do not change the game, and the checks that only read: a row of a size,
+    of the bar drawn full width, of the box twice as large, of the objects frozen, or of such a check, is compared with
+    the faithful row of its route, or without a faithful row (the compact text, the wide box) with its row without
+    them."""
     out, skip = [], False
     for option in options:
         if skip:
             skip = False
-        elif option in ("--view", "--aspect", "--screen", "--hud", "--text-size"):
+        elif option in ("--view", "--aspect", "--screen", "--hud", "--text-size", "--neighbour-animation"):
             skip = True
-        elif option == "--menus-large":
+        elif option == "--menus-large" or option in READING_CHECKS:
             pass
         else:
             out.append(option)
@@ -415,7 +427,8 @@ def view_free(options: list) -> list:
 
 
 def compare_fingerprints(results: list, harness: Path) -> list:
-    """The faithful row of a route and each of its enhanced rows, synchronous and threaded (same options), must give the same live-state fingerprints."""
+    """The faithful row of a route and each of its enhanced rows, synchronous and threaded (same options), and its
+    faithful rows with a check that only reads, must give the same live-state fingerprints."""
     by_key = {}
     for res in results:
         if "error" in res or not res.get("fingerprints"):
@@ -435,8 +448,8 @@ def compare_fingerprints(results: list, harness: Path) -> list:
                 continue
             faithful = plain[0]
             presentation_only = True
-        for mode in ("enhanced", "enhanced-threaded", "enhanced-zoom", "enhanced-zoom-threaded"):
-            for res in modes.get(mode, []):
+        for mode in ("faithful", "enhanced", "enhanced-threaded", "enhanced-zoom", "enhanced-zoom-threaded"):
+            for res in modes.get(mode, [])[1 if mode == "faithful" else 0:]:
                 if presentation_only and list(res["row"]["options"]) == list(options):
                     continue
                 proc = subprocess.run([str(harness), "--compare", str(faithful["fingerprints"]), str(res["fingerprints"])],
@@ -447,6 +460,11 @@ def compare_fingerprints(results: list, harness: Path) -> list:
                 verdicts.append({"route": route, "label": faithful["row"]["label"], "options": tuple(res["row"]["options"]) or options,
                                  "mode": mode, "ok": ok, "text": last})
     return verdicts
+
+
+def what(verdict: dict) -> str:
+    """What a fingerprint comparison holds apart: the view, or a check that only reads."""
+    return "check" if verdict["mode"] == "faithful" else "Enhanced view"
 
 
 def main() -> int:
@@ -535,11 +553,11 @@ def main() -> int:
     for verdict in verdicts:
         label = f"{verdict['label']} {verdict['mode']}" + (f" {' '.join(verdict['options'])}" if verdict["options"] else "")
         if verdict["ok"]:
-            print(f"ok     {label}: live state identical with and without the Enhanced view ({verdict['text']})")
+            print(f"ok     {label}: live state identical with and without the {what(verdict)} ({verdict['text']})")
         else:
             failed += 1
             broken += 1
-            print(f"FAIL   {label}: live state differs with the Enhanced view: {verdict['text']}")
+            print(f"FAIL   {label}: live state differs with the {what(verdict)}: {verdict['text']}")
     for manifest in sorted({m for m, _ in changed}):
         lines = manifest.read_text(encoding="utf-8").split("\n")
         for (m, n), h in changed.items():

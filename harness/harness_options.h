@@ -36,6 +36,8 @@ typedef struct harness_options {
     int enhanced_link_phase, enhanced_subpixel;
     uint32_t enhanced_reload_at, frames, corrupt_at, sample_rate_hz, colour_toggle_at;
     unsigned enhanced_ghosts;                 /* --enhanced-ghosts: ghosts working at once, threaded (1 by default) */
+    int object_animation;                  /* --object-animation-check: the objects' animation from the game's data against the live game */
+    int enhanced_frozen;                   /* --neighbour-animation off: a neighbour's objects frozen, as the Low quality has them */
     int objects_capture, enhanced_objects, enhanced_threaded, enhanced_paced, enhanced_zoom_out, continuous_transitions, continuous_swim, continuous_diagonal;
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
     unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */

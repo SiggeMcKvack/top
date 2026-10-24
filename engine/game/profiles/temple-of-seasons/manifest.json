@@ -659,6 +659,30 @@
       "bank": 4,
       "address": "0x7191"
     },
+    "interaction_animation_table": {
+      "bank": 20,
+      "address": "0x5326"
+    },
+    "interaction_oam_data_table": {
+      "bank": 20,
+      "address": "0x54f6"
+    },
+    "enemy_animation_table": {
+      "bank": 12,
+      "address": "0x6e43"
+    },
+    "enemy_oam_data_table": {
+      "bank": 12,
+      "address": "0x6f43"
+    },
+    "part_animation_table": {
+      "bank": 21,
+      "address": "0x7270"
+    },
+    "part_oam_data_table": {
+      "bank": 21,
+      "address": "0x7318"
+    },
     "gfx_regs1": {
       "bank": 0,
       "address": "0xc485"
