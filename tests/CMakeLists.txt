@@ -294,6 +294,12 @@ if(BUILD_TESTING)
         oracles_set_warnings(oracles-test-launcher-settings)
         add_test(NAME oracles-launcher-settings COMMAND oracles-test-launcher-settings ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_settings.tmp)
 
+        add_executable(oracles-test-launcher-home-files test_launcher_home_files.c ${ORACLES_LAUNCHER_DIR}/home_files.c)
+        target_include_directories(oracles-test-launcher-home-files PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
+        target_link_libraries(oracles-test-launcher-home-files PRIVATE oracles_host oracles_gameplay oracles_ui oracles_core)
+        oracles_set_warnings(oracles-test-launcher-home-files)
+        add_test(NAME oracles-launcher-home-files COMMAND oracles-test-launcher-home-files ${CMAKE_CURRENT_BINARY_DIR})
+
         add_executable(oracles-test-launcher-save-transfer test_launcher_save_transfer.c ${ORACLES_LAUNCHER_DIR}/save_transfer.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c)
         target_include_directories(oracles-test-launcher-save-transfer PRIVATE ${ORACLES_LAUNCHER_DIR})
         target_link_libraries(oracles-test-launcher-save-transfer PRIVATE oracles_core ${ORACLES_SDL_TARGET})
