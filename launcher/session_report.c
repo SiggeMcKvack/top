@@ -87,8 +87,7 @@ void oracles_session_finish(session *s, const OraclesSessionOptions *o)
     if (s->transition) {
         OraclesRoomTransitionStats stats;
         oracles_room_transition_stats(s->transition, &stats);
-        fprintf(stderr, "oracles: continuous transitions: %u taken over (%u swum, %u started by a stroke at an edge), Link moved on %u frames (%u swimming), held back by a wall ahead on %u, left alone on %u, palette_refreshes %u (background palettes refreshed after a palette mix outlived the doubled scroll)\n",
-                stats.transitions, stats.swim_transitions, stats.forced_transitions, stats.walked_frames, stats.swum_frames, stats.capped_frames, stats.refused_frames, stats.palette_refreshes);
+        oracles_session_report_transitions(&stats, stderr);
         oracles_room_transition_stop(s->transition);
     }
     oracles_hotkeys_session_stop(s->hotkeys, stderr);

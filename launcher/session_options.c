@@ -1,8 +1,10 @@
 /* What a session plays with, from its options and the settings (session.h): its defaults, its screen margin, what the
- * pause changes of the settings, its save, and the mods of the Mods page. */
+ * pause changes of the settings, its save, the mods of the Mods page, and its report's line on the transitions. */
 #include "session.h"
 
 #include "compositor.h"
+#include "room_predict.h"
+#include "room_transition.h"
 #include "text_box.h"
 #include "ui_layout.h"
 
@@ -21,6 +23,18 @@ int oracles_session_screen_margin(int option, const oracles_settings *settings)
 {
     if (option > 0 && option <= ORACLES_SCREEN_MARGINS) return option - 1;
     return settings->screen_margin >= 0 && settings->screen_margin < ORACLES_SCREEN_MARGINS ? settings->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
+}
+
+void oracles_session_report_transitions(const OraclesRoomTransitionStats *stats, FILE *out)
+{
+    fprintf(out, "oracles: continuous transitions: %u taken over (%u swum, %u started by a stroke at an edge), Link moved on %u frames (%u swimming), held back by a wall ahead on %u, left alone on %u, palette_refreshes %u (background palettes refreshed after a palette mix outlived the doubled scroll); "
+                 "the room entered's collisions predicted at %u transitions while the game loaded them (%u the same as the game's, %u not), %u left to the load",
+            stats->transitions, stats->swim_transitions, stats->forced_transitions, stats->walked_frames, stats->swum_frames, stats->capped_frames, stats->refused_frames,
+            stats->palette_refreshes, stats->predicted_transitions, stats->predicted_matched, stats->predicted_mismatched, stats->predict_fallbacks);
+    unsigned listed = 0;
+    for (unsigned v = 1; v < ORACLES_ROOM_PREDICT_VERDICTS; v++)
+        if (stats->predict_fallback_by[v]) fprintf(out, "%s%s %u", listed++ ? ", " : " (", oracles_room_predict_verdict_name((OraclesRoomPredictVerdict)v), stats->predict_fallback_by[v]);
+    fprintf(out, "%s\n", listed ? ")" : "");
 }
 
 int oracles_session_vsync_on(const char *vsync, unsigned display_hz)

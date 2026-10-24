@@ -162,8 +162,9 @@ static void count_kinds(OraclesEnhancedView *v, int world, int32_t camera_x, int
     }
     const int edge = world && v->uncovered && past_edge(v, camera_x, camera_y);
     const int ripple = world && v->uncovered && !count && !edge && v->have_wave;
-    const int places[3] = { edge, ripple, world && v->uncovered && !count && !edge && !ripple };
-    for (unsigned p = 0; p < 3u; p++) {
+    const int alone = world && v->uncovered && !count && !edge && !ripple && ev_isolated_room(v);
+    const int places[4] = { edge, ripple, alone, world && v->uncovered && !count && !edge && !ripple && !alone };
+    for (unsigned p = 0; p < 4u; p++) {
         const unsigned kind = ORACLES_ENHANCED_BLACK_EDGE + p;
         if (places[p]) {
             present |= 1u << kind;
@@ -216,13 +217,13 @@ void oracles_enhanced_view_black(const OraclesEnhancedView *v, OraclesEnhancedBl
     *out = v->black;
     for (unsigned i = 0; i < v->black_run_count; i++) keep_run(out, v->black_runs[i].group, v->black_runs[i].room, v->black_runs[i].since, v->frame);
     for (unsigned i = 0; i < v->black_episode_count; i++) end_episode(out, v->black_episodes[i].kind, v->black_episodes[i].since, v->frame, v->black_episodes[i].in_transition);
-    for (unsigned p = 0; p < 3u; p++)
+    for (unsigned p = 0; p < 4u; p++)
         if (v->black_place_since[p]) end_episode(out, ORACLES_ENHANCED_BLACK_EDGE + p, v->black_place_since[p] - 1u, v->frame, v->black_place_transition[p]);
 }
 
 const char *oracles_enhanced_black_kind_name(unsigned kind)
 {
-    static const char *const names[ORACLES_ENHANCED_BLACK_KINDS] = { "corner", "neighbour", "cold", "edge", "ripple", "other" };
+    static const char *const names[ORACLES_ENHANCED_BLACK_KINDS] = { "corner", "neighbour", "cold", "edge", "ripple", "alone", "other" };
     return kind < ORACLES_ENHANCED_BLACK_KINDS ? names[kind] : "?";
 }
 

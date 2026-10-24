@@ -4,12 +4,14 @@
  * leaves its key alone, names that were never the launcher's (zoom-out as
  * a profile, per-game profile and transitions keys) are not read, a key it does
  * not know is kept as it was, spaces and capitals are read as meant; menu_pad=
- * is taken as the session plays it. */
+ * is taken as the session plays it; the end of a session reports the predictions
+ * of the transitions, the wrong ones and those left to the load. */
 #include "compositor.h"
 #include "home_choices.h"
 #include "session.h"
 #include "settings.h"
 #include "core.h"
+#include "room_transition.h"
 #include "ui_controls_nav.h"
 #include "ui_page_nav.h"
 
@@ -220,6 +222,39 @@ static void display_stored(void)
 
 /* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the
  * margin unless --screen-margin holds it for the run. */
+/* The report's transitions line, in a file beside `path`: the predictions' mismatches and the fallbacks by reason. */
+static void transitions_line(const char *path)
+{
+    char report[1100], line[1200];
+    snprintf(report, sizeof report, "%s.report", path);
+    OraclesRoomTransitionStats stats;
+    memset(&stats, 0, sizeof stats);
+    stats.transitions = 12, stats.swim_transitions = 3, stats.walked_frames = 300, stats.swum_frames = 70, stats.palette_refreshes = 1;
+    stats.predicted_transitions = 9, stats.predicted_matched = 8, stats.predicted_mismatched = 1, stats.predict_fallbacks = 3;
+    stats.predict_fallback_by[ORACLES_ROOM_PREDICT_LARGE] = 2, stats.predict_fallback_by[ORACLES_ROOM_PREDICT_ROOM_CODE] = 1;
+    for (int fallbacks = 1; fallbacks >= 0; fallbacks--) {
+        if (!fallbacks) {
+            stats.predict_fallbacks = 0;
+            memset(stats.predict_fallback_by, 0, sizeof stats.predict_fallback_by);
+        }
+        FILE *f = fopen(report, "w");
+        CHECK(f != NULL);
+        if (!f) return;
+        oracles_session_report_transitions(&stats, f);
+        fclose(f);
+        line[0] = 0;
+        f = fopen(report, "r");
+        if (f && !fgets(line, sizeof line, f)) line[0] = 0;
+        if (f) fclose(f);
+        CHECK(!strncmp(line, "oracles: continuous transitions: 12 taken over (3 swum, 0 started by a stroke at an edge), Link moved on 300 frames (70 swimming), ", 131));
+        CHECK(strstr(line, "palette_refreshes 1 (") != NULL);
+        CHECK(strstr(line, "; the room entered's collisions predicted at 9 transitions while the game loaded them (8 the same as the game's, 1 not), ") != NULL);
+        if (fallbacks) CHECK(strstr(line, ", 3 left to the load (a large room or a dungeon's group 2, the room's own code 1)\n") != NULL);
+        else CHECK(strstr(line, ", 0 left to the load\n") != NULL);
+    }
+    remove(report);
+}
+
 static void pause_changes(void)
 {
     oracles_settings s;
@@ -1073,6 +1108,7 @@ int main(int argc, char **argv)
     pause_changes();
     text_layout();
     pause_live_changes();
+    transitions_line(path);
 
     remove(path);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

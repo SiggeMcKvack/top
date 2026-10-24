@@ -12,8 +12,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 struct OraclesPause;
+struct OraclesRoomTransitionStats;
 struct OraclesEnhancedSize;
 
 typedef struct OraclesSessionOptions {
@@ -132,6 +134,10 @@ typedef struct OraclesSessionApplied {
  * gives one (oracles_session_screen_margin), and the text size --text-size's when `text_size_option` gives one (the
  * size plus one), whatever the settings say. */
 unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, int text_size_option, OraclesSessionApplied *applied);
+/* The end-of-session report's line on the continuous transitions, to `out`: what the policy took over and moved, and
+ * the room entered's collisions predicted while the game loaded them, those not as the game then loaded them, and those
+ * left to the load, by reason. */
+void oracles_session_report_transitions(const struct OraclesRoomTransitionStats *stats, FILE *out);
 /* The window a game has, as window_scale= counts it, F11's toggle included: -1 where `setting` (the window Display chose
  * for it) is; 0 fullscreen; else the setting when the window is the `setting_scale` it opens at (lowered to what the
  * display holds), else the scale of 2 to 4 the window's `width` x `height` pixels are exactly, else -2: none. */

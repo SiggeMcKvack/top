@@ -257,12 +257,12 @@ struct OraclesEnhancedView {
     struct { uint8_t group, room; uint32_t since; } black_runs[32];   /* the places black now, and since when */
     uint32_t drawn_places[8];        /* the rooms of the reference's group the last composition drew at their place on the grid, a bit each */
     unsigned black_run_count;
-    /* The black by kind (view_black.c): the rooms' episodes under way, the edge's, the ripple's and the rest's, since
+    /* The black by kind (view_black.c): the rooms' episodes under way, the edge's, the ripple's, the lone room's and the rest's, since
      * when (0 none, else the frame plus one), and the frame the band's last fill began. */
     struct { uint8_t group, room, kind, in_transition; uint32_t since; } black_episodes[32];
     unsigned black_episode_count;
-    uint32_t black_place_since[3];
-    uint8_t black_place_transition[3];
+    uint32_t black_place_since[4];
+    uint8_t black_place_transition[4];
     uint32_t black_cold_from;
     int black_have_ref, black_loaded;
     uint8_t black_ref_group, black_ref_room;
