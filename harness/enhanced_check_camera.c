@@ -351,7 +351,7 @@ static void measure_switch_jolts(OraclesEnhancedCheck *c, uint32_t frame, const 
         if (c->jolt_pending_link > c->link_jolt_max) c->link_jolt_max = c->jolt_pending_link;
         c->jolt_pending = 0;
     }
-    /* A band in whole pixels over the three frames (no fraction there: a cutscene, the waves, a large room) steps as
+    /* A band in whole pixels over the three frames (no fraction there: a cutscene, a shake, a large room) steps as
      * the camera does, as without the sub-pixel camera: its jolts are not the camera's switches. */
     c->jolt_fraction_frames = ((contiguous ? c->jolt_fraction_frames << 1 : 0u) | (sx || sy ? 1u : 0u)) & 7u;
     if (!contiguous) { c->jolt_have_step = 0; c->jolt_edge_frames = 0; }

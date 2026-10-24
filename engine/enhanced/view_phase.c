@@ -179,7 +179,7 @@ void ev_overlay_link_phase(OraclesEnhancedView *v, int32_t camera_x, int32_t cam
  * standing on the screen (the text box, the area's name) is shown unmoved; the special objects at a fraction of their
  * own stay with the band. */
 #define SUB_EASE 16
-#define SUB_WAVE_HOLD 90   /* frames without the waves before the band takes a fraction again: the scrolls between the sea floor's rooms */
+#define SUB_SHAKE_HOLD 90   /* frames after a shake of the screen before the band takes a fraction again */
 
 void oracles_enhanced_view_set_subpixel(OraclesEnhancedView *v, int enabled)
 {
@@ -299,13 +299,15 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
     oracles_enhanced_camera_fraction(v->camera, &fx, &fy);
     if (!tracking) fx = fy = 0;
     if (!oracles_enhanced_camera_vertical_tracking(v->camera)) fy = 0;
-    /* Where Link cannot be drawn apart for a stretch (a cutscene, a large room, the sea floor's waves and the scrolls
-     * between its rooms), the band takes no fraction either, so that he keeps his place against it as without the
-     * sub-pixel camera. */
-    if (v->have_wave) v->sub_wave_hold = SUB_WAVE_HOLD;
-    else if (v->sub_wave_hold) v->sub_wave_hold--;
-    const int apart = ob->playing && !ob->cutscene && ob->grid && !ob->large && !v->have_wave && !v->sub_leaving;
-    const int live = tracking && apart && !v->sub_wave_hold;
+    /* Where Link cannot be drawn apart for a stretch (a cutscene, a large room, a shake of the screen and the frames
+     * after it), the band takes no fraction either, so that he keeps his place against it as without the sub-pixel
+     * camera.  The waves (the sea floor's, the strange force's) draw each line at its own scroll: the window rendered
+     * again without him takes each line's, and he is drawn apart there as elsewhere. */
+    const int ripple = v->have_wave && v->wave_lines;
+    if (v->have_wave && !ripple) v->sub_shake_hold = SUB_SHAKE_HOLD;
+    else if (v->sub_shake_hold) v->sub_shake_hold--;
+    const int apart = ob->playing && !ob->cutscene && ob->grid && !ob->large && (!v->have_wave || ripple) && !v->sub_leaving;
+    const int live = tracking && apart && !v->sub_shake_hold;
     const int continuous = v->sub_have_last && v->sub_last_frame + 1u == v->frame && v->sub_last_epoch == ob->epoch;
     v->sub_x = band_fraction(continuous, live, v->sub_live, fx, v->sub_raw_x, v->sub_last_x, &v->sub_ease_x);
     v->sub_y = band_fraction(continuous, live, v->sub_live, fy, v->sub_raw_y, v->sub_last_y, &v->sub_ease_y);
@@ -317,7 +319,7 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
      * fraction of a pixel.  Where that stops for a stretch (a scroll the game plays as a cutscene, the camera no longer
      * following him past a scroll), his fraction is given back the same way, by SUB_EASE a frame, his layer kept until
      * it is: he never jumps by it against the ground, from his exact place to his whole one. */
-    const int loading = ob->in_transition && !ob->in_scroll, own = tracking && apart && !loading && !v->sub_wave_hold;
+    const int loading = ob->in_transition && !ob->in_scroll, own = tracking && apart && !loading && !v->sub_shake_hold;
     v->sub_link_x = band_fraction(continuous, own, v->sub_link_live, ob->drawn_sub_x, v->sub_link_raw_x, v->sub_link_last_x, &v->sub_link_ease_x);
     v->sub_link_y = band_fraction(continuous, own, v->sub_link_live, ob->drawn_sub_y, v->sub_link_raw_y, v->sub_link_last_y, &v->sub_link_ease_y);
     v->sub_link_live = own; v->sub_link_raw_x = ob->drawn_sub_x; v->sub_link_raw_y = ob->drawn_sub_y;
@@ -403,17 +405,25 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
         }
     }
     OraclesPpuInput in;
-    in.vram = v->hybrid_vram;
-    memcpy(v->hybrid_vram, vram0, 0x2000u);
-    memcpy(v->hybrid_vram + 0x2000u, vram1, 0x2000u);
+    in.vram = vram0;   /* bank 1 follows it (oracles_guest_vram) */
     in.bg_palettes = bg_palettes;
     in.obj_palettes = palettes;
     in.colours = v->colours;
     const OraclesPpuRegs r = { (uint8_t)(regs[0] | 0x80u), (uint8_t)(ob->drawn_camera_y + ob->drawn_offset_y - (int)ORACLES_ENHANCED_HUD_HEIGHT),
                                (uint8_t)(ob->drawn_camera_x + ob->drawn_offset_x), regs[3], regs[4] };
-    for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) in.lines[ly] = r;
+    for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) {
+        in.lines[ly] = r;
+        if ((ripple || v->waves_continued) && ly >= ORACLES_ENHANCED_HUD_HEIGHT) {
+            const unsigned line = ly - ORACLES_ENHANCED_HUD_HEIGHT;
+            in.lines[ly].scx = (uint8_t)(r.scx + ev_wave_shown(v, line));
+            in.lines[ly].scy = (uint8_t)(r.scy + v->line_shift_y[line]);
+        }
+    }
     in.oam = without;
-    oracles_ppu_render(&in, v->hybrid_frame);
+    /* The window's lines the patch takes alone. */
+    const int first_line = top > 0 ? top : 0, end_line = bottom < (int)ORACLES_ENHANCED_AREA_HEIGHT ? bottom : (int)ORACLES_ENHANCED_AREA_HEIGHT;
+    if (first_line < end_line)
+        oracles_ppu_render_wide_lines(&in, v->hybrid_frame, ORACLES_PPU_WIDTH, ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)first_line, ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)end_line);
     /* The window rendered again must explain the frame around them, outside their sprites, but on the tiles the game
      * animates, which it may have drawn since (the sea's waves): the VRAM is the one after the frame, and a patch
      * taken from tiles it changed otherwise would put another background under him, or leave a drawing of theirs in
@@ -426,7 +436,8 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
             const int32_t px = ob->window_left + gx - camera_x, py = ob->window_top + gy - camera_y;
             if (mask[(unsigned)(gy - top) * SUB_LAYER_SIZE + (unsigned)(gx - left)] || px < 0 || px >= (int32_t)v->size.width || py < 0 || py >= (int32_t)v->band_height) continue;
             if (*ev_band_pixel(v, (unsigned)px, (unsigned)py) == v->hybrid_frame[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy) * ORACLES_PPU_WIDTH + (unsigned)gx]) continue;
-            const unsigned by = ((unsigned)r.scy + ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy) & 255u, bx = ((unsigned)r.scx + (unsigned)gx) & 255u;
+            const OraclesPpuRegs *line = &in.lines[ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy];
+            const unsigned by = ((unsigned)line->scy + ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy) & 255u, bx = ((unsigned)line->scx + (unsigned)gx) & 255u;
             const unsigned cell = map + (by >> 3) * 32u + (bx >> 3), n = vram0[cell];
             const unsigned tile = (unsigned_tiles ? n : (n < 128u ? 256u + n : n)) + ((vram1[cell] >> 3) & 1u) * 384u;
             if (animated && (animated[tile >> 3] & (1u << (tile & 7u)))) continue;
@@ -451,7 +462,8 @@ void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, i
             /* The frame's own pixel that the render without them does not explain, outside their sprites, off the
              * animated tiles: a drawing of theirs the patch would leave behind (none, such a frame left above). */
             if (!mask[in_layer] && band != v->hybrid_frame[at]) {
-                const unsigned by = ((unsigned)r.scy + ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy) & 255u, bx = ((unsigned)r.scx + (unsigned)gx) & 255u;
+                const OraclesPpuRegs *line = &in.lines[ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy];
+                const unsigned by = ((unsigned)line->scy + ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)gy) & 255u, bx = ((unsigned)line->scx + (unsigned)gx) & 255u;
                 const unsigned cell = map + (by >> 3) * 32u + (bx >> 3), n = vram0[cell];
                 const unsigned tile = (unsigned_tiles ? n : (n < 128u ? 256u + n : n)) + ((vram1[cell] >> 3) & 1u) * 384u;
                 if (!animated || !(animated[tile >> 3] & (1u << (tile & 7u)))) v->sub_left_pixels++;

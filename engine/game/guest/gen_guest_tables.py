@@ -231,6 +231,8 @@ VARIABLES = [
     ("vram_tiles", "w3VramTiles"), ("vram_attributes", "w3VramAttributes"),
     ("bg_palettes_buffer", "w2BgPalettesBuffer"), ("spr_palettes_buffer", "w2SprPalettesBuffer"),
     ("tileset_bg_palettes", "w2TilesetBgPalettes"),
+    # The waves' sine, 128 steps, which the LCD interrupt adds to each line's SCX (Ages' underwater rooms).
+    ("wave_scroll_values", "w2WaveScrollValues"),
     ("status_bar_tile_map", "w4StatusBarTileMap"), ("status_bar_attribute_map", "w4StatusBarAttributeMap"), ("textbox_map", "w7TextboxMap"),
     ("thread_state_buffer", "wThreadStateBuffer"),
     ("main_stack", "wMainStack"), ("main_stack_top", "wMainStackTop"),

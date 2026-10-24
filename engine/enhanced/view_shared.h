@@ -32,6 +32,7 @@ unsigned ev_map_height(const OraclesEnhancedView *v, uint8_t group);
 int ev_sea_other_side(const OraclesEnhancedView *v, uint8_t *group);
 int ev_room_beside(const OraclesEnhancedView *v, uint8_t room, unsigned side, uint8_t *out);
 int ev_isolated_room(const OraclesEnhancedView *v);
+int ev_room_whole(const OraclesEnhancedView *v);
 int ev_on_grid(const OraclesEnhancedView *v);
 int ev_on_map(const OraclesEnhancedView *v);
 int ev_open_water(const OraclesEnhancedView *v, uint8_t group, uint8_t room);
@@ -100,6 +101,12 @@ void ev_scroll_reset(OraclesEnhancedView *v);
 const uint8_t *ev_shown_vram(OraclesEnhancedView *v, unsigned bank);
 const uint8_t *ev_shown_animated(const OraclesEnhancedView *v);
 const uint32_t *ev_scroll_window(OraclesEnhancedView *v);
+const uint32_t *ev_sway_window(OraclesEnhancedView *v, const uint32_t *image);
+/* The scroll across the band shows on the game area's line `line`, the sway taken off. */
+static inline int32_t ev_wave_shown(const OraclesEnhancedView *v, unsigned line)
+{
+    return (v->wave_held && v->shown_shift ? v->shown_shift[line] : v->line_shift[line]) - v->sway;
+}
 void ev_scroll_keep_capture(OraclesEnhancedView *v, const OraclesPpuRegs *regs, const uint8_t *palettes);
 /* The last capture of the room in play, drawn from the inputs it kept the first time it is read. */
 const uint32_t *ev_source_area(OraclesEnhancedView *v);

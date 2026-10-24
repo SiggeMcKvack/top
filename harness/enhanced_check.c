@@ -203,6 +203,7 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
     for (size_t i = 1, n = (size_t)c->width * oracles_enhanced_view_height(c->view); blank && i < n; i++) blank = surface[i] == surface[0];
     ec_measure_camera(c, ob, mode, camera_x, camera_y, blank);
     ec_measure_window_darker(c, ob, mode, surface, camera_x, camera_y, blank, frame);
+    ec_measure_whole_room(c, ob, mode, surface, camera_x, camera_y);
     {   /* each run is a jump to the large menus' scale and back */
         uint32_t crop[4];
         const int enlarged = oracles_enhanced_view_framed_crop(c->view, crop);

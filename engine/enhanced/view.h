@@ -356,6 +356,14 @@ unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *view
 unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *view);
 /* Frames shown in the band with the game's per-line scroll (under water, the strange force). */
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *view);
+/* Of those, the frames of a room the band shows whole (a large room drawn back, a room shown alone that it holds): its
+ * waves held to its rows, from the game's own sine where the profile binds it, else their part common to every line
+ * taken off, so that the room stands still while its lines ripple. */
+unsigned oracles_enhanced_view_sway_frames(const OraclesEnhancedView *view);
+/* Frames of a scroll under Ages' sea, where the game stops its waves, drawn with them all the same (of the wave frames). */
+unsigned oracles_enhanced_view_continued_wave_frames(const OraclesEnhancedView *view);
+/* The band shows the room whole and still (oracles_enhanced_view_sway_frames). */
+int oracles_enhanced_view_room_whole(const OraclesEnhancedView *view);
 /* Frames shown in the band shaken whole with the game's screen shake (a gate, a bomb, a boss). */
 unsigned oracles_enhanced_view_shake_frames(const OraclesEnhancedView *view);
 /* World frames where the band shows an overworld room beside the reference room, diagonals included, that no delivered terrain covers yet. */

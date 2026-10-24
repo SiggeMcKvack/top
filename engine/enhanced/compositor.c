@@ -228,7 +228,7 @@ static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose
         if (y < y0 || y >= y0 + shown_h) { for (unsigned x = 0; x < W; x++) row[x] = black; continue; }
         const int32_t world_y = in->world_top + (int32_t)y;
         const int32_t line = (int32_t)((uint32_t)(world_y - in->window_world_top) % AREA_H);   /* AREA_H a power of two: a floor modulo */
-        const int32_t shift_x = in->line_shift ? in->line_shift[line] : 0, shift_y = in->line_shift_y ? in->line_shift_y[line] : 0;
+        const int32_t shift_x = in->line_shift ? in->line_shift[line] - in->sway : 0, shift_y = in->line_shift_y ? in->line_shift_y[line] : 0;
         for (unsigned x = 0; x < x0; x++) row[x] = black;
         for (unsigned x = x0 + shown_w; x < W; x++) row[x] = black;
         uncovered += compose_row(in, core, row, x0, x0 + shown_w, world_y, shift_x, shift_y, black);

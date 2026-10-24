@@ -72,7 +72,7 @@ typedef struct OraclesGuestTables {
         group0_room_flags, link_object_index, objects_to_draw, oam, oam_tail, terrain_effects_used, link_raised_floor_offset, textbox_flags, enemies_killed_list,
         shadow_animation, green_grass_animation, puddle_animation_pointer, grass_animation_modifier, animation_state,
         gfx_regs1, gfx_regs2, gfx_regs3, vblank_checker, lcd_interrupt_behaviour, big_buffer,
-        tile_mapping_data, tile_mapping_indices, tile_collisions, bg_palettes_buffer, spr_palettes_buffer, tileset_bg_palettes,
+        tile_mapping_data, tile_mapping_indices, tile_collisions, bg_palettes_buffer, spr_palettes_buffer, tileset_bg_palettes, wave_scroll_values,
         status_bar_tile_map, status_bar_attribute_map, textbox_map, thread_state_buffer,
         main_stack, main_stack_top, thread0_stack, thread0_stack_top, thread1_stack, thread1_stack_top,
         thread2_stack, thread2_stack_top, thread3_stack, thread3_stack_top;

@@ -120,6 +120,14 @@ int ev_isolated_room(const OraclesEnhancedView *v)
     return oracles_guest_read8(v->guest, t->minimap_group) == 2u;
 }
 
+/* The band shows the room whole and still: a large room the drawn-back view holds, a small room shown alone that
+ * the part of the band shown holds, the camera standing still. */
+int ev_room_whole(const OraclesEnhancedView *v)
+{
+    const OraclesEnhancedObservation *ob = &v->observation;
+    return (ob->large_grid || ob->world.alone) && ob->world.bounds_width <= (int32_t)v->shown_width && ob->world.bounds_height <= (int32_t)v->shown_height;
+}
+
 static int maku_tree_here(OraclesEnhancedView *v)
 {
     if (!oracles_compat_maku_tree_rules(oracles_guest_profile(v->guest))) return 0;

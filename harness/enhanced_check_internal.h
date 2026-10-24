@@ -27,6 +27,16 @@
 #define CURTAIN_SUBSTATE 0x02u           /* wScreenTransitionState2, the substate that draws a column a frame */
 #define RELOAD_SETTLE_TIMEOUT 300u       /* the post-load topology wait, in host frames */
 
+/* The waves line by line on the surface (ec_measure_whole_room). */
+typedef struct EcRipple {
+    unsigned wave_frames, edge_moves, rippled_frames;
+    int have_edge;
+    int32_t edge, camera_x, camera_y, window_left, window_top;
+    int16_t row_edge[512];            /* each band line's edge at the last such frame, -1 none */
+    unsigned moving_frames, moving_changes, still_frames, still_changes, changes_max;
+    uint64_t epoch;
+} EcRipple;
+
 struct OraclesEnhancedCheck {
     OraclesCore *core;
     OraclesGuest *guest;
@@ -78,6 +88,9 @@ struct OraclesEnhancedCheck {
     /* the window against the drawn registers */
     unsigned window_checked, window_misplaced;
     unsigned last_wave_frames;        /* the view's count at the previous frame: this frame rippled if it grew */
+    /* a room shown whole under the waves: its edge on the screen, line by line */
+    EcRipple whole, water;            /* a room shown whole under the waves; any frame under the waves */
+    unsigned whole_last_waves;
     unsigned window_lines_checked, window_lines_wrong;   /* the window's own lines found in the band where the camera puts them */
     char window_lines_list[256];
     int have_last_offset, last_offset_x, last_offset_y;
@@ -305,6 +318,8 @@ void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
                            uint8_t box[ORACLES_ENHANCED_AREA_HEIGHT][ORACLES_ENHANCED_CORE_WIDTH], uint32_t frame);
 void ec_check_curtain(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y, uint32_t frame);
 /* The game's window and the ring of the band around it, compared in luminance on a world frame. */
+void ec_measure_whole_room(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
+                           int32_t camera_x, int32_t camera_y);
 void ec_measure_window_darker(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
                            int32_t camera_x, int32_t camera_y, int blank, uint32_t frame);
 /* The text box drawn by the host against the core's image (enhanced_check_text_box.c). */

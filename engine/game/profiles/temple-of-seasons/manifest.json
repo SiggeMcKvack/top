@@ -740,6 +740,7 @@
       "bank": 2,
       "address": "0xde80"
     },
+    "wave_scroll_values": null,
     "status_bar_tile_map": {
       "bank": 4,
       "address": "0xd240"
@@ -1080,7 +1081,8 @@
     "textbox_vram_pos": "the host's text box not qualified for this revision",
     "character_display_timer": "the host's text box not qualified for this revision",
     "text_address": "the host's text box not qualified for this revision",
-    "tileset_layout": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load"
+    "tileset_layout": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "wave_scroll_values": "the waves held to a room shown whole not qualified for this revision"
   },
   "guest_table_sizes": {
     "global_flags_size": 16,

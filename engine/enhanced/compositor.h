@@ -182,6 +182,7 @@ typedef struct OraclesEnhancedCompose {
     int fade;                                                    /* the game's palette fade, -32 (black) to 31 (white), 0 none: applied to every source but the core's window, which carries it already */
     const uint32_t *colours;                                     /* ORACLES_PPU_COLOURS pixels by RGB555 colour, the live pipeline; NULL for a plain expansion */
     const int16_t *line_shift, *line_shift_y;                    /* world mode: the scroll each of the game area's 128 lines was drawn with, less the camera's (the per-line ripples, SCX and SCY), repeated above and below the window; NULL: none */
+    int32_t sway;                                                /* world mode: the part of line_shift common to its lines, taken off them (the core's image drawn again without it) */
     const OraclesEnhancedNeighbour *neighbours;                  /* world mode; may be NULL */
     unsigned neighbour_count;
     OraclesEnhancedSize size;                                    /* the surface's; {0, 0}: the normal 256x144 */

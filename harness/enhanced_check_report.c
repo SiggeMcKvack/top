@@ -96,6 +96,15 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
     fprintf(out, "enhanced.text_box_frames_in_place=%u\nenhanced.curtain_window_frames_wrong=%u\n", c->text_box_frames_in_place, c->curtain_window_frames_wrong);
     fprintf(out, "enhanced.blurb_frames=%u\nenhanced.blurb_frames_in_window=%u\n", c->blurb_frames, c->blurb_frames_in_window);
     fprintf(out, "enhanced.neighbour_waiting_frames=%u\n", oracles_enhanced_view_waiting_frames(c->view));
+    fprintf(out, "enhanced.continued_wave_frames=%u\n", oracles_enhanced_view_continued_wave_frames(c->view));
+    fprintf(out, "enhanced.sway_frames=%u\n", oracles_enhanced_view_sway_frames(c->view));
+    for (unsigned k = 0; k < 2u; k++) {
+        const EcRipple *r = k ? &c->water : &c->whole;
+        const char *name = k ? "water" : "whole_room";
+        fprintf(out, "enhanced.%s_wave_frames=%u\nenhanced.%s_rippled_frames=%u\nenhanced.%s_edge_moves=%u\n", name, r->wave_frames, name, r->rippled_frames, name, r->edge_moves);
+        fprintf(out, "enhanced.%s_row_changes_moving=%u\nenhanced.%s_row_changes_still=%u\nenhanced.%s_row_changes_max=%u\n", name,
+                r->moving_frames ? 100u * r->moving_changes / r->moving_frames : 0u, name, r->still_frames ? 100u * r->still_changes / r->still_frames : 0u, name, r->changes_max);
+    }
     fprintf(out, "enhanced.routed_neighbours=%u\n", oracles_enhanced_view_routed_delivered(c->view));
     {   /* the hotbar of the item hotkeys, when the run shows one */
         unsigned captured = 0, shown = 0, checked = 0, wrong = 0, outside = 0;

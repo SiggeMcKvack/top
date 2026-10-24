@@ -151,6 +151,7 @@ const OraclesGuestTables oracles_guest_tables_moonrise = {
     .bg_palettes_buffer = { 0x02, 0xdf00 },
     .spr_palettes_buffer = { 0x02, 0xdf40 },
     .tileset_bg_palettes = { 0x02, 0xde80 },
+    .wave_scroll_values = { ORACLES_GUEST_ABSENT, 0 },
     .status_bar_tile_map = { 0x04, 0xd240 },
     .textbox_map = { 0x07, 0xd000 },
     .thread_state_buffer = { 0x00, 0xc2e0 },

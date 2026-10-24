@@ -198,8 +198,11 @@ static void hud_full_width(void)
  * (checkUpdateUnderwaterWaves): the window's 128 lines are one period, and a
  * row above or below the window ripples with the line a taller screen would
  * have there.  Every source holds the same world function, so the band must
- * be that function shifted by the row's line modulo 128, on every row. */
-static void ripple(void)
+ * be that function shifted by the row's line modulo 128, on every row.  In a
+ * room shown whole, the part common to the lines (`sway`) is taken off every
+ * source, the core's image drawn again without it: the band is the function
+ * shifted by the line's scroll less the sway. */
+static void ripple(int32_t sway)
 {
     #define WORLD_PIXEL(wx, wy) (0xff000000u | ((uint32_t)((wx) & 0xfff) << 8) | (uint32_t)((wy) & 0xff))
     static const int8_t wave[8] = { 0, 1, 2, 3, 3, 2, 1, 0 };
@@ -213,7 +216,7 @@ static void ripple(void)
     uint32_t *core = malloc(160u * 144u * sizeof *core);
     for (unsigned y = 0; y < 144u; y++)
         for (unsigned x = 0; x < 160u; x++)
-            core[y * 160u + x] = y < 16u ? 0xff000000u : WORLD_PIXEL(window_left + (int32_t)x + shift_x[y - 16u], window_top + (int32_t)(y - 16u) + shift_y[y - 16u]);
+            core[y * 160u + x] = y < 16u ? 0xff000000u : WORLD_PIXEL(window_left + (int32_t)x + shift_x[y - 16u] - sway, window_top + (int32_t)(y - 16u) + shift_y[y - 16u]);
     const int32_t nb_left = world_left - 16, nb_top = world_top - 16;
     const unsigned nb_w = W + 32u, nb_h = BAND_H + 32u;
     uint32_t *area = malloc((size_t)nb_w * nb_h * sizeof *area);
@@ -227,6 +230,7 @@ static void ripple(void)
     in.window_world_left = window_left; in.window_world_top = window_top;
     in.world_left = world_left; in.world_top = world_top;
     in.line_shift = shift_x; in.line_shift_y = shift_y;
+    in.sway = sway;
     in.neighbours = &around; in.neighbour_count = 1;
     uint32_t *surface = malloc(W * H * sizeof *surface);
     CHECK(oracles_enhanced_compose(core, &in, surface) == 0);
@@ -234,7 +238,7 @@ static void ripple(void)
     for (unsigned y = 0; y < BAND_H; y++) {
         const int32_t row_line = world_top + (int32_t)y - window_top, line = ((row_line % 128) + 128) % 128;
         for (unsigned x = 0; x < W; x++) {
-            const uint32_t expect = WORLD_PIXEL(world_left + (int32_t)x + shift_x[line], world_top + (int32_t)y + shift_y[line]);
+            const uint32_t expect = WORLD_PIXEL(world_left + (int32_t)x + shift_x[line] - sway, world_top + (int32_t)y + shift_y[line]);
             if (surface[(16u + y) * W + x] != expect) wrong++;
         }
     }
@@ -1085,7 +1089,8 @@ int main(void)
     world_math();
     compositor();
     hud_full_width();
-    ripple();
+    ripple(0);
+    ripple(2);
     view_and_savestate();
     isolated_room_edges();
     state_across_viewports();

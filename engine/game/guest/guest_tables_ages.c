@@ -229,6 +229,7 @@ const OraclesGuestTables oracles_guest_tables_ages = {
     .bg_palettes_buffer = { 0x02, 0xdf00 },
     .spr_palettes_buffer = { 0x02, 0xdf40 },
     .tileset_bg_palettes = { 0x02, 0xde80 },
+    .wave_scroll_values = { 0x02, 0xd800 },
     .status_bar_tile_map = { 0x04, 0xd240 },
     .status_bar_attribute_map = { 0x04, 0xd640 },
     .textbox_map = { 0x07, 0xd000 },

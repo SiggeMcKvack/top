@@ -192,6 +192,48 @@ void oracles_enhanced_view_set_neighbour_objects(OraclesEnhancedView *v, int ena
     ev_invalidate_all(v);   /* the cached renders were made without the objects */
 }
 
+/* The waves under Ages' sea, from the game's own sine (w2WaveScrollValues, where the profile binds it): the
+ * window's line i takes the step SCY + the frame counter + i, as checkUpdateUnderwaterWaves counts it, the wave held
+ * to the room's rows.  The game's screen shows them filled for the next frame from the registers of the one before,
+ * torn where its camera moves: a jolt of its water under a moving screen, a shake of the room the band shows still.
+ * 1 with the waves in `out`, 0 without the table. */
+static int room_waves(OraclesEnhancedView *v, int16_t out[ORACLES_ENHANCED_AREA_HEIGHT])
+{
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    const uint8_t *table = oracles_guest_ptr(v->guest, t->wave_scroll_values, ORACLES_ENHANCED_AREA_HEIGHT);
+    if (!table) return 0;
+    const OraclesEnhancedObservation *ob = &v->observation;
+    const unsigned phase = (unsigned)(ob->drawn_camera_y + ob->drawn_offset_y - (int)ORACLES_ENHANCED_HUD_HEIGHT) + oracles_guest_read8(v->guest, t->frame_counter);
+    for (unsigned i = 0; i < ORACLES_ENHANCED_AREA_HEIGHT; i++) out[i] = (int8_t)table[(phase + i) & (ORACLES_ENHANCED_AREA_HEIGHT - 1u)];
+    return 1;
+}
+
+/* Ages' sea floor and its houses: the tileset under water. */
+static int ob_underwater(const OraclesEnhancedView *v)
+{
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    const uint8_t *flags = oracles_guest_ptr(v->guest, t->tileset_flags, 1);
+    return flags && (*flags & ORACLES_TILESETFLAG_UNDERWATER);
+}
+
+/* Without the table, the waves' part common to the room's lines, the median of their scroll across over the lines its
+ * rows show (the window's, or a taller screen's, its 128 lines repeating): the greater part of its edge where it
+ * stands. */
+static int32_t wave_sway(const OraclesEnhancedView *v, int32_t world_top)
+{
+    const OraclesEnhancedWorld *w = &v->observation.world;
+    int16_t sorted[2u * ORACLES_ENHANCED_AREA_HEIGHT];
+    unsigned n = 0;
+    for (int32_t y = w->bounds_origin_y; y < w->bounds_origin_y + w->bounds_height && n < sizeof sorted / sizeof sorted[0]; y++) {
+        if (y < world_top || y >= world_top + (int32_t)v->band_height) continue;
+        sorted[n++] = v->line_shift[(uint32_t)(y - v->observation.window_top) % ORACLES_ENHANCED_AREA_HEIGHT];
+    }
+    if (!n) return 0;
+    for (unsigned i = 1; i < n; i++)
+        for (unsigned j = i; j > 0 && sorted[j - 1] > sorted[j]; j--) { const int16_t t = sorted[j]; sorted[j] = sorted[j - 1]; sorted[j - 1] = t; }
+    return sorted[n / 2u];
+}
+
 /* A ripple reads up to its largest shift past the band's own rectangle. */
 static int32_t wave_reach(const OraclesEnhancedView *v)
 {
@@ -469,7 +511,37 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         if (room_waiting_in_view(v, camera_x, camera_y)) v->waiting_frames++;
         v->large_was_in_scroll = !v->observation.grid && v->observation.large && v->observation.in_scroll;
         v->large_scroll_epoch = v->observation.epoch;
-        if (v->have_wave) { in.line_shift = v->line_shift; in.line_shift_y = v->line_shift_y; v->wave_frames++; }
+        v->wave_held = 0;
+        /* Under Ages' sea the game stops its waves for a scroll between two rooms (checkDisableUnderwaterWaves, until
+         * the room entered is loaded): the band goes on drawing them through it, with the game's own sine and phase
+         * (room_waves), which the game takes up again where they stand, the neighbours rippling with them. */
+        const int continued = !v->have_wave && ob_underwater(v) && v->observation.playing && !v->observation.cutscene
+            && (v->observation.in_scroll || v->waves_continued) && room_waves(v, v->held_shift);
+        v->waves_continued = continued;
+        if (continued) {
+            memset(v->line_shift, 0, sizeof v->line_shift);
+            memset(v->line_shift_y, 0, sizeof v->line_shift_y);
+            in.line_shift = v->held_shift; in.line_shift_y = v->line_shift_y;
+            v->wave_held = 1;
+            v->wave_frames++; v->continued_wave_frames++;
+        }
+        if (v->have_wave) {
+            in.line_shift = v->line_shift; in.line_shift_y = v->line_shift_y; v->wave_frames++;
+            /* Ages' waves under the sea are drawn from the game's sine (room_waves), held to the world's rows: the game's
+             * own lines, filled from the registers of the frame before and torn where its camera moves, would crawl
+             * and jolt over a room the band shows still while that camera moves inside it (a room shown whole, a
+             * dungeon's large room).  Elsewhere, or without the table, a room shown whole keeps the game's lines,
+             * their common part taken off (wave_sway): another effect's lines there (a split of the screen, a warp's
+             * ripple) are not that sine.  The core's image is drawn again so. */
+            const int whole = ev_room_whole(v), underwater = ob_underwater(v);
+            if (v->wave_lines && (whole || underwater)) {
+                if (underwater && room_waves(v, v->held_shift)) { in.line_shift = v->held_shift; v->wave_held = 1; }
+                else if (whole) { in.sway = wave_sway(v, camera_y); v->wave_held = 1; }
+                if (v->wave_held) v->sway_frames++;
+            }
+        }
+        v->sway = in.sway;
+        v->shown_shift = in.line_shift;
         in.neighbours = nbs;
         in.neighbour_count = count;
         in.shown_width = v->shown_width;
@@ -488,10 +560,11 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     const int load_band = ev_load_band(v, &in, tracking, camera_x, camera_y);
     in.hud_fill = ev_hud_fill(v, in.mode);
     in.hud_place = ev_hud_place(v, in.mode);
+    if (in.mode != ORACLES_ENHANCED_WORLD) { v->sway = 0; v->wave_held = 0; }
     v->sub_x = v->sub_y = 0;
     v->sub_layer_w = v->sub_layer_h = 0;
     v->sub_fixed_count = 0;
-    v->uncovered = oracles_enhanced_compose(ev_scroll_window(v), &in, v->surface);
+    v->uncovered = oracles_enhanced_compose(in.mode == ORACLES_ENHANCED_WORLD && v->wave_held ? ev_sway_window(v, ev_scroll_window(v)) : ev_scroll_window(v), &in, v->surface);
     if (load_band) { in.mode = ORACLES_ENHANCED_FRAMED; v->uncovered = 0; }
     v->wide_shown = v->scaled_shown = v->enlarged_shown = 0;
     ev_find_area_blurb(v);
@@ -606,6 +679,9 @@ void oracles_enhanced_view_shown(const OraclesEnhancedView *v, unsigned *width, 
 unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *v) { return v->off_camera_frames; }
 unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *v) { return v->world_off_camera_frames; }
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *v) { return v->wave_frames; }
+unsigned oracles_enhanced_view_sway_frames(const OraclesEnhancedView *v) { return v->sway_frames; }
+unsigned oracles_enhanced_view_continued_wave_frames(const OraclesEnhancedView *v) { return v->continued_wave_frames; }
+int oracles_enhanced_view_room_whole(const OraclesEnhancedView *v) { return ev_room_whole(v); }
 unsigned oracles_enhanced_view_shake_frames(const OraclesEnhancedView *v) { return v->shake_frames; }
 unsigned oracles_enhanced_view_waiting_frames(const OraclesEnhancedView *v) { return v->waiting_frames; }
 unsigned oracles_enhanced_view_routed_delivered(const OraclesEnhancedView *v) { return v->routed_delivered; }

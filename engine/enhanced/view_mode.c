@@ -32,6 +32,7 @@ static int line_scroll_shifts(OraclesEnhancedView *v, int16_t shift[ORACLES_ENHA
     int scx = -1, scy = -1;
     for (size_t i = 0; i < count; i++) if (j[i].ly >= ORACLES_PPU_HEIGHT) { if (j[i].reg == IO_SCX) scx = j[i].value; if (j[i].reg == IO_SCY) scy = j[i].value; }
     int varies = 0;
+    v->wave_lines = 0;
     for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) {
         for (size_t i = 0; i < count; i++) {
             if (j[i].ly >= ORACLES_PPU_HEIGHT) continue;
@@ -49,6 +50,7 @@ static int line_scroll_shifts(OraclesEnhancedView *v, int16_t shift[ORACLES_ENHA
         shift_y[line] = (int16_t)dy;
         if (dx != shift[0] || dy != shift_y[0]) varies = 1;
     }
+    v->wave_lines = varies;
     if (varies) return 1;
     /* The frame on screen shows the registers of an earlier logic, which
      * shook them and then counted down: the shake shows while the counter

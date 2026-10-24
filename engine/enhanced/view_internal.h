@@ -626,10 +626,19 @@ struct OraclesEnhancedView {
     unsigned off_camera_frames;      /* frames the game drew its area elsewhere than its camera: framed */
     unsigned world_off_camera_frames;   /* world frames a cutscene drew elsewhere than its camera (oracles_enhanced_view_world_off_camera_frames) */
     unsigned wave_frames;            /* frames the game scrolled its area line by line (under water, the strange force): shown in the band, waves and all */
+    unsigned sway_frames;            /* of those, frames of a room shown whole, its waves held (oracles_enhanced_view_sway_frames) */
+    int32_t sway;                    /* this frame's part common to the lines taken off, without the game's sine */
+    int wave_held;                   /* this frame's waves held to the room shown whole: the core's image drawn again (ev_sway_window) */
+    int16_t held_shift[ORACLES_ENHANCED_AREA_HEIGHT];   /* their scroll across, line by line, from the game's sine */
+    const int16_t *shown_shift;      /* the shifts the band shows this frame: line_shift or held_shift */
+    int waves_continued;             /* this frame's waves drawn through a scroll the game stopped them for */
+    unsigned continued_wave_frames;
+    uint32_t sway_window[ORACLES_PPU_WIDTH * ORACLES_PPU_HEIGHT];   /* the core's image, its background drawn again without it */
     unsigned shake_frames;           /* frames the game shook its screen (updateScreenShake): shown in the band, shaken whole */
     unsigned shake_history;          /* bit n: the shake under way n + 1 observations ago (the image on screen shows the registers of a logic run one or more observations before) */
     int16_t line_shift[ORACLES_ENHANCED_AREA_HEIGHT], line_shift_y[ORACLES_ENHANCED_AREA_HEIGHT];   /* this frame's per-line scroll, less the camera's */
     int have_wave;
+    int wave_lines;                  /* the lines' scrolls differ (the waves, the strange force), where a shake moves them all alike */
     /* The tile animation of a scroll, run by the view alone (view_scroll.c). */
     int scroll_decided, scroll_running;
     OraclesScrollAnimation scroll;
@@ -677,7 +686,7 @@ struct OraclesEnhancedView {
     uint64_t sub_last_epoch;
     int sub_have_last, sub_live;
     int32_t sub_last_x, sub_last_y, sub_raw_x, sub_raw_y;   /* the last frame's fraction shown, and the camera's */
-    unsigned sub_wave_hold;          /* frames left before the band takes a fraction again after the waves */
+    unsigned sub_shake_hold;         /* frames left before the band takes a fraction again after a shake of the screen */
     int32_t sub_ease_x, sub_ease_y;  /* the fraction shown less the camera's, given back by SUB_EASE a frame */
     int32_t sub_link_x, sub_link_y;  /* Link's own fraction shown, his layer's place less his whole one, eased the same way */
     int sub_link_live;
