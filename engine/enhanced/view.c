@@ -487,6 +487,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     v->sub_fixed_count = 0;
     v->uncovered = oracles_enhanced_compose(ev_scroll_window(v), &in, v->surface);
     if (load_band) { in.mode = ORACLES_ENHANCED_FRAMED; v->uncovered = 0; }
+    v->wide_shown = v->scaled_shown = v->enlarged_shown = 0;
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {
         ev_overlay_link_phase(v, camera_x, camera_y);
@@ -499,8 +500,9 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         ev_overlay_warp_curtain(v, camera_x, camera_y);
         ev_overlay_text_box(v, camera_x, camera_y);
         black_outside_shown(v);
+        ev_overlay_text_box_above(v);
         ev_subpixel_settle(v);
-    }
+    } else if (!load_band) ev_overlay_text_box_framed(v);
     /* In the HUD band's gutters, whatever the mode: they exist in the framed
      * surface too, beside the status bar wherever the image stands (centred
      * in the drawn-back surface). */
@@ -528,6 +530,13 @@ int oracles_enhanced_view_framed_crop(void *opaque, uint32_t rect[4])
     rect[1] = (v->size.height - ORACLES_PPU_HEIGHT) / 2u;
     rect[2] = ORACLES_ENHANCED_CORE_WIDTH;
     rect[3] = ORACLES_PPU_HEIGHT;
+    /* With the host's wide box, the union of the frame and the box at its size, centred on it, whether a box shows or
+     * not: the same scale throughout, whatever the Text size, which the presenter applies within it. */
+    const unsigned box = v->wide_pixels ? v->wide_pixels + 16u : 8u * ORACLES_TEXT_BOX_GAME_COLUMNS;
+    if (box > rect[2] && rect[0] >= (box - rect[2]) / 2u) {
+        rect[0] -= (box - rect[2]) / 2u;
+        rect[2] = box;
+    }
     return 1;
 }
 

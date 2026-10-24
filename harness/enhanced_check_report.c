@@ -166,6 +166,7 @@ void oracles_enhanced_check_summary(OraclesEnhancedCheck *c, FILE *out)
 {
     summary_of_the_band(c, out);
     summary_of_what_was_shown(c, out);
+    if (c->host_box || c->wide || c->text_size) ec_host_text_box_summary(c, out);
 }
 
 /* The band itself: the modes, the camera, the ghost's runs, the seams, the
@@ -288,4 +289,5 @@ void oracles_enhanced_check_report(OraclesEnhancedCheck *c, FILE *out)
 {
     report_the_band(c, out);
     report_what_was_shown(c, out);
+    if (c->host_box || c->wide || c->text_size) ec_host_text_box_report(c, out);
 }

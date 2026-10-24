@@ -117,6 +117,9 @@ typedef struct OraclesGuestTables {
         text_gfx_buffer, line_text_buffer, line_attributes_buffer, line_delays_buffer, line_sounds_buffer, line_sound_effects_buffer,
         next_text_column, text_line_tiles, textbox_column, text_display_state, text_display_mode, textbox_attributes, textbox_option_positions,
         secret_text, secret_text_end;
+    /* The host's text box: the routine that queues a line's copy to the VRAM, the vblank's function that runs a queued
+     * DMA, the box's place in the VRAM's map and the frames left before the line's next column shows, where the text is read (WRAM bank 7). */
+    OraclesGuestSym dma_text_gfx_buffer, vblank_dma_function, textbox_vram_pos, character_display_timer, text_address;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */

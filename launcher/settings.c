@@ -259,6 +259,8 @@ void oracles_settings_defaults(oracles_settings *s)
     s->transitions = 1;
     s->swim_hold = 0;   /* the game's own taps */
     s->compact_text = 0;   /* the game's own fixed width */
+    s->text_box_wide = 0;  /* the game's own box */
+    s->text_size = 0;   /* the game's own size */
     s->view = 2;   /* far: the view drawn back, as Enhanced was before the levels */
     s->aspect = ORACLES_ASPECT_AUTO;
     s->far_fixed = 0;   /* fitted to the screen */
@@ -285,8 +287,10 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `text_box=`, `text_size=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
+static const char *const text_size_names[3] = { "normal", "large", "xlarge" };
+
 static int load_launcher(oracles_settings *s, const char *name, const char *value)
 {
     if (!strcmp(name, "profile")) {
@@ -303,6 +307,14 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "text")) {
         if (!strcmp(value, "classic") || !strcmp(value, "compact")) s->compact_text = !strcmp(value, "compact");
+        return 1;
+    }
+    if (!strcmp(name, "text_size")) {
+        for (int size = 0; size < 3; size++) if (!strcmp(value, text_size_names[size])) s->text_size = size;
+        return 1;
+    }
+    if (!strcmp(name, "text_box")) {
+        if (!strcmp(value, "standard") || !strcmp(value, "wide")) s->text_box_wide = !strcmp(value, "wide");
         return 1;
     }
     if (!strcmp(name, "view")) {
@@ -539,6 +551,12 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# The text box: classic (the game's fixed width) or compact (its lines in the font's own widths, at the game's\n"
                "# pace), in enhanced on Ages and Seasons.\n");
     fprintf(f, "text=%s\n", s->compact_text ? "compact" : "classic");
+    fprintf(f, "# The text box: standard (the game's) or wide (192 pixels of text, drawn by the port, the texts laid out again\n"
+               "# for it, classic or compact), in enhanced on Ages and Seasons; from the pause, at the next Play.\n");
+    fprintf(f, "text_box=%s\n", s->text_box_wide ? "wide" : "standard");
+    fprintf(f, "# The text box's size: normal, large (three halves, in whole screen pixels) or xlarge (twice as large), where the\n"
+               "# view holds it, else the next size down, in enhanced; at once, from the pause too.\n");
+    fprintf(f, "text_size=%s\n", text_size_names[s->text_size >= 0 && s->text_size < 3 ? s->text_size : 0]);
     if (s->window_scale) fprintf(f, "window_scale=%d\n", s->window_scale); else fprintf(f, "window_scale=full\n");
     fprintf(f, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
                "# proportions, sampled for pixel art); a window keeps its whole scales.\n");

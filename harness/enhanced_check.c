@@ -1,4 +1,5 @@
 #include "enhanced_check_internal.h"
+#include "text_box_enlarge.h"
 
 /* The monotonic clock in microseconds: a composition is timed by the wall, not
  * by the CPU time of the process, which counts the ghost's thread as well. */
@@ -64,18 +65,66 @@ void oracles_enhanced_check_surface_at(OraclesEnhancedCheck *c, uint32_t frame, 
 
 struct OraclesEnhancedView *oracles_enhanced_check_view(OraclesEnhancedCheck *c) { return (struct OraclesEnhancedView *)c->view; }
 
+/* The surface written as a PPM `surface_scale` times as large, as the presenter shows it on a screen of that size: the
+ * whole surface at that scale, or with the large menus over the framed core the part shown alone
+ * (oracles_enhanced_view_framed_crop), widened for the box where its own whole scale holds it (oracles_text_box_reserve),
+ * at that scale, centred, black around; the text box the presenter enlarges drawn over it larger, at its size or the
+ * next down where the part shown holds it (oracles_text_box_enlarge). */
 static void write_surface(const OraclesEnhancedCheck *c, const uint32_t *surface, const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f) return;
-    const unsigned height = oracles_enhanced_view_height(c->view);
-    fprintf(f, "P6\n%u %u\n255\n", c->width, height);
-    for (unsigned i = 0; i < c->width * height; i++) { const uint8_t rgb[3] = { (uint8_t)(surface[i] >> 16), (uint8_t)(surface[i] >> 8), (uint8_t)surface[i] }; fwrite(rgb, 1, 3, f); }
+    const unsigned height = oracles_enhanced_view_height(c->view), k = c->surface_scale > 1u ? c->surface_scale : 1u, w = c->width * k, h = height * k;
+    uint32_t part[4] = { 0, 0, c->width, height }, rect[4], reserve = 0;
+    int bottom = 0;
+    int32_t out[4] = { 0, 0, 0, 0 };
+    unsigned factor = 1, size = 0, scale = k;
+    const int published = oracles_enhanced_view_text_box_enlarged(c->view, rect, &bottom, &reserve, &size);
+    if (c->large_menus && oracles_enhanced_view_framed_crop(c->view, part)) {
+        oracles_text_box_reserve(c->width, w, h, 0, reserve, size, &part[0], &part[2], part[3]);
+        const double whole = oracles_text_box_part_scale(part[2], part[3], w, h, 0);
+        scale = whole >= 1.0 ? (unsigned)whole : 1u;
+    }
+    const int32_t ox = ((int32_t)w - (int32_t)(part[2] * scale)) / 2, oy = ((int32_t)h - (int32_t)(part[3] * scale)) / 2;
+    const int box = published && rect[0] >= part[0] && rect[1] >= part[1] && rect[0] + rect[2] <= part[0] + part[2] && rect[1] + rect[3] <= part[1] + part[3]
+                    && oracles_text_box_enlarge((double)ox, (double)oy, (double)(part[2] * scale), (double)(part[3] * scale), (double)scale, rect[0] - part[0],
+                                                rect[1] - part[1], rect[2], rect[3], size, bottom, out, &factor);
+    fprintf(f, "P6\n%u %u\n255\n", w, h);
+    for (unsigned y = 0; y < h; y++)
+        for (unsigned x = 0; x < w; x++) {
+            const int32_t px = (int32_t)x - ox, py = (int32_t)y - oy;
+            uint32_t p = 0xff000000u;
+            if (px >= 0 && py >= 0 && px < (int32_t)(part[2] * scale) && py < (int32_t)(part[3] * scale))
+                p = surface[(part[1] + (unsigned)py / scale) * c->width + part[0] + (unsigned)px / scale];
+            if (box && (int32_t)x >= out[0] && (int32_t)x < out[0] + out[2] && (int32_t)y >= out[1] && (int32_t)y < out[1] + out[3])
+                p = surface[(rect[1] + (unsigned)((int32_t)y - out[1]) / factor) * c->width + rect[0] + (unsigned)((int32_t)x - out[0]) / factor];
+            const uint8_t rgb[3] = { (uint8_t)(p >> 16), (uint8_t)(p >> 8), (uint8_t)p };
+            fwrite(rgb, 1, 3, f);
+        }
     fclose(f);
 }
 void oracles_enhanced_check_set_neighbour_objects(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_neighbour_objects(c->view, enabled); }
 void oracles_enhanced_check_set_link_phase(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_link_phase(c->view, enabled); }
 void oracles_enhanced_check_set_subpixel(OraclesEnhancedCheck *c, int enabled) { oracles_enhanced_view_set_subpixel(c->view, enabled); }
+void oracles_enhanced_check_set_text_box(OraclesEnhancedCheck *c, int enabled) { c->host_box = enabled != 0; }
+void oracles_enhanced_check_set_text_size(OraclesEnhancedCheck *c, unsigned size)
+{
+    oracles_enhanced_view_set_text_size(c->view, size);
+    c->text_size = size;
+}
+void oracles_enhanced_check_set_surface_scale(OraclesEnhancedCheck *c, unsigned scale) { c->surface_scale = scale; }
+void oracles_enhanced_check_set_large_menus(OraclesEnhancedCheck *c, int large)
+{
+    oracles_enhanced_view_set_large_menus(c->view, large);
+    c->large_menus = large != 0;
+}
+void oracles_enhanced_check_set_wide_text_box(OraclesEnhancedCheck *c, unsigned pixels, unsigned lines)
+{
+    oracles_enhanced_view_set_text_box(c->view, pixels, lines);
+    c->wide = 1;
+    c->wide_pixels_width = pixels;
+    c->wide_lines = lines;
+}
 void oracles_enhanced_check_set_camera_profile(OraclesEnhancedCheck *c, unsigned profile)
 {
     oracles_enhanced_view_set_camera_profile(c->view, profile);
@@ -130,6 +179,9 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
         c->compose_us_total += spent;
         if (spent > c->compose_us_max) c->compose_us_max = spent;
     }
+    if (c->text_size) ec_check_scaled_text_box(c, mode, surface);
+    if (c->wide) ec_check_wide_text_box(c, mode, surface, frame);   /* the frame just composed, before a reload replaces the state it shows */
+    else if (c->host_box) ec_check_host_text_box(c, mode, frame);
     const uint64_t hash = oracles_guest_hash((const uint8_t *)surface, (size_t)c->width * oracles_enhanced_view_height(c->view) * sizeof *surface, ORACLES_HASH_SEED);
     c->run_hash = oracles_guest_hash((const uint8_t *)&hash, sizeof hash, c->run_hash);
     for (unsigned i = 0; i < c->surfaces; i++) if (c->surface_at[i] == frame) write_surface(c, surface, c->surface_path[i]);

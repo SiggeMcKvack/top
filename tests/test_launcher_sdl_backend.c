@@ -13,6 +13,7 @@
  * a cancel; it opens in the ROM's folder. */
 #include "backends.h"
 #include "file_dialog.h"
+#include "text_box_enlarge.h"
 #include "touch_controls.h"
 
 #include <SDL3/SDL.h>
@@ -143,7 +144,7 @@ static void enlarged_menus(SDL_Window *window, SDL_Renderer *renderer)
     static uint32_t pixels[480 * 270];
     if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
         int w = 0, h = 0;
-        oracles_host_video_frame frame = { pixels, 480, 270, 480 * sizeof(uint32_t), 160, 63, 160, 144, NULL };
+        oracles_host_video_frame frame = { pixels, 480, 270, 480 * sizeof(uint32_t), 160, 63, 160, 144, NULL, 0, 0, 0, 0, 0, 0, 0 };
         CHECK(backend.present_frame(backend.opaque, &frame));
         CHECK(SDL_GetRenderLogicalPresentation(renderer, &w, &h, NULL) && w == 160 && h == 144);
         frame.crop_w = frame.crop_h = 0;
@@ -253,7 +254,7 @@ static void scaling(SDL_Window *window, SDL_Renderer *renderer)
         SDL_Texture *frame;
         int width, height, fill = 0, filled = 1;
         oracles_sdl_backend_pause_view(&backend, &w, &r, &frame, &width, &height);
-        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, NULL };
+        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0 };
         SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
         SDL_ScaleMode sampling = SDL_SCALEMODE_INVALID;
         /* In a window: whole scales. */
@@ -338,7 +339,7 @@ static void subpixel_band(SDL_Window *window, SDL_Renderer *renderer)
     if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
         /* The band half a pixel left, Link at his own place: his fraction the band's, his move 0 against it. */
         oracles_host_video_subpixel sub = { 128, 0, 16, 254, layer, 20, 40, 1, 2, 64, 0, 0, patch, 1, { { 10, 90, 1, 20 } } };
-        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
+        const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 0, 0, 0, 0, 0, 0, 0 };
         CHECK(backend.present_frame(backend.opaque, &image));
         SDL_FRect area;
         CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area));
@@ -375,7 +376,7 @@ static void subpixel_band(SDL_Window *window, SDL_Renderer *renderer)
         CHECK(pixel_at(renderer, 20, 40) == 0xff00ff00u && pixel_at(renderer, 20, 41) == 0xff00ff00u && pixel_at(renderer, 10, 100) == 0xffffffffu);
         SDL_SetRenderLogicalPresentation(renderer, 480, 270, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
         const oracles_host_video_subpixel high = { 0, 0, 16, 254, layer, 20, 15, 1, 2, 64, 0, 0, patch, 0, { { 0 } } };
-        const oracles_host_video_frame cut = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &high };
+        const oracles_host_video_frame cut = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &high, 0, 0, 0, 0, 0, 0, 0 };
         CHECK(backend.present_frame(backend.opaque, &cut));
         CHECK(pixel_at(renderer, x0 + 20 * k, y0 + 15 * k) == 0xff000000u && pixel_at(renderer, x0 + 20 * k, y0 + 16 * k) == 0xff00ff00u);
         /* Sampled smoothly (Fill's pixel art), the layer's and the patch's edges blend with their transparent pixels:
@@ -388,7 +389,7 @@ static void subpixel_band(SDL_Window *window, SDL_Renderer *renderer)
         }
         SDL_SetTextureScaleMode(kept, SDL_SCALEMODE_LINEAR);
         const oracles_host_video_subpixel smooth = { 128, 64, 16, 254, white_layer, 20, 40, 5, 3, 64, -64, 32, white_patch, 0, { { 0 } } };
-        const oracles_host_video_frame bright = { white, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &smooth };
+        const oracles_host_video_frame bright = { white, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &smooth, 0, 0, 0, 0, 0, 0, 0 };
         CHECK(backend.present_frame(backend.opaque, &bright));
         int darker = 0;
         for (int y = y0 + 38 * k; y < y0 + 44 * k; y++)
@@ -419,13 +420,13 @@ static void margins(SDL_Window *window, SDL_Renderer *renderer)
 {
     static uint32_t pixels[160 * 144];
     for (unsigned i = 0; i < 160u * 144u; i++) pixels[i] = 0xffffffffu;
-    const oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, NULL };
+    const oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0 };
     static uint32_t with_link[160 * 144], layer[64 * 64], patch[64 * 64];
     for (unsigned i = 0; i < 160u * 144u; i++) with_link[i] = 0xffffffffu;
     for (unsigned y = 40; y < 42; y++) for (unsigned x = 20; x < 22; x++) with_link[y * 160 + x] = 0xff00ff00u;
     for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xffffffffu; }
     const oracles_host_video_subpixel sub = { 128, 0, 16, 128, layer, 20, 40, 2, 2, 64, -128, 0, patch, 0, { { 0 } } };
-    const oracles_host_video_frame moved = { with_link, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
+    const oracles_host_video_frame moved = { with_link, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 0, 0, 0, 0, 0, 0, 0 };
     for (int margin = ORACLES_SCREEN_MARGIN_OFF; margin <= ORACLES_SCREEN_MARGIN_SMALL; margin += ORACLES_SCREEN_MARGIN_SMALL) {
         oracles_sdl_options options = { 0 };
         options.scale = 5;
@@ -533,7 +534,7 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
         if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
             for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xff000000u; }
             const oracles_host_video_subpixel sub = { 128, 192, 16, 254, layer, 20, 40, 2, 2, 64, 64, -32, patch, 1, { { 100, 200, 40, 20 } } };
-            const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub };
+            const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 0, 0, 0, 0, 0, 0, 0 };
             CHECK(backend.present_frame(backend.opaque, &image));
             SDL_FRect area;
             CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area) && area.w == (fullscreen ? 1280.0f : 480.0f * (float)sizes[i][2]));
@@ -588,6 +589,74 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
     }
     SDL_SetWindowSize(window, 1280, 720);
     SDL_SyncWindow(window);
+}
+
+/* Text size Large: the frame's text box shown again above it at whole screen pixels, in the lent window sized for 160x144
+ * at five times (800x720): eight screen pixels a frame pixel (5 + 3), centred on the box across, against its top edge,
+ * or its bottom; every block the box's pixel, nearest; a box the frame does not hold so left at the frame's scale.  Very
+ * large at ten, at eight where ten does not fit; the large menus' part widened for the box only at its own scale. */
+static void enlarged_box(SDL_Window *window, SDL_Renderer *renderer)
+{
+    static uint32_t pixels[160 * 144];
+    for (unsigned y = 0; y < 144u; y++)
+        for (unsigned x = 0; x < 160u; x++) pixels[y * 160u + x] = 0xff000000u | ((x * 37u + y * 101u) * 2654435761u >> 8 & 0xffffffu);
+    oracles_sdl_options options = { 0 };
+    options.scale = 5;
+    options.window = window;
+    options.renderer = renderer;
+    oracles_host_backend backend;
+    if (!oracles_sdl_backend_init(&backend, &options)) { CHECK(0); return; }
+    if (backend.start(backend.opaque, 160, 144, 48000, 0)) {
+        CHECK(SDL_GetRenderOutputSize(renderer, &output_w, &output_h) && output_w == 800 && output_h == 720);
+        /* At the top: 40 x 16 frame pixels from (40, 20), 320 x 128 screen pixels from (140, 100). */
+        oracles_host_video_frame image = { pixels, 160, 144, 160 * sizeof(uint32_t), 0, 0, 0, 0, NULL, 40, 20, 40, 16, 0, 0, ORACLES_TEXT_BOX_ENLARGE_LARGE };
+        CHECK(backend.present_frame(backend.opaque, &image));
+        int same = 1;
+        for (unsigned j = 0; j < 16u; j++)
+            for (unsigned i = 0; i < 40u; i++)
+                for (unsigned corner = 0; corner < 2u; corner++) {
+                    const int x = 140 + 8 * (int)i + (corner ? 7 : 0), y = 100 + 8 * (int)j + (corner ? 7 : 0);
+                    same &= pixel_at(renderer, x, y) == pixels[(20u + j) * 160u + 40u + i];
+                }
+        CHECK(same);
+        CHECK(pixel_at(renderer, 139, 150) == pixels[30u * 160u + 27u] && pixel_at(renderer, 460, 150) == pixels[30u * 160u + 92u]);   /* beside it, the frame */
+        /* At the bottom: its bottom edge at the frame's, 580, its top at 452. */
+        image.box_y = 100;
+        image.box_bottom = 1;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, 140, 452) == pixels[100u * 160u + 40u] && pixel_at(renderer, 459, 579) == pixels[115u * 160u + 79u]);
+        CHECK(pixel_at(renderer, 140, 451) == pixels[90u * 160u + 28u]);
+        /* Too wide for the frame at that size (120 x 8 = 960): the frame alone. */
+        image.box_x = 20; image.box_w = 120; image.box_bottom = 0; image.box_y = 20;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, 300, 100) == pixels[20u * 160u + 60u] && pixel_at(renderer, 0, 0) == pixels[0]);
+        /* Very large: ten screen pixels a pixel, 40 x 16 from (60, 20) at 400 x 160 from (200, 100). */
+        image.box_x = 60; image.box_w = 40; image.box_size = ORACLES_TEXT_BOX_ENLARGE_XLARGE;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        same = 1;
+        for (unsigned j = 0; j < 16u; j++)
+            for (unsigned i = 0; i < 40u; i++)
+                for (unsigned corner = 0; corner < 2u; corner++)
+                    same &= pixel_at(renderer, 200 + 10 * (int)i + (corner ? 9 : 0), 100 + 10 * (int)j + (corner ? 9 : 0)) == pixels[(20u + j) * 160u + 60u + i];
+        CHECK(same);
+        /* Too wide at ten (100 x 10 = 1000): at eight, Large, 800 from 0. */
+        image.box_x = 30; image.box_w = 100;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, 0, 100) == pixels[20u * 160u + 30u] && pixel_at(renderer, 8 * 99 + 7, 107) == pixels[20u * 160u + 129u]);
+        /* The large menus: a part of 80 x 144 at (40, 0), five times.  A box of 48 reserved at Very large (480 screen
+         * pixels) widens it to 96 at the same five times, 480 x 720 from (160, 0); one of 120 fits at no size at five
+         * (1200, 960) and leaves it 80, 400 x 720 from (200, 0), never shown smaller. */
+        image.box_w = 0;
+        image.crop_x = 40; image.crop_y = 0; image.crop_w = 80; image.crop_h = 144;
+        image.box_reserve_w = 48;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, 162, 300) == pixels[60u * 160u + 32u] && pixel_at(renderer, 162 + 5 * 95, 300) == pixels[60u * 160u + 127u]);
+        image.box_reserve_w = 120;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        CHECK(pixel_at(renderer, 202, 300) == pixels[60u * 160u + 40u] && pixel_at(renderer, 202 + 5 * 79, 300) == pixels[60u * 160u + 119u]);
+    } else CHECK(0);
+    backend.stop(backend.opaque);
+    oracles_sdl_backend_release(&backend);
 }
 
 /* A session in the lent window with only a virtual gamepad `vendor`:`product` plugged in, known by `mapping` (a line
@@ -865,6 +934,7 @@ int main(int argc, char **argv)
     pause_image(window, renderer);
     scaling(window, renderer);
     margins(window, renderer);
+    enlarged_box(window, renderer);
     face_buttons(window, renderer, 0, 0, NULL, &south, &east);
     CHECK(south == ORACLES_KEY_A && east == ORACLES_KEY_B);
     /* In play, with two gamepads plugged in, the buttons of the second are the game's too, as the first's: SDL gives a

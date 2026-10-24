@@ -160,6 +160,54 @@ struct OraclesEnhancedCheck {
     unsigned text_box_trail;               /* compositions left where the box is still on screen after the game's text flag fell */
     unsigned text_box_frames_at_origin;    /* frames the band showed the box where the game drew it, the view having to move it */
     char text_box_list[96];
+    /* the text box drawn by the host (--text-box-check), against the core's image */
+    int host_box;                            /* armed */
+    unsigned host_box_frames, host_box_frames_world, host_box_frames_framed;   /* frames compared, by the view's mode */
+    unsigned host_box_frames_wrong, host_box_uncovered, host_box_absent;   /* those with a pixel wrong; a box the host could not draw; a text shown without its box */
+    unsigned host_box_unknown, host_box_unexpected;   /* the uncovered frames by why: a line unknown, a cell the model does not express */
+    unsigned host_box_absent_run, host_box_absent_longest;   /* the frames in a row of a text without its box shown, the most of them */
+    uint32_t host_box_absent_last;
+    uint64_t host_box_pixels, host_box_pixels_wrong, host_box_pixels_skipped;   /* compared, wrong, left to an object or the window */
+    uint64_t host_box_object_pixels;         /* of those left to an object, the ones whose object shows over the box in the core's image */
+    double host_box_us_total, host_box_us_max;   /* the box's model and drawing, a frame */
+    double host_box_wide_us_total;               /* the same box drawn again at 192 pixels and three lines */
+    unsigned host_box_drawn;                 /* the frames it was drawn */
+    char host_box_list[160];                 /* the first frames wrong, "frame:pixels" */
+    char host_box_uncovered_list[96];
+    char host_box_runs_list[400];            /* the frames of each box drawn, the first ones */
+    uint32_t host_box_last_drawn;
+    uint8_t saved_text_box[ORACLES_GUEST_TEXT_BOX_STATE_SIZE];   /* the host's lines, saved and loaded back with the reload */
+    size_t saved_text_box_size;
+    /* the host's wide box in the surface (--text-box wide), against its layout */
+    int wide;                                /* drawn by the view */
+    unsigned wide_pixels_width, wide_lines;
+    unsigned wide_frames, wide_frames_world, wide_frames_framed, wide_frames_wrong;   /* frames it was drawn, by mode; with a pixel wrong */
+    uint64_t wide_pixels, wide_pixels_wrong, wide_pixels_skipped;   /* text pixels compared with the layout's glyphs, wrong, left to a symbol or the window */
+    unsigned wide_boxes, wide_pages;         /* boxes shown (runs of frames), pages (the game waiting for a button, or the text's end) */
+    unsigned wide_reveal_frames, wide_cut_frames, wide_early_frames;   /* frames of a line being revealed; showing a character cut; one whose step the game has not shown */
+    unsigned wide_cursor_frames, wide_symbol_tiles;   /* frames with a choice's cursor drawn; whole tiles drawn (symbols, choices' places) */
+    unsigned wide_crop_frames, wide_crop_outside;     /* framed frames with the large menus' rectangle; those it does not hold the box in */
+    unsigned text_size;                      /* --text-size: ORACLES_ENHANCED_TEXT_* */
+    int large_menus;                         /* --menus-large: the surfaces written as the presenter shows the framed core alone */
+    unsigned surface_scale;                  /* --surface-scale */
+    unsigned large_frames, large_frames_world, large_frames_framed;   /* frames the box was published for the presenter (Large) */
+    unsigned large_frames_xlarge;        /* of those, at Very large (the large menus over the framed core) */
+    unsigned long long large_pixels, large_pixels_wrong;   /* its pixels against the box it shows */
+    unsigned scaled_frames, scaled_frames_world, scaled_frames_framed, scaled_misplaced;   /* frames of a box drawn twice as large; world ones off the middle */
+    unsigned long long scaled_pixels, scaled_pixels_wrong;   /* its pixels compared with those it enlarges, wrong */
+    double scaled_us_total, scaled_us_max;   /* the enlargement's copy, timed apart, a frame */
+    uint32_t scaled_sink;
+    unsigned wide_centred_frames;            /* frames showing a line of a page the game laid out, centred */
+    unsigned wide_cursor_centred, wide_cursor_pixels_wrong;   /* a choice's cursor drawn on such a line; its pixels not the game's tile where it goes */
+    unsigned wide_absent, wide_absent_run, wide_absent_longest;
+    uint32_t wide_absent_last, wide_last_drawn;
+    unsigned wide_state;                     /* w7TextDisplayState at the last frame */
+    double wide_us_total, wide_us_max;       /* the box drawn again from its model, a frame: the drawing's cost */
+    char wide_list[160];                     /* the first frames wrong, "frame:pixels" */
+    char wide_reveal_list[160];              /* the first frames cut or early, "frame:c" or "frame:e" */
+    char page_list[400];                     /* the frames a page of the box drawn by the host was whole (the game waiting, or its text's end), the first ones */
+    unsigned page_state;                     /* w7TextDisplayState at the last frame drawn */
+    char symbol_list[160];                   /* the first frames a symbol's tile was drawn in the wide box */
     char curtain_list[96];
     /* the area blurb, from the game's objects: the last frames the game drew, their wOam and the blurb's slot then
      * (-1: none), and the world frames whose OAM showed its sprites, of those the ones the view left them in the
@@ -249,6 +297,14 @@ void ec_check_curtain(OraclesEnhancedCheck *c, const OraclesEnhancedObservation 
 /* The game's window and the ring of the band around it, compared in luminance on a world frame. */
 void ec_measure_window_darker(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
                            int32_t camera_x, int32_t camera_y, int blank, uint32_t frame);
+/* The text box drawn by the host against the core's image (enhanced_check_text_box.c). */
+void ec_check_host_text_box(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, uint32_t frame);
+/* The host's wide box where the view drew it, against its layout (enhanced_check_text_box.c). */
+void ec_check_wide_text_box(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, const uint32_t *surface, uint32_t frame);
+/* The text box drawn twice as large (Text size Large) against the box it enlarges (enhanced_check_text_box.c). */
+void ec_check_scaled_text_box(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, const uint32_t *surface);
+void ec_host_text_box_summary(const OraclesEnhancedCheck *c, FILE *out);
+void ec_host_text_box_report(const OraclesEnhancedCheck *c, FILE *out);
 void ec_note_blurb_drawn(OraclesEnhancedCheck *c);
 void ec_check_blurb(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, uint32_t frame);
 

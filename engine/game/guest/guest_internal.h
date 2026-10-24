@@ -99,7 +99,19 @@ struct OraclesGuest {
     uint16_t compact_return, compact_return_sp;      /* where its drawLineOfText call returns, and SP once it has */
     OraclesGuestCompactCharacter compact_line[ORACLES_GUEST_LINE_CHARACTERS];
     OraclesGuestCompactCounts compact_counts;
-    OraclesTextFont compact_font;                    /* the image's font, read when it arms */
+    OraclesTextFont compact_font;                    /* the image's font, read when it arms, at the fixed advance for the wide box's classic text */
+    int compact_fixed;                               /* the transaction composes at the fixed advance */
+    int text_box_armed;                              /* the host's text box (guest_text_box.c) */
+    unsigned text_box_pixels;                        /* its width of text */
+    int text_box_changed;                            /* its top or bottom line changed since the last vblank */
+    OraclesGuestTextBoxReveal text_box_reveal_next, text_box_reveal_shown;   /* the text's reveal, read at the last vblank and the one before */
+    uint32_t *text_box_pages;                        /* the pages laid out again for the wide box (oracles_guest_set_text_box_pages), */
+    unsigned text_box_page_count;                    /* their pairs */
+    int text_box_centre;                             /* the line being drawn is of a page kept as the game lays it out */
+    OraclesTextFont text_box_fixed;                  /* the fixed advance of the game's layout */
+    OraclesGuestTextBoxLine text_box[ORACLES_GUEST_TEXT_BOX_LINES];   /* as they stand */
+    OraclesGuestTextBoxLine text_box_shown[ORACLES_GUEST_TEXT_BOX_LINES];   /* as the frame just scanned showed them */
+    OraclesGuestTextBoxCounts text_box_counts;
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
     uint16_t link_shown_x, link_shown_y;             /* Link (8.8) where the OAM the frame just scanned drew him (oracles_guest_link_shown) */
@@ -124,5 +136,15 @@ void oracles_guest_flippers_stroke(OraclesGuest *guest);
 void oracles_guest_cheat_point(OraclesGuest *guest, OraclesGuestEventType type);
 /* guest_compact_text.c: at the compact text's points. */
 void oracles_guest_compact_text_point(OraclesGuest *guest, OraclesGuestEventType type);
+/* guest_text_box.c: at drawLineOfText's return, at dmaTextGfxBuffer's and vblankDmaFunction's entries; the line composed
+ * from its characters laid out at the host's width and its tiles (`gfx`, the host's width's, the compact text's
+ * transaction's); the compact text's reveal written in the VRAM's line `which` at the vblank, its first `whole` tile
+ * columns and `pixels` of the next (8: none); the lines and the reveal as the frame just scanned showed them, at the
+ * vblank before its writes; and forgotten at a reset. */
+void oracles_guest_text_box_point(OraclesGuest *guest, OraclesGuestEventType type);
+void oracles_guest_text_box_compose(OraclesGuest *guest, const OraclesGuestCompactLine *line, const OraclesGuestCompactCharacter *characters, const uint8_t *gfx);
+void oracles_guest_text_box_reveal(OraclesGuest *guest, unsigned which, unsigned whole, unsigned pixels);
+void oracles_guest_text_box_vblank(OraclesGuest *guest);
+void oracles_guest_text_box_reset(OraclesGuest *guest);
 
 #endif

@@ -725,7 +725,15 @@ unsigned language_text_boxes(const uint8_t *text, size_t length)
 
 language_wrap_result language_wrap_text(const language_wrap *wrap, const uint8_t *text, size_t length, uint8_t *out, size_t capacity, size_t *out_length)
 {
+    unsigned pages = 0;
+    return language_wrap_text_pages(wrap, text, length, out, capacity, out_length, NULL, NULL, 0, &pages);
+}
+
+language_wrap_result language_wrap_text_pages(const language_wrap *wrap, const uint8_t *text, size_t length, uint8_t *out, size_t capacity, size_t *out_length,
+                                              size_t *page_from, size_t *page_to, unsigned page_capacity, unsigned *pages)
+{
     *out_length = 0;
+    *pages = 0;
     if (!length || length > ORACLES_TEXT_MAX) return WRAP_SAME;
     {   /* A single box: nothing to gain. */
         int last = 0;
@@ -759,6 +767,8 @@ language_wrap_result language_wrap_text(const language_wrap *wrap, const uint8_t
             for (size_t i = from; i < used; i++) written[i] = 1;
             for (unsigned w = 0; w < p->words; w++)
                 if (p->after[w] == GAP_SOFT) soft_in[p->to[w] - 1u] = 1;
+            if (*pages < page_capacity) { page_from[*pages] = from; page_to[*pages] = used; }
+            (*pages)++;
             laid = 1;
         }
         if (failed || last) {
@@ -922,7 +932,11 @@ void oracles_language_layout_digest(const OraclesLanguageLayout *layout, Oracles
     const size_t n = strlen(table);
     char *bytes = malloc(n + 64u);
     if (!bytes) { snprintf(out, 41, "%040u", 0u); return; }
-    const int head = snprintf(bytes, 64u, "layout %u width %u\n", ORACLES_LANGUAGE_LAYOUT_REVISION, layout ? layout->width : 0u);
+    const unsigned lines = layout && layout->lines ? layout->lines : 2u;
+    char extra[32] = "";
+    if (layout && layout->fixed) snprintf(extra, sizeof extra, " fixed");
+    if (lines != 2u) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " lines %u", lines);
+    const int head = snprintf(bytes, 64u, "layout %u width %u%s\n", ORACLES_LANGUAGE_LAYOUT_REVISION, layout ? layout->width : 0u, extra);
     memcpy(bytes + head, table, n);
     oracles_sha1_hex((const uint8_t *)bytes, (size_t)head + n, out);
     free(bytes);

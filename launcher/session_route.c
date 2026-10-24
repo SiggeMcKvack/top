@@ -65,6 +65,11 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
     if (route_compact != s->compact_text)
         fprintf(stderr, "oracles: the route was recorded with the %s text: the replay plays with it\n", route_compact ? "compact" : "classic");
     s->compact_text = route_compact;
+    /* The wide text box: the same. */
+    const int route_wide = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
+    if (route_wide != s->text_box_wide)
+        fprintf(stderr, "oracles: the route was recorded with the %s text box: the replay plays with it\n", route_wide ? "wide" : "game's");
+    s->text_box_wide = route_wide;
     /* The cheats, a setting of each game: the route's, whatever they are. */
     unsigned route_cheats = 0;
     char names[64];
@@ -138,6 +143,10 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
     if (s->compact_text) {   /* its pages pace the dialogues: a replay plays with it */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_TEXT_COMPACT, used ? "," : "");
+    }
+    if (s->text_box_wide) {   /* the same: its texts laid out again pace the dialogues */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE, used ? "," : "");
     }
     if (s->cheats) {   /* a cheat's answers are not in the keys: a replay gives them too */
         const size_t used = strlen(header.options);

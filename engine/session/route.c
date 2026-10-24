@@ -156,7 +156,10 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
             }
             if (strcmp(key, "oracles-route") == 0) {
                 route->format = (unsigned)strtoul(value, NULL, 10);
-                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_TEXT_COMPACT) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
+                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE || route->format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE - 1u) {
+                    set_error(error, error_capacity, "unsupported route format", number);
+                    goto fail;
+                }
                 format_seen = 1;
             } else if (strcmp(key, "game") == 0) copy_field(route->header.game, sizeof route->header.game, value);
             else if (strcmp(key, "rom_sha1") == 0) copy_field(route->header.rom_sha1, sizeof route->header.rom_sha1, value);
@@ -188,6 +191,11 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
                 /* Nor the compact text. */
                 if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) && route->format < ORACLES_ROUTE_FORMAT_TEXT_COMPACT) {
                     set_error(error, error_capacity, "the text-compact option needs format 9", number);
+                    goto fail;
+                }
+                /* Nor the wide text box. */
+                if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && route->format < ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE) {
+                    set_error(error, error_capacity, "the text-box-wide option needs format 11", number);
                     goto fail;
                 }
             }
@@ -391,7 +399,8 @@ int oracles_route_writer_open(OraclesRouteWriter *writer, const char *path, cons
     writer->file = fopen(path, "wb"); /* LF on every platform */
     if (!writer->file) return -1;
     char language[16];
-    const int format = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) ? ORACLES_ROUTE_FORMAT_TEXT_COMPACT
+    const int format = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) ? ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE
+                     : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) ? ORACLES_ROUTE_FORMAT_TEXT_COMPACT
                      : oracles_route_has_cheat(header) ? ORACLES_ROUTE_FORMAT_CHEATS
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) ? ORACLES_ROUTE_FORMAT_DIAGONAL
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_SWIM_HOLD) ? ORACLES_ROUTE_FORMAT_SWIM_HOLD

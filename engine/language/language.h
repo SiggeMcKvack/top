@@ -156,16 +156,30 @@ typedef struct OraclesLanguageReport {
 } OraclesLanguageReport;
 
 /* The texts laid out again for the compact text (language_wrap.c): each page's lines filled to `width` pixels, in the
- * font of the image composed; a width of 0, or no layout, keeps the game's layout.  Ages and Seasons in every language, a
- * fan game in its English. */
+ * font of the image composed; a width of 0, or no layout, keeps the game's layout.  `fixed`: in that font at the game's
+ * fixed advance (oracles_text_font_fixed), the classic text of a box wider than the game's.  `lines`: the lines of a
+ * box, 0 for the game's two (the only count laid out yet).  `pages`, when not NULL, receives where the pages laid out
+ * again lie in the image composed, each the physical offsets from its first byte to past its last, in increasing order:
+ * every other page a text box shows is laid out as the game lays it out (a page kept, a text kept, English kept), which
+ * the host's wide box centres.  Ages and Seasons in every language, a fan game in its English (which has no
+ * wide box yet). */
+typedef struct OraclesLanguagePages {
+    uint32_t *ranges;        /* pairs: a page's first offset, past its last; the caller's */
+    unsigned capacity;       /* the pairs `ranges` holds */
+    unsigned count;          /* the pairs written */
+    unsigned overflowed;     /* the pages laid out that did not fit, not written */
+} OraclesLanguagePages;
 typedef struct OraclesLanguageLayout {
     unsigned width;
+    int fixed;
+    unsigned lines;
+    OraclesLanguagePages *pages;
 } OraclesLanguageLayout;
 /* The revision of the code that lays the texts out (language_wrap.c), raised by hand with any change of what it makes. */
 #define ORACLES_LANGUAGE_LAYOUT_REVISION 2u
-/* The SHA-1 of what an image's texts laid out by `layout` depend on besides the texts: the revision, the width and the
- * kept texts of the image of `revision` (config/vwf_keep_<game>.tsv); a savestate taken within a text laid out is tied
- * to it. */
+/* The SHA-1 of what an image's texts laid out by `layout` depend on besides the texts: the revision, the width, the
+ * fixed advance and the lines when they are not the game's, and the kept texts of the image of `revision`
+ * (config/vwf_keep_<game>.tsv); a savestate taken within a text laid out is tied to it. */
 void oracles_language_layout_digest(const OraclesLanguageLayout *layout, OraclesRomRevision revision, char out[41]);
 
 /* The image with `language` composed into it, from the US ROM of the pack's game, possibly with the mods' houses

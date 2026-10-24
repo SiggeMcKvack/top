@@ -106,6 +106,11 @@ typedef struct oracles_settings {
                                    * Tap or Hold */
     int compact_text;             /* text=classic|compact: the text box's lines in the font's own widths, in Enhanced alone; classic by
                                    * default, for every game the home screen starts that qualifies it (Ages and Seasons) */
+    int text_size;                /* text_size=normal|large|xlarge (0, 1, 2): the text box larger where the view holds it, three halves in
+                                   * whole screen pixels (large) or twice as large (xlarge), the next size down elsewhere, in Enhanced;
+                                   * normal by default; it applies at once, from the pause too */
+    int text_box_wide;            /* text_box=standard|wide: the game's box, or the host's wide box (192 pixels of text, the texts laid out
+                                   * again for it, classic or compact), in Enhanced alone; standard by default, Ages and Seasons */
     int view;                     /* view=near|medium|far, Display's View in Enhanced: an OraclesEnhancedLevel, far by default */
     int core;                     /* an OraclesCoreKind: core=sameboy|mgba, Display's Core; -1 until the player chooses one, the build's default
                                    * (ORACLES_DEFAULT_CORE) then playing, and the file holding no core= line */

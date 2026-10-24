@@ -140,6 +140,27 @@ int main(int argc, char **argv)
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 9"));
     }
     {
+        /* The wide text box, classic or with the compact text: format 11 (10 is the live settings' `set` verb, which
+         * this reader does not know), which a reader before it refuses; an older format naming it is refused. */
+        OraclesRouteHeader wide = route.header;
+        snprintf(wide.options, sizeof wide.options, "%s", ORACLES_ROUTE_OPTION_TEXT_COMPACT "," ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
+        OraclesRouteWriter writer_wide;
+        CHECK(oracles_route_writer_open(&writer_wide, path, &wide) == 0 && writer_wide.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        oracles_route_writer_record(&writer_wide, 0, 0x00);
+        CHECK(oracles_route_writer_cheat(&writer_wide, 10, "rupees", 1) == 0 && writer_wide.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        CHECK(oracles_route_writer_close(&writer_wide) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == 11u && back.cheat_count == 1);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 9\ngame ages\noptions text-box-wide\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 11"));
+        FILE *set = fopen(path, "w");
+        if (set) { fprintf(set, "oracles-route 10\ngame ages\ninputs\n0 keys 00\n"); fclose(set); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "unsupported route format"));
+    }
+    {
         /* A cheat changed during the session: a `cheat` line, the header's format raised to 8 in place at the first,
          * whatever it was written with; two cheats at a same frame, one cheat's frames increasing. */
         OraclesRouteHeader plain = route.header;

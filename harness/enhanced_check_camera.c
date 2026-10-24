@@ -11,6 +11,7 @@ static int reload_save_state(OraclesEnhancedCheck *c, int32_t camera_x, const in
     if (oracles_enhanced_view_save_state(c->view, c->saved_view, sizeof c->saved_view, &c->saved_view_size) != 0) return 0;
     c->saved_transition_size = oracles_room_transition_save_state(c->transition, c->saved_transition, sizeof c->saved_transition);
     c->saved_compact_size = oracles_guest_compact_save_state(c->guest, c->saved_compact, sizeof c->saved_compact);
+    c->saved_text_box_size = oracles_guest_text_box_save_state(c->guest, c->saved_text_box, sizeof c->saved_text_box);   /* the host's lines, empty unarmed */
     c->saved_camera = camera_x;
     memcpy(c->saved_shown, shown, sizeof c->saved_shown);
     memcpy(c->saved_room, room, sizeof c->saved_room);
@@ -50,6 +51,7 @@ static int reload_load_state(OraclesEnhancedCheck *c, const int shown[4], const 
     oracles_guest_reset_execution_state(c->guest);
     if (c->saved_transition_size && oracles_room_transition_load_state(c->transition, c->saved_transition, c->saved_transition_size) != 0) return 0;
     if (c->saved_compact_size && oracles_guest_compact_load_state(c->guest, c->saved_compact, c->saved_compact_size) != 0) return 0;
+    if (c->saved_text_box_size && oracles_guest_text_box_load_state(c->guest, c->saved_text_box, c->saved_text_box_size) != 0) return 0;
     if (oracles_enhanced_view_load_state(c->view, c->saved_view, c->saved_view_size) != 0) return 0;
     if (c->link_sprites) oracles_sprites_forget(c->link_sprites);
     c->have_drawn_link = 0;

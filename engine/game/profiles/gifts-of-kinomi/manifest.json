@@ -1100,7 +1100,12 @@
     "secret_text_end": {
       "bank": 7,
       "address": "0xd478"
-    }
+    },
+    "dma_text_gfx_buffer": null,
+    "vblank_dma_function": null,
+    "textbox_vram_pos": null,
+    "character_display_timer": null,
+    "text_address": null
   },
   "guest_table_sizes": {
     "global_flags_size": 16,
@@ -1261,6 +1266,11 @@
     "link_damage_to_apply": "the cheats play on the original ROMs alone",
     "dec_num_bombs": "the cheats play on the original ROMs alone",
     "get_rupee_value": "the cheats play on the original ROMs alone",
-    "bomb_fairy_lose_all_bombs": "the cheats play on the original ROMs alone"
+    "bomb_fairy_lose_all_bombs": "the cheats play on the original ROMs alone",
+    "dma_text_gfx_buffer": "the host's text box not qualified for this revision",
+    "vblank_dma_function": "the host's text box not qualified for this revision",
+    "textbox_vram_pos": "the host's text box not qualified for this revision",
+    "character_display_timer": "the host's text box not qualified for this revision",
+    "text_address": "the host's text box not qualified for this revision"
   }
 }

@@ -46,7 +46,7 @@ static void check_core(OraclesCoreKind kind)
     CHECK(sram != NULL && sram_size == oracles_core_sram_size(core) && sram_size >= 0x2000u);
     if (sram) sram[0x123] = 0x5a;
 
-    const OraclesStateInfo info = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
+    const OraclesStateInfo info = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
     char error[256];
     uint8_t *state = NULL;
     size_t state_size = 0;
@@ -79,10 +79,10 @@ static void check_core(OraclesCoreKind kind)
     }
 
     /* Another ROM, another set of mods: refused with a message that says so. */
-    const OraclesStateInfo other_rom = { "ages", "ffffffffffffffffffffffffffffffffffffffff", "", NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
+    const OraclesStateInfo other_rom = { "ages", "ffffffffffffffffffffffffffffffffffffffff", "", NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
     CHECK(oracles_state_deserialize(core, &other_rom, state, state_size, &host, &host_size, error, sizeof error) == -1);
     CHECK(strstr(error, "ROM") != NULL);
-    const OraclesStateInfo other_mods = { "ages", "0123456789abcdef0123456789abcdef01234567", "demo-mod", NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
+    const OraclesStateInfo other_mods = { "ages", "0123456789abcdef0123456789abcdef01234567", "demo-mod", NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
     CHECK(oracles_state_deserialize(core, &other_mods, state, state_size, &host, &host_size, error, sizeof error) == -1);
     CHECK(strstr(error, "mods") != NULL);
     /* The set a state was made with reads without loading it; an empty set is said as none. */
@@ -95,7 +95,7 @@ static void check_core(OraclesCoreKind kind)
     CHECK(oracles_state_core_version(state, state_size, version, 4) == -1);   /* longer than the room given */
     CHECK(oracles_state_core_version((const uint8_t *)"not a state", 11, version, sizeof version) == -1);
     {
-        const OraclesStateInfo with_mod = { "ages", "0123456789abcdef0123456789abcdef01234567", "demo-mod", NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
+        const OraclesStateInfo with_mod = { "ages", "0123456789abcdef0123456789abcdef01234567", "demo-mod", NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
         uint8_t *modded = NULL;
         size_t modded_size = 0;
         CHECK(oracles_state_serialize(core, &with_mod, &modded, &modded_size, error, sizeof error) == 0);
@@ -120,7 +120,7 @@ static void check_core(OraclesCoreKind kind)
 
     /* A host state travels with the buffer. */
     const uint8_t blob[5] = { 1, 2, 3, 4, 5 };
-    const OraclesStateInfo with_host = { "ages", "0123456789abcdef0123456789abcdef01234567", "", blob, sizeof blob, NULL, 0, NULL, 0, NULL, 0 };
+    const OraclesStateInfo with_host = { "ages", "0123456789abcdef0123456789abcdef01234567", "", blob, sizeof blob, NULL, 0, NULL, 0, NULL, 0, NULL, 0 };
     CHECK(oracles_state_serialize(core, &with_host, &state, &state_size, error, sizeof error) == 0);
     CHECK(oracles_state_deserialize(core, &info, state, state_size, &host, &host_size, error, sizeof error) == 0);
     CHECK(host_size == 5 && host && memcmp(host, blob, 5) == 0);
@@ -129,18 +129,20 @@ static void check_core(OraclesCoreKind kind)
     const uint8_t *peek = NULL;
     size_t peek_size = 0;
     CHECK(oracles_state_host_state(state, state_size, &peek, &peek_size) == 0 && peek_size == 5 && memcmp(peek, blob, 5) == 0);
-    CHECK(oracles_state_host_state(state, state_size - 13, &peek, &peek_size) == -1);   /* cut into the host state (the mods' storage, the transitions' state and the compact text's line, 4 bytes each, follow) */
+    CHECK(oracles_state_host_state(state, state_size - 17, &peek, &peek_size) == -1);   /* cut into the host state (the mods' storage, the transitions' state, the compact text's line and the text box's state, 4 bytes each, follow) */
     CHECK(oracles_state_mods_storage(state, state_size, &peek, &peek_size) == 0 && peek == NULL && peek_size == 0);
-    CHECK(oracles_state_mods_storage(state, state_size - 12, &peek, &peek_size) == 0 && peek == NULL);   /* a state from before the field */
+    CHECK(oracles_state_mods_storage(state, state_size - 16, &peek, &peek_size) == 0 && peek == NULL);   /* a state from before the field */
     CHECK(oracles_state_transition_state(state, state_size, &peek, &peek_size) == 0 && peek == NULL && peek_size == 0);
-    CHECK(oracles_state_transition_state(state, state_size - 8, &peek, &peek_size) == 0 && peek == NULL);   /* from before that one */
+    CHECK(oracles_state_transition_state(state, state_size - 12, &peek, &peek_size) == 0 && peek == NULL);   /* from before that one */
     CHECK(oracles_state_compact_text_state(state, state_size, &peek, &peek_size) == 0 && peek == NULL && peek_size == 0);
-    CHECK(oracles_state_compact_text_state(state, state_size - 4, &peek, &peek_size) == 0 && peek == NULL);   /* from before that one */
+    CHECK(oracles_state_compact_text_state(state, state_size - 8, &peek, &peek_size) == 0 && peek == NULL);   /* from before that one */
+    CHECK(oracles_state_text_box_state(state, state_size, &peek, &peek_size) == 0 && peek == NULL && peek_size == 0);
+    CHECK(oracles_state_text_box_state(state, state_size - 4, &peek, &peek_size) == 0 && peek == NULL);   /* from before the text box's */
     CHECK(oracles_state_host_state((const uint8_t *)"not a state", 11, &peek, &peek_size) == -1);
 
     /* The mods' storage travels with the buffer too. */
     const uint8_t storage[] = "oracles-mod-storage 1\n";
-    const OraclesStateInfo with_storage = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, storage, sizeof storage - 1, NULL, 0, NULL, 0 };
+    const OraclesStateInfo with_storage = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, storage, sizeof storage - 1, NULL, 0, NULL, 0, NULL, 0 };
     uint8_t *stored = NULL;
     size_t stored_size = 0;
     CHECK(oracles_state_serialize(core, &with_storage, &stored, &stored_size, error, sizeof error) == 0);
@@ -150,16 +152,28 @@ static void check_core(OraclesCoreKind kind)
 
     /* The continuous transitions' progress too, the state loading as before with it. */
     const uint8_t progress[] = { 1, 2, 3, 4, 5, 6, 7 };
-    const OraclesStateInfo with_progress = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, progress, sizeof progress, NULL, 0 };
+    const OraclesStateInfo with_progress = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, progress, sizeof progress, NULL, 0, NULL, 0 };
     CHECK(oracles_state_serialize(core, &with_progress, &stored, &stored_size, error, sizeof error) == 0);
     CHECK(oracles_state_transition_state(stored, stored_size, &peek, &peek_size) == 0 && peek_size == sizeof progress && memcmp(peek, progress, peek_size) == 0);
     CHECK(oracles_state_mods_storage(stored, stored_size, &peek, &peek_size) == 0 && peek == NULL);
+    CHECK(oracles_state_deserialize(core, &info, stored, stored_size, &host, &host_size, error, sizeof error) == 0 && host == NULL);
+    CHECK(oracles_state_text_box_state(stored, stored_size, &peek, &peek_size) == 0 && peek == NULL);
+    free(stored);
+
+    /* The host's lines of the text box too. */
+    const uint8_t lines[] = { 1, 16, 0, 0, 9 };
+    OraclesStateInfo with_lines = info;
+    with_lines.text_box_state = lines;
+    with_lines.text_box_state_size = sizeof lines;
+    CHECK(oracles_state_serialize(core, &with_lines, &stored, &stored_size, error, sizeof error) == 0);
+    CHECK(oracles_state_text_box_state(stored, stored_size, &peek, &peek_size) == 0 && peek_size == sizeof lines && memcmp(peek, lines, peek_size) == 0);
+    CHECK(oracles_state_transition_state(stored, stored_size, &peek, &peek_size) == 0 && peek == NULL);
     CHECK(oracles_state_deserialize(core, &info, stored, stored_size, &host, &host_size, error, sizeof error) == 0 && host == NULL);
     free(stored);
 
     /* The compact text's line too, after the transitions' progress. */
     const uint8_t line[] = { 1, 0, 0, 0x40, 0x12, 0xf0, 0xdf };
-    const OraclesStateInfo with_line = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, progress, sizeof progress, line, sizeof line };
+    const OraclesStateInfo with_line = { "ages", "0123456789abcdef0123456789abcdef01234567", "", NULL, 0, NULL, 0, progress, sizeof progress, line, sizeof line, NULL, 0 };
     CHECK(oracles_state_serialize(core, &with_line, &stored, &stored_size, error, sizeof error) == 0);
     CHECK(oracles_state_compact_text_state(stored, stored_size, &peek, &peek_size) == 0 && peek_size == sizeof line && memcmp(peek, line, peek_size) == 0);
     CHECK(oracles_state_transition_state(stored, stored_size, &peek, &peek_size) == 0 && peek_size == sizeof progress);

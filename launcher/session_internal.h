@@ -40,6 +40,7 @@ typedef struct session {
     int enhanced, continuous_transitions, continuous_swim, continuous_diagonal, zoom_out;   /* zoom_out: the view draws back (medium or far) */
     int swim_hold;                            /* the swim's hold: the option's, as a replayed route or the profile may change it */
     int compact_text;                         /* the compact text: the option's, as a replayed route or the profile may change it */
+    int text_box_wide;                        /* the host's wide text box: the same */
     unsigned cheats;                          /* the cheats on (OraclesGuestCheat): the option's, as a replayed route or the profile may change them */
     /* The pause's Cheats: the settings' game whose cheats the game plays with (an OraclesSettingsGame), -1 when its
      * profile has none or no pause can change them; the cheats the next frame begins with, once the pause changed them;

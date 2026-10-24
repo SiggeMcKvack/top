@@ -71,7 +71,15 @@ static void group(const OraclesGuestCompactCharacter *characters, OraclesGuestCo
 
 void oracles_guest_compact_layout(const OraclesGuestCompactCharacter *characters, unsigned count, const OraclesTextFont *font, OraclesGuestCompactLine *line)
 {
+    oracles_guest_compact_layout_at(characters, count, font, LINE_PIXELS, line);
+}
+
+void oracles_guest_compact_layout_at(const OraclesGuestCompactCharacter *characters, unsigned count, const OraclesTextFont *font, unsigned pixels,
+                                     OraclesGuestCompactLine *line)
+{
     memset(line, 0, sizeof *line);
+    if (pixels > ORACLES_TEXT_LINE_TILES * TILE_PIXELS) pixels = ORACLES_TEXT_LINE_TILES * TILE_PIXELS;
+    const unsigned tiles = pixels / TILE_PIXELS;
     OraclesTextPen pen;
     memset(&pen, 0, sizeof pen);
     unsigned end = 0;
@@ -80,7 +88,7 @@ void oracles_guest_compact_layout(const OraclesGuestCompactCharacter *characters
         const OraclesTextPen before = pen;
         unsigned start = 0, from = 0, drawn = 0;
         oracles_text_place(&pen, font, characters[k].character, characters[k].attribute, characters[k].whole, &start, &from, &drawn);
-        if (start >= LINE_PIXELS || start + drawn > LINE_PIXELS) { pen = before; break; }
+        if (start >= pixels || start + drawn > pixels) { pen = before; break; }
         line->start[k] = (uint8_t)start;
         line->from[k] = (uint8_t)from;
         line->drawn[k] = (uint8_t)drawn;
@@ -90,7 +98,7 @@ void oracles_guest_compact_layout(const OraclesGuestCompactCharacter *characters
     line->overflows = count - line->count;
     line->pen = pen.pen;
     line->columns = (end + TILE_PIXELS - 1u) / TILE_PIXELS;
-    for (unsigned t = 0; t < ORACLES_GUEST_LINE_COLUMNS; t++) line->attribute[t] = pen.marked[t] || !t ? pen.attribute[t] : line->attribute[t - 1u];
+    for (unsigned t = 0; t < tiles; t++) line->attribute[t] = pen.marked[t] || !t ? pen.attribute[t] : line->attribute[t - 1u];
     if (line->count > ORACLES_GUEST_LINE_COLUMNS) group(characters, line);
     else {
         line->steps = line->count;
@@ -100,7 +108,12 @@ void oracles_guest_compact_layout(const OraclesGuestCompactCharacter *characters
 
 void oracles_guest_compact_compose(const OraclesGuestCompactLine *line, const OraclesGuestCompactCharacter *characters, uint8_t *out)
 {
-    memset(out, 0xff, ORACLES_GUEST_LINE_GFX_BYTES);
+    oracles_guest_compact_compose_at(line, characters, LINE_PIXELS, out);
+}
+
+void oracles_guest_compact_compose_at(const OraclesGuestCompactLine *line, const OraclesGuestCompactCharacter *characters, unsigned pixels, uint8_t *out)
+{
+    memset(out, 0xff, pixels / TILE_PIXELS * CELL_BYTES);
     for (unsigned k = 0; k < line->count; k++)
         for (unsigned i = 0; i < line->drawn[k]; i++) {
             const unsigned x = line->from[k] + i, to = line->start[k] + i;
@@ -223,11 +236,14 @@ static void keep_character(OraclesGuest *guest)
     oracles_core_set_registers(guest->core, &r);
 }
 
+/* The width the transaction lays a line out at: the host's wide box's, else the game's line. */
+static unsigned line_pixels(const OraclesGuest *guest) { return guest->text_box_armed ? guest->text_box_pixels : LINE_PIXELS; }
+
 static void place_cursor(OraclesGuest *guest)
 {
     keep_pending(guest);
     OraclesGuestCompactLine before;
-    oracles_guest_compact_layout(guest->compact_line, guest->compact_count, &guest->compact_font, &before);
+    oracles_guest_compact_layout_at(guest->compact_line, guest->compact_count, &guest->compact_font, line_pixels(guest), &before);
     const unsigned tile = (before.pen + TILE_PIXELS - 1u) / TILE_PIXELS;
     if (tile >= ORACLES_GUEST_LINE_COLUMNS) return;
     OraclesCoreRegisters r = oracles_core_registers(guest->core);
@@ -241,12 +257,16 @@ static void place_cursor(OraclesGuest *guest)
 static void compose_line(OraclesGuest *guest)
 {
     keep_pending(guest);
-    if (!guest->compact_count) return;
     const OraclesGuestTables *t = guest->tables;
     const OraclesGuestCompactCharacter *characters = guest->compact_line;
+    const unsigned pixels = line_pixels(guest);
     OraclesGuestCompactLine line;
-    oracles_guest_compact_layout(characters, guest->compact_count, &guest->compact_font, &line);
-    oracles_guest_compact_compose(&line, characters, bank7(guest, t->text_gfx_buffer));
+    uint8_t gfx[ORACLES_TEXT_LINE_TILES * CELL_BYTES];
+    oracles_guest_compact_layout_at(characters, guest->compact_count, &guest->compact_font, pixels, &line);
+    oracles_guest_compact_compose_at(&line, characters, pixels, gfx);
+    if (guest->text_box_armed) oracles_guest_text_box_compose(guest, &line, characters, gfx);
+    if (!guest->compact_count) return;
+    memcpy(bank7(guest, t->text_gfx_buffer), gfx, ORACLES_GUEST_LINE_GFX_BYTES);   /* its first 128 pixels, the game's */
     uint8_t *text = bank7(guest, t->line_text_buffer), *attributes = bank7(guest, t->line_attributes_buffer), *delays = bank7(guest, t->line_delays_buffer);
     uint8_t *sounds = bank7(guest, t->line_sounds_buffer), *effects = bank7(guest, t->line_sound_effects_buffer);
     for (unsigned s = 0; s < ORACLES_GUEST_LINE_COLUMNS; s++) {
@@ -360,6 +380,9 @@ void oracles_guest_compact_vblank(OraclesGuest *guest)
         oracles_core_write_vram(guest->core, vram_line + whole * CELL_BYTES, partial, CELL_BYTES);
         guest->compact_counts.partial_writes++;
     }
+    if (guest->text_box_armed && guest->text_box_pixels == LINE_PIXELS)   /* a wider box's lines stay whole: its reveal is read from the state */
+        oracles_guest_text_box_reveal(guest, tiles == BOTTOM_LINE_TILES ? ORACLES_GUEST_TEXT_BOX_BOTTOM : ORACLES_GUEST_TEXT_BOX_TOP, whole,
+                                      visible > whole ? boundary % TILE_PIXELS : TILE_PIXELS);
     if (!revealing) return;
     /* The check: the map the game copies at this vblank, the tiles now in the VRAM, the line's graphics. */
     size_t size = 0;
@@ -403,6 +426,7 @@ void oracles_guest_compact_text_point(OraclesGuest *guest, OraclesGuestEventType
         if (guest->compact_open) place_cursor(guest);
     } else if (type == ORACLES_EVENT_TEXT_LINE_DRAWN) {
         if (guest->compact_open) compose_line(guest);
+        else if (guest->text_box_armed) guest->text_box[ORACLES_GUEST_TEXT_BOX_COMPOSED].known = 0;   /* a load within the call: not composed */
         guest->compact_open = guest->compact_pending = guest->compact_place_next = 0;
         guest->compact_count = 0;
     } else if (type == ORACLES_EVENT_TEXT_COLUMN_SHOWN) reveal(guest);

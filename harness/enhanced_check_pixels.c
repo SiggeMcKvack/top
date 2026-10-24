@@ -63,6 +63,10 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
     unsigned wrong = 0, in_place = 0, place = 0;
     uint32_t first = 0;
     int varied = 0;   /* the box's pixels compared are not all of one colour: a black border matches a dark room */
+    /* The host's wide box in place of the core's: the moved box is the host's (enhanced_check_text_box.c judges it). */
+    int32_t dst[2], src[2];
+    unsigned size[2];
+    const int host = oracles_enhanced_view_text_box_shown(c->view, NULL, NULL, NULL) || oracles_enhanced_view_text_box_scaled(c->view, dst, src, size);
     for (unsigned gy = 0; gy < ORACLES_ENHANCED_AREA_HEIGHT; gy++)
         for (unsigned gx = 0; gx < ORACLES_ENHANCED_CORE_WIDTH; gx++) {
             if (!box[gy][gx]) continue;
@@ -80,6 +84,7 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
                 if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)home_y) * W + (unsigned)home] == drawn) in_place++;
             }
             const int32_t x = ob->window_left + (int32_t)gx - camera_x + shift;
+            if (host) continue;
             if (x < 0 || x >= (int32_t)W) { wrong++; continue; }   /* the whole box must fit in the band */
             if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + gy + dy) * W + (unsigned)x] != core_pixels[(ORACLES_ENHANCED_HUD_HEIGHT + gy) * ORACLES_ENHANCED_CORE_WIDTH + gx]) wrong++;
         }
@@ -105,6 +110,21 @@ void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
     const uint32_t *core_pixels = oracles_core_pixels(c->core);
     const int32_t wx = ob->window_left - camera_x, wy = ob->window_top - camera_y;
     const unsigned W = c->width;
+    /* The host's wide box, wider than the game's: what it covers is its own. */
+    OraclesEnhancedHostTextBox host;
+    int32_t host_x = 0, host_y = 0;
+    int wide = oracles_enhanced_view_text_box_shown(c->view, &host, &host_x, &host_y);
+    unsigned host_w = host.width * oracles_enhanced_view_text_box_shown_scale(c->view), host_h = host.height * oracles_enhanced_view_text_box_shown_scale(c->view);
+    {   /* the game's box twice as large (Text size Large): what it covers is its own too */
+        int32_t dst[2], src[2];
+        unsigned size[2];
+        if (!wide && oracles_enhanced_view_text_box_scaled(c->view, dst, src, size)) {
+            wide = 1;
+            host_x = dst[0]; host_y = dst[1];
+            host_w = 2u * size[0]; host_h = 2u * size[1];
+        }
+    }
+    host_y -= (int32_t)ORACLES_ENHANCED_HUD_HEIGHT;
     for (unsigned r = 0; r < ORACLES_ENHANCED_AREA_HEIGHT; r++) {
         const int32_t y = (int32_t)r + wy;
         if (y < 0 || y >= (int32_t)c->band_height) continue;
@@ -114,6 +134,7 @@ void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
             if (x < 0 || x >= (int32_t)W) continue;
             /* A text box's cells: the view draws the room there, the box in the middle of the band. */
             if (box[r][col]) continue;
+            if (wide && x >= host_x && x < host_x + (int32_t)host_w && y >= host_y && y < host_y + (int32_t)host_h) continue;
             compared++;
             if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)y) * W + (unsigned)x]
                 != core_pixels[(ORACLES_ENHANCED_HUD_HEIGHT + r) * ORACLES_ENHANCED_CORE_WIDTH + col]) wrong++;

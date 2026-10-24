@@ -50,6 +50,23 @@ void oracles_enhanced_check_set_size(OraclesEnhancedCheck *check, OraclesEnhance
 void oracles_enhanced_check_set_paced(OraclesEnhancedCheck *check, int paced);
 /* Draw the objects of the neighbours. */
 void oracles_enhanced_check_set_neighbour_objects(OraclesEnhancedCheck *check, int enabled);
+/* --text-box-check: each frame, the text box drawn by the host at the game's width and lines (the guest's host lines
+ * armed) compared with the core's image, where the frame shows the game's box; nothing shown changes. */
+void oracles_enhanced_check_set_text_box(OraclesEnhancedCheck *check, int enabled);
+/* --text-box wide: the view draws the host's wide box (oracles_enhanced_view_set_text_box), the guest's wide box armed;
+ * each frame it shows, its text against the layout's glyphs, its reveal against the game's steps. */
+void oracles_enhanced_check_set_wide_text_box(OraclesEnhancedCheck *check, unsigned pixels, unsigned lines);
+/* --text-size large|xlarge (ORACLES_ENHANCED_TEXT_*, oracles_enhanced_view_set_text_size): each frame the view draws the
+ * box twice as large, the box enlarged judged against the box it enlarges; each frame it publishes the box for the
+ * presenter (Large), that box judged against the box it shows. */
+void oracles_enhanced_check_set_text_size(OraclesEnhancedCheck *check, unsigned size);
+/* --surface-scale: the surfaces --surface-at writes `scale` times as large, the box with Large drawn over them as the
+ * presenter shows it (oracles_text_box_enlarge); with the large menus, over the framed core the part the presenter shows
+ * alone, at its own scale on a screen of that size. */
+void oracles_enhanced_check_set_surface_scale(OraclesEnhancedCheck *check, unsigned scale);
+/* --menus-large (oracles_enhanced_view_set_large_menus): over the framed core the box at its size, for the presenter, at
+ * every Text size; the frames it is published at Very large counted. */
+void oracles_enhanced_check_set_large_menus(OraclesEnhancedCheck *check, int large);
 void oracles_enhanced_check_event(OraclesEnhancedCheck *check, const OraclesGuestEvent *event);
 void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *check, uint32_t frame);
 void oracles_enhanced_check_report(OraclesEnhancedCheck *check, FILE *out);

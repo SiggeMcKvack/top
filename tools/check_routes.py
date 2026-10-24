@@ -397,15 +397,18 @@ def run_row(row: dict, harness: Path, core: str, routes: Path, roms: dict, rom_d
 
 
 def view_free(options: list) -> list:
-    """The options less the view's level and shape (--view, --aspect), the screen far is fitted to (--screen) and the
-    status bar's width (--hud), which do not change the game: a row of a size, or of the bar drawn full width, is
-    compared with the faithful row of its route."""
+    """The options less the view's level and shape (--view, --aspect), the screen far is fitted to (--screen), the
+    status bar's width (--hud), the text box's size (--text-size) and the large menus (--menus-large), which do not
+    change the game: a row of a size, of the bar drawn full width or of the box twice as large, is compared with the
+    faithful row of its route, or without a faithful row (the compact text, the wide box) with its row without them."""
     out, skip = [], False
     for option in options:
         if skip:
             skip = False
-        elif option in ("--view", "--aspect", "--screen", "--hud"):
+        elif option in ("--view", "--aspect", "--screen", "--hud", "--text-size"):
             skip = True
+        elif option == "--menus-large":
+            pass
         else:
             out.append(option)
     return out
@@ -421,11 +424,21 @@ def compare_fingerprints(results: list, harness: Path) -> list:
         by_key.setdefault((row["route"], tuple(view_free(row["options"]))), {}).setdefault(row["mode"], []).append(res)
     verdicts = []
     for (route, options), modes in sorted(by_key.items()):
-        if "faithful" not in modes:
-            continue
-        faithful = modes["faithful"][0]
+        presentation_only = False
+        if "faithful" in modes:
+            faithful = modes["faithful"][0]
+        else:
+            # No faithful row (an option Faithful refuses): the rows that differ by the presentation alone are compared
+            # with the synchronous row without it.
+            plain = [res for res in modes.get("enhanced", []) + modes.get("enhanced-zoom", []) if list(res["row"]["options"]) == list(options)]
+            if not plain:
+                continue
+            faithful = plain[0]
+            presentation_only = True
         for mode in ("enhanced", "enhanced-threaded", "enhanced-zoom", "enhanced-zoom-threaded"):
             for res in modes.get(mode, []):
+                if presentation_only and list(res["row"]["options"]) == list(options):
+                    continue
                 proc = subprocess.run([str(harness), "--compare", str(faithful["fingerprints"]), str(res["fingerprints"])],
                                       capture_output=True, text=True)
                 text = (proc.stdout + proc.stderr).strip().splitlines()

@@ -26,7 +26,8 @@
 #define ENTRY_BYTES 3u
 #define STORED_SLOTS 8192u   /* a power of two, above the texts of a language */
 #define GROUP_TEXTS 0x100u
-#define INVENTORY_GROUP 0x09u   /* TX_09xx: the inventory's names and descriptions, which scroll on a line of their own */
+#define INVENTORY_GROUP 0x09u
+#define PAGES_A_TEXT 64u   /* TX_09xx: the inventory's names and descriptions, which scroll on a line of their own */
 
 typedef struct composition {
     uint8_t *im;
@@ -39,6 +40,9 @@ typedef struct composition {
     language_keep *keep;
     uint8_t inline_target[0x100][GROUP_TEXTS / 8u];   /* by internal group: the texts called or jumped to within a line */
     uint8_t laid[ORACLES_TEXT_MAX];
+    size_t page_from[PAGES_A_TEXT], page_to[PAGES_A_TEXT];   /* the pages of `laid` laid out again, */
+    unsigned pages;                                          /* how many */
+    OraclesLanguagePages *out_pages;                         /* where they go once stored: NULL, not wanted */
 } composition;
 
 /* Where the text lies in the image, stored there now if it was not; 0 when the banks are full. */
@@ -85,7 +89,8 @@ static const uint8_t *laid_out(composition *c, OraclesLanguage language, unsigne
     if (language_keep_has(c->keep, language, id) || c->inline_target[group][(id & 0xffu) / 8u] & 1u << (id & 7u)) report->layout_kept++;
     else {
         size_t n = 0;
-        const language_wrap_result result = language_wrap_text(c->wrap, text, *length, c->laid, sizeof c->laid, &n);
+        const language_wrap_result result = language_wrap_text_pages(c->wrap, text, *length, c->laid, sizeof c->laid, &n, c->page_from, c->page_to,
+                                                                     PAGES_A_TEXT, &c->pages);
         if (result == WRAP_DONE) {
             served = c->laid;
             *length = n;
@@ -95,6 +100,18 @@ static const uint8_t *laid_out(composition *c, OraclesLanguage language, unsigne
     }
     report->boxes_laid_out += served == text ? before : language_text_boxes(served, *length);
     return served;
+}
+
+/* The pages of the text laid out again just stored at `at`, where they lie in the image. */
+static void note_pages(composition *c, size_t at)
+{
+    OraclesLanguagePages *out = c->out_pages;
+    for (unsigned i = 0; i < c->pages; i++) {
+        if (i >= PAGES_A_TEXT || out->count >= out->capacity) { out->overflowed++; continue; }
+        out->ranges[2u * out->count] = (uint32_t)(at + c->page_from[i]);
+        out->ranges[2u * out->count + 1u] = (uint32_t)(at + c->page_to[i]);
+        out->count++;
+    }
 }
 
 /* The entries of one internal group of the US text, written at `entries`. */
@@ -116,8 +133,10 @@ static int compose_group(composition *c, const OraclesLanguagePack *pack, Oracle
             else report->missing++;
             continue;
         }
+        const size_t before = c->next;
         const size_t at = store(c, text, length, &report->bytes);
         if (!at) { snprintf(error, capacity, "the %s texts do not fit the image's language banks", oracles_language_code(language)); return -1; }
+        if (laid && c->out_pages && c->next != before) note_pages(c, at);   /* stored now: an identical text stored before has its pages */
         put_entry(entry, (unsigned)(at / BANK), (BANK + (unsigned)(at % BANK)) | (laid ? ORACLES_LANGUAGE_LAID_OUT : 0u));
         report->served++;
     }
@@ -131,8 +150,9 @@ static int prepare_layout(composition *c, const OraclesLanguagePack *pack, Oracl
 {
     const OraclesRom rom = { c->im, c->size };
     OraclesTextFont font;
-    if (oracles_text_font(&rom, oracles_rom_offset(target->tables->font_start.bank, target->tables->font_start.addr), &font) != ORACLES_OK
-        || !(c->wrap = language_wrap_new(&font, layout->width, language))) {
+    const int read = oracles_text_font(&rom, oracles_rom_offset(target->tables->font_start.bank, target->tables->font_start.addr), &font);
+    if (read == ORACLES_OK && layout->fixed) oracles_text_font_fixed(&font, &font);
+    if (read != ORACLES_OK || (layout->lines && layout->lines != 2u) || !(c->wrap = language_wrap_new(&font, layout->width, language))) {
         snprintf(error, capacity, "the compact text's layout of %u pixels a line cannot be made", layout->width);
         return -1;
     }
@@ -183,6 +203,10 @@ static int compose(const OraclesLanguagePack *pack, OraclesLanguage language, co
     memcpy(c->im, image, size);
     c->size = composed;
     c->end = end;
+    if (layout && layout->pages) {
+        c->out_pages = layout->pages;
+        c->out_pages->count = c->out_pages->overflowed = 0;
+    }
     const OraclesRom rom = { c->im, composed };
     OraclesTextSource us;
     const unsigned groups = language_source_tables(&rom, target->tables, &us) == 0 ? oracles_text_groups(&rom, &us) : 0;

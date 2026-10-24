@@ -9,6 +9,7 @@
 #include "backends.h"
 #include "compositor.h"
 #include "safe_area.h"
+#include "text_box_enlarge.h"
 #include "touch_sdl.h"
 #include "window_icon.h"
 
@@ -95,6 +96,10 @@ typedef struct sdl_backend {
     oracles_sdl_menu_source menu_source;   /* what asked for the pause menu last */
     oracles_host_event pending[PENDING_EVENTS];
     unsigned pending_count;
+    const oracles_host_video_frame *presenting;   /* the frame being presented, for the box drawn over it */
+    SDL_FRect presenting_part;
+    int presenting_cropped;
+    unsigned boxes_enlarged;   /* frames whose text box was shown again larger (Text size Large) */
 } sdl_backend;
 
 static void push_button(sdl_backend *backend, unsigned button, int pressed)
@@ -854,6 +859,44 @@ static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame
     return draw_subpixel(backend, &backend->shown, layered, NULL);
 }
 
+/* Text size Large or Very large: the frame's text box (oracles_host_video_frame's box) shown again above the frame, in
+ * whole screen pixels, at its size or the next down where the frame drawn at `to` (screen pixels) holds it; `direct`
+ * when the screen's pixels are drawn to already, else the logical presentation is set aside for it. */
+static void draw_box(sdl_backend *backend, const SDL_FRect *to, int direct)
+{
+    const oracles_host_video_frame *frame = backend->presenting;
+    if (!frame || !frame->box_w || !frame->box_h) return;
+    const SDL_FRect *part = backend->presenting_cropped ? &backend->presenting_part : NULL;
+    const float ox = part ? part->x : 0.0f, oy = part ? part->y : 0.0f, lw = part ? part->w : (float)frame->width, lh = part ? part->h : (float)frame->height;
+    if ((float)frame->box_x < ox || (float)frame->box_y < oy || (float)(frame->box_x + frame->box_w) > ox + lw || (float)(frame->box_y + frame->box_h) > oy + lh
+        || lw <= 0.0f || to->w <= 0.0f) return;
+    int32_t out[4];
+    unsigned factor = 0;
+    if (!oracles_text_box_enlarge(to->x, to->y, to->w, to->h, (double)to->w / (double)lw, frame->box_x - (uint32_t)ox, frame->box_y - (uint32_t)oy, frame->box_w,
+                                  frame->box_h, frame->box_size, frame->box_bottom, out, &factor)) return;
+    int logical_w = 0, logical_h = 0;
+    SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
+    if (!direct) {
+        SDL_GetRenderLogicalPresentation(backend->renderer, &logical_w, &logical_h, &mode);
+        SDL_SetRenderLogicalPresentation(backend->renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);   /* the screen's pixels */
+    }
+    SDL_ScaleMode sampling = SDL_SCALEMODE_NEAREST;
+    SDL_GetTextureScaleMode(backend->texture, &sampling);
+    SDL_SetTextureScaleMode(backend->texture, SDL_SCALEMODE_NEAREST);   /* a whole number of screen pixels a pixel */
+    const SDL_FRect source = { (float)frame->box_x, (float)frame->box_y, (float)frame->box_w, (float)frame->box_h };
+    const SDL_FRect drawn = { (float)out[0], (float)out[1], (float)out[2], (float)out[3] };
+    SDL_RenderTexture(backend->renderer, backend->texture, &source, &drawn);
+    SDL_SetTextureScaleMode(backend->texture, sampling);
+    if (!direct) SDL_SetRenderLogicalPresentation(backend->renderer, logical_w, logical_h, mode);
+    backend->boxes_enlarged++;
+}
+
+static void draw_box_direct(void *opaque, SDL_Renderer *renderer, const SDL_FRect *to)
+{
+    (void)renderer;
+    draw_box(opaque, to, 1);
+}
+
 static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
 {
     sdl_backend *backend = opaque;
@@ -864,17 +907,34 @@ static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame
     /* A part shown alone (the game's menus enlarged) takes its own whole scale: the logical size follows it.  Fill
      * follows the window into fullscreen and out (F11), and a change of Scaling from the pause, whose menu lifted the
      * presentation and set back the one it found. */
-    const SDL_FRect part = { (float)frame->crop_x, (float)frame->crop_y, (float)frame->crop_w, (float)frame->crop_h };
+    uint32_t crop_x = frame->crop_x, crop_w = frame->crop_w;
     const int cropped = frame->crop_w > 0 && frame->crop_h > 0;
-    const int logical_w = cropped ? (int)frame->crop_w : backend->frame_width, logical_h = cropped ? (int)frame->crop_h : backend->frame_height;
     const int filled = backend->fill && window_fullscreen(backend);
+    if (cropped && frame->box_reserve_w) {   /* Text size: the part takes in the box enlarged where the part's own scale holds it */
+        int output_w = 0, output_h = 0;
+        if (SDL_GetRenderOutputSize(backend->renderer, &output_w, &output_h) && output_w > 0 && output_h > 0) {
+            const OraclesTouchBox band = oracles_touch_band(output_w, output_h, &backend->touch.edges);   /* where the frame goes */
+            oracles_text_box_reserve(frame->width, (uint32_t)band.w, (uint32_t)band.h, filled, frame->box_reserve_w, frame->box_size, &crop_x, &crop_w,
+                                     frame->crop_h);
+        }
+    }
+    const SDL_FRect part = { (float)crop_x, (float)frame->crop_y, (float)crop_w, (float)frame->crop_h };
+    const int logical_w = cropped ? (int)crop_w : backend->frame_width, logical_h = cropped ? (int)frame->crop_h : backend->frame_height;
+    backend->presenting = frame;
+    backend->presenting_part = part;
+    backend->presenting_cropped = cropped;
+    backend->touch.over_frame = draw_box_direct;
+    backend->touch.over_frame_opaque = backend;
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) present_as(backend, logical_w, logical_h);
     backend->shown_subpixel = 0;
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
         if (frame->subpixel && !cropped) { if (!present_subpixel(backend, frame)) return 0; }
         else if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
+        SDL_FRect to;   /* the box above the band, Link and the fixed rectangles, at the frame's whole place */
+        if (SDL_GetRenderLogicalPresentationRect(backend->renderer, &to)) draw_box(backend, &to, 0);
     }
+    backend->presenting = NULL;
     if (backend->overlay && !backend->overlay(backend->overlay_opaque, backend->renderer)) backend->overlay = NULL;
     const uint64_t present_started_ns = sdl_monotonic_ns(backend);
     SDL_RenderPresent(backend->renderer);

@@ -563,7 +563,7 @@ static layout_count count_layout(const uint8_t *image, size_t size, size_t first
  * image differs from the one composed without the layout in the language's banks only; the boxes as measured. */
 static void check_layout(const char *name, OraclesGame game, const OraclesLanguagePack *pack, const rom_file *us)
 {
-    const OraclesLanguageLayout layout = { 128 };
+    const OraclesLanguageLayout layout = { 128, 0, 0, NULL };
     const OraclesRom us_rom = { us->data, us->size };
     OraclesTextSource source;
     CHECK(language_source_us(&us_rom, game, &source) == 0);
@@ -772,7 +772,7 @@ static void check_compact_points(const char *name, const uint8_t *fan, size_t fa
 static void check_fan_layout(const expected_fan *e, const rom_file *fan, const OraclesRomInfo *info, const OraclesCompatProfile *profile,
                              const OraclesLanguagePack *pack)
 {
-    const OraclesLanguageLayout layout = { 128 };
+    const OraclesLanguageLayout layout = { 128, 0, 0, NULL };
     const OraclesGuestTables *t = oracles_compat_guest_tables(profile);
     const OraclesRom fan_rom = { fan->data, fan->size };
     OraclesTextSource source;

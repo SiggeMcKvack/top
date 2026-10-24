@@ -165,6 +165,17 @@ int oracles_text_font(const OraclesRom *rom, size_t font_start, OraclesTextFont 
     return ORACLES_OK;
 }
 
+void oracles_text_font_fixed(const OraclesTextFont *font, OraclesTextFont *fixed)
+{
+    OraclesTextFont out;
+    memset(&out, 0, sizeof out);
+    for (unsigned c = ORACLES_TEXT_FIRST_CHARACTER; c < 0x100u; c++) {
+        out.width[c] = font->width[c] ? ORACLES_TEXT_CELL_WIDTH : 0u;
+        out.advance[c] = ORACLES_TEXT_CELL_WIDTH;
+    }
+    *fixed = out;
+}
+
 void oracles_text_place(OraclesTextPen *pen, const OraclesTextFont *font, uint8_t c, uint8_t attribute, int whole, unsigned *start, unsigned *from,
                         unsigned *drawn)
 {

@@ -89,6 +89,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-guest-threads)
     add_test(NAME oracles-guest-threads COMMAND oracles-test-guest-threads)
 
+    add_executable(oracles-test-text-box test_text_box.c)
+    target_link_libraries(oracles-test-text-box PRIVATE oracles_enhanced oracles_render)
+    oracles_set_warnings(oracles-test-text-box)
+    add_test(NAME oracles-text-box COMMAND oracles-test-text-box)
+
     add_executable(oracles-test-render test_render.c)
     target_link_libraries(oracles-test-render PRIVATE oracles_render)
     oracles_set_warnings(oracles-test-render)

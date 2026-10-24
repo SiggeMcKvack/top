@@ -208,7 +208,7 @@ static void test_keep(void)
         language_keep_free(keep);
     }
     /* Each image its table, and its layout its own digest. */
-    const OraclesLanguageLayout layout = { WIDTH };
+    const OraclesLanguageLayout layout = { WIDTH, 0, 0, NULL };
     char ages[41], moonrise[41];
     oracles_language_layout_digest(&layout, ORACLES_ROM_REVISION_AGES_US, ages);
     oracles_language_layout_digest(&layout, ORACLES_ROM_REVISION_MOONRISE_1_0_6, moonrise);

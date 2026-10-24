@@ -679,7 +679,7 @@ static void test_compose_layout(void)
     const unsigned g4 = 2u * 6u + 2u, base = g4 + 2u * 0x40u + 4u;
     memcpy(rom + table + base + 0xa00u, lines, sizeof lines);
     put16(rom + table + g4 + 2u * 2u, 0xa00u);
-    const OraclesLanguageLayout layout = { 128 };
+    const OraclesLanguageLayout layout = { 128, 0, 0, NULL };
     uint8_t *image = NULL;
     size_t size = 0;
     OraclesLanguageReport report;
@@ -703,12 +703,46 @@ static void test_compose_layout(void)
     /* Without a layout, or for a fan game's image: refused. */
     CHECK(oracles_language_compose_english(ages, rom, MIB, NULL, &image, &size, &report, error, sizeof error) == -1 && !image);
     CHECK(oracles_language_compose_english("013cf1fd3149f87990cf341f2973f1d11a28e55f", rom, MIB, &layout, &image, &size, &report, error, sizeof error) == -1);
-    /* The digest of the layout follows its width. */
-    char a[41], b[41];
+    /* The digest of the layout follows its width, the fixed advance and the lines; the game's two lines named or not. */
+    char a[41], b[41], c[41], d[41];
     oracles_language_layout_digest(&layout, ORACLES_ROM_REVISION_AGES_US, a);
-    const OraclesLanguageLayout wider = { 208 };
+    const OraclesLanguageLayout wider = { 208, 0, 0, NULL }, two = { 128, 0, 2, NULL }, fixed = { 128, 1, 0, NULL };
     oracles_language_layout_digest(&wider, ORACLES_ROM_REVISION_AGES_US, b);
     CHECK(strlen(a) == 40u && strcmp(a, b) != 0);
+    oracles_language_layout_digest(&two, ORACLES_ROM_REVISION_AGES_US, c);
+    oracles_language_layout_digest(&fixed, ORACLES_ROM_REVISION_AGES_US, d);
+    CHECK(!strcmp(a, c) && strcmp(a, d) != 0);
+    /* The wide box's layouts, 192 pixels: classic at the fixed advance, a character a tile, 24 a line; compact in the
+     * font's widths, more.  A text of four lines of the game's, two boxes, then holds in one. */
+    static const uint8_t long_lines[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', ' ', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 0x01,
+                                          'q', 'r', 's', 't', 0x01, 'u', 'v', 'w', 0x01, 'x', 'y', 'z', 0 };
+    memcpy(rom + table + base + 0xa40u, long_lines, sizeof long_lines);
+    put16(rom + table + g4 + 2u * 4u, 0xa40u);
+    static const struct { OraclesLanguageLayout layout; const char *text; } wide[] = {
+        { { 192, 1, 0, NULL }, "abcdefgh ijklmnop qrst\001uvw xyz" },
+        { { 192, 0, 0, NULL }, "abcdefgh ijklmnop qrst uvw xyz" },
+    };
+    for (unsigned w = 0; w < 2u; w++) {
+        image = NULL;
+        uint32_t ranges[2 * 8];
+        OraclesLanguagePages pages = { ranges, 8, 0, 0 };
+        OraclesLanguageLayout with_pages = wide[w].layout;
+        with_pages.pages = &pages;
+        CHECK(oracles_language_compose_english(ages, rom, MIB, &with_pages, &image, &size, &report, error, sizeof error) == 0);
+        CHECK(pages.count == 2 && pages.overflowed == 0 && ranges[0] < ranges[1] && ranges[1] <= ranges[2] && ranges[2] < ranges[3]);   /* TX_0002's, TX_0004's */
+        CHECK(report.laid_out == 2 && report.layout_failed == 0 && report.boxes == 0x40u + 2u + 2u && report.boxes_laid_out == 0x40u + 2u);
+        if (image) {
+            const uint8_t *index = image + ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u;
+            const uint8_t *e4 = index + (index[ORACLES_LANGUAGE_INDEX_GROUPS + 16u] | index[ORACLES_LANGUAGE_INDEX_GROUPS + 17u] << 8) + 12u;
+            const unsigned addr = e4[1] | e4[2] << 8;
+            CHECK(e4[0] == ORACLES_IMAGE_LANGUAGE_BANK && (addr & ORACLES_LANGUAGE_LAID_OUT));
+            CHECK(!memcmp(image + (size_t)e4[0] * 0x4000u + ((addr & ~ORACLES_LANGUAGE_LAID_OUT) - 0x4000u), wide[w].text, strlen(wide[w].text) + 1u));
+            /* Its one page, where the text lies, its terminator out of it. */
+            const uint32_t at = (uint32_t)e4[0] * 0x4000u + ((addr & ~ORACLES_LANGUAGE_LAID_OUT) - 0x4000u);
+            CHECK(ranges[2] == at && ranges[3] == at + strlen(wide[w].text));
+        }
+        free(image);
+    }
     free(rom);
 }
 

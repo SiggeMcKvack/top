@@ -659,6 +659,9 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
      * English, the only language the launcher starts it in); an image no profile qualifies plays without (check_profile). */
     if (!o.compact_text) o.compact_text = games->settings->compact_text ? 2 : 1;
     if (profile == ORACLES_PROFILE_FAITHFUL) o.compact_text = 1;
+    /* The wide text box, the same: the command line's, else settings.txt's text_box=. */
+    if (!o.text_box_wide) o.text_box_wide = games->settings->text_box_wide ? 2 : 1;
+    if (profile == ORACLES_PROFILE_FAITHFUL) o.text_box_wide = 1;
     /* No fan game's profile allows the item hotkeys yet: off, whatever the command line gave for the Oracles. */
     if (fan) o.hotkeys_option = hotkey_names[0];
     else if (!o.hotkeys_option) o.hotkeys_option = hotkey_names[state.hotkeys];

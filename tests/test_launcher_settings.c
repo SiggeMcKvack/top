@@ -107,7 +107,7 @@ static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin };
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size };
     CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
     s.hud_full = !s.hud_full;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
@@ -119,13 +119,35 @@ static void pause_changes(void)
     CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
     s.screen_margin = ORACLES_SCREEN_MARGIN_OFF;
     CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == 0);
-    /* Without the Enhanced view (Faithful) there is no HUD to change. */
+    /* Text size, at once. */
+    s.text_size = 1;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 1);
+    s.text_size = 2;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 2);
+    /* Without the Enhanced view (Faithful) there is no HUD to change, nor a text size. */
     applied.hud = -1;
+    applied.text_size = -1;
+    s.text_size = 0;
     s.hud_full = !s.hud_full;
     s.colour_correction = !s.colour_correction;
     s.scaling_fill = !s.scaling_fill;
     CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
     CHECK(applied.hud == -1 && applied.colour == s.colour_correction && applied.fill == s.scaling_fill);
+}
+
+/* The texts' layout a session plays: a fan game, with the compact text and no host's box, laid out for the game's box
+ * whatever the wide box says, and not at all with the classic text; the originals at 192 pixels in the wide box. */
+static void text_layout(void)
+{
+    unsigned width = 0;
+    int fixed = -1;
+    CHECK(oracles_session_text_layout(1, 0, 1, 1, 1, &width, &fixed) == 1 && width == 128u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 0, 1, 0, 1, &width, &fixed) == 0);
+    CHECK(oracles_session_text_layout(1, 1, 1, 0, 1, &width, &fixed) == 1 && width == 192u && fixed == 1);
+    CHECK(oracles_session_text_layout(1, 1, 1, 1, 1, &width, &fixed) == 1 && width == 192u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 1, 1, 1, 0, &width, &fixed) == 1 && width == 128u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 1, 0, 1, 1, &width, &fixed) == 0);
+    CHECK(oracles_session_text_layout(0, 0, 1, 1, 1, &width, &fixed) == 0);
 }
 
 int main(int argc, char **argv)
@@ -142,6 +164,8 @@ int main(int argc, char **argv)
     CHECK(written.transitions && written.item_hotkeys[0] == ORACLES_HOTKEYS_OFF && written.item_hotkeys[1] == ORACLES_HOTKEYS_OFF);
     CHECK(!written.swim_hold);   /* the mermaid suit as the game plays it */
     CHECK(!written.compact_text);   /* the game's fixed width */
+    CHECK(!written.text_box_wide);   /* the game's box */
+    CHECK(written.text_size == 0);   /* the game's size */
     CHECK(!written.cheats[ORACLES_SETTINGS_AGES] && !written.cheats[ORACLES_SETTINGS_SEASONS]);   /* the games as they play */
     CHECK(!strcmp(written.vsync, "auto"));
     CHECK(!strcmp(written.menu_pad, "leftstick"));   /* the left stick's click opens the pause menu */
@@ -185,6 +209,8 @@ int main(int argc, char **argv)
     written.swim_hold = 1;
     written.update_check = 0;
     written.compact_text = 1;
+    written.text_box_wide = 1;
+    written.text_size = 2;
     written.cheats[ORACLES_SETTINGS_SEASONS] = ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES;
     written.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_EQUIP;
     written.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
@@ -218,7 +244,7 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.pad_names[0], "x") && read_back.hotkey_pad_names[0][0] == 0 && !strcmp(read_back.hotkey_pad_names[1], "y"));
     CHECK(!strcmp(read_back.menu_pad, "righttrigger") && read_back.menu_toast_shown);
     CHECK(!strcmp(read_back.hotkey_bind_b, "Right Shift") && !strcmp(read_back.hotkey_bind_a, "Left Ctrl"));
-    CHECK(read_back.transitions == 0 && read_back.swim_hold == 1 && read_back.update_check == 0 && read_back.compact_text == 1);
+    CHECK(read_back.transitions == 0 && read_back.swim_hold == 1 && read_back.update_check == 0 && read_back.compact_text == 1 && read_back.text_box_wide == 1 && read_back.text_size == 2);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == 0 && read_back.cheats[ORACLES_SETTINGS_SEASONS] == (ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES));
     CHECK(read_back.item_hotkeys[ORACLES_SETTINGS_AGES] == ORACLES_HOTKEYS_EQUIP && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_USE);
     CHECK(read_back.window_scale == 0);
@@ -784,6 +810,7 @@ int main(int argc, char **argv)
     menu_pad_resolved();
     display_stored();
     pause_changes();
+    text_layout();
 
     remove(path);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

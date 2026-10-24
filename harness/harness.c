@@ -34,6 +34,7 @@
 #include "rom.h"
 #include "route.h"
 #include "sha1.h"
+#include "text_box.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -476,7 +477,7 @@ static void report_checks(run *r, const harness_options *o, FILE *summary, uint8
         if (summary) fprintf(summary, "cheats.damage_cancelled=%u\ncheats.health_kept=%u\ncheats.ammo_kept=%u\ncheats.payments_cancelled=%u\ncheats.rupees_kept=%u\ncheats.mod_payments=%u\n",
                              c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
     }
-    if (o->compact_text) {
+    if (o->compact_text || o->text_box_wide) {
         OraclesGuestCompactCounts c;
         oracles_guest_compact_counts(r->guest, &c);
         fprintf(stderr, "compact text: %u lines, %u characters in %u tile columns, %u cursor places moved, %u lines of more than sixteen characters, %u characters past a line\n",
@@ -610,12 +611,27 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         o->compact_text = 1;
         fprintf(stderr, "harness: the route was recorded with --text compact: the option is on\n");
     }
+    if (oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && !o->text_box_wide) {
+        o->text_box_wide = 1;
+        fprintf(stderr, "harness: the route was recorded with --text-box wide: the option is on\n");
+    }
     if (o->compact_text && (!oracles_compat_compact_text(oracles_compat_find(&info)) || !o->enhanced_dir)) {   /* never armed in Faithful: it changes what the core draws */
         fprintf(stderr, "harness: the compact text plays in Enhanced alone (--enhanced-check), on Ages, Seasons and the fan games made on them; refusing the request and route option\n");
         free(rom);
         return 1;
     }
-    if (o->compact_text && oracles_language_session_lay_out(&r->language, &info, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
+    if (o->text_box_wide && (!oracles_compat_host_text_box(oracles_compat_find(&info)) || !o->enhanced_dir)) {   /* the host draws the box: Enhanced alone */
+        fprintf(stderr, "harness: the wide text box plays in Enhanced alone (--enhanced-check), on Ages and Seasons; refusing the request and route option\n");
+        free(rom);
+        return 1;
+    }
+    /* The texts laid out again: at the game's 128 pixels for the compact text, at the wide box's 192, classic or compact. */
+    const OraclesLanguageLayout layout = { o->text_box_wide ? ORACLES_TEXT_BOX_WIDE_PIXELS : 128u, !o->compact_text, 0u, NULL };
+    if ((o->compact_text || o->text_box_wide) && oracles_language_session_lay_out(&r->language, &info, &layout, error, sizeof error) != 0) {
+        fprintf(stderr, "harness: %s\n", error);
+        free(rom);
+        return 1;
+    }
     /* A mod's houses are in the image before the core exists. */
     if (o->mods_count) {
         r->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, info.game, rom, rom_size, error, sizeof error);
@@ -761,9 +777,34 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
         fprintf(stderr, "harness: --cheats and a route's cheat lines need the hooks on, and the cheats' points found in the ROM\n");
         return 1;
     }
-    if (o->compact_text && (!r->guest || oracles_guest_arm_compact_text(r->guest) != 0)) {
+    if (o->text_box_wide) {   /* after the language: the font's widths are read in the image it composed */
+        if (!r->guest || !r->enhanced || oracles_guest_arm_wide_text_box(r->guest, ORACLES_TEXT_BOX_WIDE_PIXELS, !o->compact_text) != 0) {
+            fprintf(stderr, "harness: --text-box wide needs --enhanced-check, the hooks on, and the text box's points found in the ROM\n");
+            return 1;
+        }
+        unsigned pages = 0;   /* the pages laid out at its width; the others, the game's, centred */
+        const uint32_t *laid = oracles_language_session_laid_pages(r->language, &pages);
+        if (oracles_guest_set_text_box_pages(r->guest, laid, pages) != 0) { fprintf(stderr, "harness: out of memory\n"); return 1; }
+        oracles_enhanced_check_set_wide_text_box(r->enhanced, ORACLES_TEXT_BOX_WIDE_PIXELS, 2u);
+    } else if (o->compact_text && (!r->guest || oracles_guest_arm_compact_text(r->guest) != 0)) {
         fprintf(stderr, "harness: --text compact needs the hooks on, and its points found in the ROM\n");
         return 1;
+    }
+    if (o->text_size) {
+        if (!r->enhanced) { fprintf(stderr, "harness: --text-size large or xlarge needs --enhanced-check\n"); return 1; }
+        oracles_enhanced_check_set_text_size(r->enhanced, (unsigned)o->text_size);
+    }
+    if (o->surface_scale > 1u && r->enhanced) oracles_enhanced_check_set_surface_scale(r->enhanced, o->surface_scale);
+    if (o->menus_large) {
+        if (!r->enhanced) { fprintf(stderr, "harness: --menus-large needs --enhanced-check\n"); return 1; }
+        oracles_enhanced_check_set_large_menus(r->enhanced, 1);
+    }
+    if (o->text_box_check) {
+        if (!r->enhanced || (!o->text_box_wide && oracles_guest_arm_text_box(r->guest, ORACLES_TEXT_BOX_GAME_PIXELS) != 0)) {
+            fprintf(stderr, "harness: --text-box-check needs --enhanced-check, Ages or Seasons, and the text box's routines\n");
+            return 1;
+        }
+        oracles_enhanced_check_set_text_box(r->enhanced, 1);
     }
     if (o->hotkeys_live.mode) {
         if (!r->guest || o->hotkeys_dir || r->route.action_count) { fprintf(stderr, "harness: --hotkeys-live needs the hooks on, and a route without exchanges of its own\n"); return 1; }

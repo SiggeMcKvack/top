@@ -65,6 +65,10 @@ typedef struct OraclesTextFont {
 /* The widths of the font at physical offset `font_start` (gfx_font_start's, where character 0 would be);
  * ORACLES_ERR_RANGE when its characters are not all in the image. */
 int oracles_text_font(const OraclesRom *rom, size_t font_start, OraclesTextFont *font);
+/* The same font at the game's fixed advance (the classic text in a box wider than the game's): every character a whole
+ * cell, from its first column, moving the pen by a cell; a blank one draws nothing.  A line laid out in it is the game's
+ * own layout, a character a tile. */
+void oracles_text_font_fixed(const OraclesTextFont *font, OraclesTextFont *fixed);
 
 /* A line as the compact text lays it out, its characters placed one after the other at a pen, in pixels: a character
  * moves it by its advance; a whole one (a symbol, $06: an icon or a kanji, or a choice's cursor place) takes a whole tile

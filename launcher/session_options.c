@@ -3,6 +3,7 @@
 #include "session.h"
 
 #include "compositor.h"
+#include "text_box.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -42,9 +43,21 @@ unsigned oracles_session_settings_changed(const oracles_settings *settings, int 
     if (settings->colour_correction != applied->colour) { applied->colour = settings->colour_correction; changed |= ORACLES_SESSION_CHANGED_COLOUR; }
     if (settings->scaling_fill != applied->fill) { applied->fill = settings->scaling_fill; changed |= ORACLES_SESSION_CHANGED_FILL; }
     if (applied->hud >= 0 && settings->hud_full != applied->hud) { applied->hud = settings->hud_full; changed |= ORACLES_SESSION_CHANGED_HUD; }
+    if (applied->text_size >= 0 && settings->text_size != applied->text_size) { applied->text_size = settings->text_size; changed |= ORACLES_SESSION_CHANGED_TEXT_SIZE; }
     const int margin = oracles_session_screen_margin(margin_option, settings);
     if (margin != applied->margin) { applied->margin = margin; changed |= ORACLES_SESSION_CHANGED_MARGIN; }
     return changed;
+}
+
+int oracles_session_text_layout(int profile_compact, int profile_host_box, int enhanced, int compact, int wide, unsigned *width, int *fixed)
+{
+    compact = compact && profile_compact;
+    wide = wide && profile_host_box;
+    if ((!compact && !wide) || !enhanced) return 0;
+    /* The compact text at the game's 128 pixels; in the wide box at its 192, classic at the game's fixed advance. */
+    *width = wide ? ORACLES_TEXT_BOX_WIDE_PIXELS : 128u;
+    *fixed = !compact;
+    return 1;
 }
 
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity)

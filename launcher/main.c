@@ -113,7 +113,9 @@ static int usage(void)
                     "                           [--swim-hold]   (swimming, a direction held swims at full speed where the game wants A tapped with the flippers, the direction with Ages' mermaid suit)\n"
                     "                           [--cheats no-damage,ammo,rupees]   (Ages and Seasons: Link loses no heart, seeds and bombs are not used up, buying costs nothing;\n"
                     "                           a mod's prices still apply; an empty list for none)\n"
-                    "                           [--text classic|compact]   (Enhanced, the Oracles and their fan games: the text box's lines in the font's own widths, at the game's pace)\n");
+                    "                           [--text classic|compact]   (Enhanced, the Oracles and their fan games: the text box's lines in the font's own widths, at the game's pace)\n"
+                    "                           [--text-box standard|wide]   (Enhanced, Ages and Seasons: the game's box, or a wider one drawn by the port, 192 pixels of text)\n"
+                    "                           [--text-size normal|large|xlarge]   (Enhanced: the text box three halves as large, in whole screen pixels, or twice)\n");
     fprintf(stderr, "                           [--zoom-out]   (Enhanced drawn back, 480x270 or 480x360 in 4:3, three rooms across outdoors; --fullscreen --scale 4 fills 1920x1080; --view far)\n"
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
                     "                           [--core sameboy|mgba]   (the core: Accurate, the reference, or Fast, lighter)\n"
@@ -194,6 +196,16 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
             const char *text = argv[++i];
             o->compact_text = !strcmp(text, "classic") ? 1 : !strcmp(text, "compact") ? 2 : 0;
             if (!o->compact_text) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-size") && more) {
+            const char *size = argv[++i];
+            o->text_size = !strcmp(size, "normal") ? 1 : !strcmp(size, "large") ? 2 : !strcmp(size, "xlarge") ? 3 : 0;
+            if (!o->text_size) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-box") && more) {
+            const char *box = argv[++i];
+            o->text_box_wide = !strcmp(box, "standard") ? 1 : !strcmp(box, "wide") ? 2 : 0;
+            if (!o->text_box_wide) return 1;
         }
         else if (!strcmp(argv[i], "--zoom-out")) { o->zoom_out = 1; o->enhanced = 1; o->view = 3; }
         else if (!strcmp(argv[i], "--view") && more) {

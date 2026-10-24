@@ -50,6 +50,10 @@ typedef struct OraclesSessionOptions {
     int cheats_given;                /* --cheats was given: its list wins over the settings' for the games the home screen starts */
     int compact_text;                /* --text: 1 classic, 2 compact (the text box's lines in the font's own widths, in Enhanced alone);
                                       * 0 for a game the home screen starts: settings.txt's text= */
+    int text_size;                   /* --text-size: 1 normal, 2 large, 3 xlarge (the text box three halves or twice as large where the view holds
+                                      * it); 0: settings.txt's text_size= */
+    int text_box_wide;               /* --text-box: 1 standard, 2 wide (the host's box, 192 pixels of text, in Enhanced alone); 0 for a game
+                                      * the home screen starts: settings.txt's text_box= */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
     int camera_profile;              /* 0: the settings' camera; 1 or 2: this one for the session, not stored */
     int pretend_slow;                /* --pretend-slow: the game counts as one that ran slowly, to try the home screen's suggestion */
@@ -94,18 +98,26 @@ int oracles_session_screen_margin(int option, const oracles_settings *settings);
 
 /* What a running game shows of the settings the pause applies at once: the colour correction as the settings had it
  * when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws it),
- * the screen margin (an OraclesScreenMargin). */
+ * the screen margin (an OraclesScreenMargin), the text box's size. */
 typedef struct OraclesSessionApplied {
     int colour, fill, hud, margin;
+    int text_size;   /* Text size, 0 normal, 1 large, 2 xlarge (-1 without the Enhanced view, or for a fan game, which keeps the game's box) */
 } OraclesSessionApplied;
 #define ORACLES_SESSION_CHANGED_COLOUR 1u
 #define ORACLES_SESSION_CHANGED_FILL 2u
 #define ORACLES_SESSION_CHANGED_HUD 4u
 #define ORACLES_SESSION_CHANGED_MARGIN 8u
+#define ORACLES_SESSION_CHANGED_TEXT_SIZE 16u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
  * gives one (oracles_session_screen_margin), whatever the settings say. */
 unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied);
+
+/* The layout of the texts a session plays (language.h, OraclesLanguageLayout): the compact text where the profile has
+ * it (`profile_compact`), the wide box where the profile has the host's text box (`profile_host_box`; elsewhere the
+ * game's box plays, the wide box turned off), in Enhanced alone.  1 with the line's `width` and whether it is laid out
+ * at the game's `fixed` advance; 0: the game's own layout. */
+int oracles_session_text_layout(int profile_compact, int profile_host_box, int enhanced, int compact, int wide, unsigned *width, int *fixed);
 
 /* The save file of a ROM: its path with the extension .sav. */
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity);

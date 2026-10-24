@@ -34,6 +34,13 @@ int harness_usage(void)
                     "                                                (a mod's game.pay still charges); with those a route was recorded with, which are on by themselves)\n"
                     "                       [--text classic|compact]   (the text box's lines in the font's own widths, Oracles, fan games, with --enhanced-check alone; on by itself for a route recorded with it)\n");
     fprintf(stderr,
+                    "                       [--text-box-check]   (with --enhanced-check, Ages and Seasons: the text box drawn by the host each frame, at the game's width, against the core's image; nothing shown changes;\n"
+                    "                                             with --text-box wide, the wide box against its layout)\n"
+                    "                       [--text-box standard|wide]   (with --enhanced-check, Ages and Seasons: the host's box of 192 pixels of text, the texts laid out again for it, classic or compact; on by itself for a route recorded with it)\n"
+                    "                       [--text-size normal|large|xlarge]   (with --enhanced-check: the text box three halves as large, the presenter's, or twice, where the view holds it)\n"
+                    "                       [--surface-scale K]   (the surfaces of --surface-at K times as large, the text box with Large as the presenter shows it)\n"
+                    "                       [--menus-large]   (with --enhanced-check: the framed core shown alone, as menus=large, its text box enlarged by the presenter at every Text size)\n");
+    fprintf(stderr,
                     "                       [--neighbour-objects-check DIR] [--neighbour-objects-lead FRAMES] [--neighbour-capture]   (the objects of every neighbour, ghost against the real entry)\n"
                     "                       [--hotkeys-check DIR]   (item hotkeys: the inventory frame by frame in DIR; a route's exchanges are applied either way)\n"
                     "                       [--hotkeys-live use|equip] [--hotkey-slot N=<b|a>:<item>:<variant or -->]... [--hotkey-press FRAME:SLOT:FRAMES]... [--hotkeys-record ROUTE]\n"
@@ -142,6 +149,22 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
             const char *v = argv[++i];
             if (strcmp(v, "classic") != 0 && strcmp(v, "compact") != 0) { fprintf(stderr, "harness: --text is classic or compact, not %s\n", v); return -1; }
             o->compact_text = !strcmp(v, "compact");
+        }
+        else if (!strcmp(argv[i], "--text-box-check")) o->text_box_check = 1;
+        else if (!strcmp(argv[i], "--text-size") && i + 1 < argc) {
+            const char *v = argv[++i];
+            if (strcmp(v, "normal") != 0 && strcmp(v, "large") != 0 && strcmp(v, "xlarge") != 0) { fprintf(stderr, "harness: --text-size is normal, large or xlarge, not %s\n", v); return -1; }
+            o->text_size = !strcmp(v, "xlarge") ? 2 : !strcmp(v, "large");
+        }
+        else if (!strcmp(argv[i], "--menus-large")) o->menus_large = 1;
+        else if (!strcmp(argv[i], "--surface-scale") && i + 1 < argc) {
+            o->surface_scale = (unsigned)strtoul(argv[++i], NULL, 10);
+            if (o->surface_scale < 1u || o->surface_scale > 8u) { fprintf(stderr, "harness: --surface-scale is 1 to 8\n"); return -1; }
+        }
+        else if (!strcmp(argv[i], "--text-box") && i + 1 < argc) {
+            const char *v = argv[++i];
+            if (strcmp(v, "standard") != 0 && strcmp(v, "wide") != 0) { fprintf(stderr, "harness: --text-box is standard or wide, not %s\n", v); return -1; }
+            o->text_box_wide = !strcmp(v, "wide");
         }
         else if (!strcmp(argv[i], "--hotkeys-check") && i + 1 < argc) o->hotkeys_dir = argv[++i];
         else if (!strcmp(argv[i], "--hotkeys-live") && i + 1 < argc) { o->hotkeys_live.mode = argv[++i]; if (strcmp(o->hotkeys_live.mode, "use") != 0 && strcmp(o->hotkeys_live.mode, "equip") != 0) return -1; }

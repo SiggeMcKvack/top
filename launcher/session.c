@@ -37,6 +37,7 @@
 #include "route.h"
 #include "sha1.h"
 #include "state_refusal.h"
+#include "text_box.h"
 #include "ui_version.h"
 
 #include <stdarg.h>
@@ -204,7 +205,8 @@ static void pause_state_time(void *opaque, char *out, size_t capacity)
 static int pause_settings_changed(void *opaque)
 {
     session *s = opaque;
-    OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin };
+    OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin,
+                                      s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1 };
     const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, &applied);
     if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
         s->colour_applied = s->colour_setting = applied.colour;
@@ -219,6 +221,10 @@ static int pause_settings_changed(void *opaque)
     if (changed & ORACLES_SESSION_CHANGED_HUD) {
         oracles_enhanced_view_set_hud(s->view, applied.hud);
         fprintf(stderr, "oracles: status bar %s\n", applied.hud ? "full width" : "original");
+    }
+    if (changed & ORACLES_SESSION_CHANGED_TEXT_SIZE) {
+        oracles_enhanced_view_set_text_size(s->view, (unsigned)applied.text_size);
+        fprintf(stderr, "oracles: text size %s\n", applied.text_size == 2 ? "very large" : applied.text_size ? "large" : "normal");
     }
     if (changed & ORACLES_SESSION_CHANGED_MARGIN) {
         s->sdl.screen_margin = applied.margin;
@@ -333,18 +339,21 @@ static int failed(OraclesSessionResult *result, const char *format, ...)
  * profile or Faithful refuses lays nothing out: check_profile refuses it or turns it off. */
 static int lay_out_texts(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
 {
-    int compact = s->compact_text, enhanced = s->enhanced;
+    int compact = s->compact_text, wide = s->text_box_wide, enhanced = s->enhanced;
     OraclesRoute recorded;
     char error[256];
     if (o->play_path && oracles_route_read(o->play_path, &recorded, error, sizeof error) == 0) {
         compact = oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
+        wide = oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
         enhanced |= oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS)
                   || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM)
                   || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL);
         oracles_route_free(&recorded);
     }
-    if (!compact || !enhanced || !oracles_compat_compact_text(s->profile)) return 1;
-    if (oracles_language_session_lay_out(&s->language, &s->info, error, sizeof error) != 0) return failed(result, "%s", error);
+    OraclesLanguageLayout layout = { 0u, 0, 0u, NULL };
+    if (!oracles_session_text_layout(oracles_compat_compact_text(s->profile), oracles_compat_host_text_box(s->profile), enhanced, compact, wide,
+                                     &layout.width, &layout.fixed)) return 1;
+    if (oracles_language_session_lay_out(&s->language, &s->info, &layout, error, sizeof error) != 0) return failed(result, "%s", error);
     return 1;
 }
 
@@ -502,6 +511,13 @@ static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSess
         fprintf(stderr, "oracles: the compact text is not qualified for %s; this game plays with the classic text\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->compact_text = 0;
     }
+    /* The wide text box, which the host draws: never in Faithful either, nor where the host's box is not qualified (the
+     * fan games, which keep the game's box). */
+    if (s->text_box_wide && (!oracles_compat_host_text_box(s->profile) || !s->enhanced)) {
+        if (!from_home) return failed(result, "--text-box wide plays in Enhanced alone, on Ages and Seasons");
+        fprintf(stderr, "oracles: the wide text box is not qualified for %s; this game plays with the game's box\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->text_box_wide = 0;
+    }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
     if (s->continuous_transitions && !oracles_compat_continuous_transitions(s->profile))
@@ -538,10 +554,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold || s->cheats || s->cheats_route || s->compact_text) {
+        || s->swim_hold || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide) {
         s->guest = oracles_guest_attach(s->core, s->profile);
         const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
-                                   && !s->cheats && !s->cheats_route && !s->compact_text;
+                                   && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -571,7 +587,14 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         if (s->cheats) fprintf(stderr, "oracles: cheats on: %s\n", oracles_cheats_format(s->cheats, NULL, names, sizeof names));
         s->cheats_used = s->cheats;
     }
-    if (s->compact_text) {   /* after the language: the font's widths are read in the image it composed */
+    if (s->text_box_wide) {   /* after the language: the font's widths are read in the image it composed */
+        if (oracles_guest_arm_wide_text_box(s->guest, ORACLES_TEXT_BOX_WIDE_PIXELS, !s->compact_text) != 0)
+            return failed(result, "the wide text box cannot find its points in this ROM");
+        unsigned pages = 0;   /* the pages laid out at its width; the others, the game's, centred */
+        const uint32_t *laid = oracles_language_session_laid_pages(s->language, &pages);
+        if (oracles_guest_set_text_box_pages(s->guest, laid, pages) != 0) return failed(result, "out of memory");
+        fprintf(stderr, "oracles: wide text box on: %u pixels of text a line, the %s text\n", ORACLES_TEXT_BOX_WIDE_PIXELS, s->compact_text ? "compact" : "classic");
+    } else if (s->compact_text) {
         if (oracles_guest_arm_compact_text(s->guest) != 0) return failed(result, "the compact text cannot find its points in this ROM");
         fprintf(stderr, "oracles: compact text on: the text box's lines in the font's own widths\n");
     }
@@ -593,6 +616,14 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         oracles_enhanced_view_set_link_phase(s->view, s->settings->link_phase);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
         oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
+        if (s->text_box_wide) oracles_enhanced_view_set_text_box(s->view, ORACLES_TEXT_BOX_WIDE_PIXELS, ORACLES_TEXT_BOX_GAME_LINES);
+        /* Text size: the command line's, else the settings'; presentation alone, which the pause changes at once.  A
+         * fan game keeps the game's box at its size, as it keeps the box standard. */
+        const int text_size = o->text_size ? o->text_size - 1 : s->settings->text_size;
+        oracles_enhanced_view_set_text_size(s->view, (unsigned)text_size);
+        if (text_size && !oracles_enhanced_view_text_size(s->view))
+            fprintf(stderr, "oracles: text size is not qualified for %s; this game keeps the game's box at its size\n",
+                    s->profile ? oracles_compat_name(s->profile) : "this image");
         /* The ghosts: the command line's, else the settings'; auto, two where four cores leave one to each besides the
          * game's own threads (the sound, the display). */
         const int ghosts = s->ghosts;
@@ -673,6 +704,10 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
         /* The game's menus enlarged: the framed core shown alone, at its own whole scale. */
         if (s->settings->menus_large) { config->frame_crop = oracles_enhanced_view_framed_crop; config->frame_crop_opaque = s->view; }
         if (oracles_settings_subpixel_camera(s->settings)) { config->frame_subpixel = view_subpixel; config->frame_subpixel_opaque = s->view; }
+        oracles_enhanced_view_set_large_menus(s->view, s->settings->menus_large);
+        /* Text size: the text box shown again larger by the presenter, in whole screen pixels. */
+        config->frame_box = oracles_enhanced_view_text_box_enlarged;
+        config->frame_box_opaque = s->view;
         config->frame_width = oracles_enhanced_view_width(s->view);
         config->frame_height = oracles_enhanced_view_height(s->view);
     }
@@ -770,6 +805,12 @@ static void finish(session *s, const OraclesSessionOptions *o)
         for (unsigned k = 0; k < ORACLES_ENHANCED_BLACK_KINDS; k++)
             fprintf(stderr, "%s %s %u, %u, %u, %u", k ? ";" : "", oracles_enhanced_black_kind_name(k), black.kinds[k].episodes, black.kinds[k].frames, black.kinds[k].longest, black.kinds[k].in_transition);
         fprintf(stderr, "\n");
+        if (s->text_box_wide) {
+            unsigned world = 0, framed = 0, uncovered = 0;
+            oracles_enhanced_view_text_box_counts(s->view, &world, &framed, &uncovered);
+            fprintf(stderr, "oracles: wide text box: drawn on %u frames (%u in the world, %u over the framed core), %u frames of a text whose box it could not draw\n",
+                    world + framed, world, framed, uncovered);
+        }
         oracles_enhanced_view_stop(s->view);
     }
     if (s->diag) oracles_diagnostics_stop(s->diag);
@@ -779,10 +820,10 @@ static void finish(session *s, const OraclesSessionOptions *o)
         fprintf(stderr, "oracles: cheats: %u hits cost no heart, %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
                 c.hits, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
     }
-    if (s->ran && s->compact_text) {
+    if (s->ran && (s->compact_text || s->text_box_wide)) {
         OraclesGuestCompactCounts c;
         oracles_guest_compact_counts(s->guest, &c);
-        fprintf(stderr, "oracles: compact text: %u lines, %u characters in %u tile columns\n", c.lines, c.characters, c.columns);
+        fprintf(stderr, "oracles: %s text: %u lines, %u characters in %u tile columns\n", s->compact_text ? "compact" : "classic", c.lines, c.characters, c.columns);
     }
     oracles_mod_session_stop(s->mod, NULL);
     if (s->ran) oracles_language_session_report(s->language, s->guest, "oracles: ", stderr);
@@ -857,6 +898,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->cheats = o->cheats;
     s->cheats_game = -1;
     s->compact_text = o->compact_text == 2;
+    s->text_box_wide = o->text_box_wide == 2;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near); its size is the options'
      * shape, the screen's, a window taking the surface's, and far fitted to the screen (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;

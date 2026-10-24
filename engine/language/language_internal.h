@@ -203,6 +203,10 @@ typedef enum language_wrap_result {
 } language_wrap_result;
 /* A decoded text laid out again into `out` (`capacity` bytes, ORACLES_TEXT_MAX at least), its terminator included. */
 language_wrap_result language_wrap_text(const language_wrap *wrap, const uint8_t *text, size_t length, uint8_t *out, size_t capacity, size_t *out_length);
+/* The same, the pages it laid out again in `out` from page_from[i] to page_to[i] - 1, *pages of them (`page_capacity` at
+ * most kept, all counted): the pages of a text WRAP_DONE gives that are not kept as they are. */
+language_wrap_result language_wrap_text_pages(const language_wrap *wrap, const uint8_t *text, size_t length, uint8_t *out, size_t capacity, size_t *out_length,
+                                              size_t *page_from, size_t *page_to, unsigned page_capacity, unsigned *pages);
 /* Whether every line of a text fits the layout's width, measured as the compact text draws it, a name and a number at
  * their widest, from either attribute a box opens with. */
 int language_wrap_fits(const language_wrap *wrap, const uint8_t *text, size_t length);

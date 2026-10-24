@@ -87,6 +87,9 @@ FUNCTIONS = [
     # column of the cursor (textbox.s).
     ("draw_line_of_text", "drawLineOfText"), ("set_line_text_buffers", "setLineTextBuffers"),
     ("display_next_text_character", "displayNextTextCharacter"), ("text_control_code_option", "textControlCodeC_2"),
+    # The host's text box: the routine that queues a line's copy to the VRAM, and the vblank's function that runs a queued
+    # DMA (textbox.s, bank0.s).
+    ("dma_text_gfx_buffer", "dmaTextGfxBuffer"), ("vblank_dma_function", "vblankDmaFunction"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -255,6 +258,9 @@ VARIABLES = [
     ("text_display_state", "w7TextDisplayState"), ("text_display_mode", "wTextDisplayMode"),
     ("textbox_attributes", "w7TextboxAttributes"), ("textbox_option_positions", "w7TextboxOptionPositions"),
     ("secret_text", "w7SecretText1"), ("secret_text_end", "w7SecretGenerationBuffer"),
+    ("textbox_vram_pos", "w7TextboxVramPos"),   # the host's text box: where the box's rows stand in the VRAM's map
+    ("character_display_timer", "w7CharacterDisplayTimer"),   # and the frames left before the line's next column shows
+    ("text_address", "w7TextAddress"),   # and where the text thread reads the text (its bank in w7ActiveBank)
     ("general_purpose_hram", "hFF8A"), ("general_purpose_hram_end", "hRng1"), ("tmp_cec0", "wTmpcec0"), ("tmp_cec0_end", "wRoomLayout"),
 ]
 # Defines of wram.s expressed as symbol + offset.

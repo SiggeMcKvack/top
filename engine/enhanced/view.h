@@ -54,6 +54,75 @@ typedef struct OraclesEnhancedView OraclesEnhancedView;
 #define ORACLES_ENHANCED_TEXT_BOX_TRAIL_FRAMES 2u
 int oracles_enhanced_text_box_holds(int active, unsigned cells, unsigned *trail);
 
+/* The text box drawn by the host (text_box.h), with the guest's host lines armed (oracles_guest_arm_text_box): while a
+ * text of the standard box or its choice shows (wTextIsActive, the trail of the frames after it, wTextDisplayMode 0 or
+ * 1), the game's box where the game's variables put it in the VRAM's map (w7TextboxVramPos, w7d0cc), read into a model
+ * from the displayed map and drawn from that model, the host's lines as the frame just scanned showed them and the
+ * game's tiles, at `pixels` of text and `lines` lines.  1 drawn into `box`, 0 no box shown, -1 a box the host could not
+ * draw (`box->read` says why).  Nothing is drawn in the surface. */
+typedef struct OraclesEnhancedHostTextBox {
+    const uint32_t *pixels;     /* the box drawn, `width` pixels a row, 0xffRRGGBB */
+    unsigned width, height;
+    unsigned map;               /* the VRAM's map it stands in, from $8000: $1800 or $1c00 */
+    unsigned row, column;       /* its first cell in that map */
+    int read;                   /* OraclesTextBoxRead */
+} OraclesEnhancedHostTextBox;
+int oracles_enhanced_view_host_text_box(OraclesEnhancedView *view, unsigned pixels, unsigned lines, OraclesEnhancedHostTextBox *box);
+/* The box the last call drew, drawn again from the same model and lines at `pixels` and `lines` (its place in the map
+ * left out): 1, or 0 when that call drew none.  Past the game's 128 pixels, the rows' reveal is read in the text's
+ * state (oracles_text_box_reveal), the game's map showing a line's first 128 pixels alone. */
+int oracles_enhanced_view_host_text_box_again(OraclesEnhancedView *view, unsigned pixels, unsigned lines, OraclesEnhancedHostTextBox *box);
+/* The wide text box: the host draws the box in the surface at `pixels` of text (more than the game's 128, the guest's
+ * wide box armed at that width, oracles_guest_arm_wide_text_box) and `lines` lines, in place of the core's: in the
+ * world band, centred across it at the height the game drew its box at, the room redrawn under the core's box; over the
+ * framed core, at the game's box's place and centred on it, past the frame's edges (the window left over it); the large
+ * menus' rectangle (oracles_enhanced_view_framed_crop) the union of the frame and the box.  A text whose box the host
+ * cannot draw shows the core's, counted.  0 pixels: the core's box (the default). */
+void oracles_enhanced_view_set_text_box(OraclesEnhancedView *view, unsigned pixels, unsigned lines);
+/* Whether the last composition drew the host's box, the box and its place in the surface (its top-left pixel). */
+int oracles_enhanced_view_text_box_shown(const OraclesEnhancedView *view, OraclesEnhancedHostTextBox *box, int32_t *x, int32_t *y);
+/* Compositions that drew it, in the world band and over the framed core, and those of a text whose box it could not
+ * draw. */
+void oracles_enhanced_view_text_box_counts(const OraclesEnhancedView *view, unsigned *world, unsigned *framed, unsigned *uncovered);
+/* Text size, presentation alone, applied at once, each size where the box enlarged fits the view, else the next size
+ * down, the view's level changing in play; the fan games keep the game's box at its size (Normal whatever is asked):
+ *   - Very large (ORACLES_ENHANCED_TEXT_XLARGE): the text box twice as large in the surface where the view holds it so
+ *     across (the game's box, 288 pixels: Medium and Far; the host's wide box, 416: Far); the game's box enlarged from
+ *     the core's image, without the host's lines (the classic text in the game's box still hooks nothing), the wide box
+ *     drawn from the host's lines twice as large; centred across the band (in the world) or on the game's box (framed),
+ *     against the edge of the screen the game drew its box against;
+ *   - Large (ORACLES_ENHANCED_TEXT_LARGE): the box at its size in the surface, which the presenter shows again above the
+ *     frame at k + ceil(k / 2) screen pixels a pixel, k the frame's whole scale (oracles_text_box_enlarge), where that
+ *     fits: the part of the frame it takes, its edge and its size, oracles_enhanced_view_text_box_enlarged;
+ *   - with the large menus (oracles_enhanced_view_set_large_menus), over the framed core both sizes are the
+ *     presenter's: the box at its size in the surface, Very large at 2 k, and the part shown alone widened for the box
+ *     only as far as its own scale holds (oracles_text_box_reserve), never lowered. */
+#define ORACLES_ENHANCED_TEXT_NORMAL 0u
+#define ORACLES_ENHANCED_TEXT_LARGE 1u
+#define ORACLES_ENHANCED_TEXT_XLARGE 2u
+void oracles_enhanced_view_set_text_size(OraclesEnhancedView *view, unsigned size);
+unsigned oracles_enhanced_view_text_size(const OraclesEnhancedView *view);
+/* The framed core shown alone at its own scale (menus=large, oracles_enhanced_view_framed_crop as the host's frame_crop). */
+void oracles_enhanced_view_set_large_menus(OraclesEnhancedView *view, int large);
+/* The host's frame box (oracles_host_run_config's frame_box): 1 when the last composition drew a text box at its size for
+ * the presenter to enlarge, its place in the surface (x, y, width, height) and whether it stands against its bottom edge;
+ * and whatever it drew, with Large or Very large, the width of the box (the game's 144, the wide 208) the large menus'
+ * part takes in and the size (ORACLES_ENHANCED_TEXT_LARGE or XLARGE) it is shown at. */
+int oracles_enhanced_view_text_box_enlarged(void *opaque, uint32_t rect[4], int *bottom, uint32_t *reserve_w, unsigned *size);
+/* The same, and for a check the core image's pixels it shows (`src`, the game's box; 0 for the host's box). */
+int oracles_enhanced_view_text_box_enlarged_source(const OraclesEnhancedView *view, int32_t src[2], int *from_core);
+/* The last composition drew the game's box twice as large from the core's image: its top-left in the surface (`dst`),
+ * the core image's pixels it enlarged, from `src`, `size` across and down; 0 otherwise. */
+int oracles_enhanced_view_text_box_scaled(const OraclesEnhancedView *view, int32_t dst[2], int32_t src[2], unsigned size[2]);
+/* The scale the last composition drew the host's box at, 0 for none. */
+unsigned oracles_enhanced_view_text_box_shown_scale(const OraclesEnhancedView *view);
+/* Compositions that drew a box twice as large, in the world band and over the framed core. */
+void oracles_enhanced_view_text_scale_counts(const OraclesEnhancedView *view, unsigned *world, unsigned *framed);
+/* The model and the source the host's box was drawn from last (text_box.h), for a check. */
+struct OraclesTextBoxModel;
+struct OraclesTextBoxSource;
+const struct OraclesTextBoxModel *oracles_enhanced_view_text_box_model(const OraclesEnhancedView *view, const struct OraclesTextBoxSource **source);
+
 /* `rom` is copied by the ghost's core; it may be freed afterwards. */
 OraclesEnhancedView *oracles_enhanced_view_start(OraclesCore *core, OraclesGuest *guest,
                                                  const uint8_t *rom, size_t rom_size);

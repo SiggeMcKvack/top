@@ -17,6 +17,7 @@
 #include "object_sprites.h"
 #include "ppu.h"
 #include "guest_struct_offsets.h"
+#include "text_box.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -402,6 +403,34 @@ struct OraclesEnhancedView {
     unsigned plain_shown_frames;      /* frames a neighbour holding a fade's palettes was drawn in the band */
     unsigned text_box_frames;         /* frames a text box was moved to the middle of the band */
     unsigned text_box_trail;          /* compositions left where the box is still the box after the game's text flag fell */
+    unsigned host_text_box_trail;     /* the same for the box the host draws */
+    uint32_t host_text_box[ORACLES_TEXT_BOX_WIDTH_MAX * ORACLES_TEXT_BOX_HEIGHT_MAX];   /* the box the host drew last */
+    OraclesTextBoxModel host_text_box_model;   /* and what it drew it from */
+    OraclesTextBoxSource host_text_box_source;
+    int host_text_box_drawn;
+    unsigned wide_pixels, wide_lines;    /* the box the host draws in the surface (oracles_enhanced_view_set_text_box), 0 for the core's */
+    int wide_shown;                      /* the last composition drew it, at (wide_x, wide_y) in the surface */
+    int32_t wide_x, wide_y;
+    OraclesEnhancedHostTextBox wide_box;
+    unsigned wide_frames_world, wide_frames_framed;   /* compositions that drew it, by mode */
+    unsigned wide_uncovered;             /* compositions of a text whose box the host could not draw: the core's shown */
+    unsigned wide_scale;                 /* the scale the last composition drew the host's box at */
+    unsigned text_size;                  /* Text size: ORACLES_ENHANCED_TEXT_* */
+    int large_menus;                     /* the framed core shown alone (menus=large): its box enlarged by the presenter, at every size */
+    int enlarged_shown, enlarged_bottom; /* Large: the box at its size, the presenter enlarging it, at enlarged_rect in the surface */
+    unsigned enlarged_size;              /* at that size: ORACLES_ENHANCED_TEXT_LARGE, or XLARGE with the large menus */
+    int32_t enlarged_rect[4], enlarged_src[2];   /* (x, y, w, h); the core image's pixels it shows, the game's box */
+    int enlarged_from_core;
+    unsigned scaled_trail;               /* the frames after a text, the game's box read without the host's lines */
+    int scaled_shown;                    /* the last composition drew the game's box from the core's image at twice its size, */
+    int32_t scaled_x, scaled_y, scaled_src_x, scaled_src_y;   /* at (x, y) in the surface, from (src_x, src_y) in the core's image, */
+    unsigned scaled_w, scaled_h;         /* that many pixels of it */
+    unsigned scaled_frames_world, scaled_frames_framed;   /* compositions that drew a box twice as large, by mode */
+    int above;                           /* the box to draw above all in the world band: 1 the core's enlarged, 2 the host's */
+    OraclesEnhancedHostTextBox above_box;
+    unsigned above_scale, above_size[2];
+    int above_lower;                     /* the game drew its box in the lower half of its screen */
+    int32_t above_source[2], above_at[2];   /* the core image's pixels it enlarges; its top-left in the surface */
     uint32_t curtain_colour;          /* its colour, read in the core's image while the window still shows it */
     int curtain_colour_valid;
     uint8_t animated_tileset_gfx;    /* the tileset the counts above were seen under */
@@ -758,7 +787,7 @@ void ev_find_area_blurb(OraclesEnhancedView *v);
 void ev_overlay_area_blurb(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 /* The columns of its map the game has not redrawn yet after a warp, over the whole band. */
 void ev_overlay_warp_curtain(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
-/* A dialogue's text box, drawn again at the middle of the band (view_textbox.c). */
+/* A dialogue's text box, drawn again at the middle of the band (view_textbox.c): the core's, or the host's wide box. */
 void ev_overlay_text_box(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
 void ev_phase_observe(OraclesEnhancedView *v);
 void ev_subpixel_layer(OraclesEnhancedView *v, int tracking, int32_t camera_x, int32_t camera_y);
@@ -768,6 +797,11 @@ void ev_subpixel_fixed(OraclesEnhancedView *v, int32_t x, int32_t y, int32_t w, 
 /* Once every drawing is in the band: his pixels another drawing covered go back to the band. */
 void ev_subpixel_settle(OraclesEnhancedView *v);
 void ev_overlay_link_phase(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y);
+/* The host's wide box over the framed core, at the game's box's place, centred on it (view_textbox.c). */
+void ev_overlay_text_box_framed(OraclesEnhancedView *v);
+/* The box that stays above all in the world band, the black outside the part shown included: the host's, or the game's
+ * twice as large (view_textbox.c). */
+void ev_overlay_text_box_above(OraclesEnhancedView *v);
 /* view_hotbar.c: the hotbar of the item hotkeys, drawn last in the HUD band's gutters, in every mode of the surface. */
 void ev_draw_hotbar(OraclesEnhancedView *v);
 void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event);

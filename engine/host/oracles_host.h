@@ -77,6 +77,17 @@ typedef struct oracles_host_video_frame {
      * whole frame. */
     uint32_t crop_x, crop_y, crop_w, crop_h;
     const oracles_host_video_subpixel *subpixel;   /* NULL: shown as it is */
+    /* A part of the frame shown again above it larger, in whole screen pixels (the text box with Text size Large or
+     * Very large): drawn at box_size's factor of k, the frame's whole scale (text_box_enlarge.h: 1 Large, k + ceil(k / 2);
+     * 2 Very large, 2 k), or the next size down, centred on that part across and against its bottom edge when
+     * box_bottom, else its top, where it fits the frame shown; box_w 0: none. */
+    uint32_t box_x, box_y, box_w, box_h;
+    int box_bottom;
+    /* With the part shown alone (crop): the width of a box the backend may show so, whether one shows or not, which the
+     * part takes in too where its own scale holds it, so that the part's scale neither drops nor changes when a box
+     * opens; 0: none. */
+    uint32_t box_reserve_w;
+    unsigned box_size;
 } oracles_host_video_frame;
 
 typedef struct oracles_host_audio_chunk {
@@ -167,6 +178,11 @@ typedef struct oracles_host_run_config {
     /* When set and it returns 1, the frame's band is moved by less than a pixel when it is shown (an uncropped frame). */
     int (*frame_subpixel)(void *opaque, oracles_host_video_subpixel *out);
     void *frame_subpixel_opaque;
+    /* When set and it returns 1, the part of the frame the backend shows again above it larger (oracles_host_video_frame's
+     * box): x, y, width, height, and whether it stands against its bottom edge; whatever it returns, the box's
+     * reserve and size. */
+    int (*frame_box)(void *opaque, uint32_t rect[4], int *bottom, uint32_t *reserve_w, unsigned *size);
+    void *frame_box_opaque;
     /* The surface the frame source fills; 0 means the core screen (160x144). */
     uint32_t frame_width, frame_height;
     /* Once the backend has started (its window is open and sized), before the first frame: what must be ready before

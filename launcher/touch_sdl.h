@@ -23,6 +23,10 @@ typedef struct OraclesTouchScreen {
      * controls keep to its band (oracles_touch_band), drawn straight to the screen from the first frame when the band
      * is not the whole screen. */
     OraclesTouchEdges edges;
+    /* Called once the frame is drawn straight to the screen, before the controls, with where it went: what the backend
+     * draws over the frame (the text box enlarged).  NULL: nothing. */
+    void (*over_frame)(void *opaque, struct SDL_Renderer *renderer, const struct SDL_FRect *to);
+    void *over_frame_opaque;
 } OraclesTouchScreen;
 
 /* 1 when `event` is a finger's, in the renderer's output: *buttons the game's buttons all fingers press now, *pause
