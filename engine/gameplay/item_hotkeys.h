@@ -111,6 +111,9 @@ unsigned oracles_item_hotkeys_filter_keys(OraclesItemHotkeys *hotkeys, uint32_t 
 void oracles_item_hotkeys_reset(OraclesItemHotkeys *hotkeys);
 /* Nothing pending and no simulated press held: what a reset must leave. */
 int oracles_item_hotkeys_idle(const OraclesItemHotkeys *hotkeys);
+/* At rest: no exchange under way, neither a request, nor a simulated press, nor a button's item waiting to come back
+ * (the memory of `equip`'s previous item may stay): the policy may stop without a button keeping a hotkey's item. */
+int oracles_item_hotkeys_at_rest(const OraclesItemHotkeys *hotkeys);
 void oracles_item_hotkeys_live_stats(const OraclesItemHotkeys *hotkeys, OraclesItemHotkeysLiveStats *out);
 /* For the hotbar: whether slot `n`'s request is waiting, and how many of its requests were refused or given up so far. */
 void oracles_item_hotkeys_slot_status(const OraclesItemHotkeys *hotkeys, unsigned n, int *pending, unsigned *dropped);

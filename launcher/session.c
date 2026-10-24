@@ -28,6 +28,7 @@
 #include "session_internal.h"
 
 #include "guest_fingerprint.h"
+#include "home_choices.h"
 #include "home_input.h"
 #include "hotkeys_session.h"
 #include "view.h"
@@ -37,6 +38,7 @@
 #include "route.h"
 #include "sha1.h"
 #include "state_refusal.h"
+#include "text_box.h"
 #include "ui_version.h"
 
 #include <stdarg.h>
@@ -82,53 +84,77 @@ static int load_sram(OraclesCore *core, const char *path, char sha1[41])
 
 /* ---- session ----------------------------------------------------------------- */
 
-/* The cheats from `frame` on, before it runs: the guest attached at the first one turned on in a game that had no hooks
- * (they cost an instruction's check each), and kept until the session ends, its points armed; each change written while
- * recording. */
-static void change_cheats(session *s, uint32_t frame, unsigned cheats)
+/* A change from the pause gives a replayed route's controls back to the player. */
+static void replay_stopped(session *s, uint32_t frame, const char *why)
 {
-    char names[64];
-    if (!s->guest && cheats) {
-        s->guest = oracles_guest_attach(s->core, s->profile);
-        if (!s->guest) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the cheats stay off\n"); return; }
-        oracles_guest_set_frame(s->guest, frame);
-    }
-    if (!s->guest || oracles_guest_set_cheats(s->guest, cheats) != 0) {
-        if (cheats) fprintf(stderr, "oracles: the cheats cannot find their points in this ROM: they stay as they were\n");
-        return;
-    }
-    for (unsigned index = 0; s->recording && index < ORACLES_CHEATS; index++)
-        if ((cheats ^ s->cheats) & 1u << index) oracles_route_writer_cheat(&s->record, frame, oracles_cheat_name(index), (cheats >> index) & 1u);
-    fprintf(stderr, "oracles: cheats from frame %u: %s\n", frame, cheats ? oracles_cheats_format(cheats, NULL, names, sizeof names) : "none");
-    s->cheats = cheats;
-    s->cheats_used |= cheats;
+    if (!s->playing) return;
+    s->playing = 0;
+    fprintf(stderr, "oracles: route replay stopped by %s at frame %u, the player has the controls\n", why, frame);
+    oracles_hotkeys_session_route_over(s->hotkeys);
 }
 
 static void frame_begin(void *opaque, uint32_t frame)
 {
     session *s = opaque;
+    oracles_session_follow_subpixel(s);
     /* The pause's, when they differ from the game's (one turned on and off again changes nothing): a route recorded
      * says so; a replay, which has no pause today (--play is --rom's), would give the controls back. */
     if (s->cheats_pending) {
         s->cheats_pending = 0;
         if (s->cheats_next != s->cheats) {
-            if (s->playing) {
-                s->playing = 0;
-                fprintf(stderr, "oracles: route replay stopped by the cheats changed at frame %u, the player has the controls\n", frame);
-                oracles_hotkeys_session_route_over(s->hotkeys);
-            }
-            change_cheats(s, frame, s->cheats_next);
+            replay_stopped(s, frame, "the cheats changed");
+            oracles_session_change_cheats(s, frame, s->cheats_next);
         }
+    }
+    if (s->swim_pending) {
+        s->swim_pending = 0;
+        if (s->swim_next != s->swim_hold) {
+            replay_stopped(s, frame, "the swim's hold changed");
+            oracles_session_change_swim_hold(s, frame, s->swim_next);
+        }
+    }
+    if (s->text_speed_pending) {
+        s->text_speed_pending = 0;
+        if (s->text_speed_next != s->text_instant) {
+            replay_stopped(s, frame, "the text speed changed");
+            oracles_session_change_text_speed(s, frame, s->text_speed_next);
+        }
+    }
+    if (s->hotkeys_pending) {
+        s->hotkeys_pending = 0;
+        if (s->hotkeys_next != (s->hotkeys ? oracles_hotkeys_session_next_mode(s->hotkeys) : s->hotkeys_mode)) {
+            replay_stopped(s, frame, "the item hotkeys changed");
+            oracles_session_change_hotkeys(s, frame, s->hotkeys_next);
+        }
+    }
+    if (s->window_line >= 0) {   /* the window the pause changed, presentation alone: a replay goes on */
+        if (s->recording) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_WINDOW, s->window_line);
+        s->window_line = -1;
     }
     size_t first = 0;
     const size_t changes = s->playing ? oracles_route_cheats_at(&s->play, frame, &first) : 0;
     for (size_t i = first; i < first + changes; i++) {
         unsigned bit = 0;
         oracles_cheats_parse(s->play.cheats[i].name, NULL, &bit);   /* each known: the replay refused the route otherwise */
-        change_cheats(s, frame, s->play.cheats[i].on ? s->cheats | bit : s->cheats & ~bit);
+        oracles_session_change_cheats(s, frame, s->play.cheats[i].on ? s->cheats | bit : s->cheats & ~bit);
+    }
+    /* A replayed route's `set` lines: the swim's hold and the text speed change the game; the item hotkeys' exchanges are the route's
+     * `equip` lines, their mode the one the player gets after the replay; the window is presentation alone.  An
+     * extension writes each again. */
+    const size_t sets = s->playing ? oracles_route_settings_at(&s->play, frame, &first) : 0;
+    for (size_t i = first; i < first + sets; i++) {
+        const OraclesRouteSetting *set = &s->play.settings[i];
+        if (set->name == ORACLES_ROUTE_SET_SWIM_HOLD) { oracles_session_change_swim_hold(s, frame, set->value); continue; }
+        if (set->name == ORACLES_ROUTE_SET_TEXT_SPEED) { oracles_session_change_text_speed(s, frame, set->value); continue; }
+        if (set->name == ORACLES_ROUTE_SET_ITEM_HOTKEYS) {
+            oracles_hotkeys_session_set_mode(s->hotkeys, (OraclesHotkeysMode)set->value);
+            s->hotkeys_mode = (OraclesHotkeysMode)set->value;
+        } else oracles_session_apply_window(s, set->value);
+        if (s->recording) oracles_route_writer_set(&s->record, frame, set->name, set->value);
     }
     if (s->guest) oracles_guest_set_frame(s->guest, frame);
     if (s->diag) oracles_diagnostics_frame_begin(s->diag, frame);
+    if (s->hotkeys) oracles_session_hotkeys_settled(s, frame, oracles_hotkeys_session_settle(s->hotkeys, stderr));
     oracles_hotkeys_session_frame(s->hotkeys, (struct OraclesEnhancedView *)s->view);
     if (s->check) oracles_frame_check_frame_begin(s->check, frame);
 }
@@ -185,93 +211,6 @@ static void on_command(void *opaque, int command)
     }
 }
 
-/* ---- the pause menu (pause.h) ------------------------------------------------------ */
-
-static int pause_save(void *opaque, char *message, size_t capacity) { return oracles_session_save_state(opaque, message, capacity); }
-static int pause_load(void *opaque, char *message, size_t capacity) { return oracles_session_load_state(opaque, message, capacity); }
-
-static void pause_state_time(void *opaque, char *out, size_t capacity)
-{
-    const session *s = opaque;
-    struct stat file;
-    const struct tm *local = stat(s->state_path, &file) == 0 ? localtime(&file.st_mtime) : NULL;
-    if (!local || !strftime(out, capacity, "%H:%M", local)) { if (capacity) out[0] = 0; }
-}
-
-/* Controls or Display changed the settings: the keys, the colour correction, the scaling, the status bar's width and
- * the screen margin apply at once, the rest at the next Play.  The colour correction applies when Display changed
- * it: --colour-correction holds until then; --screen-margin holds for the run. */
-static int pause_settings_changed(void *opaque)
-{
-    session *s = opaque;
-    OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin };
-    const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, &applied);
-    if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
-        s->colour_applied = s->colour_setting = applied.colour;
-        oracles_core_set_colour_correction(s->core, s->colour_applied);
-        fprintf(stderr, "oracles: colour correction %s\n", s->colour_applied ? "on" : "off");
-    }
-    if (changed & ORACLES_SESSION_CHANGED_FILL) {
-        s->sdl.fill = applied.fill;
-        oracles_sdl_backend_set_fill(&s->backend, s->sdl.fill);
-        fprintf(stderr, "oracles: scaling %s\n", s->sdl.fill ? "fill" : "sharp");
-    }
-    if (changed & ORACLES_SESSION_CHANGED_HUD) {
-        oracles_enhanced_view_set_hud(s->view, applied.hud);
-        fprintf(stderr, "oracles: status bar %s\n", applied.hud ? "full width" : "original");
-    }
-    if (changed & ORACLES_SESSION_CHANGED_MARGIN) {
-        s->sdl.screen_margin = applied.margin;
-        fprintf(stderr, "oracles: screen margin %s\n", oracles_screen_margin_names[applied.margin]);
-        oracles_sdl_backend_set_screen_margin(&s->backend, applied.margin);
-    }
-    oracles_sdl_backend_rebind(&s->backend, &s->sdl);   /* s->sdl's names are the settings' own */
-    return s->sdl.screen_margin;
-}
-
-/* The game's cheats as the pause's Cheats shows them: those the next frame begins with. */
-static unsigned pause_cheats(const session *s) { return s->cheats_pending ? s->cheats_next : s->cheats; }
-
-/* Cheats changed them, from the running game's (--cheats' perhaps): from the frame the game resumes on, the first
- * after the pause. */
-static void pause_cheats_changed(void *opaque, unsigned cheats)
-{
-    session *s = opaque;
-    if (s->cheats_game < 0) return;
-    s->cheats_next = cheats;
-    s->cheats_pending = cheats != s->cheats;
-}
-
-static void session_started(void *opaque)
-{
-    session *s = opaque;
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *frame;
-    int width, height;
-    oracles_sdl_backend_pause_view(&s->backend, &window, &renderer, &frame, &width, &height);
-    oracles_pause_prepare(s->pause, renderer);
-}
-
-static oracles_host_pause_result session_pause(void *opaque)
-{
-    session *s = opaque;
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *frame;
-    int width, height;
-    oracles_sdl_backend_pause_view(&s->backend, &window, &renderer, &frame, &width, &height);
-    oracles_sdl_backend_suspend_audio(&s->backend);
-    oracles_sdl_backend_hold(&s->backend, 1);
-    const int device = oracles_home_menu_device((int)oracles_sdl_backend_menu_source(&s->backend));
-    const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, pause_cheats_changed,
-                                           (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s), s->cheats_game >= 0 };
-    const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
-    if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
-    if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);
-    return result == ORACLES_PAUSE_RESUME ? ORACLES_HOST_PAUSE_RESUME : ORACLES_HOST_PAUSE_QUIT;
-}
-
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
 {
     session *s = opaque;
@@ -283,23 +222,18 @@ static int input_source(void *opaque, uint32_t frame, unsigned *mask)
     return 0;
 }
 
+static unsigned input_filter(void *opaque, uint32_t frame, unsigned mask)
+{
+    const session *s = opaque;
+    return s->hotkeys ? oracles_hotkeys_session_filter(s->hotkeys, frame, mask) : mask;
+}
+
 static void input_sink(void *opaque, uint32_t frame, unsigned mask)
 {
     session *s = opaque;
     if (s->recording) oracles_route_writer_record(&s->record, frame, mask);
 }
 
-static int write_screenshot(const char *path, const uint32_t *pixels, uint32_t width, uint32_t height)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f) return 0;
-    fprintf(f, "P6\n%u %u\n255\n", width, height);
-    for (size_t i = 0; i < (size_t)width * height; i++) {
-        const uint8_t rgb[3] = { (uint8_t)(pixels[i] >> 16), (uint8_t)(pixels[i] >> 8), (uint8_t)pixels[i] };
-        fwrite(rgb, 1, 3, f);
-    }
-    return fclose(f) == 0;
-}
 
 /* ---- the session's steps --------------------------------------------------------- */
 
@@ -316,6 +250,30 @@ static int failed(OraclesSessionResult *result, const char *format, ...)
     va_end(copy);
     va_end(arguments);
     return 0;
+}
+
+/* The compact text lays the texts out again where the language is composed, before the route's replay and the
+ * profile's checks settle the option: decided here as they will settle it, from a replayed route's options (the
+ * compact text and, which turn Enhanced on, the transitions'); English (US) is then composed too.  A compact text the
+ * profile or Faithful refuses lays nothing out: check_profile refuses it or turns it off. */
+static int lay_out_texts(session *s, const OraclesSessionOptions *o, OraclesSessionResult *result)
+{
+    int compact = s->compact_text, wide = s->text_box_wide, enhanced = s->enhanced;
+    OraclesRoute recorded;
+    char error[256];
+    if (o->play_path && oracles_route_read(o->play_path, &recorded, error, sizeof error) == 0) {
+        compact = oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
+        wide = oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
+        enhanced |= oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_TRANSITIONS)
+                  || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_SWIM)
+                  || oracles_route_has_option(&recorded.header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL);
+        oracles_route_free(&recorded);
+    }
+    OraclesLanguageLayout layout = { 0u, 0, 0u, NULL };
+    if (!oracles_session_text_layout(oracles_compat_compact_text(s->profile), oracles_compat_host_text_box(s->profile), enhanced, compact, wide,
+                                     &layout.width, &layout.fixed)) return 1;
+    if (oracles_language_session_lay_out(&s->language, &s->info, &layout, error, sizeof error) != 0) return failed(result, "%s", error);
+    return 1;
 }
 
 /* The ROM, the core and the starting SRAM.  A replayed route brings its own
@@ -343,6 +301,7 @@ static int load_game(session *s, const OraclesSessionOptions *o, OraclesSessionR
         s->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, s->info.game, s->rom, s->rom_size, error, sizeof error);
         if (!s->mod || oracles_mod_session_compose(s->mod, oracles_rom_is_original(&s->info), &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     }
+    if (!lay_out_texts(s, o, result)) return 0;
     if (s->language && oracles_language_session_compose(s->language, &s->rom, &s->rom_size, error, sizeof error) != 0) return failed(result, "%s", error);
     /* The command line's --core, else the core a replayed route was recorded on, else the settings' core= (Display's Core). */
     OraclesCoreKind kind = o->core ? (OraclesCoreKind)(o->core - 1) : (OraclesCoreKind)oracles_settings_core(s->settings);
@@ -413,12 +372,7 @@ static void window_options(session *s, const OraclesSessionOptions *o)
     oracles_settings *prefs = s->settings;
     if (!o->no_window) {
         s->display_hz = oracles_sdl_display_refresh_hz();
-        if (!strcmp(s->vsync, "on")) s->sdl.vsync = 1;
-#ifdef __ANDROID__
-        else if (!strcmp(s->vsync, "auto")) s->sdl.vsync = oracles_settings_auto_vsync(s->display_hz, 1);
-#else
-        else if (!strcmp(s->vsync, "auto")) s->sdl.vsync = oracles_settings_auto_vsync(s->display_hz, 0);
-#endif
+        if (oracles_session_vsync_on(s->vsync, s->display_hz)) s->sdl.vsync = 1;
     }
     s->sdl.pause_menu = s->pause != NULL && !o->no_window;
     /* Over the first frames, the pause's toast when one is due (oracles_pause_toast); dropped at once when none is. */
@@ -429,11 +383,7 @@ static void window_options(session *s, const OraclesSessionOptions *o)
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) s->sdl.key_names[i] = prefs->key_names[i];
     for (unsigned i = 0; i < 4; i++) s->sdl.pad_names[i] = prefs->pad_names[i];
     s->sdl.menu_pad_name = prefs->menu_pad;
-    if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) {
-        for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) { s->sdl.hotkey_key_names[i] = prefs->hotkey_key_names[i]; s->sdl.hotkey_pad_names[i] = prefs->hotkey_pad_names[i]; }
-        s->sdl.hotkey_bind_b = prefs->hotkey_bind_b;
-        s->sdl.hotkey_bind_a = prefs->hotkey_bind_a;
-    }
+    if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) oracles_session_hotkey_keys(s, 1);
 }
 
 /* A game the home screen started plays on without the item hotkeys when they cannot attach to its ROM (one that is
@@ -459,11 +409,30 @@ static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSess
         fprintf(stderr, "oracles: the swim's hold is not qualified for %s; this game plays without it\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->swim_hold = 0;
     }
+    /* The instant text, a setting of every game: the same. */
+    if (s->text_instant && !oracles_compat_text_instant(s->profile)) {
+        if (!from_home) return failed(result, "%s does not support --text-speed instant", s->profile ? oracles_compat_name(s->profile) : "this image");
+        fprintf(stderr, "oracles: the instant text is not qualified for %s; this game plays with the classic text\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->text_instant = 0;
+    }
     /* The cheats, a setting of each Oracle: the same, a fan game playing without them. */
     if (s->cheats && !oracles_compat_cheats(s->profile)) {
         if (!from_home) return failed(result, "%s does not support --cheats", s->profile ? oracles_compat_name(s->profile) : "this image");
         fprintf(stderr, "oracles: the cheats are not qualified for %s; this game plays without them\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->cheats = 0;
+    }
+    /* The compact text changes what the core draws: never in Faithful, where the core's image is shown as it is. */
+    if (s->compact_text && (!oracles_compat_compact_text(s->profile) || !s->enhanced)) {
+        if (!from_home) return failed(result, "--text compact plays in Enhanced alone, on Ages, Seasons and the fan games made on them");
+        fprintf(stderr, "oracles: the compact text is not qualified for %s; this game plays with the classic text\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->compact_text = 0;
+    }
+    /* The wide text box, which the host draws: never in Faithful either, nor where the host's box is not qualified (the
+     * fan games, which keep the game's box). */
+    if (s->text_box_wide && (!oracles_compat_host_text_box(s->profile) || !s->enhanced)) {
+        if (!from_home) return failed(result, "--text-box wide plays in Enhanced alone, on Ages and Seasons");
+        fprintf(stderr, "oracles: the wide text box is not qualified for %s; this game plays with the game's box\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->text_box_wide = 0;
     }
     if (!s->profile) return 1;   /* no hooks at all: attach says so when they are asked for */
     const char *name = oracles_compat_name(s->profile);
@@ -501,10 +470,11 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold || s->cheats || s->cheats_route) {
+        || s->swim_hold || s->swim_route || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide || s->text_instant || s->text_speed_route) {
         s->guest = oracles_guest_attach(s->core, s->profile);
         const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
-                                   && !s->cheats && !s->cheats_route;
+                                   && !s->swim_route && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide && !s->text_instant
+                                   && !s->text_speed_route;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -523,9 +493,15 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     char error[256];
     if (s->mod && oracles_mod_session_attach(s->mod, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
     if (s->language && oracles_language_session_attach(s->language, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
-    if (s->swim_hold) {
-        if (oracles_guest_arm_swim_hold(s->guest) != 0) return failed(result, "the swim's hold cannot find its strokes in this ROM");
-        fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    if (s->swim_hold || s->swim_route) {   /* the tests armed for a replayed route that turns it on later too, answering once on */
+        if (oracles_guest_set_swim_hold(s->guest, 1) != 0 || oracles_guest_set_swim_hold(s->guest, s->swim_hold) != 0)
+            return failed(result, "the swim's hold cannot find its strokes in this ROM");
+        if (s->swim_hold) fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    }
+    if (s->text_instant || s->text_speed_route) {   /* the points armed for a replayed route that turns it on later too, as the swim's hold */
+        if (oracles_guest_set_text_instant(s->guest, 1) != 0 || oracles_guest_set_text_instant(s->guest, s->text_instant) != 0)
+            return failed(result, "the instant text cannot find its points in this ROM");
+        if (s->text_instant) fprintf(stderr, "oracles: text speed instant: each line of the text box whole\n");
     }
     if (s->cheats || s->cheats_route) {   /* the points of those a replayed route turns on later armed too, answering once on */
         char names[64];
@@ -533,6 +509,17 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
             return failed(result, "the cheats cannot find their points in this ROM");
         if (s->cheats) fprintf(stderr, "oracles: cheats on: %s\n", oracles_cheats_format(s->cheats, NULL, names, sizeof names));
         s->cheats_used = s->cheats;
+    }
+    if (s->text_box_wide) {   /* after the language: the font's widths are read in the image it composed */
+        if (oracles_guest_arm_wide_text_box(s->guest, ORACLES_TEXT_BOX_WIDE_PIXELS, !s->compact_text) != 0)
+            return failed(result, "the wide text box cannot find its points in this ROM");
+        unsigned pages = 0;   /* the pages laid out at its width; the others, the game's, centred */
+        const uint32_t *laid = oracles_language_session_laid_pages(s->language, &pages);
+        if (oracles_guest_set_text_box_pages(s->guest, laid, pages) != 0) return failed(result, "out of memory");
+        fprintf(stderr, "oracles: wide text box on: %u pixels of text a line, the %s text\n", ORACLES_TEXT_BOX_WIDE_PIXELS, s->compact_text ? "compact" : "classic");
+    } else if (s->compact_text) {
+        if (oracles_guest_arm_compact_text(s->guest) != 0) return failed(result, "the compact text cannot find its points in this ROM");
+        fprintf(stderr, "oracles: compact text on: the text box's lines in the font's own widths\n");
     }
     if (s->enhanced) {
         s->view = oracles_enhanced_view_start(s->core, s->guest, s->rom, s->rom_size);
@@ -548,8 +535,25 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         }
         const int camera = o->camera_profile ? o->camera_profile : s->settings->camera;
         oracles_enhanced_view_set_camera_profile(s->view, (unsigned)camera);
+        /* Display's Camera: the platform's default at the scale the screen shows the view at, which the first frame
+         * knows (oracles_session_follow_subpixel), else the player's choice; the pause changes it at once. */
+        oracles_enhanced_view_set_subpixel(s->view, oracles_settings_subpixel_camera(s->settings, 0));
+        s->subpixel_followed = !o->no_window;
+        fprintf(stderr, "oracles: camera %s (%s)\n", oracles_enhanced_view_subpixel_on(s->view) ? "smooth" : "pixel",
+                s->settings->subpixel_camera >= 0 ? "subpixel_camera= in the settings" : "the platform's default");
+        oracles_enhanced_view_set_link_phase(s->view, s->settings->link_phase);
         if (o->neighbour_objects) oracles_enhanced_view_set_neighbour_objects(s->view, 1);
-        oracles_enhanced_view_set_hud(s->view, s->settings->hud_full);
+        const int frozen = oracles_settings_quality_of(s->view_level, (int)oracles_core_kind(s->core), s->ghosts) == ORACLES_QUALITY_LOW;
+        oracles_enhanced_view_set_neighbour_animation(s->view, !frozen);   /* the Low quality leaves them in their captured poses */
+        oracles_enhanced_view_set_hud(s->view, s->settings->hud);
+        if (s->text_box_wide) oracles_enhanced_view_set_text_box(s->view, ORACLES_TEXT_BOX_WIDE_PIXELS, ORACLES_TEXT_BOX_GAME_LINES);
+        /* Text size: the command line's, else the settings'; presentation alone, which the pause changes at once.  A
+         * fan game keeps the game's box at its size, as it keeps the box standard. */
+        const int text_size = o->text_size ? o->text_size - 1 : s->settings->text_size;
+        oracles_enhanced_view_set_text_size(s->view, (unsigned)text_size);
+        if (text_size && !oracles_enhanced_view_text_size(s->view))
+            fprintf(stderr, "oracles: text size is not qualified for %s; this game keeps the game's box at its size\n",
+                    s->profile ? oracles_compat_name(s->profile) : "this image");
         /* The ghosts: the command line's, else the settings'; auto, two where four cores leave one to each besides the
          * game's own threads (the sound, the display). */
         const int ghosts = s->ghosts;
@@ -558,7 +562,7 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         fprintf(stderr, "oracles: neighbour ghosts: %d (%s, %d processor cores)\n", oracles_enhanced_view_set_ghosts(s->view, (unsigned)wanted),
                 ghosts == 1 || ghosts == 2 ? "chosen" : "auto", cores);
         fprintf(stderr, "oracles: Enhanced profile on screen (%ux%u): the wide world band, neighbours from the ghost instance with their objects%s, the framed fallback; F3 switches to the framed core; camera profile %d\n",
-                oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view), o->neighbour_objects ? "" : " off", camera);
+                oracles_enhanced_view_width(s->view), oracles_enhanced_view_height(s->view), !o->neighbour_objects ? " off" : frozen ? " frozen (Low quality)" : " animated in place", camera);
     }
     if (s->continuous_transitions && s->guest) {
         s->transition = oracles_room_transition_start(s->guest, s->rom, s->rom_size, s->continuous_swim);
@@ -586,6 +590,28 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     return 1;
 }
 
+/* The host's frame_subpixel: the Enhanced sub-pixel camera's move of the frame just composed. */
+static int view_subpixel(void *opaque, oracles_host_video_subpixel *out)
+{
+    memset(out, 0, sizeof *out);
+    if (!oracles_enhanced_view_subpixel(opaque, &out->x, &out->y, &out->band_top, &out->band_height, &out->layer, &out->layer_x, &out->layer_y,
+                                        &out->layer_w, &out->layer_h, &out->layer_fx, &out->layer_fy)) return 0;
+    out->layer_pitch = ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH;
+    out->patch = oracles_enhanced_view_subpixel_patch(opaque);
+    const uint32_t (*fixed)[4] = NULL;
+    out->fixed_count = oracles_enhanced_view_subpixel_fixed(opaque, &fixed);
+    if (out->fixed_count > ORACLES_HOST_SUBPIXEL_FIXED) out->fixed_count = ORACLES_HOST_SUBPIXEL_FIXED;
+    if (out->fixed_count) memcpy(out->fixed, fixed, out->fixed_count * sizeof out->fixed[0]);
+    return 1;
+}
+
+/* The host's frame_crop: the framed core with the large menus. */
+static int menus_crop(void *opaque, uint32_t rect[4])
+{
+    const session *s = opaque;
+    return s->menus_large && oracles_enhanced_view_framed_crop(s->view, rect);
+}
+
 static void configure(session *s, const OraclesSessionOptions *o, oracles_host_run_config *config)
 {
     memset(config, 0, sizeof *config);
@@ -604,16 +630,31 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
     config->on_command_opaque = s;
     if (o->play_path) { config->input_source = input_source; config->input_source_opaque = s; }
     if (o->record_path) { config->input_sink = input_sink; config->input_sink_opaque = s; }
-    if (s->hotkeys) { config->input_filter = oracles_hotkeys_session_filter; config->input_filter_opaque = s->hotkeys; }
-    /* A game whose cheats the pause may turn on has the frames' callbacks before it has a guest. */
-    if (s->guest || s->cheats_game >= 0) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
+    /* The item hotkeys' filter for a game that has them, or whose pause may turn them on. */
+    if (s->hotkeys || s->hotkeys_game >= 0) { config->input_filter = input_filter; config->input_filter_opaque = s; }
+    /* A game whose pause may change its settings, or whose replayed route does, has the frames' callbacks before it has
+     * a guest. */
+    if (s->guest || s->sdl.pause_menu || s->play.setting_count) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
     if (s->check) { config->frame_source = native_frame; config->frame_source_opaque = s->check; }
-    if (s->sdl.pause_menu) { config->on_started = session_started; config->on_pause = session_pause; config->pause_opaque = s; }
+    if (s->sdl.pause_menu) {
+        config->on_started = oracles_session_started;
+        config->on_pause = oracles_session_pause;
+        config->display_paces_now = oracles_session_display_paces_now;
+        config->pause_opaque = s;
+    }
     if (s->view) {
         config->frame_source = oracles_enhanced_view_frame_source;
         config->frame_source_opaque = s->view;
-        /* The game's menus enlarged: the framed core shown alone, at its own whole scale. */
-        if (s->settings->menus_large) { config->frame_crop = oracles_enhanced_view_framed_crop; config->frame_crop_opaque = s->view; }
+        /* The game's menus enlarged: the framed core shown alone, at its own whole scale, while the pause leaves them so. */
+        s->menus_large = s->settings->menus_large;
+        config->frame_crop = menus_crop;
+        config->frame_crop_opaque = s;
+        config->frame_subpixel = view_subpixel;   /* none while the camera keeps whole pixels */
+        config->frame_subpixel_opaque = s->view;
+        oracles_enhanced_view_set_large_menus(s->view, s->menus_large);
+        /* Text size: the text box shown again larger by the presenter, in whole screen pixels. */
+        config->frame_box = oracles_enhanced_view_text_box_enlarged;
+        config->frame_box_opaque = s->view;
         config->frame_width = oracles_enhanced_view_width(s->view);
         config->frame_height = oracles_enhanced_view_height(s->view);
     }
@@ -626,145 +667,6 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
 }
 
 /* The frames late as the slow game's suggestion counts them (OraclesSessionResult). */
-static uint32_t late_frames(const oracles_host_run_report *report)
-{
-    return report->frames_late > report->frames_over_budget ? report->frames_late : report->frames_over_budget;
-}
-
-/* A game that ran slowly, said in one line: what the home screen suggests after it, or that nothing is lighter. */
-static void report_slow(const session *s, const oracles_host_run_report *report)
-{
-    const uint32_t late = late_frames(report);
-    if (!oracles_settings_ran_slowly(s->enhanced, report->frames_presented, late)) return;
-    static const char *const views[3] = { "Near", "Medium", "Far" };
-    static const char *const qualities[5] = { "Low", "Medium", "High", "Max", "Custom" };
-    const OraclesQuality quality = oracles_settings_quality(s->settings);
-    const int view = s->settings->view >= 0 && s->settings->view < 3 ? s->settings->view : 2;
-    OraclesQuality lighter;
-    int lighter_view;
-    fprintf(stderr, "oracles: the game ran slowly: %u of %u frames late (%.1f %%, over 2 %% for a minute or more), at the %s quality",
-            late, report->frames_presented, 100.0 * late / report->frames_presented, qualities[quality]);
-    if (quality == ORACLES_QUALITY_CUSTOM) fprintf(stderr, " in the %s view", views[view]);
-    if (!oracles_settings_lighter(s->settings, &lighter, &lighter_view)) fprintf(stderr, "; nothing lighter to suggest\n");
-    else if (lighter == ORACLES_QUALITY_CUSTOM) fprintf(stderr, ": the %s view may play smoother (Display > View)\n", views[lighter_view]);
-    else fprintf(stderr, ": %s may play smoother (Display > Quality)\n", qualities[lighter]);
-}
-
-static void report_frames(const session *s, const oracles_host_run_report *report)
-{
-    fprintf(stderr, "oracles: version %s, build %s, core %s\n", ORACLES_VERSION, ORACLES_BUILD, oracles_core_version(s->core));
-    fprintf(stderr, "oracles: %u frames, %u late, %u resyncs, %u saves written to %s\n",
-            report->frames_presented, report->frames_late, report->pacing_resyncs, report->saves_written, s->save.path);
-    /* The pause holds the loop between frames: its time is in no frame's; none of its glyphs should be rasterised here. */
-    if (s->pause)
-        fprintf(stderr, "oracles: pause menu opened %u times; glyphs rasterised during the session's pauses: %u\n",
-                report->pauses, oracles_pause_late_glyphs(s->pause));
-    if (!report->frames_presented || !report->frame_ns_total) return;
-    fprintf(stderr, "oracles: frame work %.2f ms on average, %.2f ms at most (budget 4 ms with hooks); %.2f ms of the average is the presentation%s\n",
-            (double)report->frame_ns_total / report->frames_presented / 1e6, (double)report->frame_ns_max / 1e6,
-            (double)report->present_ns_total / report->frames_presented / 1e6, s->sdl.vsync ? ", which waits for the display under vsync" : "");
-    /* Where the time goes, for the peak a frame's budget allows (12 ms). */
-    fprintf(stderr, "oracles: the worst frame, %u: core %.2f ms, view %.2f ms, present %.2f ms, end %.2f ms; each phase at most: core %.2f, view %.2f, present %.2f, end %.2f ms; frames over 12 ms: %u, over one frame (16.7 ms): %u\n",
-            report->frame_max_index, (double)report->max_frame_core_ns / 1e6, (double)report->max_frame_source_ns / 1e6,
-            (double)report->max_frame_present_ns / 1e6, (double)report->max_frame_end_ns / 1e6,
-            (double)report->core_ns_max / 1e6, (double)report->source_ns_max / 1e6, (double)report->present_ns_max / 1e6, (double)report->end_ns_max / 1e6,
-            report->frames_over_12ms, report->frames_over_16ms);
-    /* The frame budget: past the first second, no
-     * frame's work over one frame, and at most one frame in a thousand
-     * late.  Said here so that a session judges it without arithmetic. */
-    const int held = report->frames_over_budget == 0 && (uint64_t)report->frames_late * 1000u <= report->frames_presented;
-    fprintf(stderr, "oracles: frame budget %s: %u frames whose work, presentation left out, took over one frame past the first second (0 allowed), %u late of %u (1 in 1000 allowed; none counted when the display paces)\n",
-            held ? "held" : "NOT held", report->frames_over_budget, report->frames_late, report->frames_presented);
-    report_slow(s, report);
-}
-
-/* What the session's parts have to say at its end, and their release. */
-static void finish(session *s, const OraclesSessionOptions *o)
-{
-    if (o->screenshot && s->ran) {
-        const uint32_t width = s->view ? oracles_enhanced_view_width(s->view) : ORACLES_SCREEN_WIDTH;
-        const uint32_t height = s->view ? oracles_enhanced_view_height(s->view) : ORACLES_SCREEN_HEIGHT;
-        const uint32_t *pixels = s->view ? oracles_enhanced_view_surface(s->view) : oracles_core_pixels(s->core);
-        const int ok = write_screenshot(o->screenshot, oracles_mod_session_screen(s->mod, pixels, width, height), width, height);
-        if (!ok) fprintf(stderr, "oracles: cannot write %s\n", o->screenshot);
-    }
-    if (s->check) { if (s->ran) oracles_frame_check_report(s->check, stderr); oracles_frame_check_stop(s->check); }
-    if (s->transition) {
-        OraclesRoomTransitionStats stats;
-        oracles_room_transition_stats(s->transition, &stats);
-        fprintf(stderr, "oracles: continuous transitions: %u taken over (%u swum, %u started by a stroke at an edge), Link moved on %u frames (%u swimming), held back by a wall ahead on %u, left alone on %u, palette_refreshes %u (background palettes refreshed after a palette mix outlived the doubled scroll)\n",
-                stats.transitions, stats.swim_transitions, stats.forced_transitions, stats.walked_frames, stats.swum_frames, stats.capped_frames, stats.refused_frames, stats.palette_refreshes);
-        oracles_room_transition_stop(s->transition);
-    }
-    oracles_hotkeys_session_stop(s->hotkeys, stderr);
-    if (s->view) {
-        /* What the session showed black, counted as the harness counts it (enhanced.black_pixels_mean). */
-        OraclesEnhancedBlack black;
-        oracles_enhanced_view_black(s->view, &black);
-        fprintf(stderr, "oracles: black in the band: %.0f pixels a world frame on average, %u at most, over %u world frames from the first full one (frame %u); rooms of the overworld's grid black whole (in the band by a pixel at least, nothing drawn there) for more than %u world frames in a row: %u",
-                black.full_world_frames ? (double)black.pixels / black.full_world_frames : 0.0, black.max, black.full_world_frames, black.first_full,
-                ORACLES_ENHANCED_BLACK_ROOM_FRAMES, black.rooms_over);
-        for (unsigned i = 0; i < black.rooms_over && i < ORACLES_ENHANCED_BLACK_ROOMS_KEPT; i++)
-            fprintf(stderr, "%s%u:%02x from frame %u, %u frames", i ? ", " : " (", black.longest[i].group, black.longest[i].room, black.longest[i].from, black.longest[i].frames);
-        fprintf(stderr, "%s\n", black.rooms_over ? ")" : "");
-        fprintf(stderr, "oracles: black episodes by cause (episodes, world frames with one, the longest in frames, begun in a transition):");
-        for (unsigned k = 0; k < ORACLES_ENHANCED_BLACK_KINDS; k++)
-            fprintf(stderr, "%s %s %u, %u, %u, %u", k ? ";" : "", oracles_enhanced_black_kind_name(k), black.kinds[k].episodes, black.kinds[k].frames, black.kinds[k].longest, black.kinds[k].in_transition);
-        fprintf(stderr, "\n");
-        oracles_enhanced_view_stop(s->view);
-    }
-    if (s->diag) oracles_diagnostics_stop(s->diag);
-    if (s->ran && s->cheats_used) {
-        OraclesGuestCheatCounts c;
-        oracles_guest_cheat_counts(s->guest, &c);
-        fprintf(stderr, "oracles: cheats: %u hits cost no heart, %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
-                c.hits, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
-    }
-    oracles_mod_session_stop(s->mod, NULL);
-    if (s->ran) oracles_language_session_report(s->language, s->guest, "oracles: ", stderr);
-    oracles_language_session_stop(s->language);
-    if (s->guest) oracles_guest_detach(s->guest);
-    if (s->ran && !o->no_window) {
-        unsigned underruns = 0, drops = 0, peak_ms = 0, average_ms = 0;
-        oracles_sdl_backend_audio_report(&s->backend, &underruns, &drops, &peak_ms, &average_ms);
-        fprintf(stderr, "oracles: audio: %u underruns (gaps heard), %u chunks dropped, queue %u ms on average, %u ms at most (target 70 ms; the average is the latency)\n",
-                underruns, drops, average_ms, peak_ms);
-        const oracles_sdl_underrun *log = NULL;
-        const unsigned logged = oracles_sdl_backend_underruns(&s->backend, &log);
-        for (unsigned i = 0; i < logged; i++)
-            fprintf(stderr, "oracles: audio underrun at frame %u: %.1f ms since the previous chunk, which left %u ms queued; the last presentation took %.1f ms\n",
-                    log[i].frame, (double)log[i].since_previous_chunk_ns / 1e6, log[i].previous_chunk_left_ms, (double)log[i].last_present_ns / 1e6);
-        if (underruns > logged) fprintf(stderr, "oracles: audio: %u more underruns not listed\n", underruns - logged);
-        unsigned presents = 0;
-        double seconds = 0.0;
-        const char *renderer = NULL;
-        int renderer_vsync = 0;
-        oracles_sdl_backend_present_report(&s->backend, &presents, &seconds, &renderer, &renderer_vsync);
-        fprintf(stderr, "oracles: vsync %s: renderer %s (vsync %s), %u frames presented in %.1f s, %.2f Hz; ",
-                s->sdl.vsync ? "on" : "off", renderer, renderer_vsync ? "reported" : "not reported",
-                presents, seconds, seconds > 0.0 ? (double)(presents - 1u) / seconds : 0.0);
-        if (!s->sdl.vsync) fprintf(stderr, "the host paced the whole run\n");
-        else if (s->display_unpaced_frame)
-            fprintf(stderr, "the presentation did not wait for the display: vsync off and the host paced from frame %u\n", s->display_unpaced_frame);
-        else fprintf(stderr, "the display paced the whole run\n");
-        double step_average[3], step_max[3];
-        oracles_sdl_backend_present_steps(&s->backend, step_average, step_max);
-        fprintf(stderr, "oracles: presentation by step: texture upload %.2f ms, drawing %.2f ms, SDL_RenderPresent %.2f ms on average; at most %.2f, %.2f and %.2f ms\n",
-                step_average[0], step_average[1], step_average[2], step_max[0], step_max[1], step_max[2]);
-        int fill = 0, filled = 0;
-        oracles_sdl_backend_scaling(&s->backend, &fill, &filled);
-        fprintf(stderr, "oracles: scaling %s: %s\n", fill ? "fill" : "sharp",
-                filled ? "the image filled the screen in its proportions, sampled for pixel art"
-                : fill ? "the image at its largest whole scale in a window (Fill applies in fullscreen)" : "the image at its largest whole scale");
-    }
-    oracles_session_stop_recording(s, "finished");
-    if (s->fingerprints) fclose(s->fingerprints);
-    oracles_route_free(&s->play);
-    if (s->backend_ready) { if (o->no_window) oracles_null_backend_release(&s->backend); else oracles_sdl_backend_release(&s->backend); }
-    if (s->core) oracles_core_destroy(s->core);
-    free(s->rom);
-}
-
 int oracles_session_view_4_3(const OraclesSessionOptions *o, const oracles_settings *settings, struct SDL_Window *window)
 {
     const int aspect = o->aspect ? o->aspect - 1 : settings->aspect;
@@ -779,10 +681,12 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->settings = settings;
     s->pause = o->pause;
     s->screen_margin_option = o->screen_margin;
+    s->text_size_option = o->text_size;
     /* --colour-correction and --vsync hold for this session and are never stored, as camera_profile. */
     s->colour_setting = settings->colour_correction;
     s->colour_applied = o->colour_option ? !strcmp(o->colour_option, "on") : settings->colour_correction;
     s->vsync = o->vsync_option ? o->vsync_option : settings->vsync;
+    s->vsync_setting = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     s->ghosts = o->ghosts ? o->ghosts - 1 : settings->ghosts;
     s->record_path = o->record_path;
     s->enhanced = o->enhanced || o->zoom_out || o->view || o->continuous_transitions || o->continuous_swim || o->continuous_diagonal;
@@ -790,8 +694,13 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->continuous_swim = o->continuous_swim;
     s->continuous_diagonal = o->continuous_diagonal;
     s->swim_hold = o->swim_hold;
+    s->text_instant = o->text_instant == 2;
+    s->text_speed_setting = -1;
     s->cheats = o->cheats;
     s->cheats_game = -1;
+    s->swim_setting = s->hotkeys_game = s->window_setting = s->window_line = -1;
+    s->compact_text = o->compact_text == 2;
+    s->text_box_wide = o->text_box_wide == 2;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near); its size is the options'
      * shape, the screen's, a window taking the surface's, and far fitted to the screen (docs/PLAYING.md). */
     s->view_level = o->view ? o->view - 1 : o->zoom_out ? ORACLES_ENHANCED_FAR : ORACLES_ENHANCED_NEAR;
@@ -801,9 +710,18 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     char why[1024];
     int ok = load_game(s, o, result) && (!o->play_path || oracles_session_replay_route(s, o, why, sizeof why) || failed(result, "%s", why))
           && check_profile(s, o, result) && (!o->record_path || oracles_session_record_route(s, o, why, sizeof why) || failed(result, "%s", why));
-    /* The pause's Cheats change the cheats of an Oracle the home screen started, from the next frame. */
-    if (ok && s->pause && oracles_compat_cheats(s->profile))
-        s->cheats_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
+    /* The pause's Cheats change the cheats of an Oracle the home screen started, from the next frame; Controls its
+     * swim's hold and item hotkeys, where its profile has them; Display, or a replayed route's `set window` lines, the
+     * window of any game that has one. */
+    const int settings_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
+    if (ok && s->pause && oracles_compat_cheats(s->profile)) s->cheats_game = settings_game;
+    if (ok && s->pause && oracles_compat_swim_hold(s->profile)) s->swim_setting = settings->swim_hold;
+    if (ok && s->pause && oracles_compat_text_instant(s->profile)) s->text_speed_setting = settings->text_instant;
+    if (ok && s->pause && oracles_compat_item_hotkeys(s->profile) && s->info.game != ORACLES_GAME_UNKNOWN) {
+        s->hotkeys_game = settings_game;
+        s->hotkeys_setting = (int)settings->item_hotkeys[settings_game];
+    }
+    if (ok && !o->no_window && !oracles_sdl_fullscreen_only()) s->window_setting = settings->window_scale;
     if (ok) {
         window_options(s, o);
         s->backend_ready = o->no_window ? oracles_null_backend_init(&s->backend) : oracles_sdl_backend_init(&s->backend, &s->sdl);
@@ -819,10 +737,10 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
         s->ran = 1;
         s->display_unpaced_frame = report.display_unpaced_frame;
         if (status != ORACLES_HOST_OK) ok = failed(result, "%s", error);
-        report_frames(s, &report);
+        oracles_session_report_frames(s, &report);
         result->enhanced = s->enhanced;
         result->frames_played = report.frames_presented;
-        result->frames_late = late_frames(&report);
+        result->frames_late = oracles_session_late_frames(&report);
         if (o->pretend_slow && s->enhanced) {
             if (result->frames_played < ORACLES_SLOW_FRAMES) result->frames_played = ORACLES_SLOW_FRAMES;
             result->frames_late = result->frames_played;
@@ -830,7 +748,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
         }
         if (!o->no_window) result->window_closed = oracles_sdl_backend_window_closed(&s->backend);
     }
-    finish(s, o);
+    oracles_session_finish(s, o);
     result->route_written = s->route_written;
     free(s);
     return ok ? 0 : 1;

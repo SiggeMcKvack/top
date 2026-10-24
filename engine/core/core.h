@@ -122,6 +122,9 @@ uint8_t *oracles_core_memory(OraclesCore *core, OraclesCoreRegion region, size_t
 
 /* A read of the bus without side effects (no register read clears anything). */
 uint8_t oracles_core_peek(OraclesCore *core, uint16_t address);
+/* `count` bytes written into the VRAM at `offset` of ORACLES_CORE_VRAM's layout (bank 1 from 0x2000), as the PPU will
+ * read them, its caches told: the compact text's reveal, from the vblank hook alone (guest.h). */
+void oracles_core_write_vram(OraclesCore *core, size_t offset, const uint8_t *bytes, size_t count);
 
 typedef struct OraclesCoreRegisters {
     uint16_t af, bc, de, hl, sp, pc;

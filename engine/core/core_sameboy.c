@@ -6,6 +6,7 @@
 #include "gb.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef ORACLES_SAMEBOY_VERSION
 #error "ORACLES_SAMEBOY_VERSION is defined by the build from config/sameboy.json"
@@ -137,6 +138,14 @@ static uint8_t *memory(OraclesCore *core, OraclesCoreRegion region, size_t *size
 
 static uint8_t peek(OraclesCore *core, uint16_t address) { return GB_safe_read_memory(gb_of(core), address); }
 
+/* SameBoy's PPU reads its VRAM as it draws: the bytes are written in place. */
+static void write_vram(OraclesCore *core, size_t offset, const uint8_t *bytes, size_t count)
+{
+    size_t size = 0;
+    uint8_t *vram = GB_get_direct_access(gb_of(core), GB_DIRECT_ACCESS_VRAM, &size, NULL);
+    if (vram && offset + count <= size) memcpy(vram + offset, bytes, count);
+}
+
 static OraclesCoreRegisters registers(const OraclesCore *core)
 {
     const GB_registers_t *r = GB_get_registers(gb_of(core));
@@ -189,6 +198,6 @@ static void hooks_changed(OraclesCore *core)
 
 const OraclesCoreOps oracles_core_sameboy_ops = {
     destroy, set_joypad_bouncing, set_keys, set_colour_correction, convert_rgb555, set_sample_rate, run_frame,
-    sram_size, load_sram, save_sram, state_size, save_state, load_state, memory, peek, registers, set_registers,
+    sram_size, load_sram, save_sram, state_size, save_state, load_state, memory, peek, write_vram, registers, set_registers,
     hooks_changed, "sameboy-" ORACLES_SAMEBOY_VERSION,
 };

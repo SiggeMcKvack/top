@@ -1,12 +1,14 @@
 # The Oracles Project
 
-[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
 
 A faithful, moddable port of Oracle of Ages and Oracle of Seasons for PC, macOS and Android. Your own ROM runs in an emulator core, [SameBoy](https://sameboy.github.io/), unmodified, the accurate reference, or [mGBA](https://mgba.io/)'s Game Boy core, lighter, for small devices (Display's Core); around it, a native host observes the game and presents it:
 
 - **Faithful**: the original image, 160x144, exactly what the game draws;
 - **Enhanced**: a widescreen view with the neighbouring rooms, which the game itself computes in a second instance of the core, a smooth camera, and the status bar repositioned in a band of its own;
-- **gameplay options**: continuous transitions (Link keeps walking through the scrolling transitions), item hotkeys (four keys that use or equip an item without the menu), swimming with a button held rather than tapped (the flippers' A, Ages' mermaid suit), and a drawn-back view that shows three rooms across and two down outdoors;
+- **gameplay options**: continuous transitions (Link keeps walking through the scrolling transitions), item hotkeys (four keys that use or equip an item without the menu), swimming with a button held rather than tapped (the flippers' A, Ages' mermaid suit), cheats (no damage, ammo and rupees that never run out), and a drawn-back view that shows three rooms across and two down outdoors;
+- **languages and text**: French, German, Italian, Spanish and the European English, taken from your own European ROM; a compact text whose letters take their own width, a wider text box, a larger text for small screens, and instant text;
+- **saves**: import a save from another emulator or from the European game, and export a copy to play it elsewhere;
 - **Lua mods**: houses, characters who talk and minigames, which act on the game through the game's own routines and replay exactly;
 - **fan games** from their BPS patch, applied in memory to your ROM:
   - Gifts of Kinomi 1.1.2, built on Oracle of Ages;
@@ -14,6 +16,10 @@ A faithful, moddable port of Oracle of Ages and Oracle of Seasons for PC, macOS 
   - Temple of Seasons 1.073, built on Oracle of Seasons.
 
 Nothing of the game's code is rewritten: the game runs as it is, and the host reads its state. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) says why.
+
+## Download
+
+The [latest release](https://github.com/thibautbus/top/releases/latest) has the port ready to play with your own ROM, for Windows, macOS (Apple Silicon and Intel), Linux and Android 10 or later. On Linux, take the AppImage, `the-oracles-project-X.Y.Z-linux-x86_64.AppImage`: make it executable (`chmod +x`) and run it. If the AppImage does not start, use the `.tar.gz`, a folder that runs once extracted, or run the AppImage with `--appimage-extract-and-run`. Linux ARM64 (Raspberry Pi 5, Asahi Linux...) has the same two files, `-linux-arm64`: experimental, not yet tried on real hardware; feedback welcome. The release notes say how to install each file.
 
 ## Quick start
 
@@ -38,7 +44,7 @@ macOS, Windows (MSYS2) and Android are in [`docs/BUILDING.md`](docs/BUILDING.md)
 
 No ROM, no asset of the games, no data decompressed from a ROM, no code of the games. You provide your own ROM of Oracle of Ages or Oracle of Seasons (US); a fan game needs that ROM and the game's own BPS patch. The addresses and symbol names the host uses come from the [oracles-disasm](https://github.com/Stewmath/oracles-disasm) disassembly, at the commit pinned in `config/disasm.json`, through tables generated from its symbol files; the CI audits that no ROM byte enters the repository. Tests that need a ROM are skipped without one, never simulated.
 
-The port recognises these files by their SHA-1; a patch's is the file as its authors distribute it (the port checks the image it makes):
+The port recognises these files by their SHA-1; a patch's is the file as its authors distribute it (the port checks the image it makes), and a `.zip` is recognised by the one ROM or patch it holds:
 
 | File you provide | Expected SHA-1 |
 |---|---|
@@ -108,6 +114,7 @@ Thanks go to these wonderful people:
   <tr>
     <td align="center" valign="top" width="14.28%"><a href="https://github.com/thibautbus"><img src="https://avatars.githubusercontent.com/thibautbus?s=100" width="100px;" alt="thibautbus"/><br /><sub><b>thibautbus</b></sub></a><br /><a href="https://github.com/thibautbus/top/commits?author=thibautbus" title="Code">💻</a> <a href="https://github.com/thibautbus/top/commits?author=thibautbus" title="Documentation">📖</a> <a href="https://github.com/thibautbus/top/commits?author=thibautbus" title="Maintenance">🚧</a></td>
     <td align="center" valign="top" width="14.28%"><a href="https://github.com/Theeohn"><img src="https://avatars.githubusercontent.com/Theeohn?s=100" width="100px;" alt="Theeohn"/><br /><sub><b>Theeohn</b></sub></a><br /><a href="#userTesting-Theeohn" title="User Testing">📓</a></td>
+    <td align="center" valign="top" width="14.28%"><a href="https://github.com/SiggeMcKvack"><img src="https://avatars.githubusercontent.com/SiggeMcKvack?s=100" width="100px;" alt="SiggeMcKvack"/><br /><sub><b>SiggeMcKvack</b></sub></a><br /><a href="https://github.com/thibautbus/top/commits?author=SiggeMcKvack" title="Code">💻</a></td>
   </tr>
 </table>
 

@@ -10,6 +10,8 @@ static int reload_save_state(OraclesEnhancedCheck *c, int32_t camera_x, const in
     if (!c->saved_core || oracles_core_save_state(c->core, c->saved_core, c->saved_core_size) != 0) return 0;
     if (oracles_enhanced_view_save_state(c->view, c->saved_view, sizeof c->saved_view, &c->saved_view_size) != 0) return 0;
     c->saved_transition_size = oracles_room_transition_save_state(c->transition, c->saved_transition, sizeof c->saved_transition);
+    c->saved_compact_size = oracles_guest_compact_save_state(c->guest, c->saved_compact, sizeof c->saved_compact);
+    c->saved_text_box_size = oracles_guest_text_box_save_state(c->guest, c->saved_text_box, sizeof c->saved_text_box);   /* the host's lines, empty unarmed */
     c->saved_camera = camera_x;
     memcpy(c->saved_shown, shown, sizeof c->saved_shown);
     memcpy(c->saved_room, room, sizeof c->saved_room);
@@ -48,6 +50,8 @@ static int reload_load_state(OraclesEnhancedCheck *c, const int shown[4], const 
     if (oracles_core_load_state(c->core, c->saved_core, c->saved_core_size) != 0) return 0;
     oracles_guest_reset_execution_state(c->guest);
     if (c->saved_transition_size && oracles_room_transition_load_state(c->transition, c->saved_transition, c->saved_transition_size) != 0) return 0;
+    if (c->saved_compact_size && oracles_guest_compact_load_state(c->guest, c->saved_compact, c->saved_compact_size) != 0) return 0;
+    if (c->saved_text_box_size && oracles_guest_text_box_load_state(c->guest, c->saved_text_box, c->saved_text_box_size) != 0) return 0;
     if (oracles_enhanced_view_load_state(c->view, c->saved_view, c->saved_view_size) != 0) return 0;
     if (c->link_sprites) oracles_sprites_forget(c->link_sprites);
     c->have_drawn_link = 0;
@@ -90,6 +94,7 @@ void ec_reload_step(OraclesEnhancedCheck *c, uint32_t frame, int32_t camera_x, c
         if (!reload_load_state(c, shown, room)) return;
         c->reload_done = 1;
         c->reload_frame = frame;
+        c->have_camera = 0;   /* the load puts the camera back where it stood at the save, as a teleport snaps it */
         return;
     }
     if (c->reload_done && !c->reload_settled) {
@@ -277,6 +282,190 @@ void ec_measure_seams(OraclesEnhancedCheck *c, const OraclesEnhancedObservation 
     c->have_last_observation = 1;
 }
 
+/* Walking diagonally in normal play (Link's sprite as drawn moved 3 px or more both ways over the last 8 frames, never
+ * back on either axis): the frames, and those where the camera steps across the walk the other way from its last step
+ * across, the band going through the zigzag of his gait (x and y crossing their pixels on frames of their own). */
+static int sign(int32_t v) { return (v > 0) - (v < 0); }
+
+#define MEASURE_SCALE 4   /* the far view on a 1920x1080 screen */
+
+/* 256ths of a pixel as whole pixels of the screen at MEASURE_SCALE, rounded to the nearest (the band's) or down
+ * (Link's own), as the backend does. */
+static int32_t shown_pixels(int32_t fraction)
+{
+    const int32_t f = fraction * MEASURE_SCALE;
+    return f >= 0 ? (f + 128) / 256 : -((-f + 128) / 256);
+}
+
+static int32_t shown_pixels_down(int32_t fraction)
+{
+    const int32_t f = fraction * MEASURE_SCALE;
+    return f >= 0 ? f / 256 : -((-f + 255) / 256);
+}
+
+/* The band's place (the world's pixel at the screen's left and top) and Link's on the screen, in pixels of the
+ * screen at MEASURE_SCALE, as the backend shows them: the band moved by its fraction, Link drawn apart at his own
+ * where the view hands a layer, else with the band. */
+static void shown_places(OraclesEnhancedCheck *c, const int32_t world[2], int32_t camera_x, int32_t camera_y, int32_t band[2], int32_t link[2])
+{
+    int32_t sx = 0, sy = 0, layer_x = 0, layer_y = 0, layer_fx = 0, layer_fy = 0;
+    uint32_t band_top = 0, band_height = 0, layer_w = 0, layer_h = 0;
+    const uint32_t *layer = NULL;
+    oracles_enhanced_view_subpixel(c->view, &sx, &sy, &band_top, &band_height, &layer, &layer_x, &layer_y, &layer_w, &layer_h, &layer_fx, &layer_fy);
+    band[0] = camera_x * MEASURE_SCALE + shown_pixels(sx); band[1] = camera_y * MEASURE_SCALE + shown_pixels(sy);
+    link[0] = world[0] * MEASURE_SCALE - band[0] + (layer ? shown_pixels_down(layer_fx + sx) : 0);
+    link[1] = world[1] * MEASURE_SCALE - band[1] + (layer ? shown_pixels_down(layer_fy + sy) : 0);
+}
+
+/* The band and Link as the screen at MEASURE_SCALE shows them, each world frame Link is drawn, transitions included:
+ * the change of a step from one frame to the next is a jolt, which a band or a Link moving smoothly keeps under a
+ * pixel or two of the screen.  Those where the picture switches (a transition starting or ending, a text box opening
+ * or closing, Link drawn apart or no longer: the frame of the switch, the one before and the one after) are counted
+ * apart from the others. */
+static void measure_switch_jolts(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, const int32_t world[2], int32_t camera_x, int32_t camera_y)
+{
+    const OraclesGuestTables *t = oracles_guest_tables(c->guest);
+    int32_t sx = 0, sy = 0, layer_x = 0, layer_y = 0, layer_fx = 0, layer_fy = 0;
+    uint32_t band_top = 0, band_height = 0, layer_w = 0, layer_h = 0;
+    const uint32_t *layer = NULL;
+    oracles_enhanced_view_subpixel(c->view, &sx, &sy, &band_top, &band_height, &layer, &layer_x, &layer_y, &layer_w, &layer_h, &layer_fx, &layer_fy);
+    const int state = (ob->in_transition ? 1 : 0) | (oracles_guest_read8(c->guest, t->text_is_active) ? 2 : 0) | (layer ? 4 : 0);
+    int32_t band[2], link[2];
+    shown_places(c, world, camera_x, camera_y, band, link);
+    /* An interior's room shown whole, or the band still in it, its edge opened by a scroll's start (a door left through
+     * the edge), the game's window still, the game in that room still: the band as shown stands where it stood
+     * (enhanced.alone_scroll_band_moves, of enhanced.alone_scroll_frames). */
+    if (!ob->in_transition) {
+        c->alone_whole = oracles_enhanced_view_room_whole(c->view);
+        c->alone_play = c->alone_whole || (ob->world.alone && c->alone_have && c->alone_frame + 1u == frame && c->alone_epoch == ob->epoch
+                                           && band[0] == c->alone_band[0] && band[1] == c->alone_band[1]);
+        c->alone_group = ob->group; c->alone_room = ob->room;
+    }
+    if (c->alone_play && ob->group == c->alone_group && ob->room == c->alone_room && ob->in_scroll && ob->world.alone && ob->window_left == ob->scroll_start_left && ob->window_top == ob->scroll_start_top) {
+        if (c->alone_have && c->alone_frame + 1u == frame && c->alone_epoch == ob->epoch) {
+            c->alone_scroll_frames++;
+            if (band[0] != c->alone_band[0] || band[1] != c->alone_band[1]) c->alone_scroll_band_moves++;
+        }
+    }
+    c->alone_have = 1; c->alone_frame = frame; c->alone_epoch = ob->epoch; c->alone_band[0] = band[0]; c->alone_band[1] = band[1];
+    /* A camera that jumps (enhanced.camera_jumps, a place the view cuts to), Link put elsewhere, start a new measure. */
+    const int32_t largest = MAX_CAMERA_STEP * MEASURE_SCALE;
+    int contiguous = c->jolt_have && c->jolt_frame + 1u == frame && c->jolt_epoch == ob->epoch;
+    for (unsigned a = 0; a < 2u && contiguous; a++)
+        contiguous = band[a] - c->jolt_band[a] <= largest && c->jolt_band[a] - band[a] <= largest && link[a] - c->jolt_link[a] <= 2 * largest && c->jolt_link[a] - link[a] <= 2 * largest;
+    const int edge = contiguous && state != c->jolt_state;
+    if (edge) {
+        c->switch_edges++;
+        c->jolt_edge_frames = 2u;
+        if (c->jolt_pending) {   /* the frame before the switch was a step into it: the switch's too */
+            if (c->jolt_pending_band > c->switch_band_jolt_max) c->switch_band_jolt_max = c->jolt_pending_band;
+            if (c->jolt_pending_link > c->switch_link_jolt_max) c->switch_link_jolt_max = c->jolt_pending_link;
+            c->jolt_pending = 0;
+        }
+    }
+    if (c->jolt_pending) {
+        if (c->jolt_pending_band > c->band_jolt_max) c->band_jolt_max = c->jolt_pending_band;
+        if (c->jolt_pending_link > c->link_jolt_max) c->link_jolt_max = c->jolt_pending_link;
+        c->jolt_pending = 0;
+    }
+    /* A band in whole pixels over the three frames (no fraction there: a cutscene, a shake, a large room) steps as
+     * the camera does, as without the sub-pixel camera: its jolts are not the camera's switches. */
+    c->jolt_fraction_frames = ((contiguous ? c->jolt_fraction_frames << 1 : 0u) | (sx || sy ? 1u : 0u)) & 7u;
+    if (!contiguous) { c->jolt_have_step = 0; c->jolt_edge_frames = 0; }
+    else {
+        int32_t band_step[2], link_step[2], band_jolt = 0, link_jolt = 0;
+        for (unsigned a = 0; a < 2u; a++) {
+            band_step[a] = band[a] - c->jolt_band[a]; link_step[a] = link[a] - c->jolt_link[a];
+            if (c->jolt_have_step) {
+                const int32_t jb = band_step[a] - c->jolt_band_step[a], jl = link_step[a] - c->jolt_link_step[a];
+                if ((jb < 0 ? -jb : jb) > band_jolt) band_jolt = jb < 0 ? -jb : jb;
+                if ((jl < 0 ? -jl : jl) > link_jolt) link_jolt = jl < 0 ? -jl : jl;
+            }
+            c->jolt_band_step[a] = band_step[a]; c->jolt_link_step[a] = link_step[a];
+        }
+        if (!c->jolt_fraction_frames) band_jolt = 0;
+        if (c->jolt_have_step && c->jolt_edge_frames) {
+            if (band_jolt > c->switch_band_jolt_max) c->switch_band_jolt_max = band_jolt;
+            if (link_jolt > c->switch_link_jolt_max) c->switch_link_jolt_max = link_jolt;
+            const size_t used = strlen(c->jolt_list);
+            if (band_jolt >= 2 && used + 24 < sizeof c->jolt_list)
+                snprintf(c->jolt_list + used, sizeof c->jolt_list - used, "%s%u:%" PRId32 "/%" PRId32, used ? " " : "", frame, band_jolt, link_jolt);
+        } else if (c->jolt_have_step) { c->jolt_pending = 1; c->jolt_pending_band = band_jolt; c->jolt_pending_link = link_jolt; }
+        if (c->jolt_edge_frames) c->jolt_edge_frames--;
+        c->jolt_have_step = 1;
+    }
+    int32_t ground[2];
+    for (unsigned a = 0; a < 2u; a++) ground[a] = link[a] + band[a] - world[a] * MEASURE_SCALE;
+    if (contiguous && (layer != NULL) != c->ground_layer && (ob->in_transition || c->ground_transition)) {
+        c->transition_layer_switches++;
+        for (unsigned a = 0; a < 2u; a++) {
+            const int32_t shift = ground[a] > c->ground_offset[a] ? ground[a] - c->ground_offset[a] : c->ground_offset[a] - ground[a];
+            if (shift > c->transition_layer_shift_max) c->transition_layer_shift_max = shift;
+        }
+    }
+    memcpy(c->ground_offset, ground, sizeof ground);
+    c->ground_layer = layer != NULL; c->ground_transition = ob->in_transition;
+    memcpy(c->jolt_band, band, sizeof band); memcpy(c->jolt_link, link, sizeof link);
+    c->jolt_frame = frame; c->jolt_epoch = ob->epoch; c->jolt_state = state; c->jolt_have = 1;
+}
+
+static void measure_camera_wobble(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, const int32_t world[2], int32_t camera_x, int32_t camera_y)
+{
+    const int contiguous = c->wobble_count && c->wobble_frame[(c->wobble_count - 1u) % 9u] + 1u == frame && !ob->in_transition;
+    if (!contiguous) { c->wobble_count = 0; c->wobble_last_across = 0; }
+    if (ob->in_transition) return;
+    c->wobble_world[c->wobble_count % 9u][0] = world[0]; c->wobble_world[c->wobble_count % 9u][1] = world[1];
+    c->wobble_frame[c->wobble_count % 9u] = frame;
+    c->wobble_count++;
+    const int camera_steps = c->wobble_camera_frame + 1u == frame;
+    const int32_t dcx = camera_x - c->wobble_camera[0], dcy = camera_y - c->wobble_camera[1];
+    c->wobble_camera[0] = camera_x; c->wobble_camera[1] = camera_y; c->wobble_camera_frame = frame;
+    /* As shown at MEASURE_SCALE: the band at the camera plus its fraction, Link unmoved where the view draws him apart. */
+    int32_t band[2], link[2];
+    shown_places(c, world, camera_x, camera_y, band, link);
+    const int shown_steps = c->shown_frame + 1u == frame;
+    /* Each axis the band stops on between two of its steps (a jerk), an axis at a time. */
+    unsigned shown_stop = 0;
+    for (unsigned a = 0; a < 2u; a++) {
+        const int moved = shown_steps && band[a] != c->shown_band[a];
+        if (shown_steps && !moved && c->shown_band_moved[a]) shown_stop++;
+        c->shown_band_moved[a] = moved;
+    }
+    int32_t link_step[2] = { 0, 0 }, band_step[2] = { 0, 0 };
+    if (shown_steps) {
+        link_step[0] = link[0] - c->shown_link[0]; link_step[1] = link[1] - c->shown_link[1];
+        band_step[0] = band[0] - c->shown_band[0]; band_step[1] = band[1] - c->shown_band[1];
+    }
+    memcpy(c->shown_band, band, sizeof band); memcpy(c->shown_link, link, sizeof link); c->shown_frame = frame;
+    if (c->wobble_count < 9u || !camera_steps) return;
+    const int32_t *oldest = c->wobble_world[c->wobble_count % 9u];
+    const int32_t mx = world[0] - oldest[0], my = world[1] - oldest[1];
+    if (((mx == 8 || mx == -8) && my == 0) || ((my == 8 || my == -8) && mx == 0)) { c->straight_frames++; c->straight_band_stops += shown_stop; }
+    int steady = (mx >= 3 || mx <= -3) && (my >= 3 || my <= -3);
+    for (unsigned k = 1; k < 9u && steady; k++) {
+        const int32_t *a = c->wobble_world[(c->wobble_count + k - 1u) % 9u], *b = c->wobble_world[(c->wobble_count + k) % 9u];
+        if ((b[0] != a[0] && sign(b[0] - a[0]) != sign(mx)) || (b[1] != a[1] && sign(b[1] - a[1]) != sign(my))) steady = 0;
+    }
+    if (!steady) { c->wobble_last_across = 0; c->shown_last_across = 0; return; }
+    c->diagonal_frames++;
+    c->band_stops += shown_stop;
+    /* The band as shown going back across the walk by 2 px of the screen or more (one is the rounding of a straight line). */
+    const int32_t shown_across = band_step[0] * sign(my) - band_step[1] * sign(mx);
+    if (shown_across >= 2 || shown_across <= -2) {
+        if (c->shown_last_across && sign(shown_across) != c->shown_last_across) c->band_wobble++;
+        c->shown_last_across = sign(shown_across);
+    }
+    if (shown_steps && (link_step[0] || link_step[1])) c->link_screen_moves++;
+    for (unsigned a = 0; a < 2u; a++) {
+        if (link_step[a] && c->shown_link_step[a] && (link_step[a] > 0) != (c->shown_link_step[a] > 0)) c->link_screen_backsteps++;
+        if (link_step[a]) c->shown_link_step[a] = link_step[a];
+    }
+    const int across = sign(dcx * sign(my) - dcy * sign(mx));
+    if (!across) return;
+    if (c->wobble_last_across && across != c->wobble_last_across) c->camera_wobble++;
+    c->wobble_last_across = across;
+}
+
 /* Link's sprite as the frame on screen draws it, in normal play: his tag (a
  * special object, slot 0) among the entries of the OAM that frame showed, its
  * corner placed in the band by the window's place and less the shown camera.
@@ -286,11 +475,32 @@ void ec_measure_seams(OraclesEnhancedCheck *c, const OraclesEnhancedObservation 
  * A camera catching up moves him one way at a time and is not counted.  In a
  * scroll, across its axis alone, where a carry moves him (--continuous-diagonal);
  * along it the band follows the game's own move. */
+/* The special objects other than Link the sub-pixel camera's layer took, each frame, at a fraction of a pixel not
+ * their own: drawn at Link's, they would move against the ground (a companion waiting, a bomb laid). */
+static void measure_layer_objects(OraclesEnhancedCheck *c)
+{
+    const uint64_t taken = oracles_enhanced_view_subpixel_taken(c->view);
+    const uint8_t *oam = oracles_guest_oam(c->guest), *link = oracles_guest_object(c->guest, 0, 0);
+    if (!taken || !c->link_sprites || !oam || !link) return;
+    OraclesSpriteTag tags[ORACLES_SPRITE_TAGS];
+    const unsigned count = oracles_sprites_tags_for_oam(c->link_sprites, oam, tags, ORACLES_SPRITE_TAGS);
+    for (unsigned i = 0; i < count; i++) {
+        if (tags[i].kind != 0u || tags[i].slot == 0u) continue;
+        int in_layer = 0;
+        for (unsigned n = 0; n < tags[i].count && tags[i].first + n < 40u; n++) in_layer |= (taken >> (tags[i].first + n)) & 1u;
+        if (!in_layer) continue;
+        c->layer_objects++;
+        const uint8_t *o = oracles_guest_object(c->guest, tags[i].slot, 0);
+        if (!o || o[ORACLES_OBJ_X] != link[ORACLES_OBJ_X] || o[ORACLES_OBJ_Y] != link[ORACLES_OBJ_Y]) c->layer_objects_off++;
+    }
+}
+
 void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_x, int32_t camera_y)
 {
+    measure_layer_objects(c);
     int found = 0, left = 255, top = 255;
     const uint8_t *oam = oracles_guest_oam(c->guest);
-    if (c->link_sprites && oam && mode == ORACLES_ENHANCED_WORLD && ob->playing && (!ob->in_transition || ob->in_scroll) && !ob->cutscene) {
+    if (c->link_sprites && oam && mode == ORACLES_ENHANCED_WORLD && ob->playing && !ob->cutscene) {
         OraclesSpriteTag tags[ORACLES_SPRITE_TAGS];
         const unsigned count = oracles_sprites_tags_for_oam(c->link_sprites, oam, tags, ORACLES_SPRITE_TAGS);
         for (unsigned i = 0; i < count; i++) {
@@ -304,8 +514,14 @@ void ec_measure_link_backsteps(OraclesEnhancedCheck *c, uint32_t frame, const Or
             }
         }
     }
+    const int32_t world[2] = { ob->window_left + left, ob->window_top + top + oracles_enhanced_view_link_phase_dy(c->view) };
+    /* His place as the frame on screen draws it, from his position rather than his sprites, which lose a column at the
+     * screen's edges. */
+    const int32_t drawn[2] = { ob->world.link_x - ob->link_step_x, ob->world.link_y - ob->link_step_y + oracles_enhanced_view_link_phase_dy(c->view) };
+    if (mode == ORACLES_ENHANCED_WORLD) measure_switch_jolts(c, frame, ob, drawn, camera_x, camera_y);
+    if (ob->in_transition && !ob->in_scroll) found = 0;
     if (!found || (c->have_drawn_link && ob->epoch != c->drawn_link_epoch)) { c->have_drawn_link = 0; if (!found) return; }
-    const int32_t world[2] = { ob->window_left + left, ob->window_top + top };
+    measure_camera_wobble(c, frame, ob, world, camera_x, camera_y);
     const int32_t screen[2] = { world[0] - camera_x, world[1] - camera_y };
     if (c->have_drawn_link) {
         c->link_drawn_steps++;

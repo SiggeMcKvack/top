@@ -9,7 +9,7 @@
 struct OraclesHotkeysSession {
     OraclesGuest *guest;
     unsigned game;                       /* 0 ages, 1 seasons: the slots of settings.txt */
-    OraclesHotkeysMode mode;
+    OraclesHotkeysMode mode, next;       /* next: the mode asked for, taken at rest */
     oracles_settings *settings;
     OraclesItemHotkeys *live;            /* NULL while a route is replayed */
     OraclesItemHotkeysReplay *replay;
@@ -56,7 +56,7 @@ OraclesHotkeysSession *oracles_hotkeys_session_start(OraclesGuest *guest, Oracle
     if (!s) return NULL;
     s->guest = guest;
     s->game = game == ORACLES_GAME_AGES ? 0u : 1u;
-    s->mode = mode;
+    s->mode = s->next = mode;
     s->settings = settings;
     if (route) {
         OraclesItemHotkeysEffect *effects = NULL;
@@ -127,18 +127,47 @@ unsigned oracles_hotkeys_session_filter(void *opaque, uint32_t frame, unsigned m
     return s && s->live ? oracles_item_hotkeys_filter_keys(s->live, frame, mask) : mask;
 }
 
+static void stop_live(OraclesHotkeysSession *s, FILE *report)
+{
+    OraclesItemHotkeysLiveStats stats;
+    unsigned applied = 0, violations = 0;
+    oracles_item_hotkeys_live_stats(s->live, &stats);
+    oracles_guest_inventory_counts(s->guest, &applied, &violations);
+    if (report) fprintf(report, "oracles: item hotkeys: %u key presses, %u exchanges applied, %u uses, %u returns (%u given up, %u still waiting at the end, the latest %u write points after its quiet spell), %u requests dropped after waiting, %u refused; inventory violations %u\n",
+                        stats.requests, stats.applied, stats.uses, stats.returns, stats.returns_abandoned, stats.returns_pending, stats.return_longest_delay, stats.dropped_postponed, stats.dropped_refused, violations);
+    oracles_item_hotkeys_stop(s->live);
+    s->live = NULL;
+}
+
+void oracles_hotkeys_session_set_mode(OraclesHotkeysSession *s, OraclesHotkeysMode mode)
+{
+    if (!s) return;
+    s->next = mode;
+    if (!s->live) { if (s->replay) s->mode = mode; return; }
+    /* The policy stops: a key held now would keep a request or a press going, its release never coming. */
+    if (mode != s->mode)
+        for (unsigned n = 0; n < ORACLES_HOTKEY_SLOTS; n++) oracles_item_hotkeys_key(s->live, n, 0, ORACLES_HOTKEY_PLAIN);
+}
+
+int oracles_hotkeys_session_settle(OraclesHotkeysSession *s, FILE *report)
+{
+    if (!s || s->replay || s->next == s->mode) return 0;
+    if (s->live) {
+        if (!oracles_item_hotkeys_at_rest(s->live)) return 0;
+        stop_live(s, report);
+    }
+    s->mode = s->next;
+    if (s->mode != ORACLES_HOTKEYS_OFF && !start_live(s)) { s->mode = s->next = ORACLES_HOTKEYS_OFF; return -1; }
+    return 1;
+}
+
+OraclesHotkeysMode oracles_hotkeys_session_mode(const OraclesHotkeysSession *s) { return s ? s->mode : ORACLES_HOTKEYS_OFF; }
+OraclesHotkeysMode oracles_hotkeys_session_next_mode(const OraclesHotkeysSession *s) { return s ? s->next : ORACLES_HOTKEYS_OFF; }
+
 void oracles_hotkeys_session_stop(OraclesHotkeysSession *s, FILE *report)
 {
     if (!s) return;
     if (s->replay) end_replay(s);
-    if (s->live) {
-        OraclesItemHotkeysLiveStats stats;
-        unsigned applied = 0, violations = 0;
-        oracles_item_hotkeys_live_stats(s->live, &stats);
-        oracles_guest_inventory_counts(s->guest, &applied, &violations);
-        if (report) fprintf(report, "oracles: item hotkeys: %u key presses, %u exchanges applied, %u uses, %u returns (%u given up, %u still waiting at the end, the latest %u write points after its quiet spell), %u requests dropped after waiting, %u refused; inventory violations %u\n",
-                            stats.requests, stats.applied, stats.uses, stats.returns, stats.returns_abandoned, stats.returns_pending, stats.return_longest_delay, stats.dropped_postponed, stats.dropped_refused, violations);
-        oracles_item_hotkeys_stop(s->live);
-    }
+    if (s->live) stop_live(s, report);
     free(s);
 }

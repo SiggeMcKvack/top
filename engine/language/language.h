@@ -147,12 +147,51 @@ typedef struct OraclesLanguageReport {
     unsigned bytes;      /* the bytes of the texts stored, identical texts once */
     unsigned graphics;         /* the graphics that carry text written in the language */
     unsigned graphics_bytes;   /* their bytes, compressed */
+    /* The compact text's layout (OraclesLanguageLayout), over every text the language has: */
+    unsigned laid_out;         /* the texts laid out again */
+    unsigned layout_kept;      /* those that keep the game's layout by config/vwf_keep_<game>.tsv, or another text's call within a line */
+    unsigned layout_failed;    /* those laid out again that did not hold, which keep the game's layout */
+    unsigned boxes;            /* the boxes of the texts as the game lays them out, */
+    unsigned boxes_laid_out;   /* and as they are served */
 } OraclesLanguageReport;
 
+/* The texts laid out again for the compact text (language_wrap.c): each page's lines filled to `width` pixels, in the
+ * font of the image composed; a width of 0, or no layout, keeps the game's layout.  `fixed`: in that font at the game's
+ * fixed advance (oracles_text_font_fixed), the classic text of a box wider than the game's.  `lines`: the lines of a
+ * box, 0 for the game's two (the only count laid out yet).  `pages`, when not NULL, receives where the pages laid out
+ * again lie in the image composed, each the physical offsets from its first byte to past its last, in increasing order:
+ * every other page a text box shows is laid out as the game lays it out (a page kept, a text kept, English kept), which
+ * the host's wide box centres.  Ages and Seasons in every language, a fan game in its English (which has no
+ * wide box yet). */
+typedef struct OraclesLanguagePages {
+    uint32_t *ranges;        /* pairs: a page's first offset, past its last; the caller's */
+    unsigned capacity;       /* the pairs `ranges` holds */
+    unsigned count;          /* the pairs written */
+    unsigned overflowed;     /* the pages laid out that did not fit, not written */
+} OraclesLanguagePages;
+typedef struct OraclesLanguageLayout {
+    unsigned width;
+    int fixed;
+    unsigned lines;
+    OraclesLanguagePages *pages;
+} OraclesLanguageLayout;
+/* The revision of the code that lays the texts out (language_wrap.c), raised by hand with any change of what it makes. */
+#define ORACLES_LANGUAGE_LAYOUT_REVISION 3u
+/* The SHA-1 of what an image's texts laid out by `layout` depend on besides the texts: the revision, the width, the
+ * fixed advance and the lines when they are not the game's, and the kept texts of the image of `revision`
+ * (config/vwf_keep_<game>.tsv); a savestate taken within a text laid out is tied to it. */
+void oracles_language_layout_digest(const OraclesLanguageLayout *layout, OraclesRomRevision revision, char out[41]);
+
 /* The image with `language` composed into it, from the US ROM of the pack's game, possibly with the mods' houses
- * (mod.h): a buffer the caller frees.  -1 with the reason when the image is not one, or the language does not fit. */
-int oracles_language_compose(const OraclesLanguagePack *pack, OraclesLanguage language, const uint8_t *image, size_t size,
+ * (mod.h), laid out by `layout` (NULL: the game's layout): a buffer the caller frees.  -1 with the reason when the image
+ * is not one, or the language does not fit. */
+int oracles_language_compose(const OraclesLanguagePack *pack, OraclesLanguage language, const uint8_t *image, size_t size, const OraclesLanguageLayout *layout,
                              uint8_t **out, size_t *out_size, OraclesLanguageReport *report, char *error, size_t capacity);
+/* The same for English (US), which has no pack, laid out by `layout`: an index whose texts are the US texts laid out
+ * again, the others kept in English; on the US ROM of SHA-1 `sha1` (the image, possibly with the mods' houses), or on
+ * the image of a fan game made on it, whose own English is so laid out, in the banks it leaves to a language. */
+int oracles_language_compose_english(const char *sha1, const uint8_t *image, size_t size, const OraclesLanguageLayout *layout, uint8_t **out,
+                                     size_t *out_size, OraclesLanguageReport *report, char *error, size_t capacity);
 
 #ifdef __cplusplus
 }

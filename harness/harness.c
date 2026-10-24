@@ -13,77 +13,7 @@
  *
  * --ghost-check DIR runs the ghost instance against every scrolling
  * transition of the route (ghost_check.h). */
-#include "backends.h"
-#include "core.h"
-#include "enhanced_check.h"
-#include "room_transition.h"
-#include "animation_check.h"
-#include "object_sprites_check.h"
-#include "hotkeys_check.h"
-#include "harness_options.h"
-#include "coverage.h"
-#include "neighbour_check.h"
-#include "frame_check.h"
-#include "ghost_check.h"
-#include "guest.h"
-#include "guest_fingerprint.h"
-#include "guest_struct_offsets.h"
-#include "mod_session.h"
-#include "language_session.h"
-#include "bps.h"
-#include "rom.h"
-#include "route.h"
-#include "sha1.h"
-
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
-typedef struct run {
-    OraclesCore *core;
-    const OraclesCompatProfile *profile;
-    OraclesGuest *guest;      /* NULL with --hooks off */
-    OraclesFrameCheck *check; /* NULL without --render-check */
-    OraclesGhostCheck *ghost; /* NULL without --ghost-check */
-    OraclesEnhancedCheck *enhanced; /* NULL without --enhanced-check */
-    OraclesRoomTransition *transition; /* NULL without --continuous-transitions */
-    OraclesCoverage *coverage; /* what the route covers, with a guest */
-    OraclesAnimationCheck *animation; /* the neighbours' animation reader against the live game, with the Enhanced check */
-    OraclesObjectSpritesCheck *object_sprites; /* the objects' sprites built from the game's data against the live OAM, with the Enhanced check */
-    OraclesNeighbourCheck *neighbours; /* NULL without --neighbour-objects-check */
-    OraclesHotkeysCheck *hotkeys; /* with --hotkeys-check, or when the route carries inventory exchanges */
-    OraclesHotkeysLive *hotkeys_live; /* with --hotkeys-live: scripted keys over the route's inputs */
-    unsigned dumps;               /* --dump-at, as many times as wanted */
-    uint32_t dump_at[HARNESS_MAX_DUMPS];
-    const char *dump_path[HARNESS_MAX_DUMPS];
-    OraclesModSession *mod;   /* --mods */
-    OraclesLanguageSession *language;   /* --language */
-    OraclesGame game;
-    OraclesRoute route;
-    FILE *out;
-    FILE *positions;          /* --positions */
-    FILE *keys_read;          /* --keys-read */
-    FILE *frame_times;        /* --frame-times */
-    uint32_t keys_polls;      /* the game's input polls counted by the guest at the last frame's end */
-    uint32_t corrupt_at;      /* 0: never */
-    uint32_t colour_toggle_at; /* --colour-toggle-at, F2 in the launcher; 0: never */
-    unsigned events;
-    size_t journal_writes;
-    const uint8_t *rom;       /* the ROM the transitions read, with them */
-    size_t rom_size;
-    int swam_before;          /* Link swimming at the last frame of normal play, with the continuous transitions */
-    int swam_into;            /* and at the start of the transition in progress */
-    int in_transition, landing;   /* a transition seen in progress; Link swam into the one that just ended */
-    int carried_off;          /* 8.8: what the last transition carried him off its straight path, across its axis */
-    unsigned landing_direction;
-    unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
-    unsigned cheats_changed;  /* the cheats the route's `cheat` lines change, their points armed from the start */
-} run;
+#include "harness_internal.h"
 
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
 {
@@ -118,6 +48,12 @@ static void on_frame_begin(void *opaque, uint32_t frame)
         oracles_cheats_parse(r->route.cheats[i].name, NULL, &bit);
         oracles_guest_set_cheats(r->guest, r->route.cheats[i].on ? cheats | bit : cheats & ~bit);   /* armed from the start: it cannot fail */
     }
+    /* The route's settings changed at this frame: the swim's hold, the instant text; the item hotkeys' mode and the window are notes, the
+     * exchanges being the `equip` lines and the window presentation alone. */
+    for (size_t n = oracles_route_settings_at(&r->route, frame, &first), i = first; i < first + n; i++) {
+        if (r->route.settings[i].name == ORACLES_ROUTE_SET_SWIM_HOLD) oracles_guest_set_swim_hold(r->guest, r->route.settings[i].value);   /* armed from the start */
+        if (r->route.settings[i].name == ORACLES_ROUTE_SET_TEXT_SPEED) oracles_guest_set_text_instant(r->guest, r->route.settings[i].value);   /* the same */
+    }
     if (r->check) oracles_frame_check_frame_begin(r->check, frame);
 }
 
@@ -140,6 +76,7 @@ static void on_frame_end(void *opaque, uint32_t frame)
         if (byte) *byte ^= 0x01;
     }
     if (r->out) oracles_guest_write_fingerprint(bus, r->core, frame, r->out);
+    if (r->guest && oracles_guest_text_instant_armed(r->guest)) oracles_text_speed_check_frame_end(&r->text_speed, r->guest);
     if (r->transition) {
         /* Link swimming into a transition swims through it: the game freezes him, and reads the tile it takes as his own
          * (y+5) again at the first frame it runs after the one the transition ends on.  Out of the water there, where
@@ -214,6 +151,12 @@ static void on_frame_end(void *opaque, uint32_t frame)
         r->journal_writes += count;
         oracles_guest_journal_clear(r->guest);
     }
+    for (unsigned p = 0; p < r->poke_count; p++) if (frame == r->pokes[p].frame) {   /* after the frame's checks: the next frame runs with it */
+        const OraclesGuestSym sym = { r->pokes[p].bank, r->pokes[p].addr };
+        uint8_t *byte = (uint8_t *)oracles_guest_ptr(bus, sym, 1);
+        if (byte) *byte = r->pokes[p].value;
+        else fprintf(stderr, "harness: --poke-at %u %x:%04x: no such byte\n", frame, r->pokes[p].bank, r->pokes[p].addr);
+    }
     if (transient) oracles_guest_detach(bus);
 }
 
@@ -271,22 +214,6 @@ static int compare(const char *a_path, const char *b_path)
     fclose(a);
     fclose(b);
     return result;
-}
-
-/* "normal,lcd-0-1,..." into a bit set of classes that must not be empty. */
-static unsigned parse_expected_classes(const char *list)
-{
-    unsigned mask = 0;
-    while (list && *list) {
-        const char *comma = strchr(list, ',');
-        const size_t length = comma ? (size_t)(comma - list) : strlen(list);
-        for (unsigned i = 0; i < ORACLES_FRAME_CLASSES; i++) {
-            const char *name = oracles_frame_class_name((OraclesFrameClass)i);
-            if (strlen(name) == length && strncmp(name, list, length) == 0) mask |= 1u << i;
-        }
-        list = comma ? comma + 1 : list + length;
-    }
-    return mask;
 }
 
 /* --frame-times reads the real clock: the null backend's own counts a microsecond a reading, to stay deterministic.  The
@@ -354,9 +281,14 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
     char error[256];
     if (r->language && oracles_language_session_attach(r->language, r->guest, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); return 1; }
     r->coverage = oracles_coverage_create(r->guest);   /* what the route covers, written to the summary */
-    if (o->objects_dir) {
+    if (o->objects_dir || o->object_animation) {
         r->neighbours = oracles_neighbour_check_start(rom, rom_size, r->profile, r->core, r->guest, o->objects_dir, o->objects_lead, o->objects_capture);
         if (!r->neighbours) { fprintf(stderr, "harness: the neighbour objects check could not start\n"); return 1; }
+    }
+    if (o->object_animation) {
+        r->object_animation = oracles_object_animation_check_start(r->guest, rom, rom_size, o->objects_dir);
+        if (!r->object_animation) { fprintf(stderr, "harness: the objects' animation check could not start\n"); return 1; }
+        oracles_neighbour_check_set_animation(r->neighbours, r->object_animation);
     }
     if (o->samples_dir) r->check = oracles_frame_check_start(r->guest, r->core, o->samples_dir, 10);
     if (o->ghost_dir) {
@@ -381,149 +313,18 @@ static int start_checks(run *r, const harness_options *o, uint8_t *rom, size_t r
             fprintf(stderr, "harness: %s\n", fitting);
         }
         oracles_enhanced_check_set_camera_profile(r->enhanced, o->enhanced_camera);
-        oracles_enhanced_view_set_hud(oracles_enhanced_check_view(r->enhanced), o->enhanced_hud_full);
+        oracles_enhanced_check_set_link_phase(r->enhanced, o->enhanced_link_phase);
+        oracles_enhanced_check_set_subpixel(r->enhanced, o->enhanced_subpixel);
+        oracles_enhanced_check_subpixel_switch_at(r->enhanced, o->enhanced_subpixel_switch, o->enhanced_subpixel_switches);
+        oracles_enhanced_view_set_hud(oracles_enhanced_check_view(r->enhanced), o->enhanced_hud);
         if (o->enhanced_ghosts > 1u) oracles_enhanced_view_set_ghosts(oracles_enhanced_check_view(r->enhanced), o->enhanced_ghosts);
         oracles_enhanced_check_set_paced(r->enhanced, o->enhanced_paced);
         if (o->enhanced_objects) oracles_enhanced_check_set_neighbour_objects(r->enhanced, 1);
+        oracles_enhanced_view_set_neighbour_animation(oracles_enhanced_check_view(r->enhanced), !o->enhanced_frozen);
         r->animation = oracles_animation_check_start(r->guest, rom, rom_size);
         r->object_sprites = oracles_object_sprites_check_start(r->guest, rom, rom_size);
     }
     return 0;
-}
-
-/* The renderer's verdict against the core, written out and to the summary. */
-static int report_renderer(run *r, const harness_options *o, FILE *summary)
-{
-    int verdict_failed = 0;
-    if (r->check) {
-        oracles_frame_check_report(r->check, stderr);
-        char reason[256];
-        const int pass = oracles_frame_check_verdict(r->check, parse_expected_classes(o->render_expect), reason, sizeof reason);
-        if (!pass) {
-            fprintf(stderr, "renderer: FAIL: %s\n", reason);
-            verdict_failed = 1;
-        } else fprintf(stderr, "renderer: PASS (no mismatch in a compared class, expected classes present, ceilings held)\n");
-        if (summary) {
-            const OraclesFrameStats *stats = oracles_frame_check_stats(r->check);
-            fprintf(summary, "render.verdict=%s\n", pass ? "pass" : "fail");
-            for (unsigned k = 0; k < ORACLES_FRAME_CLASSES; k++)
-                fprintf(summary, "render.%s.frames=%u\nrender.%s.mismatches=%u\n", oracles_frame_class_name((OraclesFrameClass)k), stats->frames[k], oracles_frame_class_name((OraclesFrameClass)k), stats->mismatches[k]);
-            fprintf(summary, "render.late_scroll_lines=%u\n", stats->late_scroll_lines);
-            fprintf(summary, "render.first_tile_lines=%u\n", stats->first_tile_lines);
-        }
-        oracles_frame_check_stop(r->check);
-    }
-    return verdict_failed;
-}
-
-/* What each check found, written to stderr, to its own file and to the summary. */
-/* The continuous transitions: what the policy did, and the writes it made
- * at the vblank of a frame the game did not finish, by transition state. */
-static void report_transitions(run *r, FILE *summary, uint8_t *rom)
-{
-    if (r->transition) {
-        OraclesRoomTransitionStats stats;
-        oracles_room_transition_stats(r->transition, &stats);
-        fprintf(stderr, "continuous transitions: %u taken over, Link moved on %u frames, held back by a wall ahead on %u, left alone on %u (game/room %u, state %u, Link's state %u, not walking %u, airborne %u, swimming %u, under water %u, holding %u, item or hurt %u, animation data %u, a savestate loaded without the policy's progress %u), no animation %u\n",
-                stats.transitions, stats.walked_frames, stats.capped_frames, stats.refused_frames, stats.refused_by[0], stats.refused_by[1], stats.refused_by[2],
-                stats.refused_by[3], stats.refused_by[4], stats.refused_by[8], stats.refused_by[9], stats.refused_by[5], stats.refused_by[6], stats.refused_by[7], stats.refused_by[10],
-                stats.unanimated_frames);
-        fprintf(stderr, "continuous transitions: palettes refreshed after a palette transition on %u\n", stats.palette_refreshes);
-        fprintf(stderr, "continuous transitions: swimming (--continuous-swim): %u taken over, Link moved on %u frames; %u started by his momentum at an edge, the direction not held\n", stats.swim_transitions, stats.swum_frames, stats.forced_transitions);
-        unsigned by_state[8];
-        oracles_guest_vblank_write_counts(r->guest, by_state);
-        fprintf(stderr, "continuous transitions: writes at the vblank of a frame the game did not finish: %u during the load (states 3 and 4), %u during the scroll (state 5), %u elsewhere\n",
-                by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
-        if (summary) fprintf(summary, "transitions.vblank_policy_skipped=%u\n", oracles_guest_vblank_policy_skipped(r->guest));
-        if (summary) fprintf(summary, "transitions.swim_taken=%u\ntransitions.swum_frames=%u\ntransitions.swim_forced=%u\n", stats.swim_transitions, stats.swum_frames, stats.forced_transitions);
-        fprintf(stderr, "continuous transitions: transitions Link swam into and came out of on land where the straight path stays in water: %u\n", r->swim_dropped);
-        if (summary) fprintf(summary, "transitions.swim_dropped=%u\n", r->swim_dropped);
-        fprintf(stderr, "continuous transitions: a diagonal held (--continuous-diagonal) carried Link across the axis on %u frames, withheld on %u (a collision across, the room's collisions not loaded)\n", oracles_guest_transition_carried(r->guest), stats.carry_withheld_frames);
-        if (summary) fprintf(summary, "transitions.carried_frames=%u\ntransitions.carry_asked_frames=%u\ntransitions.carry_withheld_frames=%u\n", oracles_guest_transition_carried(r->guest), stats.carry_asked_frames, stats.carry_withheld_frames);
-        if (summary) fprintf(summary, "transitions.resumed_frames=%u\n", stats.refused_by[10]);
-        if (summary) fprintf(summary, "transitions.taken=%u\ntransitions.walked_frames=%u\ntransitions.refused_frames=%u\ntransitions.unanimated_frames=%u\ntransitions.palette_refreshes=%u\ntransitions.vblank_load_writes=%u\ntransitions.vblank_scroll_writes=%u\ntransitions.vblank_other_writes=%u\n",
-                             stats.transitions, stats.walked_frames, stats.refused_frames, stats.unanimated_frames, stats.palette_refreshes,
-                             by_state[3] + by_state[4], by_state[5], by_state[0] + by_state[1] + by_state[2] + by_state[6] + by_state[7]);
-        oracles_room_transition_stop(r->transition);
-        free(rom);
-    }
-}
-
-static void report_checks(run *r, const harness_options *o, FILE *summary, uint8_t *rom)
-{
-    report_transitions(r, summary, rom);
-    if (o->swim_hold) {
-        unsigned mermaid = 0, flippers = 0;
-        oracles_guest_swim_strokes(r->guest, &mermaid, &flippers);
-        fprintf(stderr, "swim's hold: strokes started by a held button: %u with the mermaid suit, %u with the flippers\n", mermaid, flippers);
-        if (summary) fprintf(summary, "swim.mermaid_strokes=%u\nswim.flippers_strokes=%u\n", mermaid, flippers);
-    }
-    if (o->cheats || r->cheats_changed) {
-        OraclesGuestCheatCounts c;
-        oracles_guest_cheat_counts(r->guest, &c);
-        fprintf(stderr, "cheats: %u hits cost no heart (%u quarters kept), %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
-                c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
-        if (summary) fprintf(summary, "cheats.damage_cancelled=%u\ncheats.health_kept=%u\ncheats.ammo_kept=%u\ncheats.payments_cancelled=%u\ncheats.rupees_kept=%u\ncheats.mod_payments=%u\n",
-                             c.hits, c.health_kept, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
-    }
-    if (r->guest) {
-        unsigned overflow = 0, purged = 0;
-        oracles_guest_dropped_returns(r->guest, &overflow, &purged);
-        if (overflow || oracles_guest_journal_dropped(r->guest))
-            fprintf(stderr, "harness: hooks lost %u return captures to overflow; the journal dropped %zu writes\n", overflow, oracles_guest_journal_dropped(r->guest));
-    }
-    if (r->enhanced) {
-        oracles_enhanced_check_report(r->enhanced, stderr);
-        char path[4096];
-        snprintf(path, sizeof path, "%s/report.txt", o->enhanced_dir);
-        FILE *f = fopen(path, "w");
-        if (f) { oracles_enhanced_check_report(r->enhanced, f); fclose(f); }
-        if (summary) oracles_enhanced_check_summary(r->enhanced, summary);
-        oracles_enhanced_check_stop(r->enhanced);
-    }
-    if (r->ghost) {
-        oracles_ghost_check_report(r->ghost, stderr);
-        oracles_ghost_check_write_reads(r->ghost, o->ghost_dir);
-        char path[4096];
-        snprintf(path, sizeof path, "%s/report.txt", o->ghost_dir);
-        FILE *f = fopen(path, "w");
-        if (f) { oracles_ghost_check_report(r->ghost, f); fclose(f); }
-        if (summary) oracles_ghost_check_summary(r->ghost, summary);
-        oracles_ghost_check_stop(r->ghost);
-    }
-    if (r->neighbours) {
-        oracles_neighbour_check_report(r->neighbours, stdout);
-        if (summary) oracles_neighbour_check_summary(r->neighbours, summary);
-        oracles_neighbour_check_stop(r->neighbours);
-    }
-    if (r->animation) {
-        oracles_animation_check_report(r->animation, stderr);
-        if (summary) oracles_animation_check_summary(r->animation, summary);
-        oracles_animation_check_stop(r->animation);
-        oracles_object_sprites_check_report(r->object_sprites, stderr);
-        if (summary) oracles_object_sprites_check_summary(r->object_sprites, summary);
-        oracles_object_sprites_check_stop(r->object_sprites);
-    }
-    if (r->coverage) {
-        if (summary) oracles_coverage_summary(r->coverage, summary);
-        oracles_coverage_destroy(r->coverage);
-    }
-}
-
-/* The replay of a route's exchanges: 1 when it failed. */
-static int report_hotkeys(run *r, FILE *summary)
-{
-    if (r->hotkeys_live) {
-        if (summary) oracles_hotkeys_live_summary(r->hotkeys_live, summary);
-        return oracles_hotkeys_live_stop(r->hotkeys_live, stderr);
-    }
-    if (!r->hotkeys) return 0;
-    oracles_hotkeys_check_report(r->hotkeys, stderr);
-    const int failed = oracles_hotkeys_check_failed(r->hotkeys);
-    if (failed) fprintf(stderr, "item hotkeys: FAIL\n");
-    if (summary) oracles_hotkeys_check_summary(r->hotkeys, summary);
-    oracles_hotkeys_check_stop(r->hotkeys);
-    return failed;
 }
 
 /* The route's starting SRAM, if any, sits next to it.  Returns 0, or 1 when
@@ -543,18 +344,6 @@ static int load_starting_sram(run *r, const char *route_path)
     }
     if (strcmp(r->route.header.sram_sha1, sha1) != 0) { fprintf(stderr, "harness: the route's starting SRAM does not match %s\n", sram_path); return 1; }
     return 0;
-}
-
-/* The language, the texts the game looked up in it and the graphics composed in it, to stderr and the summary. */
-static void report_language(run *r, FILE *summary)
-{
-    if (!r->language) return;
-    oracles_language_session_report(r->language, r->guest, "harness: ", stderr);
-    unsigned served = 0, english = 0, missing = 0;
-    oracles_guest_language_counts(r->guest, &served, &english, &missing);
-    if (summary) fprintf(summary, "language.code=%s\nlanguage.texts_served=%u\nlanguage.texts_english=%u\nlanguage.texts_missing=%u\nlanguage.graphics=%u\n",
-                         oracles_guest_language(r->guest), served, english, missing, oracles_language_session_graphics(r->language));
-    oracles_language_session_stop(r->language);
 }
 
 /* The ROM, the core and the route: what the replay needs before its checks.
@@ -577,6 +366,33 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
     }
     if (oracles_language_session_note(r->language)[0]) fprintf(stderr, "harness: %s\n", oracles_language_session_note(r->language));
     if (r->language && !o->hooks) { fprintf(stderr, "harness: --language needs the hooks on\n"); free(rom); return 1; }
+    if (oracles_route_read(o->route_path, &r->route, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
+    /* The compact text lays the texts out again where the language is composed: decided before it. */
+    if (oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) && !o->compact_text) {
+        o->compact_text = 1;
+        fprintf(stderr, "harness: the route was recorded with --text compact: the option is on\n");
+    }
+    if (oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && !o->text_box_wide) {
+        o->text_box_wide = 1;
+        fprintf(stderr, "harness: the route was recorded with --text-box wide: the option is on\n");
+    }
+    if (o->compact_text && (!oracles_compat_compact_text(oracles_compat_find(&info)) || !o->enhanced_dir)) {   /* never armed in Faithful: it changes what the core draws */
+        fprintf(stderr, "harness: the compact text plays in Enhanced alone (--enhanced-check), on Ages, Seasons and the fan games made on them; refusing the request and route option\n");
+        free(rom);
+        return 1;
+    }
+    if (o->text_box_wide && (!oracles_compat_host_text_box(oracles_compat_find(&info)) || !o->enhanced_dir)) {   /* the host draws the box: Enhanced alone */
+        fprintf(stderr, "harness: the wide text box plays in Enhanced alone (--enhanced-check), on Ages and Seasons; refusing the request and route option\n");
+        free(rom);
+        return 1;
+    }
+    /* The texts laid out again: at the game's 128 pixels for the compact text, at the wide box's 192, classic or compact. */
+    const OraclesLanguageLayout layout = { o->text_box_wide ? ORACLES_TEXT_BOX_WIDE_PIXELS : 128u, !o->compact_text, 0u, NULL };
+    if ((o->compact_text || o->text_box_wide) && oracles_language_session_lay_out(&r->language, &info, &layout, error, sizeof error) != 0) {
+        fprintf(stderr, "harness: %s\n", error);
+        free(rom);
+        return 1;
+    }
     /* A mod's houses are in the image before the core exists. */
     if (o->mods_count) {
         r->mod = oracles_mod_session_start(o->mods_dirs, o->mods_count, info.game, rom, rom_size, error, sizeof error);
@@ -588,7 +404,6 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         }
     }
     if (r->language && oracles_language_session_compose(r->language, &rom, &rom_size, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
-    if (oracles_route_read(o->route_path, &r->route, error, sizeof error) != 0) { fprintf(stderr, "harness: %s\n", error); free(rom); return 1; }
     /* The core: --core's, else the one the route was recorded on. */
     const OraclesCoreKind kind = o->core_given ? (OraclesCoreKind)o->core_kind : oracles_route_core_mgba(&r->route.header) ? ORACLES_CORE_MGBA : ORACLES_CORE_SAMEBOY;
     const OraclesCoreOptions options = { o->sample_rate_hz, o->colour_correction, kind, 0 };   /* no audio unless asked: --sample-rate proves the state does not depend on it */
@@ -648,6 +463,21 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
     if (route_swim_hold && !o->swim_hold) {
         o->swim_hold = 1;
         fprintf(stderr, "harness: the route was recorded with --swim-hold: the option is on\n");
+    }
+    r->swim_changed = oracles_route_sets(&r->route, ORACLES_ROUTE_SET_SWIM_HOLD);
+    if (r->swim_changed && !oracles_compat_swim_hold(r->profile)) {
+        fprintf(stderr, "harness: the route changes the swim's hold, which %s does not support\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
+    const int route_text_instant = oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_INSTANT);
+    r->text_speed_changed = oracles_route_sets(&r->route, ORACLES_ROUTE_SET_TEXT_SPEED);
+    if ((o->text_instant || route_text_instant || r->text_speed_changed) && !oracles_compat_text_instant(r->profile)) {
+        fprintf(stderr, "harness: %s does not support the instant text; refusing the request and route option\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
+    if (route_text_instant && !o->text_instant) {
+        o->text_instant = 1;
+        fprintf(stderr, "harness: the route was recorded with --text-speed instant: the option is on\n");
     }
     unsigned route_cheats = 0;
     char cheat_names[64];
@@ -712,8 +542,14 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
         if (r->enhanced) oracles_enhanced_check_set_transition(r->enhanced, r->transition);
         oracles_room_transition_set_diagonal(r->transition, o->continuous_diagonal);
     }
-    if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
-        fprintf(stderr, "harness: --swim-hold needs the hooks on, and the swim's strokes found in the ROM\n");
+    if ((o->swim_hold || r->swim_changed)
+        && (!r->guest || oracles_guest_set_swim_hold(r->guest, 1) != 0 || oracles_guest_set_swim_hold(r->guest, o->swim_hold) != 0)) {
+        fprintf(stderr, "harness: --swim-hold and a route's set swim-hold lines need the hooks on, and the swim's strokes found in the ROM\n");
+        return 1;
+    }
+    if ((o->text_instant || r->text_speed_changed)
+        && (!r->guest || oracles_guest_set_text_instant(r->guest, 1) != 0 || oracles_guest_set_text_instant(r->guest, o->text_instant) != 0)) {
+        fprintf(stderr, "harness: --text-speed instant and a route's set text-speed lines need the hooks on, and the text's points found in the ROM\n");
         return 1;
     }
     /* The points of the cheats the route changes later are armed now, with those on from the start: a point once armed
@@ -722,6 +558,35 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
         && (!r->guest || oracles_guest_set_cheats(r->guest, o->cheats | r->cheats_changed) != 0 || oracles_guest_set_cheats(r->guest, o->cheats) != 0)) {
         fprintf(stderr, "harness: --cheats and a route's cheat lines need the hooks on, and the cheats' points found in the ROM\n");
         return 1;
+    }
+    if (o->text_box_wide) {   /* after the language: the font's widths are read in the image it composed */
+        if (!r->guest || !r->enhanced || oracles_guest_arm_wide_text_box(r->guest, ORACLES_TEXT_BOX_WIDE_PIXELS, !o->compact_text) != 0) {
+            fprintf(stderr, "harness: --text-box wide needs --enhanced-check, the hooks on, and the text box's points found in the ROM\n");
+            return 1;
+        }
+        unsigned pages = 0;   /* the pages laid out at its width; the others, the game's, centred */
+        const uint32_t *laid = oracles_language_session_laid_pages(r->language, &pages);
+        if (oracles_guest_set_text_box_pages(r->guest, laid, pages) != 0) { fprintf(stderr, "harness: out of memory\n"); return 1; }
+        oracles_enhanced_check_set_wide_text_box(r->enhanced, ORACLES_TEXT_BOX_WIDE_PIXELS, 2u);
+    } else if (o->compact_text && (!r->guest || oracles_guest_arm_compact_text(r->guest) != 0)) {
+        fprintf(stderr, "harness: --text compact needs the hooks on, and its points found in the ROM\n");
+        return 1;
+    }
+    if (o->text_size) {
+        if (!r->enhanced) { fprintf(stderr, "harness: --text-size large or xlarge needs --enhanced-check\n"); return 1; }
+        oracles_enhanced_check_set_text_size(r->enhanced, (unsigned)o->text_size);
+    }
+    if (o->surface_scale > 1u && r->enhanced) oracles_enhanced_check_set_surface_scale(r->enhanced, o->surface_scale);
+    if (o->menus_large) {
+        if (!r->enhanced) { fprintf(stderr, "harness: --menus-large needs --enhanced-check\n"); return 1; }
+        oracles_enhanced_check_set_large_menus(r->enhanced, 1);
+    }
+    if (o->text_box_check) {
+        if (!r->enhanced || (!o->text_box_wide && oracles_guest_arm_text_box(r->guest, ORACLES_TEXT_BOX_GAME_PIXELS) != 0)) {
+            fprintf(stderr, "harness: --text-box-check needs --enhanced-check, Ages or Seasons, and the text box's routines\n");
+            return 1;
+        }
+        oracles_enhanced_check_set_text_box(r->enhanced, 1);
     }
     if (o->hotkeys_live.mode) {
         if (!r->guest || o->hotkeys_dir || r->route.action_count) { fprintf(stderr, "harness: --hotkeys-live needs the hooks on, and a route without exchanges of its own\n"); return 1; }
@@ -761,6 +626,7 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     r->corrupt_at = o->corrupt_at;
     r->colour_toggle_at = o->colour_toggle_at;
     r->dumps = o->dumps; memcpy(r->dump_at, o->dump_at, sizeof r->dump_at); memcpy(r->dump_path, o->dump_path, sizeof r->dump_path);
+    r->poke_count = o->poke_count; memcpy(r->pokes, o->pokes, sizeof r->pokes);
     if (o->out_path) { r->out = fopen(o->out_path, "wb"); if (!r->out) { fprintf(stderr, "harness: cannot write %s\n", o->out_path); return 1; } }
     if (o->positions_path) { r->positions = fopen(o->positions_path, "wb"); if (!r->positions) { fprintf(stderr, "harness: cannot write %s\n", o->positions_path); return 1; } }
     if (o->frame_times_path) { r->frame_times = fopen(o->frame_times_path, "wb"); if (!r->frame_times) { fprintf(stderr, "harness: cannot write %s\n", o->frame_times_path); return 1; } fputs("frame\tcore_us\tsource_us\tpresent_us\tend_us\n", r->frame_times); }
@@ -811,10 +677,10 @@ int main(int argc, char **argv)
         if (!summary) fprintf(stderr, "harness: cannot write %s\n", o.summary_path);
         else fprintf(summary, "frames=%u\nresult=%s\nsram.sha1=%s\n", report.frames_presented, result == ORACLES_HOST_OK ? "ok" : "error", sram_sha1);
     }
-    const int renderer_failed = report_renderer(&r, &o, summary);
-    const int verdict_failed = report_hotkeys(&r, summary) || renderer_failed;
-    report_checks(&r, &o, summary, rom);
-    report_language(&r, summary);
+    const int renderer_failed = harness_report_renderer(&r, &o, summary);
+    const int verdict_failed = harness_report_hotkeys(&r, summary) || renderer_failed;
+    harness_report_checks(&r, &o, summary, rom);
+    harness_report_language(&r, summary);
     oracles_mod_session_stop(r.mod, summary);
     if (summary) fclose(summary);
     if (r.guest) oracles_guest_detach(r.guest);

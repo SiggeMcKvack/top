@@ -4,14 +4,13 @@
  *
  * An icon is never drawn by the host: the status bar draws the item of B
  * with the first two entries of the OAM and that of A with the next two.
- * At a sound vblank the view reads those entries, their tiles in the VRAM and
- * their object palette, and keeps the opaque pixels, centred in 16 x 16, as
- * the icon of that item and variant.  None of the game's display logic is
+ * At a sound vblank the view reads those entries and their tiles in the VRAM,
+ * and keeps the opaque pixels, centred in 16 x 16, as the icon of that item and
+ * variant: each pixel the object palette and colour it is drawn with, whose
+ * colour is read from the live palettes when the icon is shown, so that it
+ * fades, flashes and changes with the status bar's own.  None of the game's display logic is
  * redone (treasureDisplayData and its level tables stay the game's), so an
- * item that changes level, or a modified ROM, is followed by itself.
- *
- * The same gutters take the status bar's own background with the bar drawn
- * full width (hud=full), read from the bar as the game keeps it. */
+ * item that changes level, or a modified ROM, is followed by itself. */
 #include "view_internal.h"
 
 #include "hotbar.h"
@@ -48,6 +47,9 @@ void oracles_enhanced_view_hotbar_proof(const OraclesEnhancedView *v, unsigned *
     if (outside) *outside = v->hotbar_outside_gutters;
 }
 
+unsigned oracles_enhanced_view_hotbar_fade_checked(const OraclesEnhancedView *v) { return v->hotbar_fade_checked; }
+int oracles_enhanced_view_hotbar_drawn(const OraclesEnhancedView *v) { return v->hotbar_drawn; }
+
 void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event)
 {
     if (event->type == ORACLES_EVENT_TREASURE) v->hotbar_icons_stale = 1;   /* how an item changes level, and icon (fact 8) */
@@ -58,8 +60,9 @@ void ev_hotbar_event(OraclesEnhancedView *v, const OraclesGuestEvent *event)
 
 static unsigned variant_index(uint8_t variant) { return variant == 0xffu ? 0u : (unsigned)variant + 1u < HOTBAR_ICON_VARIANTS ? (unsigned)variant + 1u : 0u; }
 
-/* The pixels of one 8 x 8 or 8 x 16 object into the box, colour 0 transparent. */
-static void draw_object(uint16_t box[16][BOX_W], const uint8_t *entry, int left, unsigned height, const uint8_t *vram0, const uint8_t *vram1, const uint8_t *palettes)
+/* The pixels of one 8 x 8 or 8 x 16 object into the box, colour 0 transparent: its palette and colour, 4 x palette +
+ * colour. */
+static void draw_object(uint16_t box[16][BOX_W], const uint8_t *entry, int left, unsigned height, const uint8_t *vram0, const uint8_t *vram1)
 {
     const uint8_t attr = entry[3];
     const uint8_t *vram = (attr & 0x08u) ? vram1 : vram0;
@@ -74,8 +77,7 @@ static void draw_object(uint16_t box[16][BOX_W], const uint8_t *entry, int left,
             const unsigned index = ((lo >> bit) & 1u) | (((hi >> bit) & 1u) << 1);
             const int x = x0 + (int)col, y = y0 + (int)row;
             if (!index || x < 0 || x >= (int)BOX_W || y < 0 || y >= 16) continue;
-            const uint8_t *colour = palettes + ((attr & 7u) * 4u + index) * 2u;
-            box[y][x] = (uint16_t)(((colour[0] | (colour[1] << 8)) & 0x7fffu) | ORACLES_HOTBAR_ICON_OPAQUE);
+            box[y][x] = (uint16_t)(((attr & 7u) * 4u + index) | ORACLES_HOTBAR_ICON_OPAQUE);
         }
     }
 }
@@ -83,9 +85,9 @@ static void draw_object(uint16_t box[16][BOX_W], const uint8_t *entry, int left,
 /* The icon of the item on `button` (0 B, 1 A) from the status bar's sprites; 1 when one was kept. */
 static int capture_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, uint8_t variant)
 {
-    const uint8_t *oam = oracles_guest_oam(v->guest), *io = oracles_guest_io(v->guest), *palettes = oracles_guest_obj_palettes(v->guest);
+    const uint8_t *oam = oracles_guest_oam(v->guest), *io = oracles_guest_io(v->guest);
     const uint8_t *vram0 = oracles_guest_vram(v->guest, 0), *vram1 = oracles_guest_vram(v->guest, 1);
-    if (!oam || !io || !palettes || !vram0 || !vram1 || !(io[IO_LCDC] & 0x02u)) return 0;
+    if (!oam || !io || !vram0 || !vram1 || !(io[IO_LCDC] & 0x02u)) return 0;
     const unsigned height = (io[IO_LCDC] & 0x04u) ? 16u : 8u;
     const uint8_t *first = oam + button * 8u, *second = first + 4u;
     /* Both entries in the status bar's sixteen lines: a hidden one ($e0), or one the game gave to something else, is no icon. */
@@ -93,8 +95,8 @@ static int capture_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, u
     const int left = (int)(first[1] < second[1] ? first[1] : second[1]) - 8;
     uint16_t box[16][BOX_W];
     memset(box, 0, sizeof box);
-    draw_object(box, second, left, height, vram0, vram1, palettes);
-    draw_object(box, first, left, height, vram0, vram1, palettes);   /* the lower index on top, as the hardware has it */
+    draw_object(box, second, left, height, vram0, vram1);
+    draw_object(box, first, left, height, vram0, vram1);   /* the lower index on top, as the hardware has it */
     unsigned min_x = BOX_W, max_x = 0, min_y = 16, max_y = 0;
     for (unsigned y = 0; y < 16u; y++) for (unsigned x = 0; x < BOX_W; x++) if (box[y][x]) {
         if (x < min_x) min_x = x;
@@ -118,56 +120,25 @@ static int capture_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, u
 
 static uint32_t screen_colour(void *opaque, uint16_t rgb555);
 
-/* The status bar as the game keeps it: the maps of its bar, the LCDC it gives those lines, the VRAM and the palettes on
- * screen (oracles_enhanced_bar_pixel). */
-static int status_bar(OraclesEnhancedView *v, OraclesEnhancedBar *bar)
+/* An icon's pixel in the live object palettes: RGB555 with the opaque bit, 0 transparent. */
+static uint16_t icon_rgb555(const uint8_t *palettes, uint16_t pixel)
 {
-    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
-    const uint8_t *regs = oracles_guest_ptr(v->guest, t->gfx_regs1, 1u);
-    bar->tiles = oracles_guest_ptr(v->guest, t->status_bar_tile_map, 0x40u);
-    bar->attributes = oracles_guest_ptr(v->guest, t->status_bar_attribute_map, 0x40u);
-    bar->vram0 = oracles_guest_vram(v->guest, 0);
-    bar->vram1 = oracles_guest_vram(v->guest, 1);
-    bar->palettes = oracles_guest_bg_palettes(v->guest);
-    bar->lcdc = regs ? regs[0] : 0u;
-    return regs && bar->tiles && bar->attributes && bar->vram0 && bar->vram1 && bar->palettes;
+    if (!(pixel & ORACLES_HOTBAR_ICON_OPAQUE) || !palettes) return 0;
+    const uint8_t *c = palettes + (pixel & 31u) * 2u;
+    return (uint16_t)(((c[0] | (c[1] << 8)) & 0x7fffu) | ORACLES_HOTBAR_ICON_OPAQUE);
 }
+
+/* A colour of the live palettes as the core's image shows it (the game's fade is in the palettes already). */
+static uint32_t live_colour(void *opaque, uint16_t rgb555) { return oracles_core_convert_rgb555(((OraclesEnhancedView *)opaque)->core, rgb555); }
 
 /* The status bar's own pixel on its sixteen lines, and whether it hides a sprite there: the tile's priority bit set and
  * its colour not 0, as the hardware decides it.  The bar writes an item's count over its icon this way. */
 static int bar_pixel(OraclesEnhancedView *v, unsigned x, unsigned y, uint16_t *rgb555, int *hides_sprite)
 {
     OraclesEnhancedBar bar;
-    if (!status_bar(v, &bar)) return 0;
+    if (!ev_status_bar(v, &bar)) return 0;
     *rgb555 = oracles_enhanced_bar_pixel(&bar, x, y, hides_sprite);
     return 1;
-}
-
-static uint32_t core_colour(void *opaque, uint16_t rgb555) { return oracles_core_convert_rgb555(((OraclesEnhancedView *)opaque)->core, rgb555); }
-
-/* The gutters beside the status bar with the bar drawn full width: in the world band alone, and a room's load drawn
- * under it, the framed core's bar standing in the middle of the drawn-back surface, or being no bar at all (a menu, a
- * cutscene).  The counts are the world frames'. */
-const uint32_t *ev_hud_fill(OraclesEnhancedView *v, OraclesEnhancedMode mode)
-{
-    OraclesEnhancedBar bar;
-    const uint32_t *core = oracles_core_pixels(v->core);   /* the bar's lines, which a scroll's redrawn window copies as they are */
-    if (!v->hud_full || mode != ORACLES_ENHANCED_WORLD || !core || !status_bar(v, &bar)) return NULL;
-    const unsigned filled = oracles_enhanced_hud_fill(&bar, core_colour, v, core, v->hud_fill);
-    if (!v->load_band) {
-        if (filled) v->hud_frames++;
-        v->hud_lines_kept += 2u * ORACLES_ENHANCED_HUD_HEIGHT - filled;
-    }
-    return filled ? v->hud_fill : NULL;
-}
-
-void oracles_enhanced_view_set_hud(OraclesEnhancedView *v, int full) { v->hud_full = full != 0; }
-int oracles_enhanced_view_hud(const OraclesEnhancedView *v) { return v->hud_full; }
-
-void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *v, unsigned *frames, unsigned *lines_kept)
-{
-    if (frames) *frames = v->hud_frames;
-    if (lines_kept) *lines_kept = v->hud_lines_kept;
 }
 
 int oracles_enhanced_view_load_band(const OraclesEnhancedView *v, int32_t *area_left, int32_t *area_top)
@@ -192,7 +163,8 @@ static int verify_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, ui
 {
     const uint8_t *oam = oracles_guest_oam(v->guest);
     const uint32_t *core = oracles_core_pixels(v->core);
-    if (!oam || !oracles_guest_vram(v->guest, 0) || !oracles_guest_vram(v->guest, 1) || !core || !v->hotbar_icons || v->fade_effective != 0) return 0;
+    const uint8_t *palettes = oracles_guest_obj_palettes(v->guest);
+    if (!oam || !oracles_guest_vram(v->guest, 0) || !oracles_guest_vram(v->guest, 1) || !core || !v->hotbar_icons || !palettes) return 0;
     const uint8_t *first = oam + button * 8u, *second = first + 4u;
     for (unsigned i = 0; i < 2u; i++) { const uint8_t y = first[i * 4u]; if (y < 16u || y >= 32u) return 0; }
     const unsigned vi = variant_index(variant);
@@ -202,7 +174,7 @@ static int verify_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, ui
     unsigned wrong = 0;
     for (unsigned y = 0; y < ORACLES_HOTBAR_ICON; y++)
         for (unsigned x = 0; x < ORACLES_HOTBAR_ICON; x++) {
-            const uint16_t colour = icon[y * ORACLES_HOTBAR_ICON + x];
+            const uint16_t colour = icon_rgb555(palettes, icon[y * ORACLES_HOTBAR_ICON + x]);
             const int opaque = (colour & ORACLES_HOTBAR_ICON_OPAQUE) != 0;
             const int sx = x0 + (int)x, sy = y0 + (int)y;
             if (sx < 0 || sx >= (int)ORACLES_ENHANCED_CORE_WIDTH || sy < 0 || sy >= 16) { wrong += (unsigned)opaque; continue; }
@@ -210,7 +182,7 @@ static int verify_icon(OraclesEnhancedView *v, unsigned button, uint8_t item, ui
             int hidden = 0;
             if (!bar_pixel(v, (unsigned)sx, (unsigned)sy, &bar, &hidden)) { wrong++; continue; }
             const uint16_t expected = opaque && !hidden ? (uint16_t)(colour & 0x7fffu) : bar;
-            if (core[(unsigned)sy * ORACLES_ENHANCED_CORE_WIDTH + (unsigned)sx] != screen_colour(v, expected)) wrong++;
+            if (core[(unsigned)sy * ORACLES_ENHANCED_CORE_WIDTH + (unsigned)sx] != live_colour(v, expected)) wrong++;
         }
     v->hotbar_icons_checked++;
     if (wrong) v->hotbar_icon_wrong++;
@@ -252,10 +224,11 @@ static uint32_t screen_colour(void *opaque, uint16_t rgb555)
 
 #define RGB555(r, g, b) ((uint16_t)((r) | ((g) << 5) | ((b) << 10)))
 
-/* The status bar's own background, where it stands now: the colour most of its top line has, fade and all. */
+/* The status bar's own background: the colour most of its top line has, fade and all, where it stands centred, or in
+ * the core's image where it is laid out. */
 static uint32_t status_bar_background(const OraclesEnhancedView *v)
 {
-    const uint32_t *line = v->surface + v->hud_top * v->size.width + oracles_enhanced_hud_x(v->size);
+    const uint32_t *line = v->hud_laid ? oracles_core_pixels(v->core) : v->surface + v->hud_top * v->size.width + oracles_enhanced_hud_x(v->size);
     uint32_t best = line[0];
     unsigned best_count = 0;
     for (unsigned x = 0; x < ORACLES_ENHANCED_CORE_WIDTH; x += 8u) {
@@ -266,15 +239,20 @@ static uint32_t status_bar_background(const OraclesEnhancedView *v)
     return best;
 }
 
-/* The surface but for the four slots: what drawing them must leave as it was. */
+/* The surface but for the four slots: what drawing them must leave as it was (beside the bar centred, the bar's own
+ * columns; laid out, the band's but the slots'). */
 static uint64_t hash_outside_slots(const OraclesEnhancedView *v)
 {
     uint64_t h = ORACLES_HASH_SEED;
     const uint32_t *surface = v->surface;
     const unsigned width = v->size.width, gutter = oracles_enhanced_hud_x(v->size), core = ORACLES_ENHANCED_CORE_WIDTH, top = v->hud_top;
+    const unsigned slots_at = v->hud_place.hotbar_at, slots_end = slots_at + ORACLES_HOTBAR_SLOTS * ORACLES_HOTBAR_SLOT_WIDTH;
     h = oracles_guest_hash((const uint8_t *)surface, (size_t)top * width * sizeof *surface, h);   /* above the status bar: the framed drawn-back surface's border */
-    for (unsigned y = top; y < top + ORACLES_ENHANCED_HUD_HEIGHT; y++)
-        h = oracles_guest_hash((const uint8_t *)(surface + y * width + gutter), core * sizeof *surface, h);
+    for (unsigned y = top; y < top + ORACLES_ENHANCED_HUD_HEIGHT; y++) {
+        if (!v->hud_laid) { h = oracles_guest_hash((const uint8_t *)(surface + y * width + gutter), core * sizeof *surface, h); continue; }
+        h = oracles_guest_hash((const uint8_t *)(surface + y * width), slots_at * sizeof *surface, h);
+        h = oracles_guest_hash((const uint8_t *)(surface + y * width + slots_end), (width - slots_end) * sizeof *surface, h);
+    }
     return oracles_guest_hash((const uint8_t *)(surface + (top + ORACLES_ENHANCED_HUD_HEIGHT) * width),
                               (size_t)(v->size.height - top - ORACLES_ENHANCED_HUD_HEIGHT) * width * sizeof *surface, h);
 }
@@ -290,25 +268,32 @@ static int bar_blank(const OraclesEnhancedView *v)
 
 void ev_draw_hotbar(OraclesEnhancedView *v)
 {
-    if (!v->hotbar_shown || !oracles_hotbar_fits(v->size.width, ORACLES_ENHANCED_CORE_WIDTH)) return;
+    v->hotbar_drawn = 0;
+    if (!v->hotbar_shown || !(v->hud_laid ? v->hud_place.hotbar : oracles_hotbar_fits(v->size.width, ORACLES_ENHANCED_CORE_WIDTH))) return;
     OraclesGuestInventoryState s;
     oracles_guest_inventory_state(v->guest, &s);
     capture_icons(v, &s);
-    /* The hotbar is shown when a slot's key can do something, and only then: in normal play, with the status bar it
-     * belongs to on screen as the game draws it.  Not over the title, the file select, a cutscene, a warp, a menu or a
-     * text, where no item can be played, nor during a fade, where four slots on a white flash say nothing (as
-     * the opening cutscene's white flashes show).  A scroll between two rooms keeps it: the
-     * request only waits for the scroll to end.  So does a room's load (a door, stairs: the warp, the game loading
-     * the room under the same cutscene without scrolling), which refuses a request: the band stays as in play, in the
-     * load drawn under it and in the world frames that end it, but not over the blank between the rooms, the bar
-     * one colour with the LCD off. */
-    const OraclesGuestInventoryVerdict refusal = oracles_guest_inventory_refusal(&s);
-    const int room_load = refusal == ORACLES_INVENTORY_REFUSED_NOT_IN_PLAY
-        && (v->load_band || (s.game_state == 2u && s.cutscene_index == s.cutscene_loading_room)) && !bar_blank(v);
-    if ((refusal != ORACLES_INVENTORY_APPLIED && !room_load) || v->fade_effective != 0) {
+    /* The hotbar belongs to the status bar in play: it is shown whenever the game's bar is on screen, a text, a scroll
+     * and a room's load included, its icons in the live palettes, so that they fade and flash with the bar's own; not
+     * over the title, the file select, a menu, nor in a cutscene (the view framing its picture, or the game's cutscene
+     * index, a room's load apart), nor over the blank between two rooms, the bar one colour.  A key refused shows on
+     * its slot alone. */
+    const int room_load = v->load_band || (s.game_state == 2u && s.cutscene_index == s.cutscene_loading_room);
+    if ((v->hotbar_framed && !room_load) || (v->observation.cutscene && !room_load) || !ev_status_bar_shown(v) || bar_blank(v)) {
         v->hotbar_icons_shown = 0;
         return;
     }
+    const uint8_t *live = oracles_guest_obj_palettes(v->guest);
+    static uint16_t icons[ORACLES_HOTBAR_SLOTS][ORACLES_HOTBAR_ICON * ORACLES_HOTBAR_ICON];
+    /* In a fade or a flash, each frame, the icons of B and A, the bar's sprites believed, against the bar's own (to
+     * check that they follow it). */
+    if (v->hotbar_verify && v->fade_effective != 0)
+        for (unsigned b = 0; b < 2u; b++) {
+            const uint8_t item = s.slots[b], variant = oracles_guest_item_variant(&s, item);
+            if (item && item < ORACLES_GUEST_ITEM_LABELS && v->hotbar_icons && v->hotbar_have_icon[item][variant_index(variant)]
+                && v->hotbar_on_button[b].item == item && v->hotbar_on_button[b].frames >= SOUND_FRAMES && verify_icon(v, b, item, variant))
+                v->hotbar_fade_checked++;
+        }
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
     OraclesHotbarSlotView views[ORACLES_HOTBAR_SLOTS];
     char labels[ORACLES_HOTBAR_SLOTS][5];
@@ -330,7 +315,9 @@ void ev_draw_hotbar(OraclesEnhancedView *v)
         if (v->frame < v->hotbar_refused_until[n]) view->frame = ORACLES_HOTBAR_FRAME_REFUSED;
         const unsigned vi = variant_index(slot->variant);
         if (slot->item < ORACLES_GUEST_ITEM_LABELS && v->hotbar_icons && (v->hotbar_have_icon[slot->item][vi] || v->hotbar_have_icon[slot->item][0])) {
-            view->icon = v->hotbar_icons[slot->item][v->hotbar_have_icon[slot->item][vi] ? vi : 0u];
+            const uint16_t *kept = v->hotbar_icons[slot->item][v->hotbar_have_icon[slot->item][vi] ? vi : 0u];
+            for (unsigned i = 0; i < ORACLES_HOTBAR_ICON * ORACLES_HOTBAR_ICON; i++) icons[n][i] = icon_rgb555(live, kept[i]);
+            view->icon = icons[n];
             v->hotbar_icons_shown++;
         } else {
             /* No icon yet: the generated label, or the identifier of an item the tables do not know (a modified ROM). */
@@ -342,8 +329,10 @@ void ev_draw_hotbar(OraclesEnhancedView *v)
     }
     const OraclesHotbarPalette palette = {
         status_bar_background(v), screen_colour(v, RGB555(3, 3, 3)), screen_colour(v, RGB555(19, 16, 11)),
-        screen_colour(v, RGB555(25, 5, 5)), screen_colour(v, RGB555(31, 30, 27)), screen_colour(v, RGB555(29, 5, 5)), screen_colour, v };
+        screen_colour(v, RGB555(25, 5, 5)), screen_colour(v, RGB555(31, 30, 27)), screen_colour(v, RGB555(29, 5, 5)), live_colour, v };
     const uint64_t before = v->hotbar_verify ? hash_outside_slots(v) : 0;
-    oracles_hotbar_draw(v->surface + v->hud_top * v->size.width, v->size.width, ORACLES_ENHANCED_CORE_WIDTH, views, &palette);
+    if (v->hud_laid) oracles_hotbar_draw_at(v->surface + v->hud_top * v->size.width, v->size.width, v->hud_place.hotbar_at, views, &palette);
+    else oracles_hotbar_draw(v->surface + v->hud_top * v->size.width, v->size.width, ORACLES_ENHANCED_CORE_WIDTH, views, &palette);
     if (v->hotbar_verify && hash_outside_slots(v) != before) v->hotbar_outside_gutters++;
+    v->hotbar_drawn = 1;
 }

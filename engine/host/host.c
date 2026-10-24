@@ -255,6 +255,12 @@ int oracles_host_run(const oracles_host_run_config *config, const oracles_host_b
                  * during it; the pacing takes the clock as it finds it rather than catching up the pause, and the display's
                  * watch leaves the pause out of its window. */
                 buttons = 0;
+                const int paces = config->display_paces_now ? config->display_paces_now(config->pause_opaque) : -1;
+                if (paces >= 0 && paces != watching) {
+                    watching = paces;
+                    pacing = !paces;
+                    memset(&watch, 0, sizeof watch);   /* a new watch: the display's first window judged from the resume */
+                }
                 if (pacing) {
                     p.deadline_ns = backend->monotonic_ns(backend->opaque);
                     p.remainder = 0;
@@ -313,13 +319,26 @@ int oracles_host_run(const oracles_host_run_config *config, const oracles_host_b
         const uint64_t source_started_ns = frame_started_ns ? backend->monotonic_ns(backend->opaque) : 0;
         oracles_host_video_frame frame = {
             config->frame_source ? config->frame_source(config->frame_source_opaque) : oracles_core_pixels(config->core),
-            frame_width, frame_height, frame_width * sizeof(uint32_t), 0, 0, 0, 0
+            frame_width, frame_height, frame_width * sizeof(uint32_t), 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0
         };
         uint32_t crop[4];
         if (config->frame_crop && config->frame_crop(config->frame_crop_opaque, crop) && crop[2] && crop[3]
             && crop[0] + crop[2] <= frame_width && crop[1] + crop[3] <= frame_height) {
             frame.crop_x = crop[0]; frame.crop_y = crop[1]; frame.crop_w = crop[2]; frame.crop_h = crop[3];
         }
+        oracles_host_video_subpixel subpixel;
+        if (!frame.crop_w && config->frame_subpixel && config->frame_subpixel(config->frame_subpixel_opaque, &subpixel)
+            && subpixel.band_top + subpixel.band_height <= frame_height)
+            frame.subpixel = &subpixel;
+        uint32_t box[4], reserve = 0;
+        int bottom = 0;
+        unsigned box_size = 0;
+        if (config->frame_box && config->frame_box(config->frame_box_opaque, box, &bottom, &reserve, &box_size) && box[2] && box[3]
+            && box[0] + box[2] <= frame_width && box[1] + box[3] <= frame_height) {
+            frame.box_x = box[0]; frame.box_y = box[1]; frame.box_w = box[2]; frame.box_h = box[3]; frame.box_bottom = bottom;
+        }
+        frame.box_reserve_w = reserve <= frame_width ? reserve : 0;
+        frame.box_size = box_size;
         const uint64_t source_done_ns = frame_started_ns ? backend->monotonic_ns(backend->opaque) : 0;
         if (!backend->present_frame(backend->opaque, &frame)) {
             set_error(error, error_capacity, "backend frame presentation failed");

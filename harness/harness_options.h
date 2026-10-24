@@ -8,6 +8,10 @@
 #include <stdint.h>
 
 #define HARNESS_MAX_DUMPS 64u
+#define HARNESS_MAX_POKES 64u
+
+/* A byte of WRAM written at the end of a frame (--poke-at): a test's way into a scene no route reaches. */
+typedef struct harness_poke { uint32_t frame; uint8_t bank; uint16_t addr; uint8_t value; } harness_poke;
 
 /* What the command line asks of a run. */
 typedef struct harness_options {
@@ -23,19 +27,33 @@ typedef struct harness_options {
     uint32_t dump_at[HARNESS_MAX_DUMPS];
     const char *dump_path[HARNESS_MAX_DUMPS];
     unsigned dumps;
+    harness_poke pokes[HARNESS_MAX_POKES];
+    unsigned poke_count;
     uint32_t surface_at[16];                  /* --surface-at, with the Enhanced check */
     const char *surface_path[16];
     unsigned surfaces;
     unsigned objects_lead, enhanced_budget, enhanced_camera, ghost_lead;
+    int enhanced_link_phase, enhanced_subpixel;
+    uint32_t enhanced_subpixel_switch[8];   /* --enhanced-subpixel-switch: the frames the sub-pixel camera switches at, as from the pause */
+    unsigned enhanced_subpixel_switches;
     uint32_t enhanced_reload_at, frames, corrupt_at, sample_rate_hz, colour_toggle_at;
     unsigned enhanced_ghosts;                 /* --enhanced-ghosts: ghosts working at once, threaded (1 by default) */
+    int object_animation;                  /* --object-animation-check: the objects' animation from the game's data against the live game */
+    int enhanced_frozen;                   /* --neighbour-animation off: a neighbour's objects frozen, as the Low quality has them */
     int objects_capture, enhanced_objects, enhanced_threaded, enhanced_paced, enhanced_zoom_out, continuous_transitions, continuous_swim, continuous_diagonal;
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
+    int text_instant;                      /* --text-speed instant: each line of the text box whole */
     unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */
+    int compact_text;                      /* --text compact: the text box's lines in the font's own widths */
+    int text_box_check;                    /* --text-box-check: the text box drawn by the host, against the core's image */
+    int text_box_wide;                     /* --text-box wide: the host's wide box, 192 pixels of text, classic or compact */
+    int text_size;                         /* --text-size: 0 normal, 1 large (three halves, the presenter's), 2 xlarge (twice, in the band) */
+    int menus_large;                       /* --menus-large: the framed core shown alone, its box the presenter's at every Text size */
+    unsigned surface_scale;                /* --surface-scale K: the surfaces written K times as large, the box with Large as the presenter shows it */
     int enhanced_level, enhanced_aspect;      /* --view (near unless --zoom-out) and --aspect: an OraclesEnhancedLevel and OraclesEnhancedAspect */
     int aspect_given;                         /* --aspect named the shape */
     unsigned screen_w, screen_h;              /* --screen: the screen the view's shape comes from, which far fits to; 0: none */
-    int enhanced_hud_full;                    /* --hud full: the status bar drawn full width; original (0) by default, which every row hashed before it keeps */
+    int enhanced_hud;                         /* --hud full|wide: the status bar drawn full width, or laid out (OraclesEnhancedHud); original (0) by default, which every row hashed before it keeps */
     int hooks, colour_correction, ghost_threaded, ghost_trace, ghost_trace_load, compare_session;
     int core_kind;                            /* --core: an OraclesCoreKind; without it, the route's (SameBoy, or mGBA for a route that says so) */
     int core_given;

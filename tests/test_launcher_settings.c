@@ -1,14 +1,17 @@
 /* The home screen's keys of settings.txt: each game's ROM, European ROM, language, profile and
  * gameplay options and the launcher window's size are written and read back,
  * a file without them keeps the defaults, a value the launcher does not know
- * leaves its key alone, and names that were never the launcher's (zoom-out as
- * a profile, per-game profile and transitions keys) are neither read nor
- * written; menu_pad= is taken as the session plays it. */
+ * leaves its key alone, names that were never the launcher's (zoom-out as
+ * a profile, per-game profile and transitions keys) are not read, a key it does
+ * not know is kept as it was, spaces and capitals are read as meant; menu_pad=
+ * is taken as the session plays it; the end of a session reports the predictions
+ * of the transitions, the wrong ones and those left to the load. */
 #include "compositor.h"
 #include "home_choices.h"
 #include "session.h"
 #include "settings.h"
 #include "core.h"
+#include "room_transition.h"
 #include "ui_controls_nav.h"
 #include "ui_page_nav.h"
 
@@ -47,6 +50,78 @@ static int file_has_line(const char *path, const char *wanted)
     return found;
 }
 
+/* The lines of `path`, without their line ends, at most `capacity`: their count. */
+static unsigned read_lines(const char *path, char lines[][256], unsigned capacity)
+{
+    unsigned count = 0;
+    FILE *f = fopen(path, "r");
+    while (f && count < capacity && fgets(lines[count], sizeof lines[0], f)) lines[count][strcspn(lines[count], "\r\n")] = 0, count++;
+    if (f) fclose(f);
+    return count;
+}
+
+/* The index of the line `wanted` among `count`, or -1. */
+static int line_at(char lines[][256], unsigned count, const char *wanted)
+{
+    for (unsigned i = 0; i < count; i++) if (!strcmp(lines[i], wanted)) return (int)i;
+    return -1;
+}
+
+/* The keys this version does not know (a later version's, a test build's): kept as they were, each after the key read
+ * before it, at the file's start before any, at its end when that key is not written, and once however often the file is
+ * read and written; a comment is not a key. */
+static void unknown_keys(const char *path)
+{
+    static char lines[400][256];
+    oracles_settings s;
+    write_text(path, "later_first=1\n# a comment of the player's\nprofile=faithful\nlater_lens = Wide View\nview=near\n"
+                     "quality_hint=low\nlater_after_hint=C:\\Games\\a=b\n");
+    oracles_settings_defaults(&s);
+    snprintf(s.path, sizeof s.path, "%s", path);
+    oracles_settings_load(&s);
+    CHECK(s.profile == ORACLES_PROFILE_FAITHFUL && s.view == 0 && s.quality_hint == ORACLES_QUALITY_LOW);
+    s.quality_hint = -1;   /* not written: what followed it goes at the end */
+    for (int round = 0; round < 2; round++) {
+        CHECK(oracles_settings_store(&s) == 1);
+        const unsigned count = read_lines(path, lines, 400);
+        const int first = line_at(lines, count, "later_first=1"), lens = line_at(lines, count, "later_lens = Wide View");
+        const int hint = line_at(lines, count, "later_after_hint=C:\\Games\\a=b");
+        CHECK(first >= 0 && first < line_at(lines, count, "colour_correction=1") && lines[first - 1][0] == '#');
+        CHECK(lens == line_at(lines, count, "profile=faithful") + 1);
+        CHECK(hint == (int)count - 1);
+        CHECK(line_at(lines, count, "# a comment of the player's") < 0);
+        int copies = 0;
+        for (unsigned i = 0; i < count; i++) copies += !strncmp(lines[i], "later_", 6);
+        CHECK(copies == 3);
+        oracles_settings_defaults(&s);
+        snprintf(s.path, sizeof s.path, "%s", path);
+        oracles_settings_load(&s);
+    }
+    /* A file without any keeps none. */
+    write_text(path, "profile=faithful\n");
+    oracles_settings_load(&s);
+    CHECK(s.unknown[0] == 0);
+}
+
+/* Spaces around a key's name and its value, and capitals, as a player writes them by hand: `update_check = OFF` turns
+ * the check off, and is written back update_check=off; a path keeps its own spaces and case. */
+static void spaces_and_case(const char *path)
+{
+    oracles_settings s;
+    write_text(path, "update_check = OFF\n Menus=Large \t\nVIEW= Medium\nrom_ages =  C:\\My Games\\Ages.gbc  \nkey_a = X\nghosts= 2\n");
+    oracles_settings_defaults(&s);
+    snprintf(s.path, sizeof s.path, "%s", path);
+    oracles_settings_load(&s);
+    CHECK(s.update_check == 0 && s.menus_large == 1 && s.view == 1 && s.ghosts == 2);
+    CHECK(!strcmp(s.rom[ORACLES_SETTINGS_AGES], "C:\\My Games\\Ages.gbc") && !strcmp(s.key_names[4], "X"));
+    CHECK(s.unknown[0] == 0);
+    oracles_settings_store(&s);
+    CHECK(file_has_line(path, "update_check=off\n") && file_has_line(path, "menus=large\n") && file_has_line(path, "view=medium\n"));
+    write_text(path, "Update_Check=On\n");
+    oracles_settings_load(&s);
+    CHECK(s.update_check == 1);
+}
+
 /* menu_pad= `name` with pad_select= `select` and pad_hotkey1= `hotkey`, read as every screen takes it: the menu's
  * button that remains, and its first game's toast. */
 static int menu_pad_is(const char *name, const char *select, const char *hotkey, const char *wanted, const char *toast)
@@ -80,7 +155,8 @@ static void menu_pad_resolved(void)
 }
 
 /* Display's choices written back: from the pause, the running game's core and workers are not; a margin
- * --screen-margin gave for the run never is, whatever the row holds. */
+ * --screen-margin gave for the run never is, nor a text, a text box or a text size --text, --text-box or --text-size
+ * gave, whatever the row holds. */
 static void display_stored(void)
 {
     oracles_settings s;
@@ -92,40 +168,253 @@ static void display_stored(void)
     display.margin_fixed = 1;
     display.hud = 0;
     oracles_home_store_display(&display, 0, &s);
-    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud_full == 0);
+    CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_OFF && s.hud == 0);
+    /* Camera: absent until chosen, then stored as chosen, from the pause too; the platform's threshold given to the page. */
+    CHECK(display.camera == -1 && s.subpixel_camera == -1 && display.camera_from == (int)oracles_settings_subpixel_default_from());
+    display.camera = 0;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.subpixel_camera == 0);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.camera == 0);
+    display.margin = ORACLES_SCREEN_MARGIN_LARGE;
+    display.hud = 0;
     display.margin_fixed = 0;
     display.workers = 2;
     oracles_home_store_display(&display, 1, &s);
     CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_LARGE && s.ghosts != 2);
     oracles_home_store_display(&display, 0, &s);
     CHECK(s.ghosts == 2);
+    /* The text is stored from the pause too, for the next Play, but never --text's. */
+    CHECK(display.text == 0 && !display.text_fixed);
+    display.text = 1;
+    display.text_fixed = 1;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.compact_text == 0);
+    display.text_fixed = 0;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.compact_text == 1);
+    s.compact_text = 0;
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.text == 0);
+    /* Display › Text's box and size the same: stored, Very large as xlarge, never --text-box's nor --text-size's. */
+    CHECK(display.text_box == 0 && display.text_size == 0 && !display.text_box_fixed && !display.text_size_fixed);
+    display.text_box = 1;
+    display.text_size = 2;
+    display.text_box_fixed = display.text_size_fixed = 1;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.text_box_wide == 0 && s.text_size == 0);
+    display.text_box_fixed = display.text_size_fixed = 0;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.text_box_wide == 1 && s.text_size == 2);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.text_box == 1 && display.text_size == 2);
+    /* Display › Picture: Menus & scenes the platform's default (View on the desktops), stored from the pause too; Far
+     * size Fitted, stored from the home screen alone. */
+    CHECK(display.menus == 0 && display.far_fixed == 0);
+    display.menus = display.far_fixed = 1;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.menus_large == 1 && s.far_fixed == 0);
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.far_fixed == 1);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.menus == 1 && display.far_fixed == 1);
 }
 
 /* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the
  * margin unless --screen-margin holds it for the run. */
+/* The report's transitions line, in a file beside `path`: the predictions' mismatches and the fallbacks by reason. */
+static void transitions_line(const char *path)
+{
+    char report[1100], line[1200];
+    snprintf(report, sizeof report, "%s.report", path);
+    OraclesRoomTransitionStats stats;
+    memset(&stats, 0, sizeof stats);
+    stats.transitions = 12, stats.swim_transitions = 3, stats.walked_frames = 300, stats.swum_frames = 70, stats.palette_refreshes = 1;
+    stats.predicted_transitions = 9, stats.predicted_matched = 8, stats.predicted_mismatched = 1, stats.predict_fallbacks = 3;
+    stats.predict_fallback_by[ORACLES_ROOM_PREDICT_LARGE] = 2, stats.predict_fallback_by[ORACLES_ROOM_PREDICT_ROOM_CODE] = 1;
+    for (int fallbacks = 1; fallbacks >= 0; fallbacks--) {
+        if (!fallbacks) {
+            stats.predict_fallbacks = 0;
+            memset(stats.predict_fallback_by, 0, sizeof stats.predict_fallback_by);
+        }
+        FILE *f = fopen(report, "w");
+        CHECK(f != NULL);
+        if (!f) return;
+        oracles_session_report_transitions(&stats, f);
+        fclose(f);
+        line[0] = 0;
+        f = fopen(report, "r");
+        if (f && !fgets(line, sizeof line, f)) line[0] = 0;
+        if (f) fclose(f);
+        CHECK(!strncmp(line, "oracles: continuous transitions: 12 taken over (3 swum, 0 started by a stroke at an edge), Link moved on 300 frames (70 swimming), ", 131));
+        CHECK(strstr(line, "palette_refreshes 1 (") != NULL);
+        CHECK(strstr(line, "; the room entered's collisions predicted at 9 transitions while the game loaded them (8 the same as the game's, 1 not), ") != NULL);
+        if (fallbacks) CHECK(strstr(line, ", 3 left to the load (a large room or a dungeon's group 2, the room's own code 1)\n") != NULL);
+        else CHECK(strstr(line, ", 0 left to the load\n") != NULL);
+    }
+    remove(report);
+}
+
 static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin };
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
-    s.hud_full = !s.hud_full;
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0, -1, 0, -1 };
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.hud = !s.hud;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
-    CHECK(applied.hud == s.hud_full && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
+    CHECK(applied.hud == s.hud && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.hud = 2;   /* the wide layout, at once too */
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HUD && applied.hud == 2);
     /* --screen-margin large for the run: the settings' margin changes nothing, the option's is applied once. */
     s.screen_margin = ORACLES_SCREEN_MARGIN_AUTO;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
     s.screen_margin = ORACLES_SCREEN_MARGIN_OFF;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == 0);
-    /* Without the Enhanced view (Faithful) there is no HUD to change. */
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == 0);
+    /* Text size, at once. */
+    s.text_size = 1;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 1);
+    s.text_size = 2;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 2);
+    /* --text-size xlarge for the run: the settings' Normal and another row's change leave it, the game keeps Very large. */
+    s.text_size = 0;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == 0 && applied.text_size == 2);
+    s.colour_correction = !s.colour_correction;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == ORACLES_SESSION_CHANGED_COLOUR && applied.text_size == 2);
+    s.colour_correction = !s.colour_correction;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == ORACLES_SESSION_CHANGED_COLOUR);
+    s.text_size = 2;
+    /* Without the Enhanced view (Faithful) there is no HUD to change, nor a text size. */
     applied.hud = -1;
-    s.hud_full = !s.hud_full;
+    applied.text_size = -1;
+    s.text_size = 0;
+    s.hud = !s.hud;
     s.colour_correction = !s.colour_correction;
     s.scaling_fill = !s.scaling_fill;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
     CHECK(applied.hud == -1 && applied.colour == s.colour_correction && applied.fill == s.scaling_fill);
+}
+
+/* The texts' layout a session plays: a fan game, with the compact text and no host's box, laid out for the game's box
+ * whatever the wide box says, and not at all with the classic text; the originals at 192 pixels in the wide box. */
+static void text_layout(void)
+{
+    unsigned width = 0;
+    int fixed = -1;
+    CHECK(oracles_session_text_layout(1, 0, 1, 1, 1, &width, &fixed) == 1 && width == 128u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 0, 1, 0, 1, &width, &fixed) == 0);
+    CHECK(oracles_session_text_layout(1, 1, 1, 0, 1, &width, &fixed) == 1 && width == 192u && fixed == 1);
+    CHECK(oracles_session_text_layout(1, 1, 1, 1, 1, &width, &fixed) == 1 && width == 192u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 1, 1, 1, 0, &width, &fixed) == 1 && width == 128u && fixed == 0);
+    CHECK(oracles_session_text_layout(1, 1, 0, 1, 1, &width, &fixed) == 0);
+    CHECK(oracles_session_text_layout(0, 0, 1, 1, 1, &width, &fixed) == 0);
+}
+
+/* The swim's hold and the item hotkeys from the pause's Controls: each where the game has it (-1 where it has none), the
+ * item hotkeys of the settings' game it plays, the others' changing nothing; the window never: the pause applies it
+ * when Window is chosen, the settings' window_scale stored only then. */
+static void pause_live_changes(void)
+{
+    oracles_settings s;
+    oracles_settings_defaults(&s);
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
+                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS], s.text_instant, 0, s.menus_large };
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    /* Vsync, at once: off, then on, then auto again; it presents in step with a display near 60 Hz alone on auto
+     * (never on Android), always on on, never on off. */
+    snprintf(s.vsync, sizeof s.vsync, "off");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 2);
+    snprintf(s.vsync, sizeof s.vsync, "on");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 1);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    snprintf(s.vsync, sizeof s.vsync, "auto");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 0);
+#ifdef __ANDROID__
+    CHECK(!oracles_session_vsync_on("auto", 60u));
+#else
+    CHECK(oracles_session_vsync_on("auto", 60u) && !oracles_session_vsync_on("auto", 144u));
+#endif
+    CHECK(oracles_session_vsync_on("on", 144u) && !oracles_session_vsync_on("off", 60u));
+    /* The large menus, at once, in a game with the Enhanced view; none without it. */
+    s.menus_large = !s.menus_large;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_MENUS && applied.menus_large == s.menus_large);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    applied.menus_large = -1;
+    s.menus_large = !s.menus_large;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.menus_large == -1);
+    s.swim_hold = !s.swim_hold;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_USE;   /* the other Oracle's: nothing */
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_USE);
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_OFF;
+    s.window_scale = 3;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_OFF);
+    /* The text speed, for every game whose profile has the instant text, from the frame the game resumes on. */
+    s.text_instant = 1;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SPEED && applied.text_instant == 1);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.text_instant = 0;
+    applied.text_instant = -1;   /* a game without it (an unrecognised ROM): nothing */
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.text_instant == -1);
+    /* A game whose profile has neither the hold nor the item hotkeys (a fan game), without a window to change: nothing. */
+    applied.swim_hold = applied.hotkeys_game = -1;
+    s.swim_hold = !s.swim_hold;
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
+    s.window_scale = 2;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.swim_hold == -1 && applied.hotkeys_game == -1);
+    /* The window the game takes for Display's choice, as Play opens it: a scale, fullscreen for 0; without a display to
+     * measure, the scale asked for. */
+    int fullscreen = -1;
+    unsigned scale = 0;
+    oracles_home_game_window(&s, 3, NULL, (OraclesEnhancedSize){ 256u, 144u }, &fullscreen, &scale);
+    CHECK(!fullscreen && scale == 3);
+    oracles_home_game_window(&s, 0, NULL, (OraclesEnhancedSize){ 256u, 144u }, &fullscreen, &scale);
+    CHECK(fullscreen && scale == 4);
+    /* The window the pause's Window shows, F11's toggle included: fullscreen whatever the setting; a window, the
+     * setting when the window is the scale it opens at, else the scale the window is exactly, else none (-2): F11 out
+     * of a fullscreen start keeps the home screen's 1280x720, no whole scale of Near; -1 where it cannot change. */
+    CHECK(oracles_session_window_now(3, 3, 1, 1920, 1080, 256, 144) == 0);
+    CHECK(oracles_session_window_now(3, 3, 0, 768, 432, 256, 144) == 3);
+    CHECK(oracles_session_window_now(4, 3, 0, 768, 432, 256, 144) == 4);   /* 4x lowered to 3x: the setting */
+    CHECK(oracles_session_window_now(0, 0, 0, 1024, 576, 256, 144) == 4 && oracles_session_window_now(0, 0, 0, 640, 576, 160, 144) == 4);
+    CHECK(oracles_session_window_now(0, 0, 0, 768, 432, 256, 144) == 3 && oracles_session_window_now(3, 3, 0, 512, 288, 256, 144) == 2);
+    CHECK(oracles_session_window_now(0, 0, 0, 1280, 720, 256, 144) == -2 && oracles_session_window_now(0, 0, 0, 2560, 1440, 256, 144) == -2);
+    CHECK(oracles_session_window_now(3, 3, 0, 800, 450, 256, 144) == -2);   /* resized by hand */
+    CHECK(oracles_session_window_now(0, 0, 0, 1920, 1080, 160, 144) == -2);
+    CHECK(oracles_session_window_now(-1, 0, 1, 1920, 1080, 256, 144) == -1);
+    /* From the pause, Display stores the window only once Window is chosen: F11's fullscreen shown in the row stays out
+     * of the settings through any other change. */
+    OraclesHomeDisplay display;
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.window == 0);
+    display.window = 3;
+    display.hud = !display.hud;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.window_scale == 2 && s.hud == display.hud);
+    display.window_chosen = 1;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.window_scale == 0);
+    display.window = -1;   /* none shown: never stored */
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.window_scale == 0);
+    display.window = 1;
+    display.window_chosen = 0;
+    oracles_home_store_display(&display, 0, &s);   /* the home screen stores it always */
+    CHECK(s.window_scale == 3);
+    /* The windows whose pause would lose Display: Near's and Faithful's 2x and 3x, Medium's 2x, none of Far's; a 4x
+     * lowered to 3x by a small display too. */
+    static const unsigned scales[3] = { 2u, 3u, 4u }, lowered[3] = { 2u, 3u, 3u };
+    CHECK(oracles_session_windows_refused(scales, 256, 144, ORACLES_ASPECT_AUTO) == 3u);
+    CHECK(oracles_session_windows_refused(scales, 160, 144, ORACLES_ASPECT_AUTO) == 3u);
+    CHECK(oracles_session_windows_refused(scales, 384, 216, ORACLES_ASPECT_AUTO) == 1u);
+    CHECK(oracles_session_windows_refused(scales, 480, 270, ORACLES_ASPECT_AUTO) == 0u);
+    CHECK(oracles_session_windows_refused(lowered, 256, 144, ORACLES_ASPECT_AUTO) == 7u);
+    CHECK(oracles_session_windows_refused(scales, 160, 144, ORACLES_ASPECT_16_9) == 7u);   /* 640 wide in 16:9 */
 }
 
 int main(int argc, char **argv)
@@ -141,6 +430,10 @@ int main(int argc, char **argv)
     CHECK(written.launcher_width == 1280 && written.launcher_height == 720);
     CHECK(written.transitions && written.item_hotkeys[0] == ORACLES_HOTKEYS_OFF && written.item_hotkeys[1] == ORACLES_HOTKEYS_OFF);
     CHECK(!written.swim_hold);   /* the mermaid suit as the game plays it */
+    CHECK(!written.compact_text);   /* the game's fixed width */
+    CHECK(!written.text_box_wide);   /* the game's box */
+    CHECK(written.text_size == 0);   /* the game's size */
+    CHECK(!written.text_instant);   /* the game's pace */
     CHECK(!written.cheats[ORACLES_SETTINGS_AGES] && !written.cheats[ORACLES_SETTINGS_SEASONS]);   /* the games as they play */
     CHECK(!strcmp(written.vsync, "auto"));
     CHECK(!strcmp(written.menu_pad, "leftstick"));   /* the left stick's click opens the pause menu */
@@ -183,6 +476,10 @@ int main(int argc, char **argv)
     written.transitions = 0;
     written.swim_hold = 1;
     written.update_check = 0;
+    written.compact_text = 1;
+    written.text_box_wide = 1;
+    written.text_size = 2;
+    written.text_instant = 1;
     written.cheats[ORACLES_SETTINGS_SEASONS] = ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES;
     written.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_EQUIP;
     written.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
@@ -216,7 +513,8 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.pad_names[0], "x") && read_back.hotkey_pad_names[0][0] == 0 && !strcmp(read_back.hotkey_pad_names[1], "y"));
     CHECK(!strcmp(read_back.menu_pad, "righttrigger") && read_back.menu_toast_shown);
     CHECK(!strcmp(read_back.hotkey_bind_b, "Right Shift") && !strcmp(read_back.hotkey_bind_a, "Left Ctrl"));
-    CHECK(read_back.transitions == 0 && read_back.swim_hold == 1 && read_back.update_check == 0);
+    CHECK(read_back.transitions == 0 && read_back.swim_hold == 1 && read_back.update_check == 0 && read_back.compact_text == 1 && read_back.text_box_wide == 1 && read_back.text_size == 2);
+    CHECK(read_back.text_instant == 1);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == 0 && read_back.cheats[ORACLES_SETTINGS_SEASONS] == (ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES));
     CHECK(read_back.item_hotkeys[ORACLES_SETTINGS_AGES] == ORACLES_HOTKEYS_EQUIP && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_USE);
     CHECK(read_back.window_scale == 0);
@@ -264,9 +562,12 @@ int main(int argc, char **argv)
         if (!strcmp(line, "cheats_ages=\n")) seen |= 1048576;
         if (!strcmp(line, "cheats_seasons=no-damage,rupees\n")) seen |= 2097152;
         if (!strcmp(line, "update_check=off\n")) seen |= 4194304;
+        if (!strcmp(line, "text=compact\n")) seen |= 8388608;
+        if (!strcmp(line, "text_speed=instant\n")) seen |= 16777216;
     }
     if (f) fclose(f);
-    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072 | 262144 | 524288 | 1048576 | 2097152 | 4194304));   /* and not 128: no per-game profile or transitions */
+    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072 | 262144 | 524288 | 1048576 | 2097152 | 4194304 | 8388608
+                   | 16777216));   /* and not 128: no per-game profile or transitions */
 
     /* A file of an earlier version, without the keys: the defaults; the keys it has hold, colour correction off. */
     write_text(path, "colour_correction=0\nvsync=off\n");
@@ -276,7 +577,7 @@ int main(int argc, char **argv)
           && read_back.patch[ORACLES_HOME_FAN_TEMPLE][0] == 0 && read_back.patch[ORACLES_HOME_FAN_KINOMI][0] == 0 && read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && read_back.language[ORACLES_SETTINGS_AGES] == 0 && read_back.language[ORACLES_SETTINGS_SEASONS] == 0);
     CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0);
-    CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0);
+    CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0 && read_back.compact_text == 0 && read_back.text_instant == 0);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == 0 && read_back.cheats[ORACLES_SETTINGS_SEASONS] == 0);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
     CHECK(!strcmp(read_back.menu_pad, "leftstick") && !read_back.menu_toast_shown && read_back.update_check == 1);
@@ -362,9 +663,9 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.mods[ORACLES_SETTINGS_AGES], "alpha,beta,zeta") && read_back.mods[ORACLES_SETTINGS_SEASONS][0] == 0);
 
     /* Values it does not know leave the default; an empty ROM clears it. */
-    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nswim_hold=1\nupdate_check=0\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
+    write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nswim_hold=1\nupdate_check=0\ntext=narrow\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
                      "eu_rom_ages=\nlanguage_ages=ja\nlanguage_seasons=de\nlanguage_temple=xx\nlanguage_kinomi=it\nlanguage_moonrise=en-us\n"
-                     "cheats_ages=ammo,speed-150\ncheats_seasons=rupees,ammo\n");
+                     "cheats_ages=ammo,speed-150\ncheats_seasons=rupees,ammo\ntext_speed=fast\n");
     oracles_settings_defaults(&read_back);
     snprintf(read_back.rom[1], sizeof read_back.rom[1], "old.gbc");
     snprintf(read_back.eu_rom[0], sizeof read_back.eu_rom[0], "old.gbc");
@@ -374,9 +675,10 @@ int main(int argc, char **argv)
     CHECK(read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
     CHECK(read_back.rom[ORACLES_SETTINGS_SEASONS][0] == 0);
-    CHECK(read_back.transitions == 1 && read_back.swim_hold == 0 && read_back.update_check == 1 && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_OFF);
+    CHECK(read_back.transitions == 1 && read_back.swim_hold == 0 && read_back.update_check == 1 && read_back.compact_text == 0 && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_OFF);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == ORACLES_CHEAT_AMMO && read_back.cheats[ORACLES_SETTINGS_SEASONS] == (ORACLES_CHEAT_AMMO | ORACLES_CHEAT_RUPEES));   /* a cheat unknown: dropped */
     CHECK(read_back.window_scale == 0);
+    CHECK(read_back.text_instant == 0);   /* a later version's speed: the default */
     /* Display's View: far at the first opening, a level written and read by its name, an unknown name the default. */
     oracles_settings_defaults(&read_back);
     CHECK(read_back.view == 2);
@@ -544,24 +846,30 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.menus_large == 0);
-    /* The status bar: full width at the first opening, written; original written and read back; an unknown value
-     * leaves the default. */
+    /* The status bar: full width at the first opening, written; original and the wide layout written and read back; an
+     * unknown value leaves the default. */
     oracles_settings_defaults(&read_back);
-    CHECK(read_back.hud_full == 1);
+    CHECK(read_back.hud == 1);
     oracles_settings_store(&read_back);
     CHECK(file_has_line(path, "hud=full\n"));
     write_text(path, "hud=original\n");
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 0);
+    CHECK(read_back.hud == 0);
     oracles_settings_store(&read_back);
     CHECK(file_has_line(path, "hud=original\n"));
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 0);
+    CHECK(read_back.hud == 0);
     write_text(path, "hud=wide\n");
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
-    CHECK(read_back.hud_full == 1);
+    CHECK(read_back.hud == 2);
+    oracles_settings_store(&read_back);
+    CHECK(file_has_line(path, "hud=wide\n"));
+    write_text(path, "hud=split\n");
+    oracles_settings_defaults(&read_back);
+    oracles_settings_load(&read_back);
+    CHECK(read_back.hud == 1);
     /* The core: none chosen at the first opening, the build's default playing (SameBoy in the tests' build) and no core=
      * line written, so that another build's default plays its own; a core chosen is written and read by its name; an
      * unknown name leaves none chosen. */
@@ -588,8 +896,8 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.core == -1 && oracles_settings_core(&read_back) == ORACLES_CORE_SAMEBOY);
-    /* zoom-out is not a profile, and the per-game keys are not the launcher's: the defaults stay, and the next store
-     * writes the global keys alone. */
+    /* zoom-out is not a profile, and the per-game keys are not the launcher's: the defaults stay, the profile is written
+     * back as it plays, and the per-game keys, which a later version may have, are kept as they were, unread. */
     write_text(path, "profile=zoom-out\nprofile_ages=enhanced\ntransitions_ages=off\nprofile_seasons=enhanced\n");
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
@@ -600,10 +908,11 @@ int main(int argc, char **argv)
     while (f && fgets(line, sizeof line, f)) {
         if (!strcmp(line, "profile=enhanced\n")) seen |= 1;
         if (!strcmp(line, "transitions=on\n")) seen |= 2;
-        if (strstr(line, "zoom-out") || !strncmp(line, "profile_", 8) || !strncmp(line, "transitions_", 12)) seen |= 4;
+        if (strstr(line, "zoom-out")) seen |= 4;
+        if (!strcmp(line, "profile_ages=enhanced\n") || !strcmp(line, "transitions_ages=off\n") || !strcmp(line, "profile_seasons=enhanced\n")) seen += 8;
     }
     if (f) fclose(f);
-    CHECK(seen == 3);
+    CHECK(seen == 3 + 3 * 8);
 
     /* The file is written through a temporary one: none is left, and a write that cannot start leaves the old file. */
     char temporary[1100];
@@ -644,6 +953,10 @@ int main(int argc, char **argv)
     CHECK(written.ghosts == 1 && written.view == 2);
     oracles_settings_defaults(&written);   /* a player of before: far, the default core, auto: Custom on a desktop build */
     CHECK(oracles_settings_quality(&written) == ORACLES_QUALITY_CUSTOM);
+    /* A session's own: Low (near, Fast, auto) leaves a neighbour's objects frozen; near on the other core is no profile. */
+    CHECK(oracles_settings_quality_of(0, ORACLES_CORE_MGBA, 0) == ORACLES_QUALITY_LOW);
+    CHECK(oracles_settings_quality_of(0, ORACLES_CORE_SAMEBOY, 0) == ORACLES_QUALITY_CUSTOM);
+    CHECK(oracles_settings_quality_of(2, ORACLES_CORE_SAMEBOY, 2) == ORACLES_QUALITY_MAX);
     CHECK(oracles_settings_default_quality(0, 4, 8192) == ORACLES_QUALITY_MAX);
     CHECK(oracles_settings_default_quality(1, 4, 4096) == ORACLES_QUALITY_MEDIUM);    /* the RG DS */
     CHECK(oracles_settings_default_quality(1, 8, 5800) == ORACLES_QUALITY_HIGH);      /* a "6 GB" device */
@@ -750,9 +1063,52 @@ int main(int argc, char **argv)
     written.view = 0;
     CHECK(!oracles_settings_lighter(&written, &lighter, &lighter_view) && !oracles_settings_slow_hint(&written, 1, 6000, 300));
 
+    /* The sub-pixel camera: absent, the platform's default whatever the Quality, on on the desktops at every scale, on
+     * Android from three times on, and not written; set either way, written as it is, at every scale. */
+#ifdef __ANDROID__
+    CHECK(oracles_settings_subpixel_default_from() == 3u);
+#else
+    CHECK(oracles_settings_subpixel_default_from() == 0u);
+#endif
+    for (unsigned scale = 1; scale <= 6; scale++)
+        CHECK(oracles_settings_default_subpixel_camera(0, scale) == 1 && oracles_settings_default_subpixel_camera(1, scale) == (scale >= 3));
+    oracles_settings defaults_only;
+    oracles_settings_defaults(&defaults_only);
+    snprintf(defaults_only.path, sizeof defaults_only.path, "%s", path);
+    CHECK(defaults_only.subpixel_camera == -1);
+    for (unsigned scale = 1; scale <= 6; scale++) {
+#ifdef __ANDROID__
+        const int platform_subpixel = scale >= 3;
+#else
+        const int platform_subpixel = 1;
+#endif
+        CHECK(oracles_settings_subpixel_camera(&defaults_only, scale) == platform_subpixel);
+        for (int quality = 0; quality < ORACLES_QUALITIES; quality++) {
+            oracles_settings_apply_quality(&defaults_only, (OraclesQuality)quality);
+            CHECK(oracles_settings_subpixel_camera(&defaults_only, scale) == platform_subpixel);
+        }
+    }
+    oracles_settings_store(&defaults_only);
+    CHECK(!file_has_line(path, "subpixel_camera=0\n") && !file_has_line(path, "subpixel_camera=1\n"));
+    for (int chosen = 0; chosen < 2; chosen++) {
+        write_text(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n");
+        oracles_settings_defaults(&read_back);
+        snprintf(read_back.path, sizeof read_back.path, "%s", path);
+        oracles_settings_load(&read_back);
+        CHECK(read_back.subpixel_camera == chosen);
+        for (unsigned scale = 1; scale <= 6; scale++) CHECK(oracles_settings_subpixel_camera(&read_back, scale) == chosen);
+        oracles_settings_store(&read_back);
+        CHECK(file_has_line(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n"));
+    }
+
+    unknown_keys(path);
+    spaces_and_case(path);
     menu_pad_resolved();
     display_stored();
     pause_changes();
+    text_layout();
+    pause_live_changes();
+    transitions_line(path);
 
     remove(path);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

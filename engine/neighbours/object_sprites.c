@@ -118,15 +118,30 @@ static int build(OraclesGuest *guest, const uint8_t *object, unsigned slot, cons
                         ground, &ground_count, shadow, &shadow_count, &lower) != 0) return -1;
     unsigned n = 0;
     for (unsigned i = 0; i < ground_count && n < max; i++) out[n++] = ground[i];
-    const uint8_t z = (uint8_t)(object[ORACLES_OBJ_ZH] + lower);
+    const OraclesObjectPlace place = { object[ORACLES_OBJ_YH], object[ORACLES_OBJ_XH], (uint8_t)(object[ORACLES_OBJ_ZH] + lower), camera_y, camera_x,
+                                       object[ORACLES_OBJ_OAM_FLAGS], object[ORACLES_OBJ_OAM_TILE_INDEX_BASE] };
+    const unsigned address = (unsigned)(object[ORACLES_OBJ_OAM_DATA_ADDRESS] | object[ORACLES_OBJ_OAM_DATA_ADDRESS + 1] << 8);
+    const int own = oracles_object_sprites_pose(t, rom, rom_size, &place, (uint16_t)address, out + n, max - n);
+    if (own < 0) return -1;
+    n += (unsigned)own;
+    for (unsigned i = 0; i < shadow_count && n < max; i++) out[n++] = shadow[i];
+    return (int)n;
+}
+
+int oracles_object_sprites_pose(const OraclesGuestTables *t, const uint8_t *rom, size_t rom_size, const OraclesObjectPlace *place,
+                                uint16_t oam_data_address, OraclesObjectSprite out[], unsigned max)
+{
+    const int yh = place->yh >= WRAP_Y ? (int)place->yh - 256 : (int)place->yh;
+    const int xh = place->xh >= WRAP_X ? (int)place->xh - 256 : (int)place->xh;
+    const uint8_t base_y = (uint8_t)(place->yh - place->camera_y + 0x10u), base_x = (uint8_t)(place->xh - place->camera_x), z = place->zh;
+    const int wide_y = yh - (int)place->camera_y, wide_x = xh - (int)place->camera_x - 8;
     /* The data address: its two high bits add to BASE_OAM_DATA_BANK, the
      * rest names the block in $4000-$7fff. */
-    const unsigned address = (unsigned)(object[ORACLES_OBJ_OAM_DATA_ADDRESS] | object[ORACLES_OBJ_OAM_DATA_ADDRESS + 1] << 8);
-    const size_t at = rom_offset(((address & 0xc000u) >> 14) + t->oam_data_bank, address);
+    const size_t at = rom_offset(((oam_data_address & 0xc000u) >> 14) + t->oam_data_bank, oam_data_address);
     if (at >= rom_size) return -1;
     const unsigned count = rom[at];
     if (at + 1u + (size_t)count * 4u > rom_size) return -1;
-    const uint8_t flags = object[ORACLES_OBJ_OAM_FLAGS], tile_base = object[ORACLES_OBJ_OAM_TILE_INDEX_BASE];
+    unsigned n = 0;
     for (unsigned i = 0; i < count && n < max; i++) {
         const uint8_t *s = rom + at + 1u + i * 4u;
         OraclesObjectSprite *o = &out[n++];
@@ -135,12 +150,11 @@ static int build(OraclesGuest *guest, const uint8_t *object, unsigned slot, cons
         o->oam_x = (uint8_t)(base_x + s[1]);
         o->y = (int16_t)(wide_y + (int8_t)z + (int8_t)s[0]);
         o->x = (int16_t)(wide_x + (int8_t)s[1]);
-        o->tile = (uint8_t)(tile_base + s[2]);
-        o->attr = (uint8_t)(flags ^ s[3]);
+        o->tile = (uint8_t)(place->tile_base + s[2]);
+        o->attr = (uint8_t)(place->oam_flags ^ s[3]);
         o->in_window = o->oam_y < WINDOW_OAM_Y && o->oam_x < WINDOW_OAM_X;
         o->effect = ORACLES_SPRITE_OWN;
     }
-    for (unsigned i = 0; i < shadow_count && n < max; i++) out[n++] = shadow[i];
     return (int)n;
 }
 

@@ -63,6 +63,10 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
     unsigned wrong = 0, in_place = 0, place = 0;
     uint32_t first = 0;
     int varied = 0;   /* the box's pixels compared are not all of one colour: a black border matches a dark room */
+    /* The host's wide box in place of the core's: the moved box is the host's (enhanced_check_text_box.c judges it). */
+    int32_t dst[2], src[2];
+    unsigned size[2];
+    const int host = oracles_enhanced_view_text_box_shown(c->view, NULL, NULL, NULL) || oracles_enhanced_view_text_box_scaled(c->view, dst, src, size);
     for (unsigned gy = 0; gy < ORACLES_ENHANCED_AREA_HEIGHT; gy++)
         for (unsigned gx = 0; gx < ORACLES_ENHANCED_CORE_WIDTH; gx++) {
             if (!box[gy][gx]) continue;
@@ -80,6 +84,7 @@ void ec_check_text_box(OraclesEnhancedCheck *c, const OraclesEnhancedObservation
                 if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)home_y) * W + (unsigned)home] == drawn) in_place++;
             }
             const int32_t x = ob->window_left + (int32_t)gx - camera_x + shift;
+            if (host) continue;
             if (x < 0 || x >= (int32_t)W) { wrong++; continue; }   /* the whole box must fit in the band */
             if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + gy + dy) * W + (unsigned)x] != core_pixels[(ORACLES_ENHANCED_HUD_HEIGHT + gy) * ORACLES_ENHANCED_CORE_WIDTH + gx]) wrong++;
         }
@@ -105,6 +110,21 @@ void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
     const uint32_t *core_pixels = oracles_core_pixels(c->core);
     const int32_t wx = ob->window_left - camera_x, wy = ob->window_top - camera_y;
     const unsigned W = c->width;
+    /* The host's wide box, wider than the game's: what it covers is its own. */
+    OraclesEnhancedHostTextBox host;
+    int32_t host_x = 0, host_y = 0;
+    int wide = oracles_enhanced_view_text_box_shown(c->view, &host, &host_x, &host_y);
+    unsigned host_w = host.width * oracles_enhanced_view_text_box_shown_scale(c->view), host_h = host.height * oracles_enhanced_view_text_box_shown_scale(c->view);
+    {   /* the game's box twice as large (Text size Large): what it covers is its own too */
+        int32_t dst[2], src[2];
+        unsigned size[2];
+        if (!wide && oracles_enhanced_view_text_box_scaled(c->view, dst, src, size)) {
+            wide = 1;
+            host_x = dst[0]; host_y = dst[1];
+            host_w = 2u * size[0]; host_h = 2u * size[1];
+        }
+    }
+    host_y -= (int32_t)ORACLES_ENHANCED_HUD_HEIGHT;
     for (unsigned r = 0; r < ORACLES_ENHANCED_AREA_HEIGHT; r++) {
         const int32_t y = (int32_t)r + wy;
         if (y < 0 || y >= (int32_t)c->band_height) continue;
@@ -114,6 +134,7 @@ void ec_check_window_lines(OraclesEnhancedCheck *c, const OraclesEnhancedObserva
             if (x < 0 || x >= (int32_t)W) continue;
             /* A text box's cells: the view draws the room there, the box in the middle of the band. */
             if (box[r][col]) continue;
+            if (wide && x >= host_x && x < host_x + (int32_t)host_w && y >= host_y && y < host_y + (int32_t)host_h) continue;
             compared++;
             if (surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)y) * W + (unsigned)x]
                 != core_pixels[(ORACLES_ENHANCED_HUD_HEIGHT + r) * ORACLES_ENHANCED_CORE_WIDTH + col]) wrong++;
@@ -240,4 +261,120 @@ void ec_check_blurb(OraclesEnhancedCheck *c, OraclesEnhancedMode mode, uint32_t 
     c->blurb_frames_in_window++;
     const size_t used = strlen(c->blurb_list);
     if (used + 12 < sizeof c->blurb_list) snprintf(c->blurb_list + used, sizeof c->blurb_list - used, "%s%u", used ? " " : "", frame);
+}
+
+#define TINT_RING 24u              /* the band's columns and rows around the game's window compared with it */
+#define TINT_DARKER_LUMA 40u       /* how much darker than the ring around it (mean luminance, 0..255) the window stands apart */
+
+static unsigned pixel_luma(uint32_t p) { return (((p >> 16) & 0xffu) * 2u + ((p >> 8) & 0xffu) * 5u + (p & 0xffu)) / 8u; }
+
+/* The game's window against the ring of the band around it: a scene that
+ * darkens the game's screen (the night of Nayru's possession) and leaves the
+ * rooms around in their colours shows a window much darker than the ring.
+ * In play the window stands as bright as the ring or brighter (the room Link
+ * walks in against the trees around it, 30 to 75 on the routes), never 40
+ * darker.  Counted on the world frames with a ring of at least a quarter of
+ * the window's pixels on screen; a blank surface (a fade's end), a warp's
+ * curtain, a text box and a large room are not. */
+void ec_measure_window_darker(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
+                           int32_t camera_x, int32_t camera_y, int blank, uint32_t frame)
+{
+    c->window_luma = c->ring_luma = 0;
+    /* A large room is shown alone, the rest of it around the window, which
+     * may well be darker: no other room to compare with. */
+    if (mode != ORACLES_ENHANCED_WORLD || !surface || blank || ob->large) return;
+    /* The curtain of a warp opens the window column by column over the band;
+     * a text box darkens the window by itself. */
+    const OraclesGuestTables *t = oracles_guest_tables(c->guest);
+    if (oracles_guest_read8(c->guest, t->scroll_mode) == CURTAIN_SCROLL_MODE && oracles_guest_read8(c->guest, t->screen_transition_state) == CURTAIN_TRANSITION_STATE) return;
+    if (oracles_guest_read8(c->guest, t->text_is_active)) return;
+    const int32_t left = ob->window_left - camera_x, top = ob->window_top - camera_y;
+    const int32_t w = (int32_t)ORACLES_ENHANCED_CORE_WIDTH, h = (int32_t)ORACLES_ENHANCED_AREA_HEIGHT, ring = (int32_t)TINT_RING;
+    uint64_t in_sum = 0, ring_sum = 0;
+    unsigned in_count = 0, ring_count = 0;
+    for (int32_t y = top - ring; y < top + h + ring; y++) {
+        if (y < 0 || y >= (int32_t)c->band_height) continue;
+        for (int32_t x = left - ring; x < left + w + ring; x++) {
+            if (x < 0 || x >= (int32_t)c->width) continue;
+            const unsigned luma = pixel_luma(surface[(ORACLES_ENHANCED_HUD_HEIGHT + (unsigned)y) * c->width + (unsigned)x]);
+            if (x >= left && x < left + w && y >= top && y < top + h) { in_sum += luma; in_count++; }
+            else { ring_sum += luma; ring_count++; }
+        }
+    }
+    if (!in_count || ring_count < in_count / 4u) return;
+    c->window_luma = (unsigned)(in_sum / in_count);
+    c->ring_luma = (unsigned)(ring_sum / ring_count);
+    if (c->ring_luma <= c->window_luma + TINT_DARKER_LUMA) return;
+    if (!c->window_darker_frames) c->window_darker_first = frame;
+    c->window_darker_last = frame;
+    c->window_darker_frames++;
+}
+
+/* A room the band shows whole and still under the waves (oracles_enhanced_view_room_whole): its left edge on each line
+ * of the band, the first pixel other than the band's own outside at the line's start.  The lines differ where the
+ * waves ripple the room (enhanced.whole_room_rippled_frames); the median of the lines' edges is the room's place,
+ * which must not move from one such frame to the next, the camera still (enhanced.whole_room_edge_moves): the room
+ * swaying as a block reads as the camera shaking.  Line by line, the lines whose edge changed from the frame before,
+ * on the frames the game's window moved inside the room and on those it stood still: a ripple anchored to the room
+ * changes as many lines either way, one that crawls over it with the game's window more where it moves
+ * (enhanced.whole_room_row_changes_moving and _still, per hundred frames; the most lines in one frame, _max).  The same
+ * over every frame under the waves, the band's camera still from one to the next (enhanced.water_*). */
+static void measure_ripple(OraclesEnhancedCheck *c, EcRipple *r, const OraclesEnhancedObservation *ob, const uint32_t *surface, int32_t camera_x, int32_t camera_y)
+{
+    static int32_t edges[512];
+    static int16_t row_edge[512];
+    unsigned count = 0;
+    const unsigned height = oracles_enhanced_view_height(c->view);
+    for (unsigned y = ORACLES_ENHANCED_HUD_HEIGHT; y < height && y < 512u; y++) {
+        const uint32_t *row = surface + (size_t)y * c->width, outside = row[0];
+        unsigned x = 0;
+        while (x < c->width / 2u && row[x] == outside) x++;
+        row_edge[y] = x > 0 && x < c->width / 2u ? (int16_t)x : -1;
+        if (row_edge[y] >= 0) edges[count++] = (int32_t)x;
+    }
+    if (!count) { r->have_edge = 0; return; }
+    const int same = r->have_edge && r->epoch == ob->epoch && r->camera_x == camera_x && r->camera_y == camera_y;
+    if (same) {
+        unsigned changed = 0;
+        for (unsigned y = ORACLES_ENHANCED_HUD_HEIGHT; y < height && y < 512u; y++)
+            changed += row_edge[y] >= 0 && r->row_edge[y] >= 0 && row_edge[y] != r->row_edge[y];
+        if (ob->window_left != r->window_left || ob->window_top != r->window_top) { r->moving_frames++; r->moving_changes += changed; }
+        else { r->still_frames++; r->still_changes += changed; }
+        if (changed > r->changes_max) r->changes_max = changed;
+    }
+    memcpy(r->row_edge, row_edge, sizeof r->row_edge);
+    r->window_left = ob->window_left; r->window_top = ob->window_top;
+    for (unsigned i = 1; i < count; i++)
+        for (unsigned j = i; j > 0 && edges[j - 1] > edges[j]; j--) { const int32_t t = edges[j]; edges[j] = edges[j - 1]; edges[j - 1] = t; }
+    const int32_t edge = edges[count / 2u];
+    r->wave_frames++;
+    if (edges[0] != edges[count - 1u]) r->rippled_frames++;
+    if (same && edge != r->edge) r->edge_moves++;
+    r->have_edge = 1; r->edge = edge; r->epoch = ob->epoch; r->camera_x = camera_x; r->camera_y = camera_y;
+}
+
+void ec_measure_whole_room(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, const uint32_t *surface,
+                           int32_t camera_x, int32_t camera_y)
+{
+    const unsigned waves = oracles_enhanced_view_wave_frames(c->view);
+    const int rippled = waves != c->whole_last_waves;
+    c->whole_last_waves = waves;
+    const int world = mode == ORACLES_ENHANCED_WORLD && surface && rippled && !ob->in_transition;
+    if (world && oracles_enhanced_view_room_whole(c->view)) measure_ripple(c, &c->whole, ob, surface, camera_x, camera_y);
+    else c->whole.have_edge = 0;
+    if (world) measure_ripple(c, &c->water, ob, surface, camera_x, camera_y);
+    else c->water.have_edge = 0;
+}
+
+/* At a scroll's start out of a room the band showed whole, the game's window still, the game in that room still: the
+ * part of the band shown (the rest black) holds the room's top line, the camera where it stood; a camera a pixel further
+ * cuts it, and the band moved back by its fraction shows a black line over the room (enhanced.alone_scroll_cut_frames). */
+void ec_measure_alone_rows(OraclesEnhancedCheck *c, const OraclesEnhancedObservation *ob, OraclesEnhancedMode mode, int32_t camera_y)
+{
+    if (mode != ORACLES_ENHANCED_WORLD || !c->alone_whole || !ob->in_scroll || !ob->world.alone || ob->window_left != ob->scroll_start_left
+        || ob->window_top != ob->scroll_start_top || ob->group != c->alone_group || ob->room != c->alone_room) return;
+    unsigned shown_w = 0, shown_h = 0;
+    oracles_enhanced_view_shown(c->view, &shown_w, &shown_h);
+    const int32_t band = (int32_t)(oracles_enhanced_view_height(c->view) - ORACLES_ENHANCED_HUD_HEIGHT);
+    if (camera_y + (band - (int32_t)shown_h) / 2 > ob->world.origin_y) c->alone_scroll_cut_frames++;
 }

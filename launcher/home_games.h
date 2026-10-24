@@ -14,6 +14,7 @@
 #define ORACLES_LAUNCHER_HOME_GAMES_H
 
 #include "home.h"
+#include "save.h"
 #include "session.h"
 #include "settings.h"
 
@@ -54,10 +55,22 @@ typedef struct OraclesHomeGames {
      * Oracle's ROM (kept with that ROM, and forgotten with the patch). */
     OraclesHomeFound rom_found[ORACLES_SETTINGS_GAMES], eu_found[ORACLES_SETTINGS_GAMES];
     OraclesHomeFound patch_found[ORACLES_HOME_FAN_GAMES], image_found[ORACLES_HOME_FAN_GAMES];
+    /* Each Oracle's text box font, read with its original ROM (rom_found), for Display › Text's preview. */
+    OraclesHomeFont rom_font[ORACLES_SETTINGS_GAMES];
+    /* A save chosen to import, read and checked, set to English for an Oracle: for the game whose page chose it, while
+     * its confirmation is open there. */
+    struct {
+        int game, english;
+        uint8_t data[ORACLES_SAVE_SIZE];
+    } import;
 } OraclesHomeGames;
 
 /* The host of the home screen for these games. */
 void oracles_home_games_host(OraclesHomeGames *games, OraclesHomeHost *host);
+/* The Save row's part of it (home_save.c): Open folder, Import save… and Export save…. */
+void oracles_home_save_host(OraclesHomeGames *games, OraclesHomeHost *host);
+/* The save of game `game` (ORACLES_HOME_GAME_*), beside its ROM or a fan game's patch; empty without that file. */
+void oracles_home_games_save_path(const OraclesHomeGames *games, int game, char *path, size_t capacity);
 
 /* "21 Sep 2026": a date as the home screen shows it, in English whatever the locale. */
 void oracles_home_format_date(time_t when, char *out, size_t capacity);

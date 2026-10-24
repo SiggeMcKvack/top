@@ -48,6 +48,8 @@ typedef struct OraclesGuestTables {
         vram_tiles, vram_attributes,
         tileset_animation, animation_counters, animation_queue, animation_queue_head, animation_queue_tail,
         animation_group_table, animation_gfx_headers,
+        /* ROM: the objects' animations and their poses by id, for each kind (interactionAnimate, enemyAnimate, partAnimate) */
+        interaction_animation_table, interaction_oam_data_table, enemy_animation_table, enemy_oam_data_table, part_animation_table, part_oam_data_table,
         link_grab_state, link_swimming_state, magnet_glove_state, link_immobilized, link_pushing_direction,
         pegasus_seed_counter, link_playing_instrument, link_turning_disabled, force_link_push_animation, using_shield,
         link_id, link_state, link_visible, link_anim_counter, link_anim_parameter, link_anim_pointer, link_anim_mode,
@@ -61,7 +63,7 @@ typedef struct OraclesGuestTables {
         room_width, room_height, tileset_unique_gfx, active_collisions, dungeon_floor, dungeon_map_position, dungeon_layout,
         warp_transition, warp_dest_pos, warp_dest_group, warp_dest_room, warp_transition2, active_tile_pos, lost_woods_transition_counter1, lost_woods_transition_counter2, link_time_warp_tile, is_linked_game, switch_state, rom_bank, jabu_water_level, gameboy_type,
         twinrova_tile_replacement_mode, seed_tree_refilled_bitset, ricky_state, essences_obtained, animal_companion, num_placed_slates,
-        changed_tile_queue_head, changed_tile_queue_tail, tileset_layout_group, gasha_spots_planted,
+        changed_tile_queue_head, changed_tile_queue_tail, tileset_layout_group, tileset_layout, gasha_spots_planted,
         tileset_gfx, tileset_palette, loaded_tileset_unique_gfx,
         loaded_tileset_palette, dirty_bg_palettes, room_pack, loading_room_pack, room_pack_data, map_transition_group_table,
         season_reload, link_angle, hole_or_conveyor,
@@ -70,7 +72,7 @@ typedef struct OraclesGuestTables {
         group0_room_flags, link_object_index, objects_to_draw, oam, oam_tail, terrain_effects_used, link_raised_floor_offset, textbox_flags, enemies_killed_list,
         shadow_animation, green_grass_animation, puddle_animation_pointer, grass_animation_modifier, animation_state,
         gfx_regs1, gfx_regs2, gfx_regs3, vblank_checker, lcd_interrupt_behaviour, big_buffer,
-        tile_mapping_data, tile_mapping_indices, tile_collisions, bg_palettes_buffer, spr_palettes_buffer, tileset_bg_palettes,
+        tile_mapping_data, tile_mapping_indices, tile_collisions, bg_palettes_buffer, spr_palettes_buffer, tileset_bg_palettes, wave_scroll_values,
         status_bar_tile_map, status_bar_attribute_map, textbox_map, thread_state_buffer,
         main_stack, main_stack_top, thread0_stack, thread0_stack_top, thread1_stack, thread1_stack_top,
         thread2_stack, thread2_stack_top, thread3_stack, thread3_stack_top;
@@ -107,6 +109,22 @@ typedef struct OraclesGuestTables {
      * decNumBombchus share) and the rupees taken away (removeRupeeValue's call of getRupeeValue; remove_rupee_value is
      * above); the routine of Ages' bomb-upgrade fairy that takes every bomb through decNumBombs (absent in Seasons). */
     OraclesGuestSym link_apply_damage, link_damage_to_apply, dec_num_bombs, get_rupee_value, bomb_fairy_lose_all_bombs;
+    /* The compact text: the routine that composes a line of the text box before its DMA, the one that keeps each of its
+     * characters in the line's buffers, the one that reveals its next character, the choices' command, which takes the
+     * column of the cursor (textbox.s); in WRAM bank 7 the line's graphics, characters, attributes, delays, sounds and
+     * sound effects, the column the reveal is at, the line's first tile, the box's column in its map, the text's state and
+     * mode, the map's attributes, the cursor's places of a choice (textbox_map is above), and the two secrets' texts, from
+ * w7SecretText1 to w7SecretGenerationBuffer, which \secret prints. */
+    OraclesGuestSym draw_line_of_text, set_line_text_buffers, display_next_text_character, text_control_code_option,
+        text_gfx_buffer, line_text_buffer, line_attributes_buffer, line_delays_buffer, line_sounds_buffer, line_sound_effects_buffer,
+        next_text_column, text_line_tiles, textbox_column, text_display_state, text_display_mode, textbox_attributes, textbox_option_positions,
+        secret_text, secret_text_end;
+    /* The host's text box: the routine that queues a line's copy to the VRAM, the vblank's function that runs a queued
+     * DMA, the box's place in the VRAM's map and the frames left before the line's next column shows, where the text is read (WRAM bank 7). */
+    OraclesGuestSym dma_text_gfx_buffer, vblank_dma_function, textbox_vram_pos, character_display_timer, text_address;
+    /* The instant text: the routine that counts down to the line's next character and reads A and B to skip to the
+     * line's end (textbox.s), the text's flags (w7d0c1, bit 0 that skip) and the frames \slow keeps A and B unread. */
+    OraclesGuestSym update_character_display_timer, text_flags, text_slowdown_timer;
     /* defines */
     OraclesGuestSym game_state, cutscene_index;
     /* one room's flag byte, by the room's constant (ROOM_FLAG_BYTES of the generator) */
@@ -126,9 +144,14 @@ typedef struct OraclesGuestTables {
     uint8_t num_inventory_items, item_biggoron_sword, item_seed_satchel, item_shooter, item_slingshot, item_harp,
         treasure_ember_seeds, treasure_tune_of_echoes, globalflag_intro_done, cutscene_ingame, cutscene_loading_room, cutscene_onox_final_form, cutscene_pregame_intro,
         cutscene_din_imprisoned, cutscene_temple_sinking, cutscene_onox_taunting,
+        cutscene_black_tower_explanation, cutscene_black_tower_escape, cutscene_flame_of_sorrow, cutscene_flame_of_despair,
+        cutscene_black_tower_complete, cutscene_din_crystal_descending, cutscene_flame_of_destruction, cutscene_princess_kidnapped,
+        cutscene_room_of_rites_collapse, cutscene_credits, cutscene_the_end_screen, cutscene_03, cutscene_04, cutscene_05,
         interac_wild_tokay_controller, interac_golden_cave_subrosian,
         tilesetflag_bit_sidescroll, tilesetflag_bit_underwater, menu_inventory, specialobject_minecart, specialobject_raft,
         first_dynamic_interaction_index, roomflag_visited,
+        /* the prediction of a scroll's room: the opened chest's tile and its room flag, the time warp's arrival, the pollution's flag (Ages) */
+        tileindex_chest_opened, roomflag_item, transition_dest_timewarp, globalflag_water_pollution_fixed,
         /* the call transaction: the treasures the high-level prizes give, and the number of rings */
         treasure_rupees, treasure_heart_refill, treasure_ring, treasure_ring_box, treasure_gasha_seed, treasure_seed_satchel,
         num_rings,

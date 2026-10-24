@@ -24,6 +24,12 @@ extern "C" {
 #define ORACLES_OBJECT_KIND_PART 3u
 #define ORACLES_OBJECT_RECORDS 48u        /* sixteen slots of the three kinds */
 
+/* What draws an object and animates it, on one frame. */
+typedef struct OraclesObjectLook {
+    uint8_t visible, zh, oam_flags, oam_tile_base, anim_counter, anim_parameter;
+    uint16_t oam_data_address, anim_pointer;
+} OraclesObjectLook;
+
 typedef struct OraclesObjectRecord {
     uint8_t kind;              /* ORACLES_OBJECT_KIND_* */
     uint8_t slot;              /* 0 to 15 */
@@ -38,11 +44,21 @@ typedef struct OraclesObjectRecord {
      * an object may finish its initialisation over several frames, moving
      * after the frame it was latched on, and a neighbour shows it where it is drawn. */
     uint8_t drawn_y, drawn_yh, drawn_x, drawn_xh;
+    /* And its look on that frame: the record is kept at the first frame its
+     * state is not zero, before its code may have made it visible, set its
+     * animation or its graphics. */
+    OraclesObjectLook drawn;
     uint8_t oam_flags, oam_tile_base;
     uint8_t y, yh, x, xh, zh;
     uint16_t oam_data_address;
+    uint8_t anim_counter, anim_parameter;   /* the animation's state (object_animation.h) */
+    uint16_t anim_pointer;
     uint16_t created_pc;       /* the address the allocator returned to */
     uint8_t randomly_placed;   /* created by the random-placement opcode of the room's list */
+    /* In a ghost's capture: 1 when the object's own code advanced its
+     * animation by one call of the step at each update of the probe that
+     * follows the capture (ghost.h), the rule by which a neighbour animates it. */
+    uint8_t animated_by_code;
 } OraclesObjectRecord;
 
 typedef struct OraclesObjects OraclesObjects;
@@ -85,8 +101,11 @@ int oracles_objects_randomly_placed(const OraclesObjects *o, const OraclesObject
  * instance's hook table is full. */
 int oracles_objects_add_hooks(OraclesGuest *guest);
 
-/* Each latched object's position now, for the frame a capture keeps: into `records`, matched by kind and slot. */
+/* Each latched object's position and look now, for the frame a capture keeps: into `records`, matched by kind and slot. */
 void oracles_objects_note_drawn(const OraclesObjects *o, OraclesObjectRecord records[], unsigned count);
+/* A record as the frame its capture keeps draws it: its place and its look there, not as it was latched; its
+ * animation as latched, but when no animation was set then. */
+OraclesObjectRecord oracles_objects_as_drawn(const OraclesObjectRecord *record);
 
 /* The enemies the game counts as killed in the room of that index
  * (wEnemiesKilledList: eight pairs of a room index, whatever the group, and a

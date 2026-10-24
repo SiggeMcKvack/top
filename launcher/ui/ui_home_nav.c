@@ -40,8 +40,10 @@ void oracles_home_init(OraclesHomeNav *nav)
     nav->display.profile = ORACLES_PROFILE_ENHANCED;
     nav->display.transitions = 1;
     nav->display.hud = 1;   /* Full width, settings.txt's default */
+    nav->display.camera = -1;   /* the platform's default */
     nav->display.view = 2;
     nav->display.window = 2;
+    nav->update_check = 1;
     nav->display.screen_w = 1920;
     nav->display.screen_h = 1080;
     nav->display.room_w = 1920;
@@ -172,21 +174,50 @@ unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORA
 
 int oracles_home_update_shown(const OraclesHomeNav *nav)
 {
-    return nav->update[0] && nav->screen == ORACLES_SCREEN_HOME && !nav->in_game;
+    return nav->update[0] && nav->update_check && nav->screen == ORACLES_SCREEN_HOME && !nav->in_game;
+}
+
+/* The places after the menu's items: the newer version's notice when shown, then the version number, on the home
+ * screen alone. */
+static unsigned extra_places(const OraclesHomeNav *nav)
+{
+    if (nav->screen != ORACLES_SCREEN_HOME || nav->in_game) return 0;
+    return oracles_home_update_shown(nav) ? 2u : 1u;
 }
 
 unsigned oracles_home_focus(const OraclesHomeNav *nav)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items);
-    if (nav->focus >= count && oracles_home_update_shown(nav)) return count;
-    return nav->focus < count ? nav->focus : count - 1u;
+    return nav->focus < count + extra_places(nav) ? nav->focus : count - 1u;
+}
+
+void oracles_home_focus_item(OraclesHomeNav *nav, OraclesHomeItemId id)
+{
+    OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+    const unsigned count = oracles_home_items(nav, items);
+    nav->focus = 0;
+    for (unsigned i = 0; i < count; i++) if (items[i].id == id) nav->focus = i;
 }
 
 int oracles_home_update_focused(const OraclesHomeNav *nav)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
-    return oracles_home_update_shown(nav) && nav->focus >= oracles_home_items(nav, items);
+    return oracles_home_update_shown(nav) && nav->focus == oracles_home_items(nav, items);
+}
+
+int oracles_home_version_focused(const OraclesHomeNav *nav)
+{
+    OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+    return extra_places(nav) && nav->focus == oracles_home_items(nav, items) + extra_places(nav) - 1u;
+}
+
+/* About opened from the version number. */
+static OraclesHomeCommand open_about(OraclesHomeNav *nav)
+{
+    nav->screen = ORACLES_SCREEN_ABOUT;
+    nav->row = 0;
+    return ORACLES_HOME_STAY;
 }
 
 void oracles_home_others(const OraclesHomeNav *nav, OraclesHomeEntry others[2])
@@ -222,8 +253,9 @@ static unsigned hints_of(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLE
         memcpy(hints, controls, sizeof controls);
         return 3;
     }
-    /* Display's Advanced highlighted opens its rows: nothing there changes with left and right. */
-    if (nav->screen == ORACLES_SCREEN_DISPLAY && !nav->advanced && nav->row == ORACLES_DISPLAY_ADVANCED) {
+    /* Display's Advanced, Picture or Text highlighted opens its rows: nothing there changes with left and right. */
+    if (nav->screen == ORACLES_SCREEN_DISPLAY && !nav->advanced && !nav->text_page && !nav->picture_page
+        && (nav->row == ORACLES_DISPLAY_ADVANCED || nav->row == ORACLES_DISPLAY_TEXT || nav->row == ORACLES_DISPLAY_PICTURE)) {
         static const OraclesHomeHint advanced[3] = {
             { UP_DOWN, "Move", 0, 0 },
             { "Enter / A", "Open", 0, 0 },
@@ -249,7 +281,7 @@ static unsigned hints_of(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLE
         { "Esc / B", "Fan games", 1, 0 },
     };
     memcpy(hints, base, sizeof base);
-    if (oracles_home_update_focused(nav)) hints[2].label = "Open";   /* the newer version's page */
+    if (oracles_home_update_focused(nav) || oracles_home_version_focused(nav)) hints[2].label = "Open";   /* the newer version's page, About */
     return nav->entry != ORACLES_HOME_FAN || nav->fan_pick == ORACLES_HOME_HERO_FAN ? 3 : 4;
 }
 
@@ -322,7 +354,7 @@ void oracles_home_slow_open(OraclesHomeNav *nav)
 {
     nav->slow = 0;
     nav->screen = ORACLES_SCREEN_DISPLAY;
-    nav->advanced = 0;
+    nav->advanced = nav->text_page = nav->picture_page = 0;
     nav->row = oracles_display_quality(nav) == ORACLES_DISPLAY_QUALITY_CUSTOM ? ORACLES_DISPLAY_VIEW : ORACLES_DISPLAY_QUALITY;
 }
 
@@ -339,7 +371,7 @@ void oracles_home_hover(OraclesHomeNav *nav, unsigned item)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items);
-    if (item < count || (item == count && oracles_home_update_shown(nav))) nav->focus = item;
+    if (item < count + extra_places(nav)) nav->focus = item;
 }
 
 static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *it)
@@ -349,7 +381,11 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *i
         case ORACLES_HOME_ITEM_START: return oracles_home_start_command(oracles_home_game(nav));
         case ORACLES_HOME_ITEM_EXIT: return ORACLES_HOME_EXIT;
         case ORACLES_HOME_ITEM_GAME: nav->screen = ORACLES_SCREEN_GAME; nav->row = 0; nav->eu_action = 0; return ORACLES_HOME_STAY;
-        case ORACLES_HOME_ITEM_DISPLAY: nav->screen = ORACLES_SCREEN_DISPLAY; nav->row = 0; nav->advanced = 0; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_ITEM_DISPLAY:
+            nav->screen = ORACLES_SCREEN_DISPLAY;
+            nav->row = 0;
+            nav->advanced = nav->text_page = nav->picture_page = 0;
+            return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CONTROLS: oracles_controls_open(nav); return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_MODS: nav->screen = ORACLES_SCREEN_MODS; nav->row = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CHEATS: nav->screen = ORACLES_SCREEN_CHEATS; nav->row = 0; return ORACLES_HOME_STAY;
@@ -369,7 +405,10 @@ OraclesHomeCommand oracles_home_click(OraclesHomeNav *nav, unsigned item)
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     nav->slow = 0;
     const unsigned count = oracles_home_items(nav, items);
-    if (item == count && oracles_home_update_shown(nav)) { nav->focus = item; return ORACLES_HOME_OPEN_UPDATE; }
+    if (item >= count && item < count + extra_places(nav)) {
+        nav->focus = item;
+        return oracles_home_update_focused(nav) ? ORACLES_HOME_OPEN_UPDATE : open_about(nav);
+    }
     if (item >= count) return ORACLES_HOME_STAY;
     nav->focus = item;
     return activate(nav, &items[item]);
@@ -392,10 +431,11 @@ OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction actio
     if (nav->screen == ORACLES_SCREEN_CONTROLS) return oracles_controls_act(nav, action);
     if (nav->screen == ORACLES_SCREEN_MODS) return oracles_mods_act(nav, action);
     if (nav->screen == ORACLES_SCREEN_CHEATS) return oracles_cheats_act(nav, action);
+    if (nav->screen == ORACLES_SCREEN_ABOUT) return oracles_about_act(nav, action);
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
     const unsigned count = oracles_home_items(nav, items), focus = oracles_home_focus(nav);
-    /* The newer version's notice, when shown, is a place after the last item. */
-    const unsigned places = count + (oracles_home_update_shown(nav) ? 1u : 0u);
+    /* The newer version's notice, when shown, and the version number are places after the last item. */
+    const unsigned places = count + extra_places(nav);
     if (nav->screen == ORACLES_SCREEN_PAUSE && (action == ORACLES_HOME_LEFT || action == ORACLES_HOME_RIGHT)) return ORACLES_HOME_STAY;
     if (nav->screen == ORACLES_SCREEN_PAUSE && action == ORACLES_HOME_BACK) return ORACLES_HOME_RESUME;   /* Escape, B, the menu button or Guide resumes */
     switch (action) {
@@ -407,7 +447,7 @@ OraclesHomeCommand oracles_home_act(OraclesHomeNav *nav, OraclesHomeAction actio
         }
         case ORACLES_HOME_UP: nav->focus = (focus + places - 1u) % places; return ORACLES_HOME_STAY;
         case ORACLES_HOME_DOWN: nav->focus = (focus + 1u) % places; return ORACLES_HOME_STAY;
-        case ORACLES_HOME_OK: return focus < count ? activate(nav, &items[focus]) : ORACLES_HOME_OPEN_UPDATE;
+        case ORACLES_HOME_OK: return focus < count ? activate(nav, &items[focus]) : oracles_home_update_focused(nav) ? ORACLES_HOME_OPEN_UPDATE : open_about(nav);
         case ORACLES_HOME_BACK:
             /* Back from a fan game to the list, its line highlighted; nothing to go back to elsewhere. */
             if (nav->entry == ORACLES_HOME_FAN && nav->fan_pick != ORACLES_HOME_HERO_FAN) {

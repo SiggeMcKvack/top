@@ -502,6 +502,31 @@ static void test_equip_mode(void)
     oracles_item_hotkeys_stop(m.h);
 }
 
+/* At rest, where the pause's Off stops the policy: in `use`, not from the key's press to the return of the button's own
+ * item, the key let go at once as the launcher lets it go; the first frame at rest, B holds the sword again.  In
+ * `equip`, at rest once the exchange is applied, the memory of the previous item kept. */
+static void test_at_rest(void)
+{
+    sim m = start(ORACLES_GAME_SEASONS, ORACLES_HOTKEYS_USE);
+    CHECK(oracles_item_hotkeys_at_rest(m.h));
+    CHECK(oracles_item_hotkeys_key(m.h, 0, 1, ORACLES_HOTKEY_PLAIN) == ORACLES_HOTKEY_TRIGGERED);
+    CHECK(!oracles_item_hotkeys_at_rest(m.h));
+    for (unsigned n = 0; n < ORACLES_HOTKEY_SLOTS; n++) oracles_item_hotkeys_key(m.h, n, 0, ORACLES_HOTKEY_PLAIN);
+    unsigned frames = 0;
+    while (!oracles_item_hotkeys_at_rest(m.h) && frames < 4u * ORACLES_HOTKEY_PATIENCE) {
+        CHECK(frames == 0 || m.s.slots[0] == FEATHER);
+        turn(&m, 0);
+        frames++;
+    }
+    CHECK(oracles_item_hotkeys_at_rest(m.h) && frames > ORACLES_HOTKEY_PATIENCE);
+    CHECK(m.s.slots[0] == SWORD && m.s.slots[5] == FEATHER && m.exchanges == 2 && m.presses[0] == 1);
+    oracles_item_hotkeys_stop(m.h);
+    m = start(ORACLES_GAME_AGES, ORACLES_HOTKEYS_EQUIP);
+    tap(&m, 0);
+    CHECK(m.s.slots[0] == FEATHER && oracles_item_hotkeys_at_rest(m.h) && !oracles_item_hotkeys_idle(m.h));
+    oracles_item_hotkeys_stop(m.h);
+}
+
 /* checkUseItems, branch for branch (fact 10). */
 static void test_item_buttons(void)
 {
@@ -553,6 +578,7 @@ int main(void)
     test_use_variant_and_returns_given_up();
     test_reset();
     test_equip_mode();
+    test_at_rest();
     test_item_buttons();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("test_item_hotkeys_policy: ok\n");

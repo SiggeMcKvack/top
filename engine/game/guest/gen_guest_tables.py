@@ -82,6 +82,17 @@ FUNCTIONS = [
     # scripted loss of ammunition, Ages' bomb-upgrade fairy taking every bomb (scriptHelper.s), which stays the game's.
     ("link_apply_damage", "linkApplyDamage"), ("dec_num_bombs", "decNumBombs"),
     ("get_rupee_value", "getRupeeValue"), ("bomb_fairy_lose_all_bombs", "bombUpgradeFairy_loseAllBombs"),
+    # The compact text: the routine that composes a line of the text box before its DMA, the one that keeps each of its
+    # characters in the line's buffers, the one that reveals its next character, and the choices' command, which takes the
+    # column of the cursor (textbox.s).
+    ("draw_line_of_text", "drawLineOfText"), ("set_line_text_buffers", "setLineTextBuffers"),
+    ("display_next_text_character", "displayNextTextCharacter"), ("text_control_code_option", "textControlCodeC_2"),
+    # The host's text box: the routine that queues a line's copy to the VRAM, and the vblank's function that runs a queued
+    # DMA (textbox.s, bank0.s).
+    ("dma_text_gfx_buffer", "dmaTextGfxBuffer"), ("vblank_dma_function", "vblankDmaFunction"),
+    # The instant text: the routine that counts down to the line's next character and reads A and B to skip to the
+    # line's end (textbox.s; displayNextTextCharacter is above).
+    ("update_character_display_timer", "updateCharacterDisplayTimer"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -154,6 +165,9 @@ VARIABLES = [
     ("num_placed_slates", "wNumPlacedSlates"),
     ("changed_tile_queue_head", "wChangedTileQueueHead"), ("changed_tile_queue_tail", "wChangedTileQueueTail"),
     ("tileset_layout_group", "wTilesetLayoutGroup"),
+    # Continuous transitions: the tileset layout the room entered loads its collisions from (loadTilesetAndRoomLayout),
+    # written by loadTilesetData before wScrollMode is 8, which the prediction of those collisions reads.
+    ("tileset_layout", "wTilesetLayout"),
     # Ghost: the load around the substitutions (the coarse list, ghost_key.c): the Gasha seeds planted.
     ("gasha_spots_planted", "wGashaSpotsPlantedBitset"),
     # Enhanced: the tileset a room has loaded, to render a neighbour's map with the live tiles when they are the same.
@@ -201,6 +215,11 @@ VARIABLES = [
     ("tileset_animation", "wTilesetAnimation"), ("animation_counters", "wAnimationCounter1"),
     ("animation_queue", "w2AnimationQueue"), ("animation_queue_head", "wAnimationQueueHead"), ("animation_queue_tail", "wAnimationQueueTail"),
     ("animation_group_table", "animationGroupTable"), ("animation_gfx_headers", "animationGfxHeaders"),
+    # An object's animation, to advance a neighbour's objects from the game's data: the animations and the poses (OAM
+    # blocks) of each id, by kind; each routine reads both tables in its animation table's bank.
+    ("interaction_animation_table", "interactionAnimationTable"), ("interaction_oam_data_table", "interactionOamDataTable"),
+    ("enemy_animation_table", "enemyAnimationTable"), ("enemy_oam_data_table", "enemyOamDataTable"),
+    ("part_animation_table", "partAnimationTable"), ("part_oam_data_table", "partOamDataTable"),
     ("gfx_regs1", "wGfxRegs1"), ("gfx_regs2", "wGfxRegs2"), ("gfx_regs3", "wGfxRegs3"),
     ("vblank_checker", "wVBlankChecker"), ("lcd_interrupt_behaviour", "hLcdInterruptBehaviour"),
     ("big_buffer", "wBigBuffer"),
@@ -212,6 +231,8 @@ VARIABLES = [
     ("vram_tiles", "w3VramTiles"), ("vram_attributes", "w3VramAttributes"),
     ("bg_palettes_buffer", "w2BgPalettesBuffer"), ("spr_palettes_buffer", "w2SprPalettesBuffer"),
     ("tileset_bg_palettes", "w2TilesetBgPalettes"),
+    # The waves' sine, 128 steps, which the LCD interrupt adds to each line's SCX (Ages' underwater rooms).
+    ("wave_scroll_values", "w2WaveScrollValues"),
     ("status_bar_tile_map", "w4StatusBarTileMap"), ("status_bar_attribute_map", "w4StatusBarAttributeMap"), ("textbox_map", "w7TextboxMap"),
     ("thread_state_buffer", "wThreadStateBuffer"),
     ("main_stack", "wMainStack"), ("main_stack_top", "wMainStackTop"),
@@ -240,6 +261,21 @@ VARIABLES = [
     ("num_rupees", "wNumRupees"), ("link_health", "wLinkHealth"), ("link_max_health", "wLinkMaxHealth"),
     ("num_gasha_seeds", "wNumGashaSeeds"), ("seed_satchel_level", "wSeedSatchelLevel"), ("num_ember_seeds", "wNumEmberSeeds"),
     ("link_damage_to_apply", "w1Link.damageToApply"),   # the cheats: the damage linkApplyDamage reads
+    # The compact text (WRAM bank 7): the line's graphics, its characters, their attributes, delays, sounds and sound
+    # effects, the column the reveal is at, the line's first tile ($40 the top line's, $60 the bottom's), the box's column
+    # in its map, the text's state and mode (wTextDisplayMode in bank 0), the map's attributes, the cursor's places of a
+    # choice, and the two secrets' texts \secret prints (w7SecretText1 and 2, up to w7SecretGenerationBuffer).
+    ("text_gfx_buffer", "w7TextGfxBuffer"), ("line_text_buffer", "w7LineTextBuffer"), ("line_attributes_buffer", "w7LineAttributesBuffer"),
+    ("line_delays_buffer", "w7LineDelaysBuffer"), ("line_sounds_buffer", "w7LineSoundsBuffer"), ("line_sound_effects_buffer", "w7LineSoundEffectsBuffer"),
+    ("next_text_column", "w7NextTextColumnToDisplay"), ("text_line_tiles", "w7d0d3"), ("textbox_column", "w7d0cc"),
+    ("text_display_state", "w7TextDisplayState"), ("text_display_mode", "wTextDisplayMode"),
+    ("textbox_attributes", "w7TextboxAttributes"), ("textbox_option_positions", "w7TextboxOptionPositions"),
+    ("secret_text", "w7SecretText1"), ("secret_text_end", "w7SecretGenerationBuffer"),
+    ("textbox_vram_pos", "w7TextboxVramPos"),   # the host's text box: where the box's rows stand in the VRAM's map
+    ("character_display_timer", "w7CharacterDisplayTimer"),   # and the frames left before the line's next column shows
+    ("text_address", "w7TextAddress"),   # and where the text thread reads the text (its bank in w7ActiveBank)
+    # The instant text: the text's flags, whose bit 0 skips the line to its end, and the frames \slow keeps A and B unread.
+    ("text_flags", "w7d0c1"), ("text_slowdown_timer", "w7TextSlowdownTimer"),
     ("general_purpose_hram", "hFF8A"), ("general_purpose_hram_end", "hRng1"), ("tmp_cec0", "wTmpcec0"), ("tmp_cec0_end", "wRoomLayout"),
 ]
 # Defines of wram.s expressed as symbol + offset.
@@ -307,6 +343,26 @@ DISASM_CONSTANTS = [
     ("cutscene_din_imprisoned", "common/cutsceneIndices.s", "CUTSCENE_S_DIN_IMPRISONED", "seasons"),
     ("cutscene_temple_sinking", "common/cutsceneIndices.s", "CUTSCENE_S_TEMPLE_SINKING", "seasons"),
     ("cutscene_onox_taunting", "common/cutsceneIndices.s", "CUTSCENE_S_ONOX_TAUNTING", "seasons"),
+    # The cutscenes it frames while the status bar is off the screen: those that show full-screen pictures (a scene's
+    # graphics header and tile map, gfxRegisterStates 4 or 9) or a room without the bar (gfxRegisterStates $13) between
+    # rooms they play with it.  Ages: the black tower's three explanations, Veran beaten, the flames of sorrow and
+    # despair, the tower complete (miscCutscenes.s, endgameCutscenes.s, linkedGameCutscenes.s); Seasons: Din's crystal,
+    # the flame of destruction, the princess taken; both: the room of rites collapsing and the credits.  A fan game's own
+    # (CUTSCENE_THE_END_SCREEN) is 0xff in both.  And the fade-outs before a warp (cutscene03 to cutscene05, bank1.s),
+    # which show the screen left until the LCD goes off: framed too while it has no bar (a picture's warp out).
+    ("cutscene_black_tower_explanation", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_EXPLANATION", "ages"),
+    ("cutscene_black_tower_escape", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_ESCAPE", "ages"),
+    ("cutscene_flame_of_sorrow", "common/cutsceneIndices.s", "CUTSCENE_FLAME_OF_SORROW", "ages"),
+    ("cutscene_flame_of_despair", "common/cutsceneIndices.s", "CUTSCENE_FLAME_OF_DESPAIR", "ages"),
+    ("cutscene_black_tower_complete", "common/cutsceneIndices.s", "CUTSCENE_BLACK_TOWER_COMPLETE", "ages"),
+    ("cutscene_din_crystal_descending", "common/cutsceneIndices.s", "CUTSCENE_S_DIN_CRYSTAL_DESCENDING", "seasons"),
+    ("cutscene_flame_of_destruction", "common/cutsceneIndices.s", "CUTSCENE_S_FLAME_OF_DESTRUCTION", "seasons"),
+    ("cutscene_princess_kidnapped", "common/cutsceneIndices.s", "CUTSCENE_S_ZELDA_KIDNAPPED", "seasons"),
+    ("cutscene_room_of_rites_collapse", "common/cutsceneIndices.s", "CUTSCENE_{s}ROOM_OF_RITES_COLLAPSE"),
+    ("cutscene_credits", "common/cutsceneIndices.s", "CUTSCENE_{s}CREDITS"),
+    ("cutscene_the_end_screen", "common/cutsceneIndices.s", "CUTSCENE_THE_END_SCREEN"),
+    ("cutscene_03", "common/cutsceneIndices.s", "CUTSCENE_{s}03"), ("cutscene_04", "common/cutsceneIndices.s", "CUTSCENE_{s}04"),
+    ("cutscene_05", "common/cutsceneIndices.s", "CUTSCENE_{s}05"),
     ("interac_wild_tokay_controller", "{game}/interactions.s", "INTERAC_WILD_TOKAY_CONTROLLER"),
     ("interac_golden_cave_subrosian", "{game}/interactions.s", "INTERAC_GOLDEN_CAVE_SUBROSIAN"),
     ("tilesetflag_bit_sidescroll", "common/tilesetFlags.s", "TILESETFLAG_BIT_SIDESCROLL"),
@@ -318,6 +374,12 @@ DISASM_CONSTANTS = [
     ("first_dynamic_interaction_index", "../include/wram.s", "FIRST_DYNAMIC_INTERACTION_INDEX"),
     # The coarse list's comparison: the bit the entry into a room sets in its flags, which no load reads.
     ("roomflag_visited", "common/roomFlags.s", "ROOMFLAG_VISITED"),
+    # The prediction of the collisions of the room a scroll enters (room_predict.c): the opened chest's tile and the room's
+    # flag replaceOpenedChest tests, the time warp's arrival replaceBreakableTileOverLinkTimeWarpingIn tests, and the
+    # flag replacePollutionWithWaterIfPollutionFixed tests (Ages).
+    ("tileindex_chest_opened", "common/tileIndices.s", "TILEINDEX_CHEST_OPENED"), ("roomflag_item", "common/roomFlags.s", "ROOMFLAG_ITEM"),
+    ("transition_dest_timewarp", "common/transitions.s", "TRANSITION_DEST_TIMEWARP"),
+    ("globalflag_water_pollution_fixed", "common/globalFlags.s", "GLOBALFLAG_WATER_POLLUTION_FIXED", "ages"),
     # The call transaction: the treasures a mod may give through giveTreasure, and the rupee values of removeRupeeValue.
     ("treasure_rupees", "common/treasure.s", "TREASURE_RUPEES"), ("treasure_heart_refill", "common/treasure.s", "TREASURE_HEART_REFILL"),
     ("treasure_ring", "common/treasure.s", "TREASURE_RING"), ("treasure_ring_box", "common/treasure.s", "TREASURE_RING_BOX"),

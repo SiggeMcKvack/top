@@ -8,7 +8,8 @@
  * It is the control of the measurement: with the same starting state and the
  * same direction, the two sides must agree on every object that does not
  * depend on the RNG.  Writes DIR/objects.tsv, one line per object compared,
- * and reports the totals by verdict and by cause. */
+ * and reports the totals by verdict and by cause; without a directory, the
+ * totals alone. */
 #ifndef ORACLES_NEIGHBOUR_CHECK_H
 #define ORACLES_NEIGHBOUR_CHECK_H
 
@@ -31,6 +32,10 @@ void oracles_neighbour_check_report(OraclesNeighbourCheck *check, FILE *out);
 /* The figures as key=value lines (objects.*), for tools/check_routes.py. */
 void oracles_neighbour_check_summary(const OraclesNeighbourCheck *check, FILE *out);
 void oracles_neighbour_check_stop(OraclesNeighbourCheck *check);
+/* The objects' animation judged along (object_animation_check.h), not owned: every update of the live objects, and
+ * each capture of a room entered, which the check then runs. */
+struct OraclesObjectAnimationCheck;
+void oracles_neighbour_check_set_animation(OraclesNeighbourCheck *check, struct OraclesObjectAnimationCheck *animation);
 
 #ifdef __cplusplus
 }

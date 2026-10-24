@@ -19,6 +19,9 @@
 #define ORACLES_SETTINGS_MODS_MAX 8
 #define ORACLES_SETTINGS_MOD_NAME 64
 #define ORACLES_SETTINGS_MODS_LENGTH (ORACLES_SETTINGS_MODS_MAX * ORACLES_SETTINGS_MOD_NAME)
+/* The unknown keys kept, at most this many bytes and lines (oracles_settings.unknown). */
+#define ORACLES_SETTINGS_UNKNOWN_LENGTH 16384
+#define ORACLES_SETTINGS_UNKNOWN_LINES 128
 
 /* The games of the home screen's entries, in settings.txt's order. */
 typedef enum OraclesSettingsGame {
@@ -35,6 +38,7 @@ typedef enum OraclesAspect {
 } OraclesAspect;
 /* Their names in settings.txt and on the command line: "auto", "16:9", "4:3". */
 extern const char *const oracles_settings_aspect_names[3];
+extern const char *const oracles_settings_hud_names[3];   /* hud=, by the value of oracles_settings.hud */
 /* The cores' names in settings.txt and on the command line, by OraclesCoreKind: "sameboy", "mgba". */
 extern const char *const oracles_settings_core_names[2];
 
@@ -65,6 +69,9 @@ typedef struct oracles_settings {
     int colour_correction;        /* on by default */
     char vsync[8];                /* auto, on, off */
     int camera;                   /* the Enhanced camera profile: 1 or 2 */
+    int link_phase;               /* link_phase=1: Link drawn in phase on a diagonal walk (a trial, written only when on) */
+    int subpixel_camera;          /* subpixel_camera=: the Enhanced camera to the 256th of a pixel (Camera's Smooth), 1 or 0 once
+                                   * set either way, -1 absent: the platform's default (oracles_settings_subpixel_camera) */
     char key_names[ORACLES_BINDINGS][ORACLES_SETTINGS_NAME_LENGTH];
     char pad_names[4][ORACLES_SETTINGS_NAME_LENGTH];
     char menu_pad[ORACLES_SETTINGS_NAME_LENGTH];   /* menu_pad=: the controller's Escape in a game, Guide's too (leftstick by default; a
@@ -101,13 +108,24 @@ typedef struct oracles_settings {
                                    * with the flippers, A held too; the direction with Ages' mermaid suit);
                                    * off by default, in either profile, for every game the home screen starts: Controls' Swimming,
                                    * Tap or Hold */
+    int compact_text;             /* text=classic|compact: the text box's lines in the font's own widths, in Enhanced alone; classic by
+                                   * default, for every game the home screen starts that qualifies it (Ages and Seasons) */
+    int text_size;                /* text_size=normal|large|xlarge (0, 1, 2): the text box larger where the view holds it, three halves in
+                                   * whole screen pixels (large) or twice as large (xlarge), the next size down elsewhere, in Enhanced;
+                                   * normal by default; it applies at once, from the pause too */
+    int text_instant;             /* text_speed=classic|instant: the text box's lines letter by letter at the file screen's speed, or each
+                                   * whole, as a press of A at its start shows it; classic by default, in either profile, for every game
+                                   * the home screen starts; it applies when the game resumes, from the pause too */
+    int text_box_wide;            /* text_box=standard|wide: the game's box, or the host's wide box (192 pixels of text, the texts laid out
+                                   * again for it, classic or compact), in Enhanced alone; standard by default, Ages and Seasons */
     int view;                     /* view=near|medium|far, Display's View in Enhanced: an OraclesEnhancedLevel, far by default */
     int core;                     /* an OraclesCoreKind: core=sameboy|mgba, Display's Core; -1 until the player chooses one, the build's default
                                    * (ORACLES_DEFAULT_CORE) then playing, and the file holding no core= line */
     int menus_large;              /* menus=large|view: the game's menus, its map and its cutscenes, which the Enhanced view shows
                                    * framed, at their own largest whole scale (large) or the view's (view); large on Android */
-    int hud_full;                 /* hud=original|full: the status bar in Enhanced as the game draws it, dark beside it (original), or
-                                   * full width, beside it its own background (full, the default); it applies at once, from the pause too */
+    int hud;                      /* hud=original|full|wide, 0 to 2 as OraclesEnhancedHud: the status bar in Enhanced as the game draws
+                                   * it, dark beside it (original), full width, beside it its own background (full, the default), or laid
+                                   * out on that background, hearts left and items right (wide); it applies at once, from the pause too */
     int ghosts;                   /* ghosts=auto|1|2: the ghosts that prepare the rooms around, each on its own thread; 0 (auto, the
                                    * default) two on a device of four processor threads or more, else one; Display's Neighbour
                                    * workers, in its Advanced rows */
@@ -135,16 +153,34 @@ typedef struct oracles_settings {
     int quality_hint;             /* quality_hint=low|medium|high|max|custom: the quality a game that ran slowly was last suggested to leave,
                                    * -1 none: the suggestion is made once a quality, until the view, the core or the workers change */
     int first_run;                /* no settings.txt was read: the first opening, which takes the device's profile */
+    /* The lines of settings.txt whose key this version does not know (a later version's, a test build's), as they were,
+     * each after the name of the known key read before it ("" at the file's start), "name\tline\n": written back after
+     * that key, or at the file's end when it is not written. */
+    char unknown[ORACLES_SETTINGS_UNKNOWN_LENGTH];
 } oracles_settings;
 
 void oracles_settings_defaults(oracles_settings *settings);
 void oracles_settings_load(oracles_settings *settings);
-/* Writes every setting through a temporary file renamed over settings.txt: 1 when done; 0 leaves the file as it was. */
+/* Writes every setting through a temporary file renamed over settings.txt, the unknown keys read kept after the key they
+ * followed: 1 when done; 0 leaves the file as it was. */
 int oracles_settings_store(const oracles_settings *settings);
 /* The core the games run on: the one chosen, else the build's default. */
 int oracles_settings_core(const oracles_settings *settings);
+/* The sub-pixel camera on (1) or off (0) for a game whose view the screen shows at the whole scale `scale` (Display ›
+ * Advanced's Camera, Smooth or Pixel): the player's choice, else the platform's default. */
+int oracles_settings_subpixel_camera(const oracles_settings *settings, unsigned scale);
+/* That default, whatever the Quality: on on the desktops (Windows, macOS, Linux); where the game is only fullscreen
+ * (Android), on from ORACLES_SETTINGS_SUBPIXEL_SCALE times on, off under it. */
+#define ORACLES_SETTINGS_SUBPIXEL_SCALE 3u
+int oracles_settings_default_subpixel_camera(int fullscreen_only, unsigned scale);
+/* The whole scale from which this platform's default is on: 0 on the desktops (every scale), ORACLES_SETTINGS_SUBPIXEL_SCALE
+ * on Android. */
+unsigned oracles_settings_subpixel_default_from(void);
 /* The profile the view's level, the core the games run on and the neighbour workers make: Custom when none. */
 OraclesQuality oracles_settings_quality(const oracles_settings *settings);
+/* The same for a session's own: its view's level (an OraclesEnhancedLevel), its core (an OraclesCoreKind) and its
+ * workers (0 auto, 1, 2), the command line's over the settings'.  The Low quality leaves a neighbour's objects frozen. */
+OraclesQuality oracles_settings_quality_of(int view, int core, int ghosts);
 /* Sets the view's level, the core and the neighbour workers of `quality` (Custom changes nothing).  The core is
  * written only when it is not the build's default, the player having chosen none: a later build keeps its own. */
 void oracles_settings_apply_quality(oracles_settings *settings, OraclesQuality quality);

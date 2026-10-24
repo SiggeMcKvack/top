@@ -127,6 +127,7 @@ typedef struct OraclesEnhancedObserver {
      * the vblank copies it, so the frame shows the logic before). */
     int have_last_link;
     int last_link_x, last_link_y;
+    int last_sub_x, last_sub_y;              /* and his 256ths of a pixel there */
     int32_t last_world_link_x, last_world_link_y;
     uint8_t last_link_group, last_link_room;
     uint64_t last_link_epoch;
@@ -155,6 +156,11 @@ typedef struct OraclesEnhancedObservation {
     int drawn_camera_x, drawn_camera_y;      /* the game's camera (hCameraX/Y) that frame was drawn with, room-local, signed */
     int drawn_offset_x, drawn_offset_y;      /* and its screen offsets (wScreenOffsetX/Y): SCX = camera + offset, SCY = camera + offset - 16 */
     int link_step_x, link_step_y;            /* Link's move since the previous observation: the frame on screen drew him that much behind world.link */
+    int drawn_link_dy;                       /* the view draws Link that many pixels below the game's sprite (walking diagonally, in phase with his x) */
+    int drawn_sub_x, drawn_sub_y;            /* Link's 256ths of a pixel where the frame on screen draws him (the previous observation's) */
+    int link_sub_x, link_sub_y;              /* and this observation's, with world.link */
+    int link_in_phase;                       /* the view draws him so this frame (his diagonal walk at one speed both ways) */
+    int drawn_link_dy_held;                  /* the offset it gave back this frame while it still moved him: the camera keeps its place */
     uint8_t group, room;                     /* wActiveGroup/wActiveRoom as the game has them now */
     int in_transition;                       /* not in normal play: scroll mode != 1 or transition state != 2 */
     int in_scroll;                           /* a scrolling transition between two rooms (states 3 to 5): a seam */
@@ -184,7 +190,7 @@ typedef struct OraclesEnhancedCamera OraclesEnhancedCamera;
 
 /* An axis's camera in whole pixels: Link's place less `offset`, kept while the
  * reducer's smooth position stays within a pixel of it (camera.c,
- * shown_position), in the reducer's epoch and segment it was taken in. */
+ * shown_correction), in the reducer's epoch and segment it was taken in. */
 typedef struct OraclesEnhancedShownOffset {
     int valid;
     int32_t offset;
@@ -200,6 +206,11 @@ typedef struct OraclesEnhancedShownOffset {
  * window, so that a room of another group keeps the game's vertical framing. */
 int oracles_enhanced_camera_reduce(OraclesEnhancedCamera *camera, uint32_t frame,
                                    const OraclesEnhancedObservation *observation, int32_t *camera_x, int32_t *camera_y);
+/* The last reduction's smooth camera past its whole pixels, in 256ths of a pixel each way (-255 to 255): the view's
+ * sub-pixel camera. */
+void oracles_enhanced_camera_fraction(const OraclesEnhancedCamera *camera, int32_t *x, int32_t *y);
+/* The reducers fed Link's place to the 256th of a pixel (the sub-pixel camera), or in whole pixels (0, as always). */
+void oracles_enhanced_camera_set_exact(OraclesEnhancedCamera *camera, int exact);
 /* 1 when the vertical reducer tracked at the last reduction. */
 int oracles_enhanced_camera_vertical_tracking(const OraclesEnhancedCamera *camera);
 /* The surface's world band, which the reducers frame outdoors: 256x128 (the

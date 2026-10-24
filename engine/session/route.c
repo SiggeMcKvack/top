@@ -133,6 +133,62 @@ static int push_cheat(OraclesRoute *route, uint32_t frame, const char *name, int
     return 0;
 }
 
+static const char *const setting_names[ORACLES_ROUTE_SETTINGS] = { "swim-hold", "item-hotkeys", "window", "text-speed" };
+static const char *const on_off[2] = { "off", "on" };
+static const char *const hotkey_modes[3] = { "off", "use", "equip" };
+static const char *const windows[5] = { "full", NULL, "2", "3", "4" };
+static const char *const text_speeds[2] = { "classic", "instant" };
+
+const char *oracles_route_setting_name(OraclesRouteSettingName name)
+{
+    return (unsigned)name < ORACLES_ROUTE_SETTINGS ? setting_names[name] : NULL;
+}
+
+const char *oracles_route_setting_value(OraclesRouteSettingName name, int value)
+{
+    if (name == ORACLES_ROUTE_SET_SWIM_HOLD) return value >= 0 && value < 2 ? on_off[value] : NULL;
+    if (name == ORACLES_ROUTE_SET_ITEM_HOTKEYS) return value >= 0 && value < 3 ? hotkey_modes[value] : NULL;
+    if (name == ORACLES_ROUTE_SET_WINDOW) return value >= 0 && value < 5 ? windows[value] : NULL;
+    if (name == ORACLES_ROUTE_SET_TEXT_SPEED) return value >= 0 && value < 2 ? text_speeds[value] : NULL;
+    return NULL;
+}
+
+/* `set <name> <value>`: 1, 0 for a malformed line or a name or a value this reader does not know, -1 for a setting's
+ * frame that does not increase strictly. */
+static int parse_set(const OraclesRoute *route, uint32_t frame, char *rest, OraclesRouteSetting *setting)
+{
+    const char *name = strtok(rest, " "), *value = strtok(NULL, " ");
+    if (!name || !value || strtok(NULL, " ")) return 0;
+    setting->frame = frame;
+    setting->name = ORACLES_ROUTE_SETTINGS;
+    for (unsigned n = 0; n < ORACLES_ROUTE_SETTINGS; n++) if (!strcmp(name, setting_names[n])) setting->name = (OraclesRouteSettingName)n;
+    if (setting->name == ORACLES_ROUTE_SETTINGS) return 0;
+    if (setting->name == ORACLES_ROUTE_SET_TEXT_SPEED && route->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT) return 0;   /* a name its format's readers do not know */
+    setting->value = -1;
+    for (int v = 0; v < 5; v++) {
+        const char *text = oracles_route_setting_value(setting->name, v);
+        if (text && !strcmp(value, text)) setting->value = v;
+    }
+    if (setting->value < 0) return 0;
+    for (size_t i = route->setting_count; i-- > 0;)
+        if (route->settings[i].name == setting->name) return route->settings[i].frame < frame ? 1 : -1;
+    return 1;
+}
+
+static int push_setting(OraclesRoute *route, const OraclesRouteSetting *setting)
+{
+    if (route->setting_count >= ORACLES_ROUTE_MAX_EVENTS) return -1;
+    if (route->setting_count == route->setting_capacity) {
+        const size_t capacity = route->setting_capacity ? route->setting_capacity * 2 : 16;
+        OraclesRouteSetting *settings = realloc(route->settings, capacity * sizeof *settings);
+        if (!settings) return -1;
+        route->settings = settings;
+        route->setting_capacity = capacity;
+    }
+    route->settings[route->setting_count++] = *setting;
+    return 0;
+}
+
 int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_t error_capacity)
 {
     memset(route, 0, sizeof *route);
@@ -156,7 +212,7 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
             }
             if (strcmp(key, "oracles-route") == 0) {
                 route->format = (unsigned)strtoul(value, NULL, 10);
-                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_CHEAT_VERB) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
+                if (route->format < 1u || route->format > ORACLES_ROUTE_FORMAT_LATEST) { set_error(error, error_capacity, "unsupported route format", number); goto fail; }
                 format_seen = 1;
             } else if (strcmp(key, "game") == 0) copy_field(route->header.game, sizeof route->header.game, value);
             else if (strcmp(key, "rom_sha1") == 0) copy_field(route->header.rom_sha1, sizeof route->header.rom_sha1, value);
@@ -183,6 +239,21 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
                 /* Nor a cheat. */
                 if (oracles_route_has_cheat(&route->header) && route->format < ORACLES_ROUTE_FORMAT_CHEATS) {
                     set_error(error, error_capacity, "a cheat option needs format 7", number);
+                    goto fail;
+                }
+                /* Nor the compact text. */
+                if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) && route->format < ORACLES_ROUTE_FORMAT_TEXT_COMPACT) {
+                    set_error(error, error_capacity, "the text-compact option needs format 9", number);
+                    goto fail;
+                }
+                /* Nor the wide text box. */
+                if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && route->format < ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE) {
+                    set_error(error, error_capacity, "the text-box-wide option needs format 11", number);
+                    goto fail;
+                }
+                /* Nor the instant text. */
+                if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_INSTANT) && route->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT) {
+                    set_error(error, error_capacity, "the text-instant option needs format 12", number);
                     goto fail;
                 }
             }
@@ -219,13 +290,22 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
         int consumed = 0;
         if (sscanf(line, "%lu %15s %n", &frame, verb, &consumed) < 2) { set_error(error, error_capacity, "expected '<frame> <verb> ...'", number); goto fail; }
         const unsigned which = strcmp(verb, "keys") == 0 ? 0u : strcmp(verb, "equip") == 0 ? 1u : strcmp(verb, "use") == 0 ? 2u
-                             : strcmp(verb, "cheat") == 0 ? 3u : 4u;
-        if (which == 4u || (which != 0u && route->format < 2u) || (which == 3u && route->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB)) {
+                             : strcmp(verb, "cheat") == 0 ? 3u : strcmp(verb, "set") == 0 ? 5u : 4u;
+        if (which == 4u || (which != 0u && route->format < 2u) || (which == 3u && route->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB)
+            || (which == 5u && route->format < ORACLES_ROUTE_FORMAT_SET)) {
             set_error(error, error_capacity, "unknown verb for this route format", number);
             goto fail;
         }
         if ((seen_any && frame < last_any) || (which < 3u && seen_verb[which] && frame <= last_of_verb[which])) { set_error(error, error_capacity, "frames must increase", number); goto fail; }
         char *rest = line + consumed;
+        if (which == 5u) {
+            OraclesRouteSetting setting;
+            const int parsed = parse_set(route, (uint32_t)frame, rest, &setting);
+            if (parsed <= 0) { set_error(error, error_capacity, parsed < 0 ? "frames must increase" : "expected '<frame> set <name> <value>', a setting and a value this version knows", number); goto fail; }
+            if (push_setting(route, &setting) != 0) { set_error(error, error_capacity, "too many events", number); goto fail; }
+            seen_any = 1; last_any = (uint32_t)frame;
+            continue;
+        }
         if (which == 3u) {
             const char *name;
             int on;
@@ -272,6 +352,7 @@ void oracles_route_free(OraclesRoute *route)
     free(route->events);
     free(route->actions);
     free(route->cheats);
+    free(route->settings);
     memset(route, 0, sizeof *route);
 }
 
@@ -356,13 +437,34 @@ size_t oracles_route_cheats_at(const OraclesRoute *route, uint32_t frame, size_t
     return count;
 }
 
+size_t oracles_route_settings_at(const OraclesRoute *route, uint32_t frame, size_t *first)
+{
+    size_t low = 0, high = route->setting_count;
+    while (low < high) {
+        const size_t mid = low + (high - low) / 2;
+        if (route->settings[mid].frame < frame) low = mid + 1; else high = mid;
+    }
+    size_t count = 0;
+    while (low + count < route->setting_count && route->settings[low + count].frame == frame) count++;
+    if (first) *first = low;
+    return count;
+}
+
+int oracles_route_sets(const OraclesRoute *route, OraclesRouteSettingName name)
+{
+    for (size_t i = 0; i < route->setting_count; i++) if (route->settings[i].name == name) return 1;
+    return 0;
+}
+
 uint32_t oracles_route_last_frame(const OraclesRoute *route)
 {
     const uint32_t keys = route->count ? route->events[route->count - 1].frame : 0u;
     const uint32_t actions = route->action_count ? route->actions[route->action_count - 1].frame : 0u;
     const uint32_t cheats = route->cheat_count ? route->cheats[route->cheat_count - 1].frame : 0u;
-    const uint32_t last = keys > actions ? keys : actions;
-    return last > cheats ? last : cheats;
+    const uint32_t settings = route->setting_count ? route->settings[route->setting_count - 1].frame : 0u;
+    uint32_t last = keys > actions ? keys : actions;
+    if (cheats > last) last = cheats;
+    return last > settings ? last : settings;
 }
 
 int oracles_route_mask_at(const OraclesRoute *route, uint32_t frame, unsigned *mask)
@@ -382,15 +484,24 @@ int oracles_route_mask_at(const OraclesRoute *route, uint32_t frame, unsigned *m
 
 int oracles_route_writer_open(OraclesRouteWriter *writer, const char *path, const OraclesRouteHeader *header)
 {
+    return oracles_route_writer_open_format(writer, path, header, 0);
+}
+
+int oracles_route_writer_open_format(OraclesRouteWriter *writer, const char *path, const OraclesRouteHeader *header, int at_least)
+{
     memset(writer, 0, sizeof *writer);
     writer->file = fopen(path, "wb"); /* LF on every platform */
     if (!writer->file) return -1;
     char language[16];
-    const int format = oracles_route_has_cheat(header) ? ORACLES_ROUTE_FORMAT_CHEATS
+    const int lowest = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_INSTANT) ? ORACLES_ROUTE_FORMAT_TEXT_INSTANT
+                     : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) ? ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE
+                     : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) ? ORACLES_ROUTE_FORMAT_TEXT_COMPACT
+                     : oracles_route_has_cheat(header) ? ORACLES_ROUTE_FORMAT_CHEATS
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) ? ORACLES_ROUTE_FORMAT_DIAGONAL
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_SWIM_HOLD) ? ORACLES_ROUTE_FORMAT_SWIM_HOLD
                      : oracles_route_language(header, language, sizeof language)[0] ? ORACLES_ROUTE_FORMAT_LANGUAGE
                      : header->mods[0] ? ORACLES_ROUTE_FORMAT_MODS : ORACLES_ROUTE_FORMAT;
+    const int format = at_least > lowest ? at_least : lowest;
     writer->format = format;
     fprintf(writer->file, "oracles-route %d\ngame %s\nrom_sha1 %s\nsram_sha1 %s\n", format,
             header->game, header->rom_sha1, header->sram_sha1);
@@ -435,16 +546,18 @@ int oracles_route_writer_cheat(OraclesRouteWriter *writer, uint32_t frame, const
 {
     if (!writer->file) return 0;
     if (!name[0] || strlen(name) >= sizeof ((OraclesRouteCheat *)0)->name || strpbrk(name, " \t\r\n")) return -1;
-    if (writer->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB) {
-        /* The header was written at the start, before a cheat changed: its format, one digit after "oracles-route ", is
-         * raised in place, 8 taking the place of the digit it replaces. */
-        const long end = ftell(writer->file);
-        if (end < 0 || fseek(writer->file, (long)strlen("oracles-route "), SEEK_SET) != 0) return -1;
-        fputc('0' + ORACLES_ROUTE_FORMAT_CHEAT_VERB, writer->file);
-        if (fseek(writer->file, end, SEEK_SET) != 0) return -1;
-        writer->format = ORACLES_ROUTE_FORMAT_CHEAT_VERB;
-    }
+    /* The header, written at the start, says the format: a route opened in one before the verb's cannot carry it. */
+    if (writer->format < ORACLES_ROUTE_FORMAT_CHEAT_VERB) return -1;
     fprintf(writer->file, "%u cheat %s %s\n", frame, name, on ? "on" : "off");
+    return 0;
+}
+
+int oracles_route_writer_set(OraclesRouteWriter *writer, uint32_t frame, OraclesRouteSettingName name, int value)
+{
+    if (!writer->file) return 0;
+    const char *text = oracles_route_setting_value(name, value);
+    if (!text || writer->format < ORACLES_ROUTE_FORMAT_SET || (name == ORACLES_ROUTE_SET_TEXT_SPEED && writer->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT)) return -1;
+    fprintf(writer->file, "%u set %s %s\n", frame, setting_names[name], text);
     return 0;
 }
 

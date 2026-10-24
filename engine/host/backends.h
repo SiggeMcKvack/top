@@ -13,6 +13,7 @@
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
+struct SDL_FRect;
 struct SDL_Gamepad;
 union SDL_Event;
 
@@ -135,13 +136,22 @@ void oracles_sdl_place_window(struct SDL_Window *window, int centre_x, int centr
  * not and Scaling on Fill or not: the largest whole scale sampled to the nearest pixel (Sharp, and Fill in a window), or,
  * Fill in fullscreen, the largest size in the image's proportions sampled for pixel art. */
 void oracles_sdl_presentation(int fullscreen, int fill, int *presentation, int *scale_mode);
+/* Vsync changed during the pause: the presentation in step with the display, or not, from the next frame. */
+void oracles_sdl_backend_set_vsync(const oracles_host_backend *backend, int vsync);
 /* Scaling changed during the pause: the frame's sampling at once, the presentation from the next frame. */
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill);
+/* The window changed during the pause: fullscreen, or a window of `scale` times the frame around its centre, kept on
+ * its display; nothing where the window is always the whole screen. */
+void oracles_sdl_backend_set_window(const oracles_host_backend *backend, int fullscreen, unsigned scale);
 /* The screen margin changed during the pause: its band read again, the image and the touch controls in it from the
  * next frame. */
 void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin);
 /* Scaling's Fill chosen, and in effect at the last frame (the window fullscreen then). */
 void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chosen, int *in_effect);
+/* The whole scale the frame is shown at on the screen now, in the band the screen margin leaves it: the largest whole
+ * number of the screen's pixels a pixel of the frame takes there (Fill's 2.67 counts 2), at least 1; 0 before the
+ * session started. */
+unsigned oracles_sdl_backend_whole_scale(const oracles_host_backend *backend);
 /* 1 when the session ended because the window was closed, not by Escape. */
 int oracles_sdl_backend_window_closed(const oracles_host_backend *backend);
 /* Frames presented and the seconds between the first and the last (with vsync, the rate the display imposed), and
@@ -157,6 +167,23 @@ void oracles_sdl_backend_release(oracles_host_backend *backend);
  * game with its size. */
 void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct SDL_Window **window, struct SDL_Renderer **renderer,
                                     struct SDL_Texture **frame, int *width, int *height);
+/* For the pause menu, between two frames: the game's last image drawn into `image`, in the window's pixels (the
+ * logical presentation lifted), as its last frame showed it: the sub-pixel camera's band at its fraction of a pixel,
+ * the patch and Link's layer at their places, the fixed rectangles unmoved; the frame as it is when the last frame was
+ * shown so (no sub-pixel camera, the touch controls' or the screen margin's drawing); then the text box Text size
+ * showed again larger over it, at that size over the image.  A part shown alone (the game's menus enlarged) is drawn
+ * alone so, and the image's size is that part's (oracles_sdl_backend_pause_size): the frame's otherwise.  The pause
+ * changing the large menus changes the part the image shows (oracles_sdl_backend_pause_crop: x, y, w, h in the frame,
+ * or NULL for the whole frame). */
+int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image);
+void oracles_sdl_backend_pause_size(const oracles_host_backend *backend, int *width, int *height);
+void oracles_sdl_backend_pause_crop(const oracles_host_backend *backend, const uint32_t rect[4]);
+/* The pause changing Text size changes the box it shows again larger (oracles_sdl_backend_pause_box: x, y, w, h in the
+ * frame, or NULL for none, with the frame's box_bottom, box_reserve_w and box_size), and the part a reserve widens. */
+void oracles_sdl_backend_pause_box(const oracles_host_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size);
+/* The last frame's pixels drawn again (the frame's size, its crop, box and sub-pixel move kept): the pause changing a
+ * setting that the frame's own pixels show (the status bar's layout) shows it in the image at once. */
+void oracles_sdl_backend_pause_pixels(const oracles_host_backend *backend, const uint32_t *pixels);
 /* What asked for the pause menu last: a key (Escape), a controller (Guide, the menu's button or trigger) or a finger
  * (the touch controls' pause); NONE before any, for Android's Back, which a finger or a controller gives too, and for
  * a suspension (Android's background), which no device asked. */

@@ -1,7 +1,8 @@
 /* The drawn-back view without a ROM: the geometry of a 480x270
  * surface in the camera's world math, the compositor and the view on a
  * synthetic core, the refusal of a savestate taken at the other size, and,
- * at both sizes, the scenes of both games' intros the band shows or frames, and the
+ * at both sizes, the scenes of both games' intros the band shows or frames, the
+ * pictures their cutscenes show between rooms, and the
  * ghost's captures of a fade, never kept. */
 #include "camera.h"
 #include "compositor.h"
@@ -197,8 +198,11 @@ static void hud_full_width(void)
  * (checkUpdateUnderwaterWaves): the window's 128 lines are one period, and a
  * row above or below the window ripples with the line a taller screen would
  * have there.  Every source holds the same world function, so the band must
- * be that function shifted by the row's line modulo 128, on every row. */
-static void ripple(void)
+ * be that function shifted by the row's line modulo 128, on every row.  In a
+ * room shown whole, the part common to the lines (`sway`) is taken off every
+ * source, the core's image drawn again without it: the band is the function
+ * shifted by the line's scroll less the sway. */
+static void ripple(int32_t sway)
 {
     #define WORLD_PIXEL(wx, wy) (0xff000000u | ((uint32_t)((wx) & 0xfff) << 8) | (uint32_t)((wy) & 0xff))
     static const int8_t wave[8] = { 0, 1, 2, 3, 3, 2, 1, 0 };
@@ -212,7 +216,7 @@ static void ripple(void)
     uint32_t *core = malloc(160u * 144u * sizeof *core);
     for (unsigned y = 0; y < 144u; y++)
         for (unsigned x = 0; x < 160u; x++)
-            core[y * 160u + x] = y < 16u ? 0xff000000u : WORLD_PIXEL(window_left + (int32_t)x + shift_x[y - 16u], window_top + (int32_t)(y - 16u) + shift_y[y - 16u]);
+            core[y * 160u + x] = y < 16u ? 0xff000000u : WORLD_PIXEL(window_left + (int32_t)x + shift_x[y - 16u] - sway, window_top + (int32_t)(y - 16u) + shift_y[y - 16u]);
     const int32_t nb_left = world_left - 16, nb_top = world_top - 16;
     const unsigned nb_w = W + 32u, nb_h = BAND_H + 32u;
     uint32_t *area = malloc((size_t)nb_w * nb_h * sizeof *area);
@@ -226,6 +230,7 @@ static void ripple(void)
     in.window_world_left = window_left; in.window_world_top = window_top;
     in.world_left = world_left; in.world_top = world_top;
     in.line_shift = shift_x; in.line_shift_y = shift_y;
+    in.sway = sway;
     in.neighbours = &around; in.neighbour_count = 1;
     uint32_t *surface = malloc(W * H * sizeof *surface);
     CHECK(oracles_enhanced_compose(core, &in, surface) == 0);
@@ -233,7 +238,7 @@ static void ripple(void)
     for (unsigned y = 0; y < BAND_H; y++) {
         const int32_t row_line = world_top + (int32_t)y - window_top, line = ((row_line % 128) + 128) % 128;
         for (unsigned x = 0; x < W; x++) {
-            const uint32_t expect = WORLD_PIXEL(world_left + (int32_t)x + shift_x[line], world_top + (int32_t)y + shift_y[line]);
+            const uint32_t expect = WORLD_PIXEL(world_left + (int32_t)x + shift_x[line] - sway, world_top + (int32_t)y + shift_y[line]);
             if (surface[(16u + y) * W + x] != expect) wrong++;
         }
     }
@@ -242,21 +247,27 @@ static void ripple(void)
     #undef WORLD_PIXEL
 }
 
-/* A synthetic core running `jr -2`, whose WRAM the test writes as the game would. */
+/* A synthetic core running `jr -2`, whose WRAM the test writes as the game would; or running `code`. */
 typedef struct rig { uint8_t *rom; OraclesCore *core; OraclesGuest *guest; } rig;
-static int rig_start_game(rig *r, OraclesGame game)
+static int rig_start_code(rig *r, const OraclesCompatProfile *profile, const uint8_t *code, size_t n)
 {
     const size_t size = 1024u * 1024u;
     r->rom = calloc(size, 1);
     memcpy(r->rom + 0x134, "ZELDA NAYRU", 11);
     r->rom[0x143] = 0xc0; r->rom[0x147] = 0x1b; r->rom[0x148] = 0x05; r->rom[0x149] = 0x02;
     r->rom[0x100] = 0x00; r->rom[0x101] = 0xc3; r->rom[0x102] = 0x50; r->rom[0x103] = 0x01;
-    r->rom[0x150] = 0x18; r->rom[0x151] = 0xfe;
+    memcpy(r->rom + 0x150, code, n);
     const OraclesCoreOptions options = { 0, 0, ORACLES_CORE_SAMEBOY, 0 };
     r->core = oracles_core_create(r->rom, size, &options);
-    r->guest = r->core ? oracles_guest_attach(r->core, original_profile(game)) : NULL;
+    r->guest = r->core && profile ? oracles_guest_attach(r->core, profile) : NULL;
     return r->guest != NULL;
 }
+static int rig_start_profile(rig *r, const OraclesCompatProfile *profile)
+{
+    static const uint8_t spin[] = { 0x18, 0xfe };
+    return rig_start_code(r, profile, spin, sizeof spin);
+}
+static int rig_start_game(rig *r, OraclesGame game) { return rig_start_profile(r, original_profile(game)); }
 static int rig_start(rig *r) { return rig_start_game(r, ORACLES_GAME_AGES); }
 static void rig_stop(rig *r)
 {
@@ -316,6 +327,21 @@ static void view_and_savestate(void)
         frames(&r, zoom, 1, &mode, &cam, &cam_y);
         oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
         CHECK(hud_frames == 1u && shown[0] == border && shown[W - 1u] == border);
+        /* Changed with the game paused: the last surface's band drawn again at once as the next composition draws it,
+         * the world below as it was, nothing counted. */
+        static uint32_t centred[W * H], redrawn[W * H];
+        const size_t band = 16u * W * sizeof *shown;
+        memcpy(centred, shown, sizeof centred);
+        oracles_enhanced_view_set_hud(zoom, 1);
+        CHECK(oracles_enhanced_view_redraw_hud(zoom) == 1);
+        oracles_enhanced_view_hud_counts(zoom, &hud_frames, &kept);
+        CHECK(hud_frames == 1u && shown[0] != border && shown[0] == shown[HUD_X] && !memcmp(shown + 16u * W, centred + 16u * W, sizeof centred - band));
+        memcpy(redrawn, shown, sizeof redrawn);
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
+        CHECK(mode == ORACLES_ENHANCED_WORLD && !memcmp(shown, redrawn, band));
+        oracles_enhanced_view_set_hud(zoom, 0);
+        CHECK(oracles_enhanced_view_redraw_hud(zoom) == 1 && !memcmp(shown, centred, band));
+        frames(&r, zoom, 1, &mode, &cam, &cam_y);
     }
 
     /* The state names its size; the other size refuses it, and says why. */
@@ -552,7 +578,7 @@ static void cutscenes(void)
         frames(&r, view, 5, &mode, &cam, &cam_y);
         CHECK(mode == ORACLES_ENHANCED_WORLD && cam == cam0 && cam_y == cam_y0);
 
-        /* A scene played in the room itself (Nayru's song, CUTSCENE_NAYRU_SINGING): the band. */
+        /* A scene played in the room itself (Nayru's song after its picture, CUTSCENE_NAYRU_SINGING): the band. */
         W0(t->cutscene_index) = 6;
         for (unsigned i = 0; i < 10u; i++) { frames(&r, view, 1, &mode, &cam, &cam_y); world += mode == ORACLES_ENHANCED_WORLD; }
         CHECK(world == 10u && cam == cam0 && cam_y == cam_y0);
@@ -645,6 +671,171 @@ static void seasons_scenes(void)
         oracles_enhanced_view_stop(view);
         rig_stop(&r);
     }
+}
+
+/* The cutscenes that show full-screen pictures between rooms (the black
+ * tower's explanations, the endings, the credits, the flames lit in the room
+ * of rites), on each game that has them, at both sizes: framed while the
+ * status bar is off the screen (wGfxRegs1 splitting it nowhere, or on its
+ * first line), in the band while the bar shows (Ambi's room after the
+ * tower), the screen variables cleared as clearScreenVariablesAndWramBank1
+ * leaves them, which the observation takes for a load in the room it has.
+ * A warp's fade-out (cutscene03 to cutscene05) is framed the same way while
+ * the LCD is on: from a picture, not from play; the LCD off, its blank is a
+ * load's, at the view's scale, but after a frame the large menus enlarge.
+ * The scenes played in the room itself stay in the band, the bar shown or
+ * not.  The core writes LCDC from RIG_LCDC (xor $91: 0 leaves it on). */
+#define RIG_LCDC 0xc0feu
+static const uint8_t rig_lcdc_code[] = {
+    0xfa, 0xfe, 0xc0,   /* ld a,(RIG_LCDC) */
+    0xee, 0x91,         /* xor $91 */
+    0x47,               /* ld b,a */
+    0xf0, 0x40,         /* ldh a,(LCDC) */
+    0xb8,               /* cp b */
+    0x28, 0xf5,         /* jr z,$0150 */
+    0x78,               /* ld a,b */
+    0xe0, 0x40,         /* ldh (LCDC),a */
+    0x18, 0xf0,         /* jr $0150 */
+};
+
+static unsigned scene_world_frames(rig *r, OraclesEnhancedView *view, const OraclesGuestTables *t, uint8_t cutscene, uint8_t lyc, int cleared, int lcd_on, unsigned *enlarged)
+{
+    uint8_t *w0 = oracles_guest_wram_writable(r->guest, 0);
+    #define W0(sym) w0[(sym).addr - 0xc000u]
+    W0(t->cutscene_index) = cutscene; W0(t->scroll_mode) = cleared ? 0 : 1; W0(t->screen_transition_state) = cleared ? 0 : 2;
+    w0[t->gfx_regs1.addr + 5u - 0xc000u] = lyc;
+    w0[RIG_LCDC - 0xc000u] = lcd_on ? 0x00 : 0x80;   /* LCDC $91, or $11 */
+    OraclesEnhancedMode mode = ORACLES_ENHANCED_FRAMED;
+    int32_t cam = 0, cam_y = 0;
+    uint32_t rect[4];
+    unsigned world = 0;
+    for (unsigned i = 0; i < 10u; i++) {
+        frames(r, view, 1, &mode, &cam, &cam_y);
+        world += mode == ORACLES_ENHANCED_WORLD;
+        if (enlarged) *enlarged += (unsigned)oracles_enhanced_view_framed_crop(view, rect);
+    }
+    W0(t->cutscene_index) = 1; W0(t->scroll_mode) = 1; W0(t->screen_transition_state) = 2;
+    w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0x0f;
+    w0[RIG_LCDC - 0xc000u] = 0x00;
+    frames(r, view, 5, &mode, &cam, &cam_y);
+    CHECK(mode == ORACLES_ENHANCED_WORLD && !oracles_enhanced_view_framed_crop(view, rect));
+    #undef W0
+    return world;
+}
+
+static void picture_scenes_of(const OraclesCompatProfile *profile, const uint8_t *pictures, unsigned n_pictures, const uint8_t *in_room, unsigned n_in_room)
+{
+    for (int drawn_back = 0; drawn_back < 2; drawn_back++) {
+        rig r;
+        memset(&r, 0, sizeof r);
+        CHECK(rig_start_code(&r, profile, rig_lcdc_code, sizeof rig_lcdc_code));
+        OraclesEnhancedView *view = r.guest ? oracles_enhanced_view_start(r.core, r.guest, NULL, 0) : NULL;
+        CHECK(view != NULL);
+        if (!view) { rig_stop(&r); return; }
+        oracles_enhanced_view_set_zoom_out(view, drawn_back);
+        const OraclesGuestTables *t = oracles_compat_guest_tables(profile);
+        uint8_t *w0 = oracles_guest_wram_writable(r.guest, 0), *w1 = oracles_guest_wram_writable(r.guest, 1);
+        uint8_t *link = w1 + (ORACLES_OBJECTS_BASE - 0xd000u);
+        #define W0(sym) w0[(sym).addr - 0xc000u]
+        /* The boot ROM's logo first: the code runs once LCDC holds its $11. */
+        w0[RIG_LCDC - 0xc000u] = 0x80;
+        unsigned boot = 0;
+        while (boot < 600u && oracles_guest_io(r.guest)[0x40] != 0x11u) { oracles_core_run_frame(r.core); boot++; }
+        CHECK(boot < 600u);
+        w0[RIG_LCDC - 0xc000u] = 0x00;
+        W0(t->game_state) = 2; W0(t->cutscene_index) = 1; W0(t->scroll_mode) = 1; W0(t->screen_transition_state) = 2;
+        W0(t->active_group) = 0; W0(t->active_room) = 0x86; W0(t->room_is_large) = 0;
+        w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0x0f;   /* gfxRegisterStates 2: the bar above the game area */
+        link[ORACLES_OBJ_ENABLED] = 1; link[ORACLES_OBJ_STATE] = 1; link[ORACLES_OBJ_XH] = 80; link[ORACLES_OBJ_YH] = 64;
+        OraclesEnhancedMode mode = ORACLES_ENHANCED_FRAMED;
+        int32_t cam = 0, cam_y = 0;
+        frames(&r, view, 40, &mode, &cam, &cam_y);
+        CHECK(mode == ORACLES_ENHANCED_WORLD);
+        CHECK((oracles_guest_io(r.guest)[0x40] & 0x80u) != 0);
+        uint8_t still = 0xffu;
+        for (unsigned k = 0; k < n_pictures; k++) {
+            CHECK(pictures[k] != 0xffu);
+            const int fade = pictures[k] == t->cutscene_03 || pictures[k] == t->cutscene_04 || pictures[k] == t->cutscene_05;
+            if (!fade && still == 0xffu) still = pictures[k];
+            unsigned enlarged = 0;
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x0f, 0, 1, NULL) == 10u);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x0f, 1, 1, NULL) == 10u);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 1, 1, &enlarged) == 0 && enlarged == 10u);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 0, 1, NULL) == 0);
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x00, 1, 1, NULL) == 0);
+            /* The LCD off: a fade's blank is not the picture's, in the band while the screen variables say play, a
+             * load's at the view's scale once cleared; a picture's own blank is framed as the picture. */
+            enlarged = 0;
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 0, 0, NULL) == (fade ? 10u : 0u));
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0xc7, 1, 0, &enlarged) == 0 && enlarged == (fade ? 0u : 10u));
+            CHECK(scene_world_frames(&r, view, t, pictures[k], 0x00, 1, 0, NULL) == 0);
+        }
+        /* A picture, its fade to white under cutscene03, then the LCD off for the warp's reload: one scale throughout,
+         * the large menus', until the room shows in the band. */
+        CHECK(still != 0xffu);
+        W0(t->cutscene_index) = still;
+        w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0xc7;
+        unsigned enlarged = 0, world = 0;
+        uint32_t rect[4];
+        for (unsigned i = 0; i < 24u; i++) {
+            if (i == 8u) W0(t->cutscene_index) = t->cutscene_03;
+            if (i == 16u) { W0(t->scroll_mode) = 0; W0(t->screen_transition_state) = 0; w0[RIG_LCDC - 0xc000u] = 0x80; }
+            frames(&r, view, 1, &mode, &cam, &cam_y);
+            world += mode == ORACLES_ENHANCED_WORLD;
+            enlarged += (unsigned)oracles_enhanced_view_framed_crop(view, rect);
+        }
+        CHECK(world == 0 && enlarged == 24u);
+        W0(t->cutscene_index) = 1; W0(t->scroll_mode) = 1; W0(t->screen_transition_state) = 2;
+        w0[t->gfx_regs1.addr + 5u - 0xc000u] = 0x0f;
+        w0[RIG_LCDC - 0xc000u] = 0x00;
+        frames(&r, view, 5, &mode, &cam, &cam_y);
+        CHECK(mode == ORACLES_ENHANCED_WORLD && !oracles_enhanced_view_framed_crop(view, rect));
+        #undef W0
+        for (unsigned k = 0; k < n_in_room; k++) {
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0x0f, 0, 1, NULL) == 10u);
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0xc7, 1, 1, NULL) == 10u);
+            CHECK(scene_world_frames(&r, view, t, in_room[k], 0x00, 0, 1, NULL) == 10u);
+        }
+        oracles_enhanced_view_stop(view);
+        rig_stop(&r);
+    }
+}
+
+static void picture_scenes(void)
+{
+    /* Ages and the fan games on its engine: the explanations of the black tower, Veran beaten, the credits, the room of
+     * rites collapsing, the flames of sorrow and despair, the tower complete; in the room: a wall retracting, the Wing
+     * Dungeon collapsing, Jabu-Jabu opening, Ambi's passage, the seas cleaned, the fairies hiding, the palace's guard,
+     * the people turned to stone, the princess taken, the pirates' ship (Seasons) in its window.  Nayru's song is
+     * neither: its picture (GFXH_NAYRU_SINGING_CUTSCENE under registers 4, SCY 0 and SCX panning, where the camera
+     * says SCY -16) is drawn off the camera, which frames it in the game and not on a core that writes no scroll
+     * register (ages/intro.route holds it), then the room with its bar. */
+    const OraclesGuestTables *a = &oracles_guest_tables_ages, *s = &oracles_guest_tables_seasons;
+    CHECK(a->cutscene_black_tower_explanation == 0x08u && a->cutscene_black_tower_escape == 0x09u && a->cutscene_credits == 0x0au
+          && a->cutscene_room_of_rites_collapse == 0x0fu && a->cutscene_flame_of_sorrow == 0x11u && a->cutscene_flame_of_despair == 0x20u
+          && a->cutscene_black_tower_complete == 0x21u && a->cutscene_din_crystal_descending == 0xffu && a->cutscene_flame_of_destruction == 0xffu
+          && a->cutscene_princess_kidnapped == 0xffu && a->cutscene_the_end_screen == 0xffu);
+    CHECK(s->cutscene_din_crystal_descending == 0x09u && s->cutscene_credits == 0x0au && s->cutscene_room_of_rites_collapse == 0x0fu
+          && s->cutscene_flame_of_destruction == 0x10u && s->cutscene_princess_kidnapped == 0x12u && s->cutscene_black_tower_explanation == 0xffu
+          && s->cutscene_black_tower_escape == 0xffu && s->cutscene_flame_of_sorrow == 0xffu && s->cutscene_flame_of_despair == 0xffu
+          && s->cutscene_black_tower_complete == 0xffu && s->cutscene_the_end_screen == 0xffu);
+    const uint8_t ages_pictures[] = { 0x03, 0x04, 0x05, 0x08, 0x09, 0x0a, 0x0f, 0x11, 0x20, 0x21 };
+    const uint8_t ages_in_room[] = { 0x0b, 0x1a, 0x1d, 0x1c, 0x1e, 0x13, 0x14, 0x10, 0x12 };
+    const uint8_t seasons_pictures[] = { 0x03, 0x04, 0x05, 0x09, 0x0a, 0x0f, 0x10, 0x12 };
+    const uint8_t seasons_in_room[] = { 0x06, 0x0b, 0x0c };
+    /* Gifts of Kinomi's credits are a stub that never runs (0xff), and its own end screen (0x22) is a picture. */
+    const uint8_t kinomi_pictures[] = { 0x03, 0x04, 0x05, 0x08, 0x09, 0x0f, 0x11, 0x20, 0x21, 0x22 };
+    picture_scenes_of(original_profile(ORACLES_GAME_AGES), ages_pictures, sizeof ages_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(original_profile(ORACLES_GAME_SEASONS), seasons_pictures, sizeof seasons_pictures, seasons_in_room, sizeof seasons_in_room);
+    const OraclesRomInfo moonrise = { .game = ORACLES_GAME_AGES, .revision = ORACLES_ROM_REVISION_MOONRISE_1_0_6, .known = 1 };
+    const OraclesRomInfo temple = { .game = ORACLES_GAME_SEASONS, .revision = ORACLES_ROM_REVISION_TEMPLE_1_073, .known = 1 };
+    const OraclesRomInfo kinomi = { .game = ORACLES_GAME_AGES, .revision = ORACLES_ROM_REVISION_KINOMI_1_1_2, .known = 1 };
+    CHECK(oracles_compat_find(&moonrise) && oracles_compat_find(&temple) && oracles_compat_find(&kinomi));
+    if (!oracles_compat_find(&moonrise) || !oracles_compat_find(&temple) || !oracles_compat_find(&kinomi)) return;
+    CHECK(oracles_compat_guest_tables(oracles_compat_find(&kinomi))->cutscene_credits == 0xffu);
+    picture_scenes_of(oracles_compat_find(&moonrise), ages_pictures, sizeof ages_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(oracles_compat_find(&kinomi), kinomi_pictures, sizeof kinomi_pictures, ages_in_room, sizeof ages_in_room);
+    picture_scenes_of(oracles_compat_find(&temple), seasons_pictures, sizeof seasons_pictures, seasons_in_room, sizeof seasons_in_room);
 }
 
 /* The black the band shows, counted by the view for the harness and the
@@ -756,6 +947,34 @@ static void parent_keys(void)
     CHECK(oracles_enhanced_parent_key_holds(parent, live, 64u, -1, 0u, -1));
 }
 
+/* A parent judged for a room chained from it: its key the live one but for
+ * its own visited bit, and, in the drawn-back band, the other rooms' visited
+ * bits (Link's first entry into a room, the rooms the ghost's chain crossed),
+ * said so that the run's reads are checked on delivery. */
+static void parent_visits(void)
+{
+    uint8_t parent[64], live[64];
+    for (unsigned i = 0; i < 64u; i++) parent[i] = live[i] = (uint8_t)(i * 7u);
+    const long flags_at = 16, own = 16 + 0x17;
+    int visits = 0;
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && !visits);
+    live[own] ^= 0x10u;                          /* its own visited bit: holds, nothing to check */
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && !visits);
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, -1, 0u, own, 0x10u, NULL));
+    live[16 + 0x18] ^= 0x10u;                    /* another room's visited bit: holds, its reads to check */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, NULL));   /* not judged so: not */
+    CHECK(oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits) && visits);
+    visits = 0;
+    live[16 + 0x19] ^= 0x20u;                    /* another flag of another room: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[16 + 0x19] ^= 0x20u; live[own] ^= 0x01u;   /* another bit of its own flags: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[own] ^= 0x01u; live[3] ^= 0x10u;        /* bit 4 of a byte outside the flags: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+    live[3] ^= 0x10u; live[16 + 32] ^= 0x10u;    /* the byte just past them: not */
+    CHECK(!oracles_enhanced_parent_key_current(parent, live, 64u, flags_at, 32u, own, 0x10u, &visits));
+}
+
 /* A room run from beside during a cutscene, kept only if the bytes its run
  * read are the live ones, the visited bit of its own flags aside. */
 static void beside_reads(void)
@@ -770,6 +989,27 @@ static void beside_reads(void)
     live[1] = 0x00; live[0] = 0x30;
     CHECK(!oracles_enhanced_reads_hold(3, addresses, seen, live, 0xc797, 0x10));   /* another bit of its own flags: refused */
     CHECK(oracles_enhanced_reads_hold(0, addresses, seen, live, 0xc797, 0x10));    /* nothing read */
+}
+
+/* A room whose run was refused for its parent's state, no start (Ages' 1:37
+ * beyond the Maku sapling's grove at the first arrival in the past): settled
+ * for the band's fill as a failed room is, though it waits on no clock, and
+ * its parent run again no sooner than a failure would allow. */
+static void waiting_on_a_start(void)
+{
+    const unsigned grove = 0x138u, beside = 0x147u, arrival = 0x139u, below = 0x148u;
+    CHECK(!oracles_enhanced_fill_settled(0, 0, 0, 0, 0u, arrival));   /* nothing yet: the fill goes on */
+    CHECK(oracles_enhanced_fill_settled(1, 0, 0, 0, 0u, arrival) && oracles_enhanced_fill_settled(0, 1, 0, 0, 0u, arrival)
+          && oracles_enhanced_fill_settled(0, 0, 1, 0, 0u, arrival));
+    CHECK(oracles_enhanced_fill_settled(0, 0, 0, 1, arrival, arrival));   /* waiting for another parent: settled, the look-ahead and the corners go on */
+    CHECK(!oracles_enhanced_fill_settled(0, 0, 0, 1, arrival, below));    /* marked around another reference room: not, until found so again */
+    CHECK(oracles_enhanced_parent_rerun_due(0, 0u, 0u, 0u, grove, arrival, 5u));   /* not waiting: the parent is run again at once */
+    CHECK(!oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1000u));
+    CHECK(!oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1299u));
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, arrival, 1300u));   /* the pace of a failure, 300 frames */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 0xffffff00u, grove, arrival, 0x0000002cu));   /* across the frame counter's wrap */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, beside, arrival, 1001u));   /* another parent: at once */
+    CHECK(oracles_enhanced_parent_rerun_due(1, grove, arrival, 1000u, grove, below, 1001u));      /* Link in another room: at once */
 }
 
 /* A ghost's capture of no terrain, never kept: Seasons' intro fades to white
@@ -821,12 +1061,182 @@ static void blank_captures(void)
     CHECK(oracles_enhanced_capture_blank(base, base, 0, area, 160u * 128u));    /* more: the LCD off */
 }
 
+/* The night Nayru's possession puts on Lynna (Ages' CUTSCENE_NAYRU_SINGING):
+ * PALH_99 over palettes 2 to 7 of PALH_TILESET_LYNNA_CITY, the base itself,
+ * with no fade.  The other rooms take it as a colour transform; a palette or
+ * two of an object, a palette transition's last mix and palettes of another
+ * room are no scene's tint. */
+static void set_colours(uint8_t *palettes, unsigned first, const uint8_t (*rgb)[3], unsigned count)
+{
+    for (unsigned i = 0; i < count; i++) {
+        const unsigned c = rgb[i][0] | rgb[i][1] << 5 | rgb[i][2] << 10;
+        palettes[(first + i) * 2u] = (uint8_t)c; palettes[(first + i) * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+}
+
+static unsigned channel(const uint8_t *palettes, unsigned i, unsigned shift) { return ((unsigned)(palettes[i * 2u] | palettes[i * 2u + 1u] << 8) >> shift) & 31u; }
+
+static void scene_tints(void)
+{
+    static const uint8_t common[8][3] = { { 31, 31, 31 }, { 20, 20, 20 }, { 10, 10, 10 }, { 0, 0, 0 }, { 31, 31, 24 }, { 31, 12, 4 }, { 16, 4, 0 }, { 0, 0, 0 } };
+    static const uint8_t lynna[24][3] = {   /* paletteData4a30 */
+        { 31, 28, 2 }, { 16, 28, 2 }, { 6, 17, 0 }, { 0, 0, 0 }, { 25, 17, 1 }, { 16, 28, 2 }, { 6, 17, 0 }, { 0, 0, 0 },
+        { 31, 28, 2 }, { 25, 17, 1 }, { 16, 10, 0 }, { 0, 0, 0 }, { 26, 23, 20 }, { 15, 18, 20 }, { 8, 9, 12 }, { 4, 2, 0 },
+        { 31, 31, 24 }, { 4, 22, 31 }, { 0, 10, 22 }, { 0, 0, 0 }, { 20, 24, 15 }, { 7, 18, 16 }, { 9, 4, 16 }, { 0, 5, 5 } };
+    static const uint8_t night[24][3] = {   /* paletteData44a8 */
+        { 7, 16, 19 }, { 6, 10, 13 }, { 2, 3, 11 }, { 0, 0, 5 }, { 9, 11, 11 }, { 6, 11, 13 }, { 2, 3, 11 }, { 0, 0, 5 },
+        { 7, 16, 19 }, { 9, 11, 11 }, { 5, 6, 8 }, { 0, 0, 5 }, { 7, 16, 19 }, { 3, 12, 14 }, { 2, 4, 12 }, { 0, 0, 5 },
+        { 7, 18, 25 }, { 3, 14, 21 }, { 2, 4, 14 }, { 0, 0, 5 }, { 7, 16, 19 }, { 3, 12, 14 }, { 2, 4, 12 }, { 0, 0, 5 } };
+    uint8_t reference[64], scene[64], out[64], other[64];
+    int32_t k[12];
+    uint8_t slots = 0, changed = 0;
+    set_colours(reference, 0, common, 8); set_colours(reference, 8, lynna, 24);
+    set_colours(scene, 0, common, 8); set_colours(scene, 8, night, 24);
+    CHECK(oracles_enhanced_scene_tint(reference, scene, &slots, &changed, k) && slots == 0xfcu && changed == 0xfcu);
+    oracles_enhanced_scene_tinted(reference, reference, scene, changed, k, out);
+    CHECK(memcmp(out, scene, 64u) == 0);   /* a room of the live room's palettes: the scene's own */
+    oracles_enhanced_scene_tinted(scene, reference, scene, changed, k, out);
+    CHECK(memcmp(out, scene, 64u) == 0);   /* a room the ghost ran during the scene, its palettes the scene's: kept */
+    /* Another room's palettes: through the transform, darker and bluer, palettes 0 and 1 untouched. */
+    for (unsigned i = 0; i < 32u; i++) {
+        const uint8_t rgb[1][3] = { { (uint8_t)(10u + i % 20u), (uint8_t)(12u + i % 19u), (uint8_t)(i % 9u) } };
+        set_colours(other, i, rgb, 1);
+    }
+    oracles_enhanced_scene_tinted(other, reference, scene, changed, k, out);
+    CHECK(memcmp(out, other, 16u) == 0);
+    unsigned red_in = 0, red_out = 0, blue_in = 0, blue_out = 0;
+    for (unsigned i = 8; i < 32u; i++) { red_in += channel(other, i, 0); red_out += channel(out, i, 0); blue_in += channel(other, i, 10); blue_out += channel(out, i, 10); }
+    CHECK(red_out * 2u < red_in && blue_out > blue_in);
+    /* Half way through the palette thread's fade between the two: the tint so far. */
+    uint8_t half[64];
+    memcpy(half, reference, 64u);
+    for (unsigned i = 4; i < 32u; i++) {
+        unsigned c = 0;
+        for (unsigned shift = 0; shift < 15u; shift += 5u) c |= ((channel(reference, i, shift) + channel(scene, i, shift)) / 2u) << shift;
+        half[i * 2u] = (uint8_t)c; half[i * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+    CHECK(oracles_enhanced_scene_tint(reference, half, &slots, &changed, k) && slots == 0xfcu);
+    /* Two palettes of an object: no tint of the screen. */
+    memcpy(half, reference, 64u);
+    memcpy(half + 16u, scene + 16u, 16u);
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* A palette transition's last mix, every channel within 2: no scene's tint. */
+    memcpy(half, reference, 64u);
+    for (unsigned i = 4; i < 32u; i++) {
+        unsigned c = 0;
+        for (unsigned shift = 0; shift < 15u; shift += 5u) { const unsigned ch = channel(reference, i, shift); c |= (ch >= 2u ? ch - 2u : ch + 1u) << shift; }
+        half[i * 2u] = (uint8_t)c; half[i * 2u + 1u] = (uint8_t)(c >> 8);
+    }
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* That last mix with two palettes far apart, which no transform of the
+     * others explains: what is left is no tint either. */
+    for (unsigned i = 0; i < 8u; i++) { half[i * 2u] = (uint8_t)(0x1fu * (i & 1u)); half[i * 2u + 1u] = (uint8_t)(0x7cu * ((i >> 1) & 1u)); }
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    /* The same palettes in another order: no transform takes the one to the other. */
+    memcpy(half, reference, 64u);
+    for (unsigned p = 2; p < 8u; p++) memcpy(half + p * 8u, reference + (9u - p) * 8u, 8u);
+    CHECK(!oracles_enhanced_scene_tint(reference, half, &slots, &changed, k));
+    CHECK(!oracles_enhanced_scene_tint(reference, reference, &slots, &changed, k));
+    /* Onox's arrival in Seasons: four palettes to the night, two others red,
+     * which no transform of the night explains.  The night is the tint: a
+     * room's palettes that were the live room's take the scene's, red ones
+     * included, any other goes to the night. */
+    static const uint8_t red[8][3] = { { 18, 3, 1 }, { 25, 16, 4 }, { 19, 10, 1 }, { 0, 0, 0 }, { 24, 1, 11 }, { 29, 3, 0 }, { 18, 2, 1 }, { 0, 0, 0 } };
+    memcpy(half, scene, 64u);
+    set_colours(half, 24, red, 8);
+    CHECK(oracles_enhanced_scene_tint(reference, half, &slots, &changed, k) && slots == 0x3cu && changed == 0xfcu);
+    oracles_enhanced_scene_tinted(reference, reference, half, changed, k, out);
+    CHECK(memcmp(out, half, 64u) == 0);
+    uint8_t dark_other[64];
+    oracles_enhanced_scene_tinted(other, reference, scene, changed, k, dark_other);
+    oracles_enhanced_scene_tinted(other, reference, half, changed, k, out);
+    CHECK(memcmp(out, dark_other, 64u) == 0);   /* another room's palettes all go to the night */
+}
+
+static void set_rgb555(uint8_t *palettes, const uint16_t colours[32])
+{
+    for (unsigned i = 0; i < 32u; i++) { palettes[i * 2u] = (uint8_t)colours[i]; palettes[i * 2u + 1u] = (uint8_t)(colours[i] >> 8); }
+}
+
+/* In the few frames after a fade, a scroll or a palette transition, a tint
+ * is a scene's only when most of its palettes changed beyond the
+ * transition's last mix.  The palettes on screen two frames after a scroll's
+ * fade into Lynna's 0:6b, within 2 of the room's but for
+ * palette 1, which the room shows white, fit a tint of four palettes and are
+ * none; Nayru's night as its palettes start to mix (intro, 7877) and the
+ * night a fade from white opens on (14718) are. */
+static void tint_after_fade(void)
+{
+    static const uint16_t room_6b[32] = { 0x142d, 0x0c3d, 0x475f, 0x0000, 0x433f, 0x269f, 0x0e1f, 0x01be, 0x5212, 0x3dac, 0x2d05, 0x0000, 0x3d52, 0x3dac, 0x2d05, 0x0000,
+                                          0x5212, 0x3d51, 0x2469, 0x0000, 0x498e, 0x3d0c, 0x2ca7, 0x0000, 0x6193, 0x48ed, 0x3849, 0x0000, 0x5212, 0x50ef, 0x2c07, 0x0000 };
+    static const uint16_t fade_end[32] = { 0x142d, 0x0c3d, 0x475f, 0x0000, 0x7fff, 0x7fff, 0x7fff, 0x7fff, 0x4a12, 0x39ac, 0x2905, 0x0000, 0x3952, 0x39ac, 0x2905, 0x0000,
+                                           0x4a12, 0x3951, 0x2069, 0x0000, 0x498e, 0x3d0c, 0x2ca7, 0x0000, 0x61b3, 0x48ec, 0x3848, 0x0000, 0x4e12, 0x4cee, 0x2c07, 0x0000 };
+    static const uint16_t lynna[32] = { 0x142d, 0x0c3d, 0x475f, 0x0000, 0x11df, 0x7ea4, 0x03e8, 0x0000, 0x0b9f, 0x0b90, 0x0226, 0x0000, 0x0639, 0x0b90, 0x0226, 0x0000,
+                                        0x0b9f, 0x0639, 0x0150, 0x0000, 0x52fa, 0x524f, 0x3128, 0x0044, 0x63ff, 0x7ec4, 0x5940, 0x0000, 0x3f14, 0x4247, 0x4089, 0x14a0 };
+    static const uint16_t dusk[32] = { 0x142d, 0x0c3d, 0x475f, 0x0000, 0x11df, 0x7ea4, 0x03e8, 0x0000, 0x173a, 0x130e, 0x09c5, 0x0000, 0x09f6, 0x130e, 0x09c5, 0x0000,
+                                       0x173a, 0x09f6, 0x052d, 0x0000, 0x4eb6, 0x4a0c, 0x3106, 0x0023, 0x639a, 0x7683, 0x5100, 0x0000, 0x3ed1, 0x3e06, 0x3c87, 0x1480 };
+    static const uint16_t night[32] = { 0x142d, 0x0c3d, 0x475f, 0x0000, 0x11df, 0x7ea4, 0x03e8, 0x0000, 0x4e07, 0x3546, 0x2c62, 0x1400, 0x2d69, 0x3566, 0x2c62, 0x1400,
+                                        0x4e07, 0x2d69, 0x20c5, 0x1400, 0x4e07, 0x3983, 0x3082, 0x1400, 0x6647, 0x55c3, 0x3882, 0x1400, 0x4e07, 0x3983, 0x3082, 0x1400 };
+    uint8_t reference[64], scene[64];
+    int32_t k[12];
+    uint8_t slots = 0, changed = 0;
+    set_rgb555(reference, room_6b); set_rgb555(scene, fade_end);
+    CHECK(oracles_enhanced_scene_tint(reference, scene, &slots, &changed, k) && slots == 0xc6u);   /* a tint of four palettes, the white one among them */
+    CHECK(!oracles_enhanced_scene_tint_after_fade(reference, scene, slots));                      /* one beyond the mix: none just after the fade */
+    set_rgb555(reference, lynna); set_rgb555(scene, dusk);
+    CHECK(oracles_enhanced_scene_tint(reference, scene, &slots, &changed, k) && oracles_enhanced_scene_tint_after_fade(reference, scene, slots));
+    set_rgb555(scene, night);
+    CHECK(oracles_enhanced_scene_tint(reference, scene, &slots, &changed, k) && slots == 0xfcu && oracles_enhanced_scene_tint_after_fade(reference, scene, slots));
+}
+
+/* The room's own palettes a scene's tint is taken from, kept by room while
+ * the scene lasts and no longer: its entry run again during the scene (the
+ * night in it, or the fade part way) or taken for another room does not
+ * change them; the scene over, a warp or a load, or ten seconds without a
+ * tint drop them, so that palettes kept by mistake cannot tint a room's
+ * neighbours for the rest of the session. */
+static void tint_memories(void)
+{
+    OraclesTintMemory m[ORACLES_TINT_MEMORIES];
+    uint8_t day[64], night[64], dusk[64], other[64];
+    for (unsigned i = 0; i < 64u; i++) { day[i] = (uint8_t)(i * 3u); night[i] = (uint8_t)(i * 3u + 1u); dusk[i] = (uint8_t)(i * 3u + 2u); other[i] = (uint8_t)(200u - i); }
+    oracles_enhanced_tint_forget(m);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 100, day, night) == day);   /* nothing kept: the entry */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 100, NULL, night) == NULL);
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 100, day);
+    const uint8_t *r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 101, night, night);   /* the entry run again in the night */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 102, dusk, night);   /* run again part way through the fade */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 102, dusk);   /* what a tint held from: never the later entry */
+    r = oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 103, NULL, night);   /* the entry taken for another room */
+    CHECK(r && memcmp(r, day, 64u) == 0);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x38, 0x10, 103, other, night) == other);   /* another room: its own entry */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x11, 103, NULL, night) == NULL);    /* another palette header */
+    /* The scene over: entry, screen and kept palettes the same. */
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 104, day, day) == day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 105, NULL, night) == NULL);
+    /* Ten seconds without a tint held from them. */
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 200, day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 200 + ORACLES_TINT_MEMORY_FRAMES, NULL, night) != NULL);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 201 + ORACLES_TINT_MEMORY_FRAMES, NULL, night) == NULL);
+    /* A warp or a load. */
+    oracles_enhanced_tint_kept(m, 0, 0x39, 0x10, 300, day);
+    oracles_enhanced_tint_forget(m);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x39, 0x10, 301, NULL, night) == NULL);
+    /* Four rooms kept at most: the longest without a tint goes first. */
+    for (unsigned i = 0; i < ORACLES_TINT_MEMORIES + 1u; i++) oracles_enhanced_tint_kept(m, 0, (uint8_t)(0x40u + i), 0x10, 400u + i, day);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x40, 0x10, 410, NULL, night) == NULL);
+    CHECK(oracles_enhanced_tint_reference(m, 0, 0x44, 0x10, 410, NULL, night) != NULL);
+}
+
 int main(void)
 {
     world_math();
     compositor();
     hud_full_width();
-    ripple();
+    ripple(0);
+    ripple(2);
     view_and_savestate();
     isolated_room_edges();
     state_across_viewports();
@@ -834,11 +1244,17 @@ int main(void)
     stairs_walk();
     cutscenes();
     seasons_scenes();
+    picture_scenes();
     blank_captures();
+    scene_tints();
+    tint_after_fade();
+    tint_memories();
     black_count();
     black_kinds();
     parent_keys();
+    parent_visits();
     beside_reads();
+    waiting_on_a_start();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("test_zoom_out: ok\n");
     return 0;

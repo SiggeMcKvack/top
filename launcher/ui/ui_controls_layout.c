@@ -1,4 +1,5 @@
 #include "ui_controls_layout.h"
+#include "ui_page_nav.h"
 
 #include "ui_page_layout.h"
 
@@ -60,6 +61,7 @@ const char *const oracles_ui_controls_mode_choices[2] = { "Off", "On" };
 const char oracles_ui_controls_swim_text[] =
     "Hold a direction to swim at full speed, instead of tapping A with the flippers or the direction with the mermaid suit.";
 const char oracles_ui_controls_swim_fan[] = "Fan games ignore it for now.";
+const char oracles_ui_controls_original_only[] = "Needs an original ROM.";
 const char *const oracles_ui_controls_swim_choices[2] = { "Tap", "Hold" };
 
 /* Controls' geometry, in scene pixels. */
@@ -97,7 +99,7 @@ const char *const oracles_ui_controls_swim_choices[2] = { "Tap", "Hold" };
 #define CHIP_GAP 8.0f
 #define SLOTS_MARGIN 12.0f
 #define SWIM_MARGIN 14.0f           /* above Swimming, under Reset */
-#define SWIM_MARGIN_IN_GAME 2.0f    /* in a game, its line that waits for the next Play takes back this room and its padding's */
+#define SWIM_MARGIN_IN_GAME 2.0f    /* in a fan game's pause, its reason's line takes back this room and its padding's */
 #define SWIM_PAD_Y_IN_GAME 4.0f
 #define SHORTCUTS_X (RIGHT_X + PANEL_PAD_X)
 #define SHORTCUTS_W (RIGHT_W - 2.0f * PANEL_PAD_X)
@@ -270,25 +272,39 @@ static void chips_4_3(const char *const *names, float right, float y, OraclesUiC
     }
 }
 
-/* The fan game shown, whose hotkeys stay off: the line that says so, else empty. */
+/* From the pause, a fan game, which has neither the swim's hold nor the item hotkeys: Swimming and the Item hotkeys are
+ * dimmed and inert there, and say why in place of the fan games' lines; in an Oracle they apply to the game, unless its
+ * ROM has neither (an unrecognised one), where they are dimmed and say why.  The line under each, NULL for none. */
+static int fan_pause(const OraclesHomeNav *nav) { return nav->in_game && oracles_home_fan_game(oracles_home_game(nav)) != NULL; }
+static const char *swim_later(const OraclesHomeNav *nav)
+{
+    return nav->swim_refused ? oracles_ui_controls_original_only : fan_pause(nav) ? oracles_display_fan_reason : NULL;
+}
+static const char *mode_later(const OraclesHomeNav *nav)
+{
+    return nav->hotkeys_refused ? oracles_ui_controls_original_only : fan_pause(nav) ? oracles_display_fan_reason : NULL;
+}
+
+/* The fan game shown from the home screen, whose hotkeys stay off: the line that says so, else empty. */
 static void fan_note(const OraclesHomeNav *nav, char *out, size_t capacity)
 {
     const OraclesHomeFanGame *fan = oracles_home_fan_game(oracles_home_game(nav));
-    if (fan) snprintf(out, capacity, "Fan games refuse item hotkeys: they stay off for %s.", oracles_home_title(fan->hero));
+    if (fan && !fan_pause(nav)) snprintf(out, capacity, "Fan games refuse item hotkeys: they stay off for %s.", oracles_home_title(fan->hero));
     else if (capacity) out[0] = 0;
 }
 
 /* Under Swimming's explanation from `bottom`: in 4:3 a fan game's line that it does not apply there (16:9's Item hotkeys
- * already say that fan games refuse them), and in a game that it waits for the next Play; returns their bottom. */
+ * already say that fan games refuse them), or from a fan game's pause why it is dimmed; returns their bottom. */
 static float swim_lines(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out, float x, float bottom)
 {
     const OraclesUiControlsStyles *st = oracles_ui_controls_styles(layout);
-    if (layout == ORACLES_UI_LAYOUT_4_3 && oracles_home_fan_game(oracles_home_game(nav))) {
+    if (layout == ORACLES_UI_LAYOUT_4_3 && oracles_home_fan_game(oracles_home_game(nav)) && !fan_pause(nav)) {
         out->swim_fan = line_at(st->mode_text, oracles_ui_controls_swim_fan, x, bottom + MODE_LINE_GAP, 0.0f);
         bottom = out->swim_fan.y + out->swim_fan.h;
     }
-    if (nav->in_game) {
-        out->swim_later = line_at(st->note, oracles_ui_later, x, bottom + MODE_LINE_GAP, 0.0f);
+    if (swim_later(nav)) {
+        out->swim_later_text = swim_later(nav);
+        out->swim_later = line_at(st->note, out->swim_later_text, x, bottom + MODE_LINE_GAP, 0.0f);
         bottom = out->swim_later.y + out->swim_later.h;
     }
     return bottom;
@@ -297,7 +313,7 @@ static float swim_lines(OraclesUiLayout layout, const OraclesHomeNav *nav, Oracl
 /* Swimming in the game buttons' panel from `y`: its title and Tap and Hold on one line, its explanation, its lines. */
 static void swim_16_9(const OraclesHomeNav *nav, OraclesUiControlsLayout *out, float left, float width, float y)
 {
-    const float pad = nav->in_game ? SWIM_PAD_Y_IN_GAME : MODE_PAD_Y, inner_x = left + MODE_PAD_X, inner_y = y + pad;
+    const float pad = swim_later(nav) ? SWIM_PAD_Y_IN_GAME : MODE_PAD_Y, inner_x = left + MODE_PAD_X, inner_y = y + pad;
     const float top_h = chips(oracles_ui_controls_swim_choices, left + width - MODE_PAD_X, inner_y, out->swim_choices);
     out->swim_title = line_at(&oracles_ui_controls_mode_title, "Swimming", inner_x, 0.0f, 0.0f);
     move_line(&out->swim_title, inner_x, inner_y + (top_h - out->swim_title.h) * 0.5f);
@@ -332,7 +348,7 @@ static void layout_buttons(const OraclesHomeNav *nav, OraclesUiControlsLayout *o
     out->reset_dot = dot;
     out->reset_text = line_at(&oracles_ui_controls_reset, "Reset to defaults", 0.0f, 0.0f, 0.0f);
     move_line(&out->reset_text, dot.x - RESET_GAP - out->reset_text.w, dot.y);
-    swim_16_9(nav, out, left, width, out->reset.y + out->reset.h + PANEL_GAP + (nav->in_game ? SWIM_MARGIN_IN_GAME : SWIM_MARGIN));
+    swim_16_9(nav, out, left, width, out->reset.y + out->reset.h + PANEL_GAP + (swim_later(nav) ? SWIM_MARGIN_IN_GAME : SWIM_MARGIN));
     out->left_panel = box(LEFT_X, PANEL_Y, LEFT_W, out->swim.y + out->swim.h + PANEL_PAD_Y + BORDER - PANEL_Y);
 }
 
@@ -340,8 +356,8 @@ static void layout_hotkeys(const OraclesHomeNav *nav, OraclesUiControlsLayout *o
 {
     const float left = RIGHT_X + BORDER + PANEL_PAD_X, width = RIGHT_W - 2.0f * (BORDER + PANEL_PAD_X);
     float y = PANEL_Y + BORDER + PANEL_PAD_Y;
-    /* The Item hotkeys line: its title and Off, On on one line; its explanation, its note, a fan game's line that they
-     * stay off, and in a game the line that says it waits for the next Play. */
+    /* The Item hotkeys line: its title and Off, On on one line; its explanation, its note, and a fan game's line that
+     * they stay off, or from its pause why they are dimmed. */
     const float inner_x = left + MODE_PAD_X, inner_y = y + MODE_PAD_Y;
     const float top_h = chips(oracles_ui_controls_mode_choices, left + width - MODE_PAD_X, inner_y, out->mode_choices);
     out->mode_title = line_at(&oracles_ui_controls_mode_title, "Item hotkeys", inner_x, 0.0f, 0.0f);
@@ -355,8 +371,9 @@ static void layout_hotkeys(const OraclesHomeNav *nav, OraclesUiControlsLayout *o
         bottom = out->mode_fan.y + out->mode_fan.h;
     }
     memset(&out->mode_later, 0, sizeof out->mode_later);
-    if (nav->in_game) {
-        out->mode_later = line_at(&oracles_ui_controls_note, oracles_ui_later, inner_x, bottom + MODE_LINE_GAP, 0.0f);
+    if (mode_later(nav)) {
+        out->mode_later_text = mode_later(nav);
+        out->mode_later = line_at(&oracles_ui_controls_note, out->mode_later_text, inner_x, bottom + MODE_LINE_GAP, 0.0f);
         bottom = out->mode_later.y + out->mode_later.h;
     }
     out->mode = box(left, y, width, bottom + MODE_PAD_Y - y);
@@ -564,7 +581,7 @@ static void hotkeys_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
     chips_4_3(oracles_ui_controls_mode_choices, right, out->mode.y, out->mode_choices);
     out->mode_title = line_at(&oracles_ui_row_title_4_3, "Item hotkeys", left, 0.0f, 0.0f);
     move_line(&out->mode_title, left, out->mode.y + (MODE_H_4_3 - out->mode_title.h) * 0.5f);
-    /* Under it, its explanation and its note; a fan game's line; in a game, that it waits for the next Play. */
+    /* Under it, its explanation and its note; a fan game's line, or from its pause why it is dimmed. */
     out->mode_text = line_at(&oracles_ui_row_text_4_3, oracles_ui_controls_mode_text, left, out->mode.y + MODE_H_4_3 + MODE_TEXT_PAD_TOP_4_3, 0.0f);
     out->mode_note = line_at(&oracles_ui_page_note_4_3, oracles_ui_controls_mode_note, left, out->mode_text.y + out->mode_text.h + MODE_LINE_GAP, 0.0f);
     float bottom = out->mode_note.y + out->mode_note.h;
@@ -573,8 +590,9 @@ static void hotkeys_4_3(const OraclesHomeNav *nav, OraclesUiControlsLayout *out)
         out->mode_fan = line_at(&oracles_ui_row_text_4_3, out->mode_fan_text, left, bottom + MODE_LINE_GAP, 0.0f);
         bottom = out->mode_fan.y + out->mode_fan.h;
     }
-    if (nav->in_game) {
-        out->mode_later = line_at(&oracles_ui_page_note_4_3, oracles_ui_later, left, bottom + MODE_LINE_GAP, 0.0f);
+    if (mode_later(nav)) {
+        out->mode_later_text = mode_later(nav);
+        out->mode_later = line_at(&oracles_ui_page_note_4_3, out->mode_later_text, left, bottom + MODE_LINE_GAP, 0.0f);
         bottom = out->mode_later.y + out->mode_later.h;
     }
     /* The slots and the two modifiers, Bind to B 8 lower. */

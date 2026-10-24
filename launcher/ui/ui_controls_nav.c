@@ -285,19 +285,20 @@ static void move(OraclesHomeNav *nav, OraclesHomeAction action)
 
 static OraclesHomeCommand toggle_hotkeys(OraclesHomeNav *nav, int on)
 {
-    /* A fan game's hotkeys stay off: no fan game's profile allows them yet. */
+    /* A fan game's hotkeys stay off: no fan game's profile allows them yet; nor from the pause of a game whose profile has none. */
     const int g = hotkey_game(nav);
-    if (g < 0) return ORACLES_HOME_STAY;
+    if (g < 0 || nav->hotkeys_refused) return ORACLES_HOME_STAY;
     const int now = nav->games[g].hotkeys != 0;
     if (now == on) return ORACLES_HOME_STAY;
     nav->games[g].hotkeys = on ? 1 : 0;   /* On is the use mode; equip stays the command line's */
     return ORACLES_HOME_STORE;
 }
 
-/* Swimming: Tap (0) or Hold (1), for every game. */
+/* Swimming: Tap (0) or Hold (1), for every game; not from a fan game's pause, the fan games having no swim's hold, nor
+ * from the pause of an Oracle whose profile has none. */
 static OraclesHomeCommand set_swim(OraclesHomeNav *nav, int hold)
 {
-    if (nav->controls.swim_hold == hold) return ORACLES_HOME_STAY;
+    if (nav->controls.swim_hold == hold || nav->swim_refused || (nav->in_game && oracles_home_fan_game(oracles_home_game(nav)))) return ORACLES_HOME_STAY;
     nav->controls.swim_hold = hold;
     return ORACLES_HOME_STORE;
 }
@@ -369,7 +370,7 @@ OraclesHomeCommand oracles_controls_act(OraclesHomeNav *nav, OraclesHomeAction a
         case ORACLES_HOME_BACK:
             /* Back to the menu Controls was opened from, on Controls. */
             nav->screen = nav->in_game ? ORACLES_SCREEN_PAUSE : ORACLES_SCREEN_HOME;
-            nav->focus = nav->in_game ? 3 : 2;
+            oracles_home_focus_item(nav, ORACLES_HOME_ITEM_CONTROLS);
             return ORACLES_HOME_STAY;
     }
     return ORACLES_HOME_STAY;

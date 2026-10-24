@@ -96,6 +96,7 @@ int language_target_of(const char *sha1, language_target *target)
     if (!t || !bank || bank > LANGUAGE_LAST_BANK || t->get_text_address.bank == ORACLES_GUEST_ABSENT || t->font_start.bank == ORACLES_GUEST_ABSENT)
         return -1;
     target->game = info.game;
+    target->revision = info.revision;
     target->tables = t;
     target->first_bank = bank;
     target->original = oracles_rom_is_original(&info);

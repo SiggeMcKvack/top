@@ -2,22 +2,15 @@
  * reference, tests/launcher_layout_reference.json (layout_reference.h), the
  * test's argument, in its frames 22h (No damage on, highlighted) at
  * 1920x1080, 22i (Rupees never run out highlighted) in the 4:3 layout at
- * 1440x1080, and 22j (at 640x480 on Android with a controller); a text is
- * compared by its left, its width, its line box and its baseline, an element
- * by its box.  The prototype draws a fourth row, Faster walking, which the
- * launcher drops until the cheat comes: the three rows keep their places, and
- * what lies under them (16:9's panel's bottom, 4:3's explanation and note)
- * sits one row higher, by the reference's own pitch from Rupees never run out
- * to Faster walking (a row's height and the gap).  22j highlights Faster
- * walking, which the launcher has not: the page is compared on Rupees never
- * run out, the explanation by its left, top and baseline (its width is Faster
- * walking's).  And the page's keys and pointer, from the home screen and from
- * the pause. */
+ * 1440x1080, and 22j (Rupees never run out highlighted too, at 640x480 on
+ * Android with a controller); a text is compared by its left, its width, its
+ * line box and its baseline, an element by its box.  And the page's keys and
+ * pointer, from the home screen and from the pause.  About, laid out as Cheats:
+ * turn 32's 32g about in 16:9 and 32g about 4:3, 1.2.0 with 1.3.0 announced. */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_page_nav.h"
 
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -37,26 +30,6 @@ static void page(OraclesHomeNav *nav, unsigned row)
     nav->focus = 5;
     CHECK(oracles_home_act(nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav->screen == ORACLES_SCREEN_CHEATS && nav->row == 0);
     nav->row = row;
-}
-
-/* The reference's dropped row, Faster walking's: its distance from the row above, the height of the page's rows and
- * their gap. */
-static float dropped_row(const char *frame, const char *row_probe)
-{
-    char name[32];
-    snprintf(name, sizeof name, "walk%s", row_probe);
-    const float walk = layout_reference(frame, name, "y");
-    snprintf(name, sizeof name, "rupees%s", row_probe);
-    return walk - layout_reference(frame, name, "y");
-}
-
-/* `line` as the reference places it, `dy` lower. */
-static OraclesUiLine lowered(const OraclesUiLine *line, float dy)
-{
-    OraclesUiLine l = *line;
-    l.y += dy;
-    l.baseline += dy;
-    return l;
 }
 
 /* Each row's label, Off and On, the probes both layouts have. */
@@ -87,12 +60,7 @@ static void frame_22h(void)
     layout_near("22h", "note", "width", l.note.w);
     layout_near("22h", "note box", "y", l.note.lines[0].y);
     layout_near("22h", "note box", "h", l.note.h);
-    /* The panel ends a row higher than the reference's, the launcher's rows as far apart as the reference's. */
-    const float dropped = dropped_row("22h", " row");
-    CHECK(fabsf(l.rows[2].y - l.rows[1].y - dropped) <= LAYOUT_TOLERANCE);
-    OraclesUiBox panel = l.panel;
-    panel.h += dropped;
-    layout_box("22h", "panel", &panel);
+    layout_box("22h", "panel", &l.panel);
     rows("22h", &l);
     for (int r = 0; r < ORACLES_CHEATS_ROWS; r++) {
         char name[32];
@@ -110,9 +78,8 @@ static void frame_22h(void)
     CHECK(l.help.h == 0.0f && l.help_note.h == 0.0f);
 }
 
-/* 4:3: one column of rows, the highlighted row's explanation and its note under them, a row higher than the
- * reference's; the head and the note on one line each; no panel, the rows and the help the mockup's panel.  `help` is
- * the reference's explanation, NULL when it is the dropped row's. */
+/* 4:3: one column of rows, the highlighted row's explanation and its note under them; the head and the note on one
+ * line each; no panel, the rows and the help the mockup's panel.  `help` is the reference's explanation. */
 static void frame_4_3(const char *frame, unsigned row, const char *help)
 {
     OraclesHomeNav nav;
@@ -126,31 +93,21 @@ static void frame_4_3(const char *frame, unsigned row, const char *help)
     layout_line(frame, "note", &l.note.lines[0]);
     layout_near(frame, "head", "y", l.head.section.y);
     layout_near(frame, "head", "h", l.note.lines[0].y + l.note.lines[0].h - l.head.section.y);
-    const float dropped = dropped_row(frame, "");
-    CHECK(fabsf(l.rows[2].y - l.rows[1].y - dropped) <= LAYOUT_TOLERANCE);
     CHECK(l.panel.w == 0.0f);
     layout_near(frame, "panel", "y", l.rows[0].y);
-    layout_near(frame, "panel", "h", l.help_note.y + l.help_note.h + dropped - l.rows[0].y);
+    layout_near(frame, "panel", "h", l.help_note.y + l.help_note.h - l.rows[0].y);
     rows(frame, &l);
     for (int r = 0; r < ORACLES_CHEATS_ROWS; r++) {
         char name[32];
         snprintf(name, sizeof name, "%s", ids[r]); layout_box(frame, name, &l.rows[r]);
     }
-    const OraclesUiLine help_line = lowered(&l.help, dropped), note_line = lowered(&l.help_note, dropped);
-    layout_near(frame, "help", "y", help_line.y);
-    layout_near(frame, "help", "h", help_line.h);
-    if (help) {
-        layout_line(frame, "help text", &help_line);
-        CHECK(!strcmp(oracles_cheats_texts[row], help));
-    } else {
-        layout_near(frame, "help text", "x", help_line.x);
-        layout_near(frame, "help text", "top", help_line.y);
-        layout_near(frame, "help text", "h", help_line.h);
-        layout_near(frame, "help text", "baseline", help_line.baseline);
-    }
-    layout_near(frame, "help note", "y", note_line.y);
-    layout_near(frame, "help note", "h", note_line.h);
-    if (help && row == 2) layout_line(frame, "help note text", &note_line);
+    layout_near(frame, "help", "y", l.help.y);
+    layout_near(frame, "help", "h", l.help.h);
+    layout_line(frame, "help text", &l.help);
+    CHECK(!strcmp(oracles_cheats_texts[row], help));
+    layout_near(frame, "help note", "y", l.help_note.y);
+    layout_near(frame, "help note", "h", l.help_note.h);
+    if (row == 2) layout_line(frame, "help note text", &l.help_note);
 }
 
 /* 22j: the help bar with a controller, the page's four hints. */
@@ -246,16 +203,74 @@ static void refused(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_QUIT_GAME);
 }
 
+/* About from the version number of 1.2.0, 1.3.0 announced: "The Oracles" over "Project" (16:9) or the whole name on the
+ * title's line (4:3), the version and the notice as the note, the row Update check, On chosen, always highlighted. */
+static void about(OraclesUiLayout layout, const char *frame)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    nav.layout = layout;
+    nav.games[0].usable = 1;
+    snprintf(nav.update, sizeof nav.update, "1.3.0");
+    nav.focus = 8;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_ABOUT);
+    char note[ORACLES_HOME_TEXT_LENGTH];
+    OraclesUiCheatsLayout l;
+    oracles_ui_layout_about(layout, &nav, "v1.2.0 (abc1234)", note, sizeof note, &l);
+    CHECK(!strcmp(note, "v1.2.0 (abc1234) \xc2\xb7 1.3.0 available"));
+    layout_line(frame, "section", &l.head.section);
+    layout_line(frame, "title", &l.head.title.lines[0]);
+    layout_line(frame, "note", &l.note.lines[0]);
+    layout_near(frame, "note box", "y", l.note.lines[0].y);
+    layout_line(frame, "update label", &l.labels[0]);
+    layout_box(frame, "update on", &l.choices[0][0].box);
+    layout_box(frame, "update off", &l.choices[0][1].box);
+    layout_line(frame, "update on text", &l.choices[0][0].name);
+    layout_line(frame, "update off text", &l.choices[0][1].name);
+    CHECK(l.rows[1].w == 0.0f && l.rows[2].w == 0.0f);
+    if (layout == ORACLES_UI_LAYOUT_4_3) {
+        CHECK(l.head.over.h == 0.0f && !strcmp(l.head.title.text[0], "The Oracles Project"));
+        layout_near(frame, "head", "h", l.note.lines[0].y + l.note.lines[0].h - l.head.section.y);
+        layout_box(frame, "update", &l.rows[0]);
+        layout_near(frame, "panel", "y", l.rows[0].y);
+        layout_near(frame, "panel", "h", l.help_note.y + l.help_note.h - l.rows[0].y);
+        layout_line(frame, "help text", &l.help);
+        layout_line(frame, "help note text", &l.help_note);
+        return;
+    }
+    layout_line(frame, "over", &l.head.over);
+    layout_box(frame, "panel", &l.panel);
+    layout_box(frame, "update row", &l.rows[0]);
+    layout_near(frame, "update", "y", l.rows[0].y);
+    layout_near(frame, "update", "h", l.rows[0].h);
+    layout_line(frame, "update explanation", &l.explanations[0].lines[0]);
+    layout_near(frame, "update explanation", "lines", (float)l.explanations[0].count);
+    layout_near(frame, "update explanation", "width", l.explanations[0].w);
+    CHECK(l.help.h == 0.0f);
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    OraclesUiHintLayout h[ORACLES_HOME_MAX_HINTS];
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    CHECK(oracles_home_hints(&nav, hints) == 4);
+    oracles_ui_layout_hints(layout, hints, 4, h);
+    for (unsigned i = 0; i < 4u; i++) {
+        char name[32];
+        snprintf(name, sizeof name, "hint %u", i); layout_box(frame, name, &h[i].box);
+        snprintf(name, sizeof name, "hint %u label", i); layout_line(frame, name, &h[i].label);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2 || !layout_reference_load(argv[1])) { fprintf(stderr, "usage: oracles-test-launcher-cheats launcher_layout_reference.json\n"); return 2; }
     if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
     frame_22h();
     frame_4_3("22i", 2, "Buying costs nothing.");
-    frame_4_3("22j", 2, NULL);
+    frame_4_3("22j", 2, "Buying costs nothing.");
     hints_22j();
     keys();
     refused();
+    about(ORACLES_UI_LAYOUT_16_9, "32g about");
+    about(ORACLES_UI_LAYOUT_4_3, "32g about 4:3");
     if (layout_failures()) { fprintf(stderr, "%d failure(s)\n", layout_failures()); return 1; }
     printf("launcher cheats: the page matches the layout reference within %.1f px, and its keys and pointer do what they say\n", (double)LAYOUT_TOLERANCE);
     return 0;

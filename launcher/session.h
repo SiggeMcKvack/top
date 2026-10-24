@@ -12,8 +12,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 struct OraclesPause;
+struct OraclesRoomTransitionStats;
 struct OraclesEnhancedSize;
 
 typedef struct OraclesSessionOptions {
@@ -48,6 +50,14 @@ typedef struct OraclesSessionOptions {
                                       * starts the swim's strokes (A's with the flippers, A held too; the direction's with Ages' mermaid suit) */
     unsigned cheats;                 /* --cheats, or settings.txt's cheats_<game>= for a game the home screen starts: a mask of OraclesGuestCheat */
     int cheats_given;                /* --cheats was given: its list wins over the settings' for the games the home screen starts */
+    int compact_text;                /* --text: 1 classic, 2 compact (the text box's lines in the font's own widths, in Enhanced alone);
+                                      * 0 for a game the home screen starts: settings.txt's text= */
+    int text_size;                   /* --text-size: 1 normal, 2 large, 3 xlarge (the text box three halves or twice as large where the view holds
+                                      * it); 0: settings.txt's text_size= */
+    int text_instant;                /* --text-speed: 1 classic, 2 instant (each line of the text box whole, in either profile); 0 for a game
+                                      * the home screen starts: settings.txt's text_speed= */
+    int text_box_wide;               /* --text-box: 1 standard, 2 wide (the host's box, 192 pixels of text, in Enhanced alone); 0 for a game
+                                      * the home screen starts: settings.txt's text_box= */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
     int camera_profile;              /* 0: the settings' camera; 1 or 2: this one for the session, not stored */
     int pretend_slow;                /* --pretend-slow: the game counts as one that ran slowly, to try the home screen's suggestion */
@@ -89,21 +99,59 @@ struct OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions
 /* The screen margin the games play with, an OraclesScreenMargin: the command line's (`option`, --screen-margin's as
  * OraclesSessionOptions holds it, 0 for none), else the settings' screen_margin=. */
 int oracles_session_screen_margin(int option, const oracles_settings *settings);
+/* Whether a game presents in step with the display for vsync= `vsync` ("auto", "on" or "off") on a display of
+ * `display_hz`: on, off, or auto's (oracles_settings_auto_vsync, never on Android). */
+int oracles_session_vsync_on(const char *vsync, unsigned display_hz);
 
-/* What a running game shows of the settings the pause applies at once: the colour correction as the settings had it
- * when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws it),
- * the screen margin (an OraclesScreenMargin). */
+/* What a running game shows of the settings the pause applies while it runs: the colour correction as the settings
+ * had it when the game last took it, Scaling's Fill, the HUD (OraclesEnhancedHud, -1 without the Enhanced view, which alone
+ * draws it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
+ * took them, the swim's hold (-1 where the game's profile has none), the item hotkeys' mode (an OraclesHotkeysMode) of
+ * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none), the instant text, vsync= (0 auto,
+ * 1 on, 2 off: what --vsync gave holds until the pause changes it), the large menus (-1 without the Enhanced view).  The
+ * window is not among
+ * them: the pause applies it when its row is chosen (OraclesPauseSession's window_chosen). */
 typedef struct OraclesSessionApplied {
     int colour, fill, hud, margin;
+    int text_size;   /* Text size, 0 normal, 1 large, 2 xlarge (-1 without the Enhanced view, or for a fan game, which keeps the game's box) */
+    int swim_hold, hotkeys_game, hotkeys;
+    int text_instant;   /* the instant text (-1 where the game's profile has none), as the settings had it when the game last took it */
+    int vsync;
+    int menus_large;   /* menus=large (-1 without the Enhanced view) */
 } OraclesSessionApplied;
 #define ORACLES_SESSION_CHANGED_COLOUR 1u
 #define ORACLES_SESSION_CHANGED_FILL 2u
 #define ORACLES_SESSION_CHANGED_HUD 4u
 #define ORACLES_SESSION_CHANGED_MARGIN 8u
+#define ORACLES_SESSION_CHANGED_SWIM 16u
+#define ORACLES_SESSION_CHANGED_HOTKEYS 32u
+#define ORACLES_SESSION_CHANGED_TEXT_SIZE 64u
+#define ORACLES_SESSION_CHANGED_TEXT_SPEED 128u
+#define ORACLES_SESSION_CHANGED_VSYNC 256u
+#define ORACLES_SESSION_CHANGED_MENUS 512u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
- * gives one (oracles_session_screen_margin), whatever the settings say. */
-unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied);
+ * gives one (oracles_session_screen_margin), and the text size --text-size's when `text_size_option` gives one (the
+ * size plus one), whatever the settings say. */
+unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, int text_size_option, OraclesSessionApplied *applied);
+/* The end-of-session report's line on the continuous transitions, to `out`: what the policy took over and moved, and
+ * the room entered's collisions predicted while the game loaded them, those not as the game then loaded them, and those
+ * left to the load, by reason. */
+void oracles_session_report_transitions(const struct OraclesRoomTransitionStats *stats, FILE *out);
+/* The window a game has, as window_scale= counts it, F11's toggle included: -1 where `setting` (the window Display chose
+ * for it) is; 0 fullscreen; else the setting when the window is the `setting_scale` it opens at (lowered to what the
+ * display holds), else the scale of 2 to 4 the window's `width` x `height` pixels are exactly, else -2: none. */
+int oracles_session_window_now(int setting, unsigned setting_scale, int fullscreen, int width, int height, int surface_w, int surface_h);
+/* The windows (1 << Display's Window value) whose pause would keep only its own entries (oracles_ui_layout_narrow),
+ * Display gone with them: `scales`, those 2x, 3x and 4x open at (lowered to what the display holds), of a surface of
+ * surface_w x surface_h, under `aspect` (the settings' aspect=). */
+unsigned oracles_session_windows_refused(const unsigned scales[3], int surface_w, int surface_h, int aspect);
+
+/* The layout of the texts a session plays (language.h, OraclesLanguageLayout): the compact text where the profile has
+ * it (`profile_compact`), the wide box where the profile has the host's text box (`profile_host_box`; elsewhere the
+ * game's box plays, the wide box turned off), in Enhanced alone.  1 with the line's `width` and whether it is laid out
+ * at the game's `fixed` advance; 0: the game's own layout. */
+int oracles_session_text_layout(int profile_compact, int profile_host_box, int enhanced, int compact, int wide, unsigned *width, int *fixed);
 
 /* The save file of a ROM: its path with the extension .sav. */
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity);

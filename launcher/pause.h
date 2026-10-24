@@ -26,16 +26,33 @@ typedef struct OraclesPauseSession {
     int (*load_state)(void *opaque, char *message, size_t capacity);
     /* The time of the savestate, "22:14", or empty when there is none. */
     void (*state_time)(void *opaque, char *out, size_t capacity);
-    /* The settings changed: the keys, the colour correction, the HUD, the scaling, the screen margin and the cheats apply
-     * at once.  Returns the screen margin in effect (an OraclesScreenMargin), which the menu's band follows. */
+    /* The settings changed: the keys, the colour correction, the HUD, the scaling and the screen margin apply at once,
+     * the swim's hold and the item hotkeys from the frame the game resumes on.  Returns the screen margin in effect (an
+     * OraclesScreenMargin), which the menu's band follows, as it follows the window's size. */
     int (*settings_changed)(void *opaque);
     /* Cheats changed the running game's cheats (a mask): they apply from the frame the game resumes on. */
     void (*cheats_changed)(void *opaque, unsigned cheats);
+    /* Display's Window was chosen (window_scale=: 2 to 4, 0 fullscreen): it applies at once. */
+    void (*window_chosen)(void *opaque, int window);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */
     int device; /* the device that opened the pause (an OraclesInputDevice), which its key hints follow; -1 when not known */
     unsigned cheats;   /* the running game's cheats, --cheats' perhaps, which its Cheats page starts from */
     int has_cheats;    /* its profile has them: else the menu has no Cheats */
+    /* Draws the game's last image into `image`, in the window's pixels, as its last frame showed it (the sub-pixel
+     * camera's band at its fraction of a pixel, Link at his place, Text size's box enlarged); NULL: the frame drawn there
+     * as it is. */
+    int (*game_image)(void *opaque, SDL_Renderer *renderer, const SDL_FRect *image);
+    int has_swim, has_hotkeys;   /* its profile has the swim's hold, the item hotkeys: else an Oracle's Controls dims them */
+    /* Its window as window_scale= counts it (2 to 4, 0 fullscreen), F11's toggle included, which Display shows, -2 for
+     * a window no choice is (its size window_w x window_h); -1 when Display cannot change it.  The windows (1 <<
+     * Display's Window value) whose pause would keep only its own entries, which Display refuses. */
+    int window, window_w, window_h;
+    unsigned windows_refused;
+    int has_text_instant;   /* its profile has the instant text: else Display › Text dims Text speed */
+    /* The size of that image, in the game's pixels: its part shown alone (the game's menus enlarged, which Display may
+     * change here), or the whole frame; NULL: the frame's. */
+    void (*game_size)(void *opaque, int *width, int *height);
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {
@@ -76,9 +93,10 @@ unsigned oracles_pause_late_glyphs(const OraclesPause *pause);
 
 /* The pause's image on an output of `out_width` x `out_height`: the game's `frame` at its whole scale (with `fill`, as
  * Scaling's Fill shows it in fullscreen: the whole output in its proportions), darkened, and the screen of `nav` over
- * it, in its layout (nav->layout and nav->narrow set for that output); the capture draws it offscreen too.  Returns 1
- * while a transition runs. */
+ * it, in its layout (nav->layout and nav->narrow set for that output); the capture draws it offscreen too.  With
+ * `session` and its game_image, the game's image is drawn by it, `frame` otherwise.  Returns 1 while a transition runs. */
 int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture *frame, int width, int height, int fill,
-                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms);
+                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms,
+                        const OraclesPauseSession *session);
 
 #endif

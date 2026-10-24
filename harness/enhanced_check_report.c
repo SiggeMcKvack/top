@@ -18,12 +18,12 @@ void ec_write_frame_row(OraclesEnhancedCheck *c, uint32_t frame, uint64_t hash, 
     const uint8_t *oam = oracles_guest_oam(c->guest);
     unsigned oam_used = 0;
     for (unsigned i = 0; oam && i < 40u; i++) if (oam[i * 4] != 0 && oam[i * 4] < 160u) oam_used++;
-    fprintf(c->tsv, "\t%s%02x\t%s%02x\t%u\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%02x\t%" PRId32 "\t%" PRId32 "\t%" PRId32 "\t%u\t%d\t%d\t%d\t%" PRId32 "\t%" PRId32 "\n", left_shown ? "+" : "-", left_room, right_shown ? "+" : "-", right_room, uncovered, scx, scy,
+    fprintf(c->tsv, "\t%s%02x\t%s%02x\t%u\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%02x\t%" PRId32 "\t%" PRId32 "\t%" PRId32 "\t%u\t%d\t%d\t%d\t%" PRId32 "\t%" PRId32 "\t%u\t%u\n", left_shown ? "+" : "-", left_room, right_shown ? "+" : "-", right_room, uncovered, scx, scy,
             (int16_t)oracles_guest_read16(c->guest, t->camera_x), (int16_t)oracles_guest_read16(c->guest, t->camera_y), off_x, off_y,
             oam_used, oam ? oam[0] : 0u, oam ? oam[1] : 0u, oracles_guest_io(c->guest) ? oracles_guest_io(c->guest)[0x40] : 0u,
             camera_y, ob->world.link_y, ob->window_top, oracles_guest_read8(c->guest, t->opened_menu_type),
             (int)(int8_t)oracles_guest_read8(c->guest, (OraclesGuestSym){ t->thread_state_buffer.bank, (uint16_t)(t->thread_state_buffer.addr + 0x1fu) }),
-            oracles_enhanced_view_isolated(c->view), ob->large, ob->world.origin_x, ob->world.origin_y);
+            oracles_enhanced_view_isolated(c->view), ob->large, ob->world.origin_x, ob->world.origin_y, c->window_luma, c->ring_luma);
 }
 
 /* The figures of the band itself: the frames, the cost of a composition,
@@ -34,7 +34,7 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     oracles_enhanced_view_ghost_failures(c->view, reasons);
     fprintf(out, "enhanced.run_hash=%016" PRIx64 "\nenhanced.frames=%u\nenhanced.world_frames=%u\nenhanced.framed_frames=%u\n", c->run_hash, c->frames, c->world_frames, c->framed_frames);
-    fprintf(out, "enhanced.enlarged_frames=%u\nenhanced.enlarged_runs=%u\n", c->enlarged_frames, c->enlarged_runs);
+    fprintf(out, "enhanced.enlarged_frames=%u\nenhanced.enlarged_runs=%u\nenhanced.enlarged_framed_drops=%u\n", c->enlarged_frames, c->enlarged_runs, c->enlarged_framed_drops);
     fprintf(out, "enhanced.normal_band_frames=%u\n", c->normal_band_frames);
     fprintf(out, "enhanced.compose_us_mean=%.0f\nenhanced.compose_us_max=%.0f\n", c->frames ? c->compose_us_total / c->frames : 0.0, c->compose_us_max);
     {
@@ -43,13 +43,41 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
         fprintf(out, "enhanced.fade_frames=%u\nenhanced.faded_objects=%u\n", fade_frames, faded);
         oracles_enhanced_view_fade_out_counts(c->view, &fade_frames, &faded);
         fprintf(out, "enhanced.fade_out_frames=%u\nenhanced.faded_out_objects=%u\n", fade_frames, faded);
+        unsigned tint_frames = 0;
+        uint32_t tint_first = 0, tint_last = 0;
+        oracles_enhanced_view_scene_tint_counts(c->view, &tint_frames, &tint_first, &tint_last);
+        fprintf(out, "enhanced.scene_tint_frames=%u\nenhanced.scene_tint_first=%" PRIu32 "\nenhanced.scene_tint_last=%" PRIu32 "\n", tint_frames, tint_first, tint_last);
+        fprintf(out, "enhanced.window_darker_frames=%u\nenhanced.window_darker_first=%" PRIu32 "\nenhanced.window_darker_last=%" PRIu32 "\n", c->window_darker_frames, c->window_darker_first, c->window_darker_last);
         unsigned shown = 0, jumps = 0, holes = 0, unseen = 0;
         oracles_enhanced_view_handoff_counts(c->view, &shown, &jumps, &holes, &unseen);
         fprintf(out, "enhanced.handoff_shown=%u\nenhanced.handoff_jumps=%u\nenhanced.handoff_hole_frames=%u\nenhanced.handoff_unseen=%u\n", shown, jumps, holes, unseen);
     }
+    fprintf(out, "enhanced.link_unshown_frames=%u\nenhanced.link_built_frames=%u\n", oracles_enhanced_view_link_unshown_frames(c->view),
+            oracles_enhanced_view_link_built_frames(c->view));
     fprintf(out, "enhanced.camera_jumps=%u\nenhanced.largest_jump=%" PRId32 "\nenhanced.camera_jumps_y=%u\nenhanced.largest_jump_y=%" PRId32 "\n", c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);
     fprintf(out, "enhanced.link_jumps=%u\nenhanced.link_jumps_y=%u\nenhanced.window_jumps=%u\n", c->link_jumps, c->link_jumps_y, c->window_jumps);
     fprintf(out, "enhanced.link_drawn_steps=%u\nenhanced.link_backsteps=%u\nenhanced.link_backsteps_y=%u\n", c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y);
+    {
+        unsigned moved = 0, engaged = 0;
+        oracles_enhanced_view_link_phase_counts(c->view, &moved, &engaged);
+        fprintf(out, "enhanced.diagonal_frames=%u\nenhanced.camera_wobble=%u\nenhanced.link_phase_frames=%u\nenhanced.link_phase_engaged=%u\n", c->diagonal_frames, c->camera_wobble, moved, engaged);
+        unsigned sub = 0, layered = 0, refused = 0, left_pixels = 0, wrong_pixels = 0, alike_pixels = 0;
+        oracles_enhanced_view_subpixel_counts(c->view, &sub, &layered, &refused);
+        oracles_enhanced_view_subpixel_pixel_counts(c->view, &left_pixels, &wrong_pixels, &alike_pixels);
+        fprintf(out, "enhanced.band_stops=%u\nenhanced.band_wobble=%u\nenhanced.straight_frames=%u\nenhanced.straight_band_stops=%u\nenhanced.link_screen_moves=%u\nenhanced.link_screen_backsteps=%u\n"
+                     "enhanced.subpixel_frames=%u\nenhanced.subpixel_layer_frames=%u\nenhanced.subpixel_refused_frames=%u\nenhanced.subpixel_left_pixels=%u\nenhanced.subpixel_wrong_pixels=%u\nenhanced.subpixel_alike_pixels=%u\n",
+                c->band_stops, c->band_wobble, c->straight_frames, c->straight_band_stops, c->link_screen_moves, c->link_screen_backsteps, sub, layered, refused, left_pixels, wrong_pixels, alike_pixels);
+        fprintf(out, "enhanced.subpixel_covered_pixels=%u\nenhanced.subpixel_unexplained_frames=%u\n", oracles_enhanced_view_subpixel_covered_pixels(c->view),
+                oracles_enhanced_view_subpixel_unexplained_frames(c->view));
+        fprintf(out, "enhanced.subpixel_objects=%u\nenhanced.subpixel_objects_off=%u\nenhanced.subpixel_objects_left=%u\n", c->layer_objects, c->layer_objects_off,
+                oracles_enhanced_view_subpixel_objects_left(c->view));
+        fprintf(out, "enhanced.switch_edges=%u\nenhanced.switch_band_jolt_max=%" PRId32 "\nenhanced.switch_link_jolt_max=%" PRId32 "\nenhanced.band_jolt_max=%" PRId32 "\nenhanced.link_jolt_max=%" PRId32 "\n",
+                c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->band_jolt_max, c->link_jolt_max);
+        fprintf(out, "enhanced.alone_scroll_frames=%u\nenhanced.alone_scroll_band_moves=%u\nenhanced.alone_scroll_cut_frames=%u\n", c->alone_scroll_frames, c->alone_scroll_band_moves,
+                c->alone_scroll_cut_frames);
+        fprintf(out, "enhanced.transition_layer_switches=%u\nenhanced.transition_layer_shift_max=%" PRId32 "\nenhanced.subpixel_switched=%u\n", c->transition_layer_switches,
+                c->transition_layer_shift_max, c->subpixel_switched);
+    }
     fprintf(out, "enhanced.link_edge_margin_min=%" PRId32 "\nenhanced.link_near_edge_frames=%u\n", c->link_edge_margin_min, c->link_near_edge_frames);
     fprintf(out, "enhanced.ghost_requested=%u\nenhanced.ghost_completed=%u\nenhanced.ghost_failed=%u\nenhanced.ghost_not_primeable=%u\nenhanced.ghost_load_failed=%u\nenhanced.ghost_never_settled=%u\nenhanced.ghost_wrong_room=%u\nenhanced.ghost_other=%u\n",
             requested, completed, failed, reasons[0], reasons[1], reasons[2], reasons[3], reasons[4]);
@@ -63,24 +91,39 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
             c->transitions, c->transitions_vertical, c->transitions_with_terrain, c->transitions_black, c->transitions_other_room, c->transitions_large, c->large_scroll_black, c->terrains_equal, c->terrains_different);
     fprintf(out, "enhanced.terrains_old=%u\n", c->terrains_old);
     fprintf(out, "enhanced.scrolls_diagonal=%u\nenhanced.scroll_across_stalled=%u\n", c->scrolls_diagonal, c->scroll_across_stalled);
-    fprintf(out, "enhanced.scrolls=%u\nenhanced.scroll_frames=%u\nenhanced.scroll_frozen_frames=%u\nenhanced.scroll_solid_arrivals=%u\nenhanced.window_checked=%u\nenhanced.window_misplaced=%u\nenhanced.off_camera_frames=%u\nenhanced.wave_frames=%u\nenhanced.shake_frames=%u\nenhanced.window_lines_checked=%u\nenhanced.window_lines_wrong=%u\n",
-            c->transitions_seen, c->transition_frames_total, c->transition_frozen_total, c->transition_arrivals_solid, c->window_checked, c->window_misplaced, oracles_enhanced_view_off_camera_frames(c->view), oracles_enhanced_view_wave_frames(c->view), oracles_enhanced_view_shake_frames(c->view), c->window_lines_checked, c->window_lines_wrong);
+    fprintf(out, "enhanced.scrolls=%u\nenhanced.scroll_frames=%u\nenhanced.scroll_frozen_frames=%u\nenhanced.scroll_solid_arrivals=%u\nenhanced.window_checked=%u\nenhanced.window_misplaced=%u\nenhanced.off_camera_frames=%u\nenhanced.world_off_camera_frames=%u\nenhanced.wave_frames=%u\nenhanced.shake_frames=%u\nenhanced.window_lines_checked=%u\nenhanced.window_lines_wrong=%u\n",
+            c->transitions_seen, c->transition_frames_total, c->transition_frozen_total, c->transition_arrivals_solid, c->window_checked, c->window_misplaced, oracles_enhanced_view_off_camera_frames(c->view), oracles_enhanced_view_world_off_camera_frames(c->view), oracles_enhanced_view_wave_frames(c->view), oracles_enhanced_view_shake_frames(c->view), c->window_lines_checked, c->window_lines_wrong);
     fprintf(out, "enhanced.curtain_frames=%u\nenhanced.curtain_frames_wrong=%u\nenhanced.curtain_frames_unchecked=%u\nenhanced.curtain_pixels_wrong=%u\n",
             c->curtain_frames, c->curtain_frames_wrong, c->curtain_frames_unchecked, c->curtain_pixels_wrong);
     fprintf(out, "enhanced.text_box_frames_in_place=%u\nenhanced.curtain_window_frames_wrong=%u\n", c->text_box_frames_in_place, c->curtain_window_frames_wrong);
     fprintf(out, "enhanced.blurb_frames=%u\nenhanced.blurb_frames_in_window=%u\n", c->blurb_frames, c->blurb_frames_in_window);
     fprintf(out, "enhanced.neighbour_waiting_frames=%u\n", oracles_enhanced_view_waiting_frames(c->view));
+    fprintf(out, "enhanced.continued_wave_frames=%u\n", oracles_enhanced_view_continued_wave_frames(c->view));
+    fprintf(out, "enhanced.sway_frames=%u\n", oracles_enhanced_view_sway_frames(c->view));
+    for (unsigned k = 0; k < 2u; k++) {
+        const EcRipple *r = k ? &c->water : &c->whole;
+        const char *name = k ? "water" : "whole_room";
+        fprintf(out, "enhanced.%s_wave_frames=%u\nenhanced.%s_rippled_frames=%u\nenhanced.%s_edge_moves=%u\n", name, r->wave_frames, name, r->rippled_frames, name, r->edge_moves);
+        fprintf(out, "enhanced.%s_row_changes_moving=%u\nenhanced.%s_row_changes_still=%u\nenhanced.%s_row_changes_max=%u\n", name,
+                r->moving_frames ? 100u * r->moving_changes / r->moving_frames : 0u, name, r->still_frames ? 100u * r->still_changes / r->still_frames : 0u, name, r->changes_max);
+    }
     fprintf(out, "enhanced.routed_neighbours=%u\n", oracles_enhanced_view_routed_delivered(c->view));
     {   /* the hotbar of the item hotkeys, when the run shows one */
         unsigned captured = 0, shown = 0, checked = 0, wrong = 0, outside = 0;
         oracles_enhanced_view_hotbar_counts(c->view, &captured, &shown);
         oracles_enhanced_view_hotbar_proof(c->view, &checked, &wrong, &outside);
         fprintf(out, "enhanced.hotbar_icons_captured=%u\nenhanced.hotbar_icons_checked=%u\nenhanced.hotbar_icon_wrong=%u\nenhanced.hotbar_outside_gutters=%u\n", captured, checked, wrong, outside);
+        fprintf(out, "enhanced.hotbar_fade_checked=%u\nenhanced.hotbar_cutscene_frames=%u\n", oracles_enhanced_view_hotbar_fade_checked(c->view), c->hotbar_cutscene_frames);
     }
     {   /* the status bar drawn full width, when the run asks it */
         unsigned frames = 0, kept = 0;
         oracles_enhanced_view_hud_counts(c->view, &frames, &kept);
         fprintf(out, "enhanced.hud_full_frames=%u\nenhanced.hud_lines_kept=%u\n", frames, kept);
+    }
+    {   /* the status bar laid out, when the run asks it */
+        unsigned laid = 0, centred = 0, one_row = 0;
+        oracles_enhanced_view_hud_wide_counts(c->view, &laid, &centred, &one_row);
+        fprintf(out, "enhanced.hud_wide_frames=%u\nenhanced.hud_wide_centred=%u\nenhanced.hud_wide_one_row=%u\n", laid, centred, one_row);
     }
     {   /* a room's load drawn under the world's HUD band */
         unsigned band = 0, blank = 0;
@@ -132,6 +175,16 @@ static void summary_of_what_was_shown(OraclesEnhancedCheck *c, FILE *out)
             oracles_enhanced_view_coarse_drops(c->view));
     fprintf(out, "enhanced.beside_refused=%u\n", oracles_enhanced_view_beside_refused(c->view));
     fprintf(out, "enhanced.render_wait_max=%u\nenhanced.renders_forced=%u\n", oracles_enhanced_view_render_wait_max(c->view), oracles_enhanced_view_renders_forced(c->view));   /* a neighbour's own-animation render: the most frames it waited for the frame's budget, and those made past it */
+    {   /* a neighbour's objects animated in place */
+        OraclesEnhancedPoseCounts p;
+        oracles_enhanced_view_pose_counts(c->view, &p);
+        fprintf(out, "enhanced.poses_animated=%u\nenhanced.poses_frozen_code=%u\nenhanced.poses_frozen_enemies=%u\nenhanced.poses_frozen_low=%u\nenhanced.poses_frozen_unplaced=%u\n"
+                     "enhanced.poses_frozen_unreadable=%u\nenhanced.pose_steps=%u\nenhanced.pose_changes=%u\nenhanced.pose_changes_drawn=%u\nenhanced.pose_renders=%u\n"
+                     "enhanced.pose_lines=%u\nenhanced.pose_resets=%u\nenhanced.poses_drawn_wrong=%u\nenhanced.pose_lines_wrong=%u\nenhanced.pose_lag_max=%u\n"
+                     "enhanced.pose_probes=%u\nenhanced.pose_probe_frames=%u\n",
+                p.animated, p.frozen_code, p.frozen_enemies, p.frozen_low, p.frozen_unplaced, p.frozen_unreadable, p.steps, p.changes, p.changes_drawn,
+                p.renders, p.lines, p.resets, p.drawn_wrong, p.lines_wrong, p.lag_max, p.probes, p.probe_frames);
+    }
     if (c->reload_at)
         fprintf(out, "enhanced.reload=%s\nenhanced.reload_camera_delta=%" PRId32 "\nenhanced.reload_camera_frozen=%u\nenhanced.reload_transition_frames=%u\nenhanced.reload_transition_differing=%u\n",
                 !c->reload_done ? "not-performed" : c->reload_settled == 1 ? "neighbours-back" : "neighbours-not-back", c->reload_camera_delta,
@@ -142,6 +195,7 @@ void oracles_enhanced_check_summary(OraclesEnhancedCheck *c, FILE *out)
 {
     summary_of_the_band(c, out);
     summary_of_what_was_shown(c, out);
+    if (c->host_box || c->wide || c->text_size) ec_host_text_box_summary(c, out);
 }
 
 /* The band itself: the modes, the camera, the ghost's runs, the seams, the
@@ -151,6 +205,9 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
     fprintf(out, "enhanced: %u frames composed, run hash %016" PRIx64 "\n", c->frames, c->run_hash);
     fprintf(out, "  world %u frames in %u runs, framed fallback %u frames in %u runs, of which the large menus enlarge %u frames in %u runs\n",
             c->world_frames, c->world_runs, c->framed_frames, c->fallback_runs, c->enlarged_frames, c->enlarged_runs);
+    fprintf(out, "  framed frames at the view's scale right after an enlarged one: %u", c->enlarged_framed_drops);
+    for (unsigned i = 0; i < c->enlarged_framed_drops && i < 8u; i++) fprintf(out, "%s%" PRIu32, i ? ", " : " (at ", c->enlarged_framed_drop_at[i]);
+    fprintf(out, "%s\n", c->enlarged_framed_drops ? ")" : "");
     fprintf(out, "  world frames showing the normal band centred in a wider one (an interior in the drawn-back view): %u\n", c->normal_band_frames);
     fprintf(out, "  camera jumps over %d px between consecutive world frames: %u (largest %" PRId32 " px); vertical: %u (largest %" PRId32 " px)\n",
             MAX_CAMERA_STEP, c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);
@@ -164,6 +221,21 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
             c->link_jumps, c->largest_link_jump, c->link_jumps_y, c->largest_link_jump_y, c->window_jumps, c->largest_window_jump, c->epochs);
     fprintf(out, "  Link's sprite as drawn, on the screen in normal play: %u steps between frames, %u back against the step before across and %u down, he not turning%s%s\n",
             c->link_drawn_steps, c->link_backsteps, c->link_backsteps_y, c->link_backsteps_list[0] ? "; first: " : "", c->link_backsteps_list);
+    {
+        unsigned moved = 0, engaged = 0;
+        oracles_enhanced_view_link_phase_counts(c->view, &moved, &engaged);
+        fprintf(out, "  walking diagonally: %u frames, %u where the camera stepped back across the walk; Link drawn in phase on %u frames, off the game's sprite on %u\n",
+                c->diagonal_frames, c->camera_wobble, engaged, moved);
+        unsigned sub = 0, layered = 0, refused = 0;
+        oracles_enhanced_view_subpixel_counts(c->view, &sub, &layered, &refused);
+        fprintf(out, "  as shown at 4x: the band stopping between two steps %u times an axis in those frames (%u in %u walking straight); Link moving on the screen on %u, back against his step before %u times; "
+                     "sub-pixel camera on %u frames, Link drawn apart on %u, refused on %u\n",
+                c->band_stops, c->straight_band_stops, c->straight_frames, c->link_screen_moves, c->link_screen_backsteps, sub, layered, refused);
+        fprintf(out, "  as shown at 4x, a step changing from one frame to the next: at the %u switches (a transition, a text box, Link drawn apart) by %" PRId32 " px at most for the band, %" PRId32 " for Link (%s); elsewhere by %" PRId32 " and %" PRId32 "\n",
+                c->switch_edges, c->switch_band_jolt_max, c->switch_link_jolt_max, c->jolt_list[0] ? c->jolt_list : "none of 2 px", c->band_jolt_max, c->link_jolt_max);
+        fprintf(out, "  as shown at 4x, Link drawn apart or no longer in a transition, the band at a fraction: %u times, he moving against the ground by %" PRId32 " px at most\n",
+                c->transition_layer_switches, c->transition_layer_shift_max);
+    }
     unsigned requested = 0, completed = 0, failed = 0;
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     unsigned reasons[5] = { 0, 0, 0, 0, 0 };
@@ -174,8 +246,8 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
     if (reasons[0] || reasons[2] || reasons[3]) fprintf(out, "  failed runs (from>expected=got, from>room?: never settled, from>room!reason: not primeable): %s\n", oracles_enhanced_view_failure_log(c->view));
     fprintf(out, "  scrolling transitions %u: %u frames in all (%u at most), Link's position unchanged on %u of them; arrivals on a tile with a collision: %u; room:frames/frozen@x,y: %s\n",
             c->transitions_seen, c->transition_frames_total, c->transition_frames_max, c->transition_frozen_total, c->transition_arrivals_solid, c->transition_list);
-    fprintf(out, "  window against the drawn scroll registers: %u world frames checked, misplaced %u%s%s; frames framed because the game drew its area elsewhere than its camera: %u; frames shown shaken with the game's screen shake: %u\n",
-            c->window_checked, c->window_misplaced, c->window_misplaced ? ": frame:dx,dy " : "", c->window_misplaced_list, oracles_enhanced_view_off_camera_frames(c->view), oracles_enhanced_view_shake_frames(c->view));
+    fprintf(out, "  window against the drawn scroll registers: %u world frames checked, misplaced %u%s%s; frames framed because the game drew its area elsewhere than its camera: %u (in a cutscene shown in the band all the same: %u); frames shown shaken with the game's screen shake: %u\n",
+            c->window_checked, c->window_misplaced, c->window_misplaced ? ": frame:dx,dy " : "", c->window_misplaced_list, oracles_enhanced_view_off_camera_frames(c->view), oracles_enhanced_view_world_off_camera_frames(c->view), oracles_enhanced_view_shake_frames(c->view));
     fprintf(out, "  text box in the middle of the band: %u world frames, %u with the wrong pixels (%u pixels), %u showing it where the game drew it%s%s\n",
             c->text_box_frames, c->text_box_frames_wrong, c->text_box_pixels_wrong, c->text_box_frames_at_origin, c->text_box_frames_wrong ? ": frame:pixels " : "", c->text_box_list);
     fprintf(out, "  curtain of a warp over the band: %u world frames, %u with the wrong pixels (%u pixels), %u with the window fully drawn (colour unchecked)%s%s\n",
@@ -251,4 +323,5 @@ void oracles_enhanced_check_report(OraclesEnhancedCheck *c, FILE *out)
 {
     report_the_band(c, out);
     report_what_was_shown(c, out);
+    if (c->host_box || c->wide || c->text_size) ec_host_text_box_report(c, out);
 }

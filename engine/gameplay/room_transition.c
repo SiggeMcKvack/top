@@ -1,6 +1,7 @@
 #include "room_transition.h"
 
 #include "guest_tables.h"
+#include "room_predict.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,10 @@ struct OraclesRoomTransition {
     int owed_along;                     /* 8.8: what Link went along the axis, a carry asked, while the room entered's collisions were unknown */
     int owed;                           /* 8.8: the carry across that distance, at his own ratio, still to catch up */
     int owed_across;                    /* the direction across it is owed in, -1 none */
+    const OraclesTables *data;          /* the ROM's tables the room entered's collisions are predicted from, NULL where the profile does not qualify it */
+    int predicted;                      /* the room entered's: 0 not tried yet, -1 not named yet, 1 predicted and not loaded yet, 2 not predicted,
+                                           3 loaded, the game's last kept (in the buffers below) */
+    uint8_t predicted_layout[ORACLES_ROOM_LAYOUT_BYTES], predicted_collisions[ORACLES_ROOM_LAYOUT_BYTES];
     OraclesRoomTransitionStats stats;
 };
 
@@ -577,6 +582,43 @@ static int carry_allowed(const OraclesRoomTransition *tr, const OraclesGuestTran
                     : oracles_room_transition_across_free(s, across, delta, along, offset, rest);
 }
 
+/* The room entered's layout and collisions, predicted at the first frame of the transition that names it (wScrollMode
+ * 8) before the game has loaded them (room_predict.h), in a room the policy takes over; compared with the game's at the
+ * first frame it has them.  A vblank before the game names the room (between the transition's start and wScrollMode
+ * 8) leaves the prediction to the next frame of the load. */
+static void predict_room(OraclesRoomTransition *tr, const OraclesGuestTransitionState *s, int in_transition)
+{
+    if (in_transition && tr->predicted <= 0 && oracles_room_transition_refusal(s, tr->swim) != 0) {
+        if (s->room_collisions) {
+            /* Loaded by the transition's first frame, nothing to predict; after a vblank before the room was named, no
+             * prediction was made. */
+            if (tr->predicted < 0) { tr->stats.predict_fallbacks++; tr->stats.predict_fallback_by[ORACLES_ROOM_PREDICT_EARLY]++; }
+            tr->predicted = 2;
+        } else {
+            const OraclesRom rom = { tr->rom, tr->rom_size };
+            const OraclesRoomPredictVerdict verdict = tr->data ? oracles_room_predict(&rom, tr->data, s, tr->predicted_layout, tr->predicted_collisions)
+                                                               : ORACLES_ROOM_PREDICT_UNQUALIFIED;
+            if (verdict == ORACLES_ROOM_PREDICT_EARLY) tr->predicted = -1;
+            else if (verdict == ORACLES_ROOM_PREDICTED) { tr->predicted = 1; tr->stats.predicted_transitions++; }
+            else { tr->predicted = 2; tr->stats.predict_fallbacks++; tr->stats.predict_fallback_by[verdict]++; }
+        }
+    }
+    if (tr->predicted == 1 && s->room_collisions && s->room_layout) {
+        if (!memcmp(tr->predicted_collisions, s->room_collisions, sizeof tr->predicted_collisions)
+            && !memcmp(tr->predicted_layout, s->room_layout, sizeof tr->predicted_layout)) tr->stats.predicted_matched++;
+        else tr->stats.predicted_mismatched++;
+        tr->predicted = 2;
+    }
+    /* Once the game has loaded them, a vblank of state 3 after the load's last frame (the transaction gives no
+     * collisions there, wRoomCollisions possibly not the room entered's yet at such a vblank) has the ones it last
+     * gave, where the profile qualifies the prediction. */
+    if (in_transition && tr->data && tr->predicted >= 0 && s->room_collisions && s->room_layout) {
+        memcpy(tr->predicted_collisions, s->room_collisions, sizeof tr->predicted_collisions);
+        memcpy(tr->predicted_layout, s->room_layout, sizeof tr->predicted_layout);
+        tr->predicted = 3;
+    }
+}
+
 static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGuestTransitionMutation *m)
 {
     OraclesRoomTransition *tr = opaque;
@@ -606,6 +648,7 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
         tr->doubled = 0;
         tr->owed_along = tr->owed = 0;
         tr->owed_across = -1;
+        tr->predicted = 0;
     }
     /* A smooth palette transition (paletteTransitions.s) mixes BG2-7 from the
      * palette left to the one entered over about thirty frames, the loaded
@@ -630,6 +673,7 @@ static void policy(void *opaque, const OraclesGuestTransitionState *s, OraclesGu
     }
     tr->in_transition = in_transition;
     if (!in_transition) tr->resumed = 0;
+    if (!tr->resumed) predict_room(tr, s, in_transition);
 
     /* --continuous-swim: the transition a swim's momentum takes him to, the game asking the direction held. */
     if (tr->swim && !in_transition) {
@@ -763,11 +807,23 @@ static void move_link(OraclesRoomTransition *tr, const OraclesGuestTransitionSta
         /* The scroll may leave him anywhere up to the game's own distance, or the machine's steps still to come
          * beyond it; the cap holds him further on. */
         const int rest = native_total - travelled - extra > machine_rest ? native_total - travelled - extra : machine_rest;
+        /* While the game loads the room entered, its collisions as predicted, where they are. */
+        OraclesGuestTransitionState with_predicted;
+        const OraclesGuestTransitionState *c = s;
+        if (!s->room_collisions && (tr->predicted == 1 || tr->predicted == 3)) {
+            with_predicted = *s;
+            with_predicted.room_collisions = tr->predicted_collisions;
+            with_predicted.room_layout = tr->predicted_layout;
+            c = &with_predicted;
+            if (tr->predicted == 1) tr->stats.carry_predicted_frames++;
+        }
         if (tr->owed_across != across) { tr->owed_along = tr->owed = 0; tr->owed_across = across; }
-        if (!s->room_collisions) {
+        if (!c->room_collisions) {
             /* Nothing says yet where a carry would leave him: what he goes along the axis meanwhile is owed across. */
             tr->owed_along += extra + (machine_moved ? (horizontal ? NATIVE_STEP_X : NATIVE_STEP_Y) : 0);
             tr->stats.carry_withheld_frames++;
+            tr->stats.carry_unknown_frames++;
+            if (tr->predicted < 0) tr->stats.carry_unnamed_frames++;
         } else {
             /* Once they are known, the carry withheld, that distance at his own ratio across and along, is caught up
              * within the bus's bound on the axis, each step through the same tests; what a wall refuses is owed no
@@ -776,12 +832,12 @@ static void move_link(OraclesRoomTransition *tr, const OraclesGuestTransitionSta
             tr->owed_along = 0;
             const int bound = in_water ? ORACLES_TRANSITION_SWIM_STEP_MAX : ORACLES_TRANSITION_WALK_STEP_MAX;
             const int catch_up = tr->owed < bound - across_step ? tr->owed : bound - across_step;
-            if (catch_up > 0 && carry_allowed(tr, s, swimming, (unsigned)across, across_step + catch_up, extra, offset, rest)) {
+            if (catch_up > 0 && carry_allowed(tr, c, swimming, (unsigned)across, across_step + catch_up, extra, offset, rest)) {
                 carried = across_step + catch_up;
                 tr->owed -= catch_up;
             } else {
                 tr->owed = 0;
-                if (carry_allowed(tr, s, swimming, (unsigned)across, across_step, extra, offset, rest)) carried = across_step;
+                if (carry_allowed(tr, c, swimming, (unsigned)across, across_step, extra, offset, rest)) carried = across_step;
                 else tr->stats.carry_withheld_frames++;
             }
         }
@@ -834,9 +890,11 @@ static void reset(void *opaque)
     tr->straight_known = 0;
     tr->owed_along = tr->owed = 0;
     tr->owed_across = -1;
+    tr->predicted = 0;
 }
 
-#define STATE_VERSION 1u
+#define STATE_VERSION 2u
+#define STATE_V1_SIZE 53u                /* a state saved before the prediction: its fields alone */
 
 static uint8_t *put_int(uint8_t *at, int value)
 {
@@ -859,18 +917,30 @@ size_t oracles_room_transition_save_state(const OraclesRoomTransition *tr, uint8
     const int fields[] = { tr->armed, tr->last_camera, tr->in_transition, tr->start_pos, tr->start_cross, tr->doubled, tr->palette_pending,
                            tr->forced, tr->straight_known, (int)tr->direction, tr->owed_along, tr->owed, tr->owed_across };
     for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++) at = put_int(at, fields[i]);
+    at = put_int(at, tr->predicted);
+    memcpy(at, tr->predicted_layout, sizeof tr->predicted_layout);
+    at += sizeof tr->predicted_layout;
+    memcpy(at, tr->predicted_collisions, sizeof tr->predicted_collisions);
+    at += sizeof tr->predicted_collisions;
     return (size_t)(at - out);
 }
 
 int oracles_room_transition_load_state(OraclesRoomTransition *tr, const uint8_t *data, size_t size)
 {
-    if (!tr || !data || size != ORACLES_ROOM_TRANSITION_STATE_SIZE || data[0] != STATE_VERSION) return -1;
+    /* A state of the first version, saved before the prediction, goes on without one. */
+    if (!tr || !data || !((size == ORACLES_ROOM_TRANSITION_STATE_SIZE && data[0] == STATE_VERSION) || (size == STATE_V1_SIZE && data[0] == 1u))) return -1;
     const uint8_t *at = data + 1;
     int last_camera = 0, direction = 0;
     at = get_int(at, &tr->armed); at = get_int(at, &last_camera); at = get_int(at, &tr->in_transition);
     at = get_int(at, &tr->start_pos); at = get_int(at, &tr->start_cross); at = get_int(at, &tr->doubled);
     at = get_int(at, &tr->palette_pending); at = get_int(at, &tr->forced); at = get_int(at, &tr->straight_known);
-    at = get_int(at, &direction); at = get_int(at, &tr->owed_along); at = get_int(at, &tr->owed); get_int(at, &tr->owed_across);
+    at = get_int(at, &direction); at = get_int(at, &tr->owed_along); at = get_int(at, &tr->owed); at = get_int(at, &tr->owed_across);
+    tr->predicted = 0;
+    if (data[0] == STATE_VERSION) {
+        at = get_int(at, &tr->predicted);
+        memcpy(tr->predicted_layout, at, sizeof tr->predicted_layout);
+        memcpy(tr->predicted_collisions, at + sizeof tr->predicted_layout, sizeof tr->predicted_collisions);
+    }
     tr->last_camera = (uint16_t)last_camera;
     tr->direction = (unsigned)direction & 3u;
     tr->resumed = 0;
@@ -889,6 +959,7 @@ OraclesRoomTransition *oracles_room_transition_start(OraclesGuest *guest, const 
     tr->rom = rom;
     tr->rom_size = rom_size;
     tr->swim = swim != 0;
+    if (oracles_compat_predict_collisions(oracles_guest_profile(guest))) tr->data = oracles_compat_data_tables(oracles_guest_profile(guest));
     oracles_guest_set_transition_swim(guest, tr->swim);
     oracles_guest_set_transition_policy(guest, policy, reset, tr);
     return tr;

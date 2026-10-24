@@ -44,6 +44,10 @@ void oracles_sprites_event(OraclesSprites *s, const OraclesGuestEvent *event);
  * drawn: found among the last frames drawn by the content of their wOam.
  * Returns 0 when none matches (the tags are then unknown, not empty). */
 unsigned oracles_sprites_tags_for_oam(const OraclesSprites *s, const uint8_t oam[160], OraclesSpriteTag out[], unsigned max);
+/* The same where the game moved the entries of special objects since it drew them, each by one offset, their tiles
+ * and flags kept (a scroll carrying Link without drawing him again): the tags of the newest frame drawn that the OAM
+ * matches but for those.  0 when none does, or when nothing moved (oracles_sprites_tags_for_oam). */
+unsigned oracles_sprites_tags_for_moved_oam(const OraclesSprites *s, const uint8_t oam[160], OraclesSpriteTag out[], unsigned max);
 
 /* The frame drawn just before the one whose wOam is `oam`: its OAM and its
  * tags.  The game draws some objects on one frame in two (the spurt of a

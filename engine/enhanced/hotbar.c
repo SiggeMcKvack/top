@@ -79,3 +79,11 @@ void oracles_hotbar_draw(uint32_t *surface, unsigned width, unsigned core_width,
         draw_slot(&c, &slots[n], palette);
     }
 }
+
+void oracles_hotbar_draw_at(uint32_t *surface, unsigned width, unsigned x, const OraclesHotbarSlotView slots[ORACLES_HOTBAR_SLOTS], const OraclesHotbarPalette *palette)
+{
+    for (unsigned n = 0; n < ORACLES_HOTBAR_SLOTS; n++) {
+        const canvas c = { surface, width, x + n * SLOT_W };
+        draw_slot(&c, &slots[n], palette);
+    }
+}

@@ -54,6 +54,75 @@ typedef struct OraclesEnhancedView OraclesEnhancedView;
 #define ORACLES_ENHANCED_TEXT_BOX_TRAIL_FRAMES 2u
 int oracles_enhanced_text_box_holds(int active, unsigned cells, unsigned *trail);
 
+/* The text box drawn by the host (text_box.h), with the guest's host lines armed (oracles_guest_arm_text_box): while a
+ * text of the standard box or its choice shows (wTextIsActive, the trail of the frames after it, wTextDisplayMode 0 or
+ * 1), the game's box where the game's variables put it in the VRAM's map (w7TextboxVramPos, w7d0cc), read into a model
+ * from the displayed map and drawn from that model, the host's lines as the frame just scanned showed them and the
+ * game's tiles, at `pixels` of text and `lines` lines.  1 drawn into `box`, 0 no box shown, -1 a box the host could not
+ * draw (`box->read` says why).  Nothing is drawn in the surface. */
+typedef struct OraclesEnhancedHostTextBox {
+    const uint32_t *pixels;     /* the box drawn, `width` pixels a row, 0xffRRGGBB */
+    unsigned width, height;
+    unsigned map;               /* the VRAM's map it stands in, from $8000: $1800 or $1c00 */
+    unsigned row, column;       /* its first cell in that map */
+    int read;                   /* OraclesTextBoxRead */
+} OraclesEnhancedHostTextBox;
+int oracles_enhanced_view_host_text_box(OraclesEnhancedView *view, unsigned pixels, unsigned lines, OraclesEnhancedHostTextBox *box);
+/* The box the last call drew, drawn again from the same model and lines at `pixels` and `lines` (its place in the map
+ * left out): 1, or 0 when that call drew none.  Past the game's 128 pixels, the rows' reveal is read in the text's
+ * state (oracles_text_box_reveal), the game's map showing a line's first 128 pixels alone. */
+int oracles_enhanced_view_host_text_box_again(OraclesEnhancedView *view, unsigned pixels, unsigned lines, OraclesEnhancedHostTextBox *box);
+/* The wide text box: the host draws the box in the surface at `pixels` of text (more than the game's 128, the guest's
+ * wide box armed at that width, oracles_guest_arm_wide_text_box) and `lines` lines, in place of the core's: in the
+ * world band, centred across it at the height the game drew its box at, the room redrawn under the core's box; over the
+ * framed core, at the game's box's place and centred on it, past the frame's edges (the window left over it); the large
+ * menus' rectangle (oracles_enhanced_view_framed_crop) the union of the frame and the box.  A text whose box the host
+ * cannot draw shows the core's, counted.  0 pixels: the core's box (the default). */
+void oracles_enhanced_view_set_text_box(OraclesEnhancedView *view, unsigned pixels, unsigned lines);
+/* Whether the last composition drew the host's box, the box and its place in the surface (its top-left pixel). */
+int oracles_enhanced_view_text_box_shown(const OraclesEnhancedView *view, OraclesEnhancedHostTextBox *box, int32_t *x, int32_t *y);
+/* Compositions that drew it, in the world band and over the framed core, and those of a text whose box it could not
+ * draw. */
+void oracles_enhanced_view_text_box_counts(const OraclesEnhancedView *view, unsigned *world, unsigned *framed, unsigned *uncovered);
+/* Text size, presentation alone, applied at once, each size where the box enlarged fits the view, else the next size
+ * down, the view's level changing in play; the fan games keep the game's box at its size (Normal whatever is asked):
+ *   - Very large (ORACLES_ENHANCED_TEXT_XLARGE): the text box twice as large in the surface where the view holds it so
+ *     across (the game's box, 288 pixels: Medium and Far; the host's wide box, 416: Far); the game's box enlarged from
+ *     the core's image, without the host's lines (the classic text in the game's box still hooks nothing), the wide box
+ *     drawn from the host's lines twice as large; centred across the band (in the world) or on the game's box (framed),
+ *     against the edge of the screen the game drew its box against;
+ *   - Large (ORACLES_ENHANCED_TEXT_LARGE): the box at its size in the surface, which the presenter shows again above the
+ *     frame at k + ceil(k / 2) screen pixels a pixel, k the frame's whole scale (oracles_text_box_enlarge), where that
+ *     fits: the part of the frame it takes, its edge and its size, oracles_enhanced_view_text_box_enlarged;
+ *   - with the large menus (oracles_enhanced_view_set_large_menus), over the framed core both sizes are the
+ *     presenter's: the box at its size in the surface, Very large at 2 k, and the part shown alone widened for the box
+ *     only as far as its own scale holds (oracles_text_box_reserve), never lowered. */
+#define ORACLES_ENHANCED_TEXT_NORMAL 0u
+#define ORACLES_ENHANCED_TEXT_LARGE 1u
+#define ORACLES_ENHANCED_TEXT_XLARGE 2u
+void oracles_enhanced_view_set_text_size(OraclesEnhancedView *view, unsigned size);
+unsigned oracles_enhanced_view_text_size(const OraclesEnhancedView *view);
+/* The framed core shown alone at its own scale (menus=large, oracles_enhanced_view_framed_crop as the host's frame_crop). */
+void oracles_enhanced_view_set_large_menus(OraclesEnhancedView *view, int large);
+/* The host's frame box (oracles_host_run_config's frame_box): 1 when the last composition drew a text box at its size for
+ * the presenter to enlarge, its place in the surface (x, y, width, height) and whether it stands against its bottom edge;
+ * and whatever it drew, with Large or Very large, the width of the box (the game's 144, the wide 208) the large menus'
+ * part takes in and the size (ORACLES_ENHANCED_TEXT_LARGE or XLARGE) it is shown at. */
+int oracles_enhanced_view_text_box_enlarged(void *opaque, uint32_t rect[4], int *bottom, uint32_t *reserve_w, unsigned *size);
+/* The same, and for a check the core image's pixels it shows (`src`, the game's box; 0 for the host's box). */
+int oracles_enhanced_view_text_box_enlarged_source(const OraclesEnhancedView *view, int32_t src[2], int *from_core);
+/* The last composition drew the game's box twice as large from the core's image: its top-left in the surface (`dst`),
+ * the core image's pixels it enlarged, from `src`, `size` across and down; 0 otherwise. */
+int oracles_enhanced_view_text_box_scaled(const OraclesEnhancedView *view, int32_t dst[2], int32_t src[2], unsigned size[2]);
+/* The scale the last composition drew the host's box at, 0 for none. */
+unsigned oracles_enhanced_view_text_box_shown_scale(const OraclesEnhancedView *view);
+/* Compositions that drew a box twice as large, in the world band and over the framed core. */
+void oracles_enhanced_view_text_scale_counts(const OraclesEnhancedView *view, unsigned *world, unsigned *framed);
+/* The model and the source the host's box was drawn from last (text_box.h), for a check. */
+struct OraclesTextBoxModel;
+struct OraclesTextBoxSource;
+const struct OraclesTextBoxModel *oracles_enhanced_view_text_box_model(const OraclesEnhancedView *view, const struct OraclesTextBoxSource **source);
+
 /* `rom` is copied by the ghost's core; it may be freed afterwards. */
 OraclesEnhancedView *oracles_enhanced_view_start(OraclesCore *core, OraclesGuest *guest,
                                                  const uint8_t *rom, size_t rom_size);
@@ -86,6 +155,59 @@ void oracles_enhanced_view_set_camera_profile(OraclesEnhancedView *view, unsigne
  * entry and those another object created are never drawn, their place at the
  * real entry not being the one the ghost found. */
 void oracles_enhanced_view_set_neighbour_objects(OraclesEnhancedView *view, int enabled);
+/* Walking diagonally at the same speed both ways, Link's sprite drawn up to a pixel off the game's, on the line his y
+ * would take stepping on the frames his x does, and the camera following him there: the band moves along the
+ * diagonal without the zigzag of his gait.  Presentation only.  Off by default. */
+void oracles_enhanced_view_set_link_phase(OraclesEnhancedView *view, int enabled);
+/* This frame's: Link drawn that many pixels below the game's sprite; frames drawn so, frames the phase was in use. */
+int oracles_enhanced_view_link_phase_dy(const OraclesEnhancedView *view);
+void oracles_enhanced_view_link_phase_counts(const OraclesEnhancedView *view, unsigned *moved_frames, unsigned *engaged_frames);
+/* The sub-pixel camera: the camera is the reducer's smooth position, to the 256th of a pixel, and the band is moved
+ * by its fraction of a pixel when it is shown, at the screen's resolution; Link and what he holds are drawn apart, at
+ * his exact place (his position in 256ths of a pixel), so that he does not shake on the screen.  The surface keeps the camera's whole pixels.  Presentation
+ * only.  Off by default; it sets the link phase aside. */
+void oracles_enhanced_view_set_subpixel(OraclesEnhancedView *view, int enabled);
+/* The same during a game (Display › Advanced's Camera from the pause), without a jolt: switched on, the band and Link
+ * take their fractions up from the whole pixels by a sixteenth of a pixel a frame; off, they give them back so,
+ * the camera's whole pixels coming back once they have.  On (1) or off (0) as it will be. */
+void oracles_enhanced_view_switch_subpixel(OraclesEnhancedView *view, int enabled);
+int oracles_enhanced_view_subpixel_on(const OraclesEnhancedView *view);
+/* This frame's (the frame just composed): 1 when the band is to be moved, by `x` and `y` 256ths of a pixel left and
+ * up (negative: right and down), its lines `band_top` to `band_top + band_height` of the surface, or Link drawn apart;
+ * Link's layer (0 alpha where it shows nothing) at `layer_x`, `layer_y` of the surface moved `layer_fx`, `layer_fy`
+ * 256ths of a pixel right and down, NULL when it has none.  The surface keeps him: a frame shown as it is shows him at
+ * his whole pixels. */
+int oracles_enhanced_view_subpixel(const OraclesEnhancedView *view, int32_t *x, int32_t *y, uint32_t *band_top, uint32_t *band_height,
+                                   const uint32_t **layer, int32_t *layer_x, int32_t *layer_y, uint32_t *layer_w, uint32_t *layer_h,
+                                   int32_t *layer_fx, int32_t *layer_fy);
+/* Frames moved by a fraction, frames with Link drawn apart, frames it was refused (Link not wholly in the game's
+ * window, or too large). */
+/* Its layer's lines are this many pixels apart. */
+#define ORACLES_ENHANCED_SUBPIXEL_LAYER_PITCH 64u
+void oracles_enhanced_view_subpixel_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *layer_frames, unsigned *refused_frames);
+/* The checks of Link's layer over the run, where it is used: pixels the frame showed in his area, outside his sprites
+ * and off the tiles the game animates, that the window rendered again without them does not show (a drawing of his
+ * the patch would leave behind; a frame with any is left to the band, oracles_enhanced_view_subpixel_unexplained_frames),
+ * and pixels where the layer over the band at the whole pixels is not the frame as the game drew it; and the pixels of
+ * his sprites that had the colour of the background under them (which a layer of the pixels that differ would leave
+ * behind). */
+void oracles_enhanced_view_subpixel_pixel_counts(const OraclesEnhancedView *view, unsigned *left_pixels, unsigned *wrong_pixels, unsigned *alike_pixels);
+/* With the layer, the window without him where it shows him (0 alpha elsewhere), the layer's size and place, to draw
+ * over the band moved with it before the layer; NULL without a layer. */
+const uint32_t *oracles_enhanced_view_subpixel_patch(const OraclesEnhancedView *view);
+/* The rectangles of the surface shown unmoved over the band moved and the layer (x, y, w, h): what the view draws
+ * standing on the screen, the text box and the area's name; their count. */
+#define ORACLES_ENHANCED_SUBPIXEL_FIXED 16u
+unsigned oracles_enhanced_view_subpixel_fixed(const OraclesEnhancedView *view, const uint32_t (**rects)[4]);
+/* His pixels another drawing covered once the layer was taken (the text box, the area's name), left to the band. */
+unsigned oracles_enhanced_view_subpixel_covered_pixels(const OraclesEnhancedView *view);
+/* Frames Link was left to the band because the window rendered again without him did not show the frame around him
+ * (in a scroll, the next room's lines written into the VRAM since the frame was drawn). */
+unsigned oracles_enhanced_view_subpixel_unexplained_frames(const OraclesEnhancedView *view);
+/* The OAM entries this frame's layer took (bit k: entry k), none without a layer; and over the run, the special objects
+ * at a fraction of their own (a companion waiting, a bomb laid) left to the band, an object a frame. */
+uint64_t oracles_enhanced_view_subpixel_taken(const OraclesEnhancedView *view);
+unsigned oracles_enhanced_view_subpixel_objects_left(const OraclesEnhancedView *view);
 
 /* The hotbar of the item hotkeys, in the gutters of the HUD band.  The launcher hands the view what
  * only it knows, read-only: the slots, their keys, the slot whose request waits, and a count of refusals a slot, whose
@@ -109,22 +231,37 @@ void oracles_enhanced_view_hotbar_counts(const OraclesEnhancedView *view, unsign
  * the drawing touched anything else. */
 void oracles_enhanced_view_hotbar_verify(OraclesEnhancedView *view, int enabled);
 void oracles_enhanced_view_hotbar_proof(const OraclesEnhancedView *view, unsigned *checked, unsigned *wrong, unsigned *outside);
-/* The status bar drawn full width (`hud=full`): the gutters beside it, on its sixteen lines, take the bar's own
- * background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour correction
- * follow), in the world band and a room's load drawn under it; the framed core keeps the border.  Off by default
- * (`hud=original`, the border).  It may change between two compositions: it is presentation alone.  The counts: world
- * frames that filled a line at least, and the gutters' lines that kept the border in every world frame with the bar,
- * filled or not, the left's and the right's sixteen each (32 a frame at most), the core's image showing there something
- * else than the bar. */
-void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int full);
+/* Of those checks, the ones made in a fade or a flash, each frame, of the icons of B and A against the bar's own. */
+unsigned oracles_enhanced_view_hotbar_fade_checked(const OraclesEnhancedView *view);
+/* The frame just composed drew the hotbar. */
+int oracles_enhanced_view_hotbar_drawn(const OraclesEnhancedView *view);
+/* The status bar in the HUD band (`hud=`).  Drawn full width, the gutters beside it, on its sixteen lines, take the
+ * bar's own background, its palette's colour at its edge as the game shows it (fades, its own changes and the colour
+ * correction follow), in the world band and a room's load drawn under it; the framed core keeps the border.  Laid out,
+ * the bar is cut into its blocks on that background (OraclesEnhancedHudPlace): the hearts and the money at the left
+ * corner, the hotbar then B and A at the right, wherever the game's map signs one of its layouts and the core's image
+ * shows it; else, and in the framed core, the bar stays centred.  Original by default (the border).  It may change
+ * between two compositions: it is presentation alone.  The counts: world frames that filled a line at least, and the
+ * gutters' lines that kept the border in every world frame with the bar, filled or not, the left's and the right's
+ * sixteen each (32 a frame at most), the core's image showing there something else than the bar; laid out, the world
+ * frames laid out, those left centred, and those with the hearts on one row. */
+typedef enum OraclesEnhancedHud { ORACLES_ENHANCED_HUD_ORIGINAL = 0, ORACLES_ENHANCED_HUD_FULL, ORACLES_ENHANCED_HUD_WIDE } OraclesEnhancedHud;
+void oracles_enhanced_view_set_hud(OraclesEnhancedView *view, int hud);
 int oracles_enhanced_view_hud(const OraclesEnhancedView *view);
+/* The last composed surface's HUD band drawn again for the status bar's setting now, the game not having run since (a
+ * change from the pause): 1 when it was, a world frame or a room's load under the band; 0 for a framed frame, whose bar
+ * stays centred whatever the setting. */
+int oracles_enhanced_view_redraw_hud(OraclesEnhancedView *view);
 void oracles_enhanced_view_hud_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *lines_kept);
+void oracles_enhanced_view_hud_wide_counts(const OraclesEnhancedView *view, unsigned *laid, unsigned *centred, unsigned *one_row);
 /* A room's load (a door, stairs) drawn under the HUD band the world frames draw, the game area alone where the world
  * shows it: whether the last composition drew one, and the surface's place of the game area's top-left pixel there or in
  * the last world frame.  The counts: the load's frames drawn so, and those left framed whole for showing one colour
  * (the LCD off, a full fade). */
 int oracles_enhanced_view_load_band(const OraclesEnhancedView *view, int32_t *area_left, int32_t *area_top);
 void oracles_enhanced_view_load_counts(const OraclesEnhancedView *view, unsigned *band_frames, unsigned *blank_frames);
+/* Frames composed under a scene's tint of the game's screen, which the other rooms took, and the first and last of them. */
+void oracles_enhanced_view_scene_tint_counts(const OraclesEnhancedView *view, unsigned *frames, uint32_t *first, uint32_t *last);
 /* Frames that drew the fade of objects appearing on entry, and objects that started one. */
 void oracles_enhanced_view_fade_counts(const OraclesEnhancedView *view, unsigned *frames, unsigned *objects);
 /* Frames that drew the fade of objects an image of a room left showed, once replaced, and objects that started one. */
@@ -180,6 +317,30 @@ unsigned oracles_enhanced_view_live_renders_kept(const OraclesEnhancedView *view
 unsigned oracles_enhanced_view_render_wait_max(const OraclesEnhancedView *view);
 /* Those renders made past the frame's budget once they had waited the most it allows. */
 unsigned oracles_enhanced_view_renders_forced(const OraclesEnhancedView *view);
+/* A neighbour's objects animated in place: the interactions and parts whose animation loops over several poses go
+ * through it at the live game's updates of its objects, back to their captured poses at each transition's start; on
+ * by default, off in the Low quality (`enabled` 0), from the next delivery of each neighbour. */
+void oracles_enhanced_view_set_neighbour_animation(OraclesEnhancedView *view, int enabled);
+/* The harness's check: each render of a pose checked against the step and against a render of the whole area. */
+void oracles_enhanced_view_pose_verify(OraclesEnhancedView *view, int enabled);
+typedef struct OraclesEnhancedPoseCounts {
+    unsigned animated;            /* objects of the captures delivered that their neighbour animates */
+    unsigned frozen_code;         /* of several poses, frozen: their code did not advance their animation by one step an update at the capture's probe */
+    unsigned frozen_enemies;      /* of several poses, frozen: enemies */
+    unsigned frozen_low;          /* that would animate, frozen: the Low quality */
+    unsigned frozen_unplaced;     /* that would animate, frozen: the captured pose, built at their place, is not what the capture drew */
+    unsigned frozen_unreadable;   /* their animation's data cannot be read */
+    unsigned steps;               /* updates of the live objects the neighbours stepped */
+    unsigned changes;             /* pose changes stepped */
+    unsigned changes_drawn;       /* pose changes a render drew */
+    unsigned renders, lines;      /* renders made for poses alone (under the frame's budget), and their lines */
+    unsigned resets;              /* objects put back in their captured pose as a transition enters their room */
+    unsigned drawn_wrong;         /* with the check: objects a render drew otherwise than their step's pose builds */
+    unsigned lines_wrong;         /* with the check: lines of a render of some lines that differ from a render of the whole area */
+    unsigned lag_max;             /* the most frames in a row a neighbour shown drew a pose behind its step */
+    unsigned probes, probe_frames;   /* captures delivered after their probe, and the guest frames those probes ran */
+} OraclesEnhancedPoseCounts;
+void oracles_enhanced_view_pose_counts(const OraclesEnhancedView *view, OraclesEnhancedPoseCounts *out);
 /* The lines of the renders made that were not drawn again, their tiles unchanged since the last render (ev_neighbour_pixels). */
 unsigned oracles_enhanced_view_live_lines_kept(const OraclesEnhancedView *view);
 /* The most 8x8 blocks of tiles the live VRAM does not animate that a live render differed from the ghost's render of the same room by: none if the live render is right. */
@@ -198,8 +359,19 @@ unsigned oracles_enhanced_view_uncovered(const OraclesEnhancedView *view);
 void oracles_enhanced_view_shown(const OraclesEnhancedView *view, unsigned *width, unsigned *height);
 /* Frames shown framed because the game drew its area elsewhere than its camera (a cutscene's pan or flash). */
 unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *view);
+/* World frames shown while a cutscene held the game with its area drawn elsewhere than its camera, a room's load
+ * included, waves and shakes apart: a picture the band placed at the camera's spot.  None is meant. */
+unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *view);
 /* Frames shown in the band with the game's per-line scroll (under water, the strange force). */
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *view);
+/* Of those, the frames of a room the band shows whole (a large room drawn back, a room shown alone that it holds): its
+ * waves held to its rows, from the game's own sine where the profile binds it, else their part common to every line
+ * taken off, so that the room stands still while its lines ripple. */
+unsigned oracles_enhanced_view_sway_frames(const OraclesEnhancedView *view);
+/* Frames of a scroll under Ages' sea, where the game stops its waves, drawn with them all the same (of the wave frames). */
+unsigned oracles_enhanced_view_continued_wave_frames(const OraclesEnhancedView *view);
+/* The band shows the room whole and still (oracles_enhanced_view_sway_frames). */
+int oracles_enhanced_view_room_whole(const OraclesEnhancedView *view);
 /* Frames shown in the band shaken whole with the game's screen shake (a gate, a bomb, a boss). */
 unsigned oracles_enhanced_view_shake_frames(const OraclesEnhancedView *view);
 /* World frames where the band shows an overworld room beside the reference room, diagonals included, that no delivered terrain covers yet. */
@@ -244,6 +416,50 @@ unsigned oracles_enhanced_routed_beyond(uint8_t ref, unsigned dir, uint8_t answe
 void oracles_enhanced_band_order(const int32_t *shown, const int32_t *distance, unsigned count, unsigned *out);
 /* World frames where a neighbour drawn in the band holds a fade's palettes (oracles_enhanced_capture_blank): never, if its guard holds. */
 unsigned oracles_enhanced_view_plain_shown_frames(const OraclesEnhancedView *view);
+/* A scene's tint of the game's screen: `scene`, the palettes a cutscene
+ * shows over `reference`, those the room's own load gives.  1 when it
+ * changed palettes (`changed`, a bit each), one of them by more than 2 on a
+ * channel, and one colour transform (`coefficients`, by output channel red,
+ * green, blue: the weights of red, green and blue and a constant, in 1/1024)
+ * takes every colour of at least four of them (`slots`) within 4 of the
+ * scene's, the others left out the farthest first.  `oracles_enhanced_scene_tinted`
+ * applies it to a room's own palettes: of those changed, a palette that is the
+ * scene's already stays, the room's that is the reference's takes the scene's,
+ * any other goes through the transform. */
+int oracles_enhanced_scene_tint(const uint8_t reference[64], const uint8_t scene[64], uint8_t *slots, uint8_t *changed, int32_t coefficients[12]);
+void oracles_enhanced_scene_tinted(const uint8_t own[64], const uint8_t reference[64], const uint8_t scene[64], uint8_t changed,
+                                   const int32_t coefficients[12], uint8_t out[64]);
+/* Whether a tint found in the few frames after a fade, a scroll or a palette
+ * transition is a scene's: at least four of the palettes it explains
+ * (`slots`) changed by more than 2 on a channel, the palettes a fade ends on
+ * (the night a fade from white opens on), not the last step of the fade or
+ * of the transition still on screen beside a palette the room shows apart. */
+int oracles_enhanced_scene_tint_after_fade(const uint8_t reference[64], const uint8_t scene[64], uint8_t slots);
+/* The room's own palettes a scene's tint is taken from, kept by room while
+ * the scene lasts: its entry may be taken for another room, or run again
+ * from the live game, which carries the scene's palettes (the ghost's load
+ * keeps the base of the same palette header: loadTilesetData loads the
+ * palettes of another one only).  `oracles_enhanced_tint_reference` returns
+ * the palettes to fit the scene against: those kept for the room, the first
+ * a tint held from there, else `entry` (its last delivery, NULL without
+ * one); it drops what was kept once the room's entry, the scene and the kept
+ * palettes are the same (the scene over), and what no tint held from for
+ * ORACLES_TINT_MEMORY_FRAMES.  `oracles_enhanced_tint_kept` notes a tint
+ * held from `reference`; `oracles_enhanced_tint_forget` drops everything (a
+ * warp, a load). */
+#define ORACLES_TINT_MEMORIES 4u
+#define ORACLES_TINT_MEMORY_FRAMES 600u
+typedef struct OraclesTintMemory {
+    int valid;
+    uint8_t group, room, header;   /* the room and its palette header (wTilesetPalette) */
+    uint32_t used_at;              /* the last frame a tint held from it */
+    uint8_t reference[64];
+} OraclesTintMemory;
+const uint8_t *oracles_enhanced_tint_reference(OraclesTintMemory memories[ORACLES_TINT_MEMORIES], uint8_t group, uint8_t room, uint8_t header,
+                                               uint32_t frame, const uint8_t *entry, const uint8_t scene[64]);
+void oracles_enhanced_tint_kept(OraclesTintMemory memories[ORACLES_TINT_MEMORIES], uint8_t group, uint8_t room, uint8_t header, uint32_t frame,
+                                const uint8_t reference[64]);
+void oracles_enhanced_tint_forget(OraclesTintMemory memories[ORACLES_TINT_MEMORIES]);
 /* Whether a ghost's capture of a room is no terrain: its background palettes
  * the palette thread's fade rather than the room's own (the offset most
  * channels agree on, against the base palettes w2TilesetBgPalettes, more
@@ -286,6 +502,11 @@ void oracles_enhanced_view_scroll_animation_counts(const OraclesEnhancedView *vi
 void oracles_enhanced_view_stream_counts(const OraclesEnhancedView *view, unsigned *matched, unsigned *followed);
 /* Whether the area blurb was taken out of the window and drawn apart this frame (its pixels are repainted). */
 int oracles_enhanced_view_blurb_drawn(const OraclesEnhancedView *view);
+/* Scroll frames where Link is to be drawn (his object visible) and nothing of him is on the screen nor drawn past its
+ * edge: Link missing from the view; and those he was drawn from his fields, past the edge where the game writes none
+ * of his sprites. */
+unsigned oracles_enhanced_view_link_unshown_frames(const OraclesEnhancedView *view);
+unsigned oracles_enhanced_view_link_built_frames(const OraclesEnhancedView *view);
 /* Pre-runs started while a room loaded: results filed beside the room the ghost primed in, and results dropped. */
 void oracles_enhanced_view_blind_runs(const OraclesEnhancedView *view, unsigned *filed, unsigned *dropped);
 /* Neighbours run again from the live state because the key had moved since they were computed (the source of a chain). */
@@ -311,10 +532,11 @@ typedef struct OraclesEnhancedBlackRoom { uint8_t group, room; uint32_t from, fr
  * ORACLES_ENHANCED_BLACK_COLD_FRAMES frames after the first world frame, a
  * load or a warp), or the band shows a place of no room of its grid (past
  * the map's edge, the sea's shore), or what is left black is the fringe of a
- * ripple, or none of these. */
+ * ripple, or around a room shown alone on purpose (the Maku tree's), or
+ * none of these. */
 #define ORACLES_ENHANCED_BLACK_COLD_FRAMES 300u
 enum { ORACLES_ENHANCED_BLACK_CORNER, ORACLES_ENHANCED_BLACK_NEIGHBOUR, ORACLES_ENHANCED_BLACK_COLD, ORACLES_ENHANCED_BLACK_EDGE,
-       ORACLES_ENHANCED_BLACK_RIPPLE, ORACLES_ENHANCED_BLACK_OTHER, ORACLES_ENHANCED_BLACK_KINDS };
+       ORACLES_ENHANCED_BLACK_RIPPLE, ORACLES_ENHANCED_BLACK_ALONE, ORACLES_ENHANCED_BLACK_OTHER, ORACLES_ENHANCED_BLACK_KINDS };
 typedef struct OraclesEnhancedBlackKind {
     unsigned episodes, frames, longest;   /* frames: world frames with one episode of the kind at least */
     unsigned in_transition;               /* episodes whose first frame was in a transition */
@@ -329,7 +551,7 @@ typedef struct OraclesEnhancedBlack {
     OraclesEnhancedBlackKind kinds[ORACLES_ENHANCED_BLACK_KINDS];
 } OraclesEnhancedBlack;
 void oracles_enhanced_view_black(const OraclesEnhancedView *view, OraclesEnhancedBlack *out);
-/* The black kinds' names (corner, neighbour, cold, edge, ripple, other), and the
+/* The black kinds' names (corner, neighbour, cold, edge, ripple, alone, other), and the
  * corners' and other rooms' episodes ended so far outside the band's fill,
  * "c|n group:room from+frames" with a `t` when begun in a transition, the
  * first that fit. */
@@ -340,11 +562,29 @@ const char *oracles_enhanced_view_black_log(const OraclesEnhancedView *view);
  * ghost (a cutscene): its key the live one but for the flags of other rooms
  * (the room flags' pages at `flags_at` in the key, `flags_length` long). */
 int oracles_enhanced_parent_key_holds(const uint8_t *parent_key, const uint8_t *live_key, size_t length, long flags_at, size_t flags_length, long own);
+/* Whether a parent's key is the live one for a room chained from it: but for
+ * the visited bit (`visited`) of the parent's own flags (at `own` in the key),
+ * and, `visits` not NULL, of the other rooms' flags (the pages at `flags_at`,
+ * `flags_length` long), `*visits` then set when one of those differs. */
+int oracles_enhanced_parent_key_current(const uint8_t *parent_key, const uint8_t *live_key, size_t length, long flags_at, size_t flags_length, long own,
+                                        uint8_t visited, int *visits);
 /* Whether the `count` bytes a run read, at `addresses`, as it saw them
  * (`seen`) are the live ones: the visited bit (`visited`) of the room's own
  * flags (`own_flags`) aside, which the entry into it sets and no load reads.
  * A room run from beside is kept only if they are. */
 int oracles_enhanced_reads_hold(unsigned count, const uint16_t *addresses, const uint8_t *seen, const uint8_t *live, uint16_t own_flags, uint8_t visited);
+/* Whether a room around the reference room `ref` is settled for the band's
+ * fill: delivered, under way, failed, or waiting for another parent than one
+ * whose state is no start (`waits_start`, marked around `waits_ref`), which
+ * the band would otherwise wait on for as long as that parent holds.  Rooms
+ * as group << 8 | room. */
+int oracles_enhanced_fill_settled(int valid, int in_flight, int failed, int waits_start, unsigned waits_ref, unsigned ref);
+/* Whether `parent`, no longer holding, may be run again for a room around
+ * `ref` at `frame`: at once, unless it is the parent the room waits on as no
+ * start (`waits_parent`, found so around `waits_ref` since `waits_since`),
+ * then at the pace of a failure, as when the room itself was failed. */
+int oracles_enhanced_parent_rerun_due(int waits_start, unsigned waits_parent, unsigned waits_ref, uint32_t waits_since,
+                                      unsigned parent, unsigned ref, uint32_t frame);
 /* Results run from a room beside while a cutscene held the game, refused because a byte they read had changed. */
 unsigned oracles_enhanced_view_beside_refused(const OraclesEnhancedView *view);
 /* Runs started from the live state across the sea's surface (Ages), ahead of a dive or a return to the surface. */

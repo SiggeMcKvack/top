@@ -3,7 +3,7 @@
 # its headers.
 add_library(oracles_core STATIC
     core/core.c core/core_sameboy.c core/core_mgba.c core/colour.c core/state.c core/cgb_boot_rom.c core/cgb_boot_rom_mgba.c
-    rom/rom.c rom/sha1.c rom/bps.c rom/zip.c)
+    rom/rom.c rom/sha1.c rom/bps.c rom/zip.c rom/save.c)
 target_include_directories(oracles_core PUBLIC core rom)
 string(SUBSTRING ${ORACLES_MGBA_COMMIT} 0 8 ORACLES_MGBA_VERSION)
 target_compile_definitions(oracles_core PRIVATE ORACLES_SAMEBOY_VERSION="${ORACLES_SAMEBOY_VERSION}" ORACLES_MGBA_VERSION="${ORACLES_MGBA_VERSION}")
@@ -19,7 +19,7 @@ target_link_libraries(oracles_host PUBLIC oracles_core)
 oracles_set_warnings(oracles_host)
 
 # Guest bus, hooks and register journal; the tables are generated per game.
-add_library(oracles_guest STATIC game/guest/guest.c game/guest/guest_transaction.c game/guest/guest_call.c game/guest/guest_inventory.c game/guest/guest_item_buttons.c game/guest/guest_text.c game/guest/guest_swim.c game/guest/guest_cheats.c game/guest/guest_fingerprint.c game/guest/guest_tables_ages.c game/guest/guest_tables_seasons.c game/profiles/profile.c game/profiles/moonrise-regalia/tables.c game/profiles/temple-of-seasons/tables.c game/profiles/gifts-of-kinomi/tables.c)
+add_library(oracles_guest STATIC game/guest/guest.c game/guest/guest_transaction.c game/guest/guest_call.c game/guest/guest_inventory.c game/guest/guest_item_buttons.c game/guest/guest_text.c game/guest/guest_swim.c game/guest/guest_cheats.c game/guest/guest_compact_text.c game/guest/guest_text_box.c game/guest/guest_text_speed.c game/guest/guest_fingerprint.c game/guest/guest_tables_ages.c game/guest/guest_tables_seasons.c game/profiles/profile.c game/profiles/moonrise-regalia/tables.c game/profiles/temple-of-seasons/tables.c game/profiles/gifts-of-kinomi/tables.c)
 target_include_directories(oracles_guest PUBLIC game/guest game/profiles game/data)
 target_link_libraries(oracles_guest PUBLIC oracles_core)
 oracles_set_warnings(oracles_guest)
@@ -41,18 +41,18 @@ target_link_libraries(oracles_guest PUBLIC oracles_data)
 
 # The objects of a room and the number each received at its creation:
 # read from any instance's bus, the live one or a ghost's.
-add_library(oracles_neighbours STATIC neighbours/objects.c neighbours/sprites.c neighbours/animation.c neighbours/object_sprites.c)
+add_library(oracles_neighbours STATIC neighbours/objects.c neighbours/sprites.c neighbours/animation.c neighbours/object_sprites.c neighbours/object_animation.c)
 target_include_directories(oracles_neighbours PUBLIC neighbours)
 target_link_libraries(oracles_neighbours PUBLIC oracles_guest)
 oracles_set_warnings(oracles_neighbours)
 
-add_library(oracles_ghost STATIC ghost/ghost.c ghost/ghost_key.c ghost/ghost_data.c)
+add_library(oracles_ghost STATIC ghost/ghost.c ghost/ghost_probe.c ghost/ghost_key.c ghost/ghost_data.c)
 target_include_directories(oracles_ghost PUBLIC ghost)
 target_link_libraries(oracles_ghost PUBLIC oracles_guest oracles_render oracles_data oracles_neighbours Threads::Threads)
 oracles_set_warnings(oracles_ghost)
 
 # Enhanced presentation: the smooth camera reducer fed from the guest bus.
-add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_textbox.c enhanced/view_hotbar.c enhanced/view_scroll.c enhanced/hotbar.c)
+add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_state.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_tint.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_poses.c enhanced/view_textbox.c enhanced/text_box.c enhanced/view_hotbar.c enhanced/view_hud.c enhanced/view_scroll.c enhanced/view_phase.c enhanced/hotbar.c)
 target_include_directories(oracles_enhanced PUBLIC enhanced)
 target_link_libraries(oracles_enhanced PUBLIC oracles_guest oracles_core oracles_ghost)
 oracles_set_warnings(oracles_enhanced)
@@ -106,15 +106,23 @@ foreach(ORACLES_LANGUAGE_CONFIG exceptions_ages exceptions_seasons own_texts cor
     string(APPEND ORACLES_LANGUAGE_CONFIG_C "const unsigned char oracles_language_${ORACLES_LANGUAGE_CONFIG}[] = {${ORACLES_LANGUAGE_CONFIG_BYTES}0};\n")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ORACLES_LANGUAGE_CONFIG_PATH})
 endforeach()
+# The texts the compact text leaves as the game lays them out, config/vwf_keep_*.tsv, embedded the same way.
+foreach(ORACLES_VWF_KEEP ages seasons moonrise kinomi temple)
+    set(ORACLES_LANGUAGE_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../config/vwf_keep_${ORACLES_VWF_KEEP}.tsv)
+    file(READ ${ORACLES_LANGUAGE_CONFIG_PATH} ORACLES_LANGUAGE_CONFIG_HEX HEX)
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," ORACLES_LANGUAGE_CONFIG_BYTES "${ORACLES_LANGUAGE_CONFIG_HEX}")
+    string(APPEND ORACLES_LANGUAGE_CONFIG_C "const unsigned char oracles_vwf_keep_${ORACLES_VWF_KEEP}[] = {${ORACLES_LANGUAGE_CONFIG_BYTES}0};\n")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ORACLES_LANGUAGE_CONFIG_PATH})
+endforeach()
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/language_config.c "${ORACLES_LANGUAGE_CONFIG_C}")
 add_library(oracles_language STATIC language/language_rom.c language/language_pack.c language/language_table.c language/language_rules.c
             language/language_own.c language/language_corrections.c language/language_extract.c language/language_fan.c language/language_compose.c language/language_gfx.c
-            ${CMAKE_CURRENT_BINARY_DIR}/language_config.c)
+            language/language_wrap.c language/language_keep.c language/language_words.c ${CMAKE_CURRENT_BINARY_DIR}/language_config.c)
 target_include_directories(oracles_language PUBLIC language)
 target_link_libraries(oracles_language PUBLIC oracles_guest oracles_data oracles_core)
 oracles_set_warnings(oracles_language)
 
-add_library(oracles_gameplay STATIC gameplay/room_transition.c gameplay/item_hotkeys.c gameplay/item_hotkeys_policy.c)
+add_library(oracles_gameplay STATIC gameplay/room_transition.c gameplay/room_predict.c gameplay/item_hotkeys.c gameplay/item_hotkeys_policy.c)
 target_include_directories(oracles_gameplay PUBLIC gameplay)
 target_link_libraries(oracles_gameplay PUBLIC oracles_guest)
 oracles_set_warnings(oracles_gameplay)

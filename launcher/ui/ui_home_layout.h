@@ -103,6 +103,9 @@ void oracles_ui_layout_version(OraclesUiLayout layout, const char *text, Oracles
 /* The notice of the newer version `release` ("1.3.0") by the `version` oracles_ui_layout_version laid out, which keeps
  * its place. */
 void oracles_ui_layout_update(OraclesUiLayout layout, const OraclesUiLine *version, const char *release, OraclesUiUpdateLayout *out);
+/* The version number's place for the highlight, the `version` laid out: padded as the notice is, the line its text, an
+ * outline `*outline` wide drawn inside it, so that the number does not move. */
+void oracles_ui_layout_version_link(OraclesUiLayout layout, const OraclesUiLine *version, OraclesUiBox *box, float *outline);
 void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);
 /* Over the first game started with a controller, at the top, centred: "Press L3 for the menu." */
 void oracles_ui_layout_pad_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out);

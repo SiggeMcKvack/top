@@ -2,7 +2,44 @@
 
 What changed in each version of The Oracles Project, the newest first. The release page of each version on GitHub carries the same text, under the installation notes.
 
-## 1.2.0 (unreleased)
+## 1.3.0 (unreleased)
+
+### New
+
+- **Compact text.** **Display > Text > Text**: Classic, the game's letters each in a cell of its own, as before, or Compact, where each letter takes its own width, so more words fit on a line and a dialogue takes about a fifth fewer boxes. The texts are laid out again for it and still appear letter by letter at the game's pace, with its sounds. It works in Enhanced, in Ages and Seasons in every language, and in the English of the three fan games.
+- **Wide text box.** **Display > Text > Text box**: Standard, the game's, or Wide, a longer box drawn by the port, whose lines hold half as much again: with the compact text, a dialogue takes about a third fewer boxes. The game still pages, paces and asks its questions as it does. It works in Enhanced, in Ages and Seasons.
+- **Text size.** **Display > Text > Text size**: Normal, Large (half as big again) or Very large (twice as big), the text box drawn larger where the view has room for it, for small screens and reading from a distance. It stays sharp, in whole screen pixels, and changes at once from the pause too. It works in Enhanced, in Ages and Seasons.
+- **Instant text.** **Display > Text > Text speed**: Classic, letter by letter at the speed chosen on the file screen, as before, or Instant, where each line of a dialogue appears whole and every page comes much faster; A still turns the page. Characters' voices and the game's own pauses are kept, and your save's text speed is untouched. It works in Faithful and Enhanced, in Ages, Seasons and the three fan games, and from the pause too.
+- **Display > Text.** The four settings have a page of their own, opened from Display's **Text** row, with a preview of the box as it will show in your view, at the size it will take there. A savestate loads only with the Text and the Text box it was taken with.
+- **Living neighbouring rooms.** In Enhanced, the people and things in the rooms around Link now move as the game moves them, instead of standing still in the pose the view captured. What the game itself keeps still stays still. The Low quality keeps them still, as before.
+- **Wide layout for the status bar.** **Display > HUD**: Wide layout, a third choice beside Full width (still the default) and Original. The game's own status bar is split to the corners of the view: the hearts and the rupees on the left, the item hotkeys then B and A on the right, on the bar's colour. The hearts take a single row where the view is wide enough (Medium and Far). It follows the dungeons' keys, Subrosia's ore and fifteen or sixteen hearts, works in the five games and changes at once from the pause too.
+- **Camera.** **Display > Advanced > Camera**: Smooth, the camera moving by fractions of a pixel so that diagonal walks and stairs glide, or Pixel, whole pixels as the game does. It changes at once from the pause too. On Android, Smooth is now the default where the game is shown at three times its size or more; it also works with a Screen margin and the touch controls, and Link no longer shifts slightly when swimming from one room to the next.
+- **Settings while you play.** From the pause, **Swimming**, **Item hotkeys**, **Window** and **Vsync** now apply to the game you are playing, without going back to the home screen. What a running game cannot change (the text, the text box, the core) is greyed in the pause, which says to change it from the home screen.
+- **Import a save.** **Cartridge > Save > Import save…** brings in a save from another emulator, another device or the European ROM, on every platform and for the five games. It asks before replacing anything, keeps the save it replaces, and its savestate, in a **Backups** folder beside it, and refuses a file that is not a save of Oracle of Ages or Seasons. A save played in German, Italian or Spanish on the European ROM gets its language set to English, which the US game needs to show its texts right; the rest of your game is kept.
+- **Zipped ROMs.** **Choose ROM…**, **Choose patch…** and the European ROM now take a `.zip` too, as most ROMs are kept, and so do a file dropped on the window and the command line: the one ROM or patch inside is read, nothing is unpacked to disk, and the save goes beside the zip, under its name. A zip holding several ROMs, or compressed other than the usual way, is refused with the reason.
+- **Export a save on Android.** **Cartridge > Save > Export save…** puts a copy of your save where you choose (Downloads, an SD card), to play it elsewhere, without a cable. On a computer, **Open folder** shows it as before. A save made here also works with the European ROM in other emulators, beside that ROM under the same name; Cartridge says so under the save.
+- **Display > Picture.** How the game's picture shows now has a page of its own, opened from Display's **Picture** row, which sums up its settings beside it: **Scaling** and **Screen margin**, moved from Advanced, **Color correction**, moved from Display's first page, and two settings that only `settings.txt` held until now, on every platform, Android included. **Menus & scenes**: View or Large, the menus, the map, the cutscenes and the file screen at the view's scale, or alone at their own largest scale, easier to read on a small screen (Large is Android's default); it changes at once from the pause too. **Far size**, on 1280x960 and 1240x1080 screens only, where it changes something: Fitted, Far at a size made for the screen, or Fixed, at its usual size. **Display > Advanced** keeps Core, Continuous transitions, Vsync, Neighbor workers and Camera.
+- **About.** The version number at the bottom left of the home screen now opens **About**, with the version and **Update check**: On, or Off for no network request at all, which also hides a newer version's notice. It works on every platform, Android included, where the update check could not be turned off until now.
+- **Linux: an AppImage.** Linux now has an AppImage, one file to make executable and run, with its icon and menu entry for the tools that install AppImages. The `.tar.gz` stays, for systems where the AppImage does not start. Both also come for Linux ARM64 (Raspberry Pi 5, Asahi Linux...), experimental: not yet tried on real hardware, feedback welcome.
+
+### Improved
+
+- **Smoother diagonal transitions.** With **Continuous transitions**, crossing a room edge diagonally, walking or swimming, stalls much less: Link now carries on across while the next room loads, instead of being held back. A slight catch can still be felt as the scroll ends. It works in Ages and Seasons.
+- **The hotbar through dialogues.** In Enhanced, the hotbar of the **Item hotkeys** now stays with the status bar through dialogues, scrolls and fades, fading and flashing with it, instead of hiding at every text box. It is hidden in cutscenes.
+
+### Fixed
+
+- In Ages' underwater rooms, the underwater dungeon included, and under the sea, the water's ripple no longer shakes the rooms when the camera moves, and it keeps rippling while the screen scrolls to the next room. An interior under the sea no longer sways from side to side with the waves, and with the Smooth camera the scenery now glides around Link as he swims diagonally on the sea floor, as it does on foot, instead of turning at every step.
+- In Enhanced, a house no longer moves as Link walks out of it.
+- At the end of a fade, the rooms around no longer flash a wrong tint for a moment.
+- In the drawn-back view (Medium and Far), the farthest rooms stay black much less often, and fill in much faster, when Link walks into ground he has not been to yet, or after a savestate is loaded beside a room that starts a scene.
+- With **Menus & scenes** on Large (the default on Android), a cutscene that ends on a blank screen before the next room now keeps its size through the blank, instead of shrinking for a moment.
+- A newer version found while a game was running now shows as soon as you return to the home screen, instead of at the next launch.
+- On a device without a web browser (some Android consoles), opening a newer version's page now shows its address instead of doing nothing.
+- `settings.txt` keeps the settings this version does not know, which a newer version or a test build wrote there, instead of losing them at each launch. A setting it knows, written with a value it does not know, goes back to its default.
+- A setting written by hand with spaces or capitals in `settings.txt`, such as `update_check = OFF`, now applies, instead of being ignored and replaced by the default.
+
+## 1.2.0 (2026-10-18)
 
 Most of this release answers what players asked for after 1.1.0, many of them on Retroid, AYN and Anbernic handhelds. Thank you for every report, screenshot and log, and to everyone who tested the builds and posted feedback: they shaped this version.
 
@@ -21,22 +58,26 @@ Most of this release answers what players asked for after 1.1.0, many of them on
 ### Improved
 
 - **Far view fitted to the screen.** On 4:3 screens of about 1280 pixels across, Far showed at twice its size in a black frame. It now takes a size made for the screen and fills it at three times: 426x320 on a 1280x960 screen (Retroid Pocket Nova and Mini, Anbernic RG477M) and 412x360 on a 1240x1080 screen (Retroid Pocket Mini V2 and Classic, AYN Thor's lower screen). Display shows the size the game will take, and in the 4:3 layout View's help says "Far fits this screen". Every other screen keeps Far's usual size.
+- **Smoother camera on computers.** In Enhanced on Windows, macOS and Linux, the camera now moves by fractions of a pixel at your screen's own resolution, and Link is drawn at his exact place: walking diagonally or on stairs, the scenery glides instead of stepping a pixel at a time, and Link stays steady in it. It shows on a screen at least twice the view's size (Far on a 1080p screen, for instance), not with a Screen margin. To keep the whole-pixel camera, write `subpixel_camera=0` in `settings.txt` while the launcher is closed. Android keeps the whole-pixel camera for now.
 - **Key hints that follow your device.** The key hints at the bottom of the launcher's pages, the pause menu's included, now show only the keys of the device you used last: the keyboard's after a key, the controller's (D-pad, A, B, the menu button) after a button. Controls shows Escape and F2 to F11 only once a keyboard is used.
 - **Display** now reads Profile, Quality, Window, View, HUD, Color correction; **Continuous transitions** moved to Display's Advanced page, with Core, Vsync, Neighbor workers, Scaling and Screen margin.
 - On a screen where every Window choice comes to the same size, choosing Fill now starts the game fullscreen, as Display's diagram shows it.
 - The neighbouring rooms fill in more reliably, under the sea in Ages in particular.
-- **Zipped ROMs.** Choose ROM, Choose patch and European ROM now take a `.zip` too, as most ROMs are kept: the one ROM or patch inside it is read, nothing is unpacked to disk, and the save goes beside the zip. A zip holding several ROMs, or compressed other than the usual way, is refused with the reason.
 
 ### Fixed
 
 - In the drawn-back view (Medium and Far), far rooms are prepared a little before they come into view, so their corners show black much less often at the edges of the screen, swimming in particular.
+- In Far, when Link first reaches the past in Ages, the rooms to his left, past the Maku sapling's grove, now fill in much faster instead of staying black. The same goes for the rooms beyond any other room that starts a scene as Link enters it.
 - At each door, while the next room loads, the status bar keeps its look from play (full width, with the item hotkeys) instead of switching for a moment to its original, narrow form.
 - After the season changes in Seasons (crossing into an area of another season, or with the Rod of Seasons), and after a game loads, a piece of the season's or era's banner no longer stays drawn over the scenery for a frame.
 - Enemies of the room Link leaves no longer vanish at the edge of the game's own screen during the scroll: they stay where they were and fade out once it ends, as the ones of the room entered fade in.
 - Walking diagonally or on stairs in Enhanced, Link no longer shakes a pixel back and forth against the screen. The fix in 1.1.0 was not enough; the camera now follows Link where the picture draws him.
+- With Continuous transitions, Link no longer vanishes for a few frames as he crosses a room's edge in Enhanced, swimming at the surface across the bottom of a room or walking across its left edge.
 - Entering or leaving a house or a shop with the game's menus enlarged (the default on Android) no longer shows the room enlarged before it shrinks back: the room stays at the view's scale while it loads.
 - With the Fast (mGBA) core on Windows, mods could misbehave; they now play as on the other platforms.
 - In Gifts of Kinomi, the caves made of several rooms (east of the map) now show in Medium and Far with the rooms they open onto, instead of a single screen framed in black.
+- In Enhanced, the cutscenes that draw a picture over the whole screen (the story of the tower told by a worker in Ages, and other scenes of both games and the fan games) now show it framed, as the game draws it, instead of amid the scenery with its top in the status bar and a line of its text copied above it. The rooms these scenes play in stay in the wide view.
+- When a scene darkens the screen in Enhanced (night falling over Lynna in Ages' introduction, a scene of Seasons' introduction), the neighbouring rooms now darken with it, instead of the game's own screen standing as a dark rectangle in a bright world.
 
 ### Android
 
@@ -50,7 +91,7 @@ Most of this release answers what players asked for after 1.1.0, many of them on
 
 ### Notes
 
-- **Defaults.** The status bar is Full width in Enhanced (Display > HUD > Original brings back the old look). Continuous transitions, on by default, now include the diagonal. Far takes the fitted size on the screens above. The menu button is L3; if your settings already gave L3 to Select or to an item hotkey, it stays theirs, Guide alone opens the menu, and Controls > Menu lets you choose another button. Swimming starts on Tap, Screen margin on Off and Scaling on Sharp, so the game plays as before until you change them.
+- **Defaults.** The status bar is Full width in Enhanced (Display > HUD > Original brings back the old look). Continuous transitions, on by default, now include the diagonal. Far takes the fitted size on the screens above. The menu button is L3; if your settings already gave L3 to Select or to an item hotkey, it stays theirs, Guide alone opens the menu, and Controls > Menu lets you choose another button. Swimming starts on Tap, Screen margin on Off and Scaling on Sharp, so the game plays as before until you change them. On computers, the camera moves by fractions of a pixel (Smoother camera, above).
 - **Saves and settings.** Your saves (`.sav`) and `settings.txt` from 1.1.0 carry over as they are (on Android, a new application, they do not: see Android above), and cheats use the same save. Savestates (F5) from 1.1.0 still load, with one exception: a savestate taken in Far on a 1280x960 or 1240x1080 screen loads only at the size it was taken at; add `far=fixed` to `settings.txt` to keep Far's previous size and load it. On Android, where `settings.txt` is out of reach, such a savestate does not load: continue from the game's own save (`.sav`). A savestate taken in a language loads only in that language.
 - **On macOS**, the application has a new identifier too, `org.theoraclesproject`: your settings and saves stay where they were, but macOS may treat it as a new application and ask again, the first time it opens, as it did when you first installed it (right-click, then Open).
 - **Fan games** keep English for now: their own dialogues are not translated yet, so the Language row is only for Ages and Seasons. Cheats and Hold to swim are for the original Ages and Seasons too.

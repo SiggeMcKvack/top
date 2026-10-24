@@ -21,3 +21,6 @@ tests/CMakeLists.txt	launcher-dépôt
 tests/test_launcher_page.c	C:\\+Users|"/home/
 tests/test_launcher_settings.c	C:\\+Users\\+sam|/home/sam
 tests/test_launcher_mods.c	C:\\+Users\\+sam
+tests/test_launcher_save.c	C:\\+Users\\+sam
+# Contributors named in musl's copyright notice, which the AppImage carries.
+launcher/linux/licences/musl-LICENSE.txt	Clément Vasseur|Timo Teräs

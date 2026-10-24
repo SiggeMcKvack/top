@@ -2,7 +2,10 @@
 
 #include "backends.h"
 #include "guest_tables.h"
+#include "safe_area.h"
+#include "touch_controls.h"
 #include "ui_controls_nav.h"
+#include "ui_page_nav.h"
 
 #include <SDL3/SDL.h>
 
@@ -18,16 +21,26 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
 {
     display->profile = settings->profile;
     display->transitions = settings->transitions;
-    display->hud = settings->hud_full;
+    display->hud = settings->hud;
+    display->text = settings->compact_text;
+    display->text_box = settings->text_box_wide;
+    display->text_size = settings->text_size;
+    display->text_speed = settings->text_instant;
+    display->text_fixed = display->text_box_fixed = display->text_size_fixed = 0;
     display->view = settings->view;
     display->aspect = settings->aspect;
     display->far_fixed = settings->far_fixed;
+    display->menus = settings->menus_large;
     display->core = oracles_settings_core(settings);
     display->window = settings->window_scale ? settings->window_scale - 2 : 3;
+    display->window_w = display->window_h = display->window_chosen = 0;
+    display->windows_refused = 0;
     display->colour = settings->colour_correction;
     display->vsync = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     display->workers = settings->ghosts;
     display->scaling = settings->scaling_fill;
+    display->camera = settings->subpixel_camera;
+    display->camera_from = (int)oracles_settings_subpixel_default_from();
     display->margin = settings->screen_margin;
     display->margin_fixed = 0;
     display->cores = SDL_GetNumLogicalCPUCores();   /* as the session counts them for Auto */
@@ -49,6 +62,13 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
         display->screen_h = 1080;
         display->room_w = 1920;
         display->room_h = 1080 - WINDOW_FRAME;
+    }
+    /* The band each screen margin leaves the game on this screen, fullscreen (oracles_touch_band). */
+    for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) {
+        OraclesTouchEdges edges;
+        oracles_safe_area_edges(window, m, &edges);
+        const OraclesTouchBox band = oracles_touch_band(display->screen_w, display->screen_h, &edges);
+        display->margin_lines[m] = display->screen_h - (int)band.h;
     }
 }
 
@@ -110,8 +130,16 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     const int view = prefs->view, core = oracles_settings_core(prefs), ghosts = prefs->ghosts;
     prefs->profile = display->profile;
     prefs->transitions = display->transitions;
-    prefs->hud_full = display->hud;   /* a running game takes it at once (the pause's settings_changed) */
+    prefs->hud = display->hud;   /* a running game takes it at once (the pause's settings_changed) */
+    /* The text a game lays its texts out for at its start: the next Play's, from the pause too; never --text's. */
+    if (!display->text_fixed) prefs->compact_text = display->text;
+    if (!display->text_box_fixed) prefs->text_box_wide = display->text_box;
+    /* Text size: a running game takes it at once (the pause's settings_changed); never --text-size's. */
+    if (!display->text_size_fixed) prefs->text_size = display->text_size;
+    prefs->text_instant = display->text_speed;   /* a running game takes it when it resumes (the pause's settings_changed) */
     prefs->view = display->view;
+    prefs->menus_large = display->menus;   /* a running game takes it at once (the pause's settings_changed) */
+    if (!in_game) prefs->far_fixed = display->far_fixed;   /* the view's size: the next Play's, never the pause's */
     /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
      * --core's, never stored. */
     if (!in_game && (prefs->core >= 0 || display->core != oracles_settings_core(prefs))) prefs->core = display->core;
@@ -119,9 +147,11 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     if (!in_game) prefs->ghosts = display->workers;
     oracles_settings_quality_changed(prefs, view, core, ghosts);
     static const char *const vsync_names[3] = { "auto", "on", "off" };
-    prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
+    /* From the pause, only once Window is chosen: the row shows the window F11 or --fullscreen left, which hold till then. */
+    if ((!in_game || display->window_chosen) && display->window >= 0) prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
     prefs->colour_correction = display->colour;
     prefs->scaling_fill = display->scaling;
+    prefs->subpixel_camera = display->camera;   /* absent until chosen; a running game takes it at once (oracles_session_follow_subpixel) */
     if (!display->margin_fixed) prefs->screen_margin = display->margin;   /* never --screen-margin's */
     snprintf(prefs->vsync, sizeof prefs->vsync, "%s", vsync_names[display->vsync]);
 }
@@ -138,4 +168,16 @@ unsigned oracles_home_fitting_scale(struct SDL_Window *window, unsigned wanted, 
     const int room_w = (int)((float)usable.w * ratio + 0.5f), room_h = (int)(((float)usable.h - frame) * ratio + 0.5f);
     while (scale > 1u && ((int)(scale * surface.width) > room_w || (int)(scale * surface.height) > room_h)) scale--;
     return scale;
+}
+
+void oracles_home_game_window(const oracles_settings *settings, int window_scale, struct SDL_Window *window, OraclesEnhancedSize surface,
+                              int *fullscreen, unsigned *scale)
+{
+    *fullscreen = window_scale == 0 || oracles_sdl_fullscreen_only();
+    *scale = oracles_home_fitting_scale(window, window_scale > 0 ? (unsigned)window_scale : 4u, surface);
+    if (!*fullscreen && settings->scaling_fill) {
+        OraclesHomeDisplay display;
+        oracles_home_inspect_display(settings, &display, window);
+        *fullscreen = oracles_display_one_size_for(&display, (int)surface.width, (int)surface.height);
+    }
 }

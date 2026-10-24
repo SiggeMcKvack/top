@@ -3,11 +3,14 @@ name: Release
 # A release is a tag vX.Y.Z on the commit whose config/version.json says X.Y.Z (docs/BUILDING.md, releasing): this
 # workflow builds the product for every platform and publishes a GitHub Release of that tag with
 #
-#   the-oracles-project-X.Y.Z-windows.zip          the Windows folder: the executable, its two libraries, the licences
-#   the-oracles-project-X.Y.Z-macos.zip            the macOS application, universal (Apple Silicon and Intel)
-#   the-oracles-project-X.Y.Z-linux-x86_64.tar.gz  the Linux folder, which runs without installation
-#   the-oracles-project-X.Y.Z-android.apk          the Android application, signed by the project's release key
-#   SHA256SUMS.txt                                 their checksums
+#   the-oracles-project-X.Y.Z-windows.zip            the Windows folder: the executable, its two libraries, the licences
+#   the-oracles-project-X.Y.Z-macos.zip              the macOS application, universal (Apple Silicon and Intel)
+#   the-oracles-project-X.Y.Z-linux-x86_64.AppImage  the Linux AppImage, one file that runs without installation
+#   the-oracles-project-X.Y.Z-linux-x86_64.tar.gz    the Linux folder, for a system where the AppImage does not start
+#   the-oracles-project-X.Y.Z-linux-arm64.AppImage   the same two for Linux on ARM64, experimental
+#   the-oracles-project-X.Y.Z-linux-arm64.tar.gz
+#   the-oracles-project-X.Y.Z-android.apk            the Android application, signed by the project's release key
+#   SHA256SUMS.txt                                   their checksums
 #
 # and the notes of .github/release-notes.md, followed by the version's section of CHANGELOG.md.  Run by hand (workflow_dispatch), it builds the same files from the
 # chosen branch and keeps them as artifacts for seven days, without any Release: a rehearsal.  The tests are the CI's,
@@ -39,13 +42,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: "false"
-      - name: Read config/version.json, and check a release tag against it
+      - name: Read config/version.json, and check a release tag against it and against CHANGELOG.md
         id: version
         run: |
           version="$(python3 -c 'import json; print(json.load(open("config/version.json"))["version"])')"
           if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
             echo "the tag ${GITHUB_REF_NAME} does not match config/version.json (${version})" >&2
             exit 1
+          fi
+          # The version's section of CHANGELOG.md, which the notes take, dated for a tag: checked before any build.
+          awk -v v="$version" 'index($0, "## " v " ") == 1 { found = 1 } END { exit !found }' CHANGELOG.md \
+            || { echo "CHANGELOG.md has no section for ${version}" >&2; exit 1; }
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && grep -q "^## ${version} (unreleased)" CHANGELOG.md; then
+            echo "CHANGELOG.md still calls ${version} unreleased: give it its date" >&2; exit 1
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
@@ -77,8 +86,8 @@ jobs:
           mkdir -p "dist/$name"
           cp build-windows/the-oracles-project.exe build-windows/SDL3.dll build-windows/libwinpthread-1.dll \
             build-windows/*-OFL.txt build-windows/SameBoy-LICENSE.txt build-windows/mGBA-LICENSE.txt \
-            build-windows/mGBA-NOTICE.txt build-windows/mGBA-boot-rom.patch build-windows/inih-LICENSE.txt build-windows/SDL3-LICENSE.txt \
-            build-windows/libwinpthread-COPYING.txt "dist/$name/"
+            build-windows/mGBA-NOTICE.txt build-windows/mGBA-boot-rom.patch build-windows/inih-LICENSE.txt build-windows/Lua-LICENSE.txt \
+            build-windows/SDL3-LICENSE.txt build-windows/libwinpthread-COPYING.txt "dist/$name/"
           sed -e "s/X\.Y\.Z/${VERSION}/" -e "s/PLATFORM/Windows/" .github/release-readme.txt > "dist/$name/README.txt"
           (cd dist && python -m zipfile -c "$name.zip" "$name")
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -123,8 +132,18 @@ jobs:
 
   linux:
     needs: version
-    # The oldest Ubuntu of the runners: its glibc, the one the executable and SDL need at least, the widest.
-    runs-on: ubuntu-22.04
+    # One build per architecture, each on its own runner, x86_64 and ARM64 (the files' arm64, uname's aarch64): the
+    # oldest Ubuntu of the runners for both, its glibc, the one the executable and SDL need at least, the widest.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    name: linux (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
       VERSION: ${{ needs.version.outputs.version }}
@@ -134,24 +153,30 @@ jobs:
           persist-credentials: "false"
           fetch-depth: 0
       # The development packages SDL's README-linux lists, as the CI installs them: SDL is built with the X11 and the
-      # Wayland backends both, and the sound servers; patchelf sets the executable's run path.
+      # Wayland backends both, and the sound servers; patchelf sets the executable's run path, and appstreamcli
+      # validates the AppImage's metadata.
       - name: Install what SDL 3 builds against
         run: >-
           sudo apt-get update && sudo apt-get install -y libasound2-dev libpulse-dev libaudio-dev
           libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev
           libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev
-          libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev patchelf
+          libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev patchelf appstream
       - name: Configure with the SDL 3 pinned in config/sdl3.json
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DORACLES_WARNINGS_AS_ERRORS=ON -DORACLES_SDL3_FROM_SOURCE=ON
       - name: Build the launcher
         run: cmake --build build --parallel 4 --target oracles
       - name: Make the archive
         run: ./tools/make_linux_tarball.sh build dist
+      # From the same build, with the appimagetool and the runtime pinned in config/appimage.json.
+      - name: Make the AppImage
+        run: ./tools/make_linux_appimage.sh build dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: the-oracles-project-linux
-          path: dist/the-oracles-project-*-linux-x86_64.tar.gz
+          name: the-oracles-project-linux-${{ matrix.arch }}
+          path: |
+            dist/the-oracles-project-*-linux-${{ matrix.arch }}.tar.gz
+            dist/the-oracles-project-*-linux-${{ matrix.arch }}.AppImage
           retention-days: 7
 
   android:
@@ -216,23 +241,19 @@ jobs:
         run: |
           cd dist
           for asset in "the-oracles-project-${VERSION}-windows.zip" "the-oracles-project-${VERSION}-macos.zip" \
-                       "the-oracles-project-${VERSION}-linux-x86_64.tar.gz" "the-oracles-project-${VERSION}-android.apk"; do
+                       "the-oracles-project-${VERSION}-linux-x86_64.AppImage" "the-oracles-project-${VERSION}-linux-x86_64.tar.gz" \
+                       "the-oracles-project-${VERSION}-linux-arm64.AppImage" "the-oracles-project-${VERSION}-linux-arm64.tar.gz" \
+                       "the-oracles-project-${VERSION}-android.apk"; do
             test -f "$asset" || { echo "$asset is missing" >&2; exit 1; }
           done
           sha256sum the-oracles-project-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Write the notes
-        env:
-          EVENT: ${{ github.event_name }}
         run: |
           sed -e "s/X\.Y\.Z/${VERSION}/g" .github/release-notes.md > "$RUNNER_TEMP/notes.md"
           # Under them, the version's section of CHANGELOG.md, from its "## X.Y.Z (date)" heading to the next version's.
           awk -v v="$VERSION" '/^## / { if (on) exit; if (index($0, "## " v " ") == 1) { on = 1; print "## What'"'"'s new in " v; next } } on' \
             CHANGELOG.md > "$RUNNER_TEMP/changes.md"
-          grep -q . "$RUNNER_TEMP/changes.md" || { echo "CHANGELOG.md has no section for ${VERSION}" >&2; exit 1; }
-          if [ "$EVENT" = push ] && grep -q "^## ${VERSION} (unreleased)" CHANGELOG.md; then
-            echo "CHANGELOG.md still calls ${VERSION} unreleased: give it its date" >&2; exit 1
-          fi
           { echo; cat "$RUNNER_TEMP/changes.md"; } >> "$RUNNER_TEMP/notes.md"
           cp "$RUNNER_TEMP/notes.md" dist/release-notes.md
       - name: Keep a rehearsal's assets as one artifact

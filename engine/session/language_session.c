@@ -7,13 +7,19 @@
 #include <string.h>
 
 #define ORIGIN_LENGTH 2200
+#define LAID_PAGES_MAX 16384u   /* the pages laid out again whose place is kept: above those of a language */
 
 struct OraclesLanguageSession {
     OraclesLanguage language;
-    OraclesLanguagePack *pack;
+    OraclesLanguagePack *pack;       /* NULL for English (US), laid out again */
+    char sha1[41];                   /* the image's, as read */
+    OraclesLanguageLayout layout;    /* the texts' layout: a width of 0 without it */
+    OraclesLanguagePages pages;      /* where the pages it laid out lie in the image composed */
     char origin[ORIGIN_LENGTH];      /* where the pack came from, for the report */
     char note[ORIGIN_LENGTH];        /* what the player is told: the pack could not be written */
-    char identity[64];               /* language-CODE@SHA1, the pack's digest */
+    char language_identity[64];      /* language-CODE@SHA1, the pack's digest */
+    char layout_identity[80];        /* text-compact@SHA1 or text-MODE-WIDTHxLINES@SHA1, the layout's */
+    char identity[160];              /* the two, the language's first */
     OraclesLanguageReport composed;
 };
 
@@ -119,6 +125,7 @@ int oracles_language_session_start(OraclesLanguageSession **out, const char *cod
     OraclesLanguageSession *session = calloc(1, sizeof *session);
     if (!session) { snprintf(error, capacity, "out of memory"); return -1; }
     session->language = language;
+    snprintf(session->sha1, sizeof session->sha1, "%s", info->sha1);
     char reason[512] = "";
     FILE *existing = pack_path ? fopen(pack_path, "rb") : NULL;
     if (existing) {
@@ -162,8 +169,52 @@ int oracles_language_session_start(OraclesLanguageSession **out, const char *cod
      * the same pack only. */
     char digest[41];
     oracles_language_pack_digest(session->pack, digest);
-    snprintf(session->identity, sizeof session->identity, "language-%s@%s", code, digest);
+    snprintf(session->language_identity, sizeof session->language_identity, "language-%s@%s", code, digest);
+    snprintf(session->identity, sizeof session->identity, "%s", session->language_identity);
     *out = session;
+    return 0;
+}
+
+int oracles_language_session_lay_out(OraclesLanguageSession **session, const OraclesRomInfo *info, const OraclesLanguageLayout *layout, char *error,
+                                     size_t capacity)
+{
+    if (!layout->width || layout->width % 8u || layout->width > 256u || (layout->lines && layout->lines != 2u)) {
+        snprintf(error, capacity, "the texts cannot be laid out on %u pixels a line and %u lines a box", layout->width, layout->lines ? layout->lines : 2u);
+        return -1;
+    }
+    const OraclesCompatProfile *profile = oracles_compat_find(info);
+    if (!profile || !oracles_compat_language_bank(profile)) {
+        snprintf(error, capacity, "the compact text lays out the texts of the US ROM of Ages or Seasons, or of a fan game made on it");
+        return -1;
+    }
+    if (!oracles_rom_is_original(info) && *session) {
+        snprintf(error, capacity, "the compact text lays out a fan game's texts in its English alone, not in a language");
+        return -1;
+    }
+    if (!oracles_rom_is_original(info) && (layout->fixed || layout->width != 128u || (layout->lines && layout->lines != 2u))) {
+        snprintf(error, capacity, "a fan game's texts are laid out for the game's text box alone, not a wider one");
+        return -1;
+    }
+    if (!*session) {
+        if (!(*session = calloc(1, sizeof **session))) { snprintf(error, capacity, "out of memory"); return -1; }
+        (*session)->language = ORACLES_LANGUAGE_ENGLISH;
+        snprintf((*session)->sha1, sizeof (*session)->sha1, "%s", info->sha1);
+    }
+    OraclesLanguageSession *s = *session;
+    s->layout = *layout;
+    if (!s->pages.ranges) {
+        s->pages.capacity = LAID_PAGES_MAX;
+        if (!(s->pages.ranges = calloc(2u * LAID_PAGES_MAX, sizeof *s->pages.ranges))) { snprintf(error, capacity, "out of memory"); return -1; }
+    }
+    s->layout.pages = &s->pages;
+    /* A savestate holds the address of a text laid out again: it loads with the same layout only.  The compact text in
+     * the game's box keeps the name its states were taken with. */
+    char digest[41];
+    oracles_language_layout_digest(&s->layout, info->revision, digest);
+    const unsigned lines = layout->lines ? layout->lines : 2u;
+    if (!layout->fixed && layout->width == 128u && lines == 2u) snprintf(s->layout_identity, sizeof s->layout_identity, "text-compact@%s", digest);
+    else snprintf(s->layout_identity, sizeof s->layout_identity, "text-%s-%ux%u@%s", layout->fixed ? "classic" : "compact", layout->width, lines, digest);
+    snprintf(s->identity, sizeof s->identity, "%s%s%s", s->language_identity, s->language_identity[0] ? "," : "", s->layout_identity);
     return 0;
 }
 
@@ -171,7 +222,10 @@ int oracles_language_session_compose(OraclesLanguageSession *session, uint8_t **
 {
     uint8_t *image = NULL;
     size_t size = 0;
-    if (oracles_language_compose(session->pack, session->language, *rom, *rom_size, &image, &size, &session->composed, error, capacity) != 0) return -1;
+    const OraclesLanguageLayout *layout = session->layout.width ? &session->layout : NULL;
+    const int status = session->pack ? oracles_language_compose(session->pack, session->language, *rom, *rom_size, layout, &image, &size, &session->composed, error, capacity)
+                                     : oracles_language_compose_english(session->sha1, *rom, *rom_size, layout, &image, &size, &session->composed, error, capacity);
+    if (status != 0) return -1;
     free(*rom);
     *rom = image;
     *rom_size = size;
@@ -189,6 +243,16 @@ int oracles_language_session_attach(OraclesLanguageSession *session, OraclesGues
 
 const char *oracles_language_session_identity(const OraclesLanguageSession *session) { return session ? session->identity : ""; }
 
+const char *oracles_language_session_language_identity(const OraclesLanguageSession *session) { return session ? session->language_identity : ""; }
+
+const char *oracles_language_session_layout_identity(const OraclesLanguageSession *session) { return session ? session->layout_identity : ""; }
+
+const uint32_t *oracles_language_session_laid_pages(const OraclesLanguageSession *session, unsigned *count)
+{
+    *count = session && session->pages.ranges ? session->pages.count : 0u;
+    return *count ? session->pages.ranges : NULL;
+}
+
 const char *oracles_language_session_note(const OraclesLanguageSession *session) { return session ? session->note : ""; }
 
 void oracles_language_session_report(const OraclesLanguageSession *session, const OraclesGuest *guest, const char *prefix, FILE *out)
@@ -196,17 +260,31 @@ void oracles_language_session_report(const OraclesLanguageSession *session, cons
     if (!session) return;
     unsigned served = 0, english = 0, missing = 0;
     oracles_guest_language_counts(guest, &served, &english, &missing);
-    fprintf(out, "%slanguage %s, from the pack of the European ROM %s, %s: %u texts composed, %u kept in English, %u it lacks, "
-                 "%u graphics composed; the game looked up %u texts in the language, %u kept in English, %u it lacks\n",
-            prefix, oracles_language_code(session->language), oracles_language_pack_source(session->pack), session->origin,
-            session->composed.served, session->composed.english, session->composed.missing, session->composed.graphics, served, english, missing);
+    const OraclesLanguageReport *c = &session->composed;
+    if (session->pack)
+        fprintf(out, "%slanguage %s, from the pack of the European ROM %s, %s: %u texts composed, %u kept in English, %u it lacks, "
+                     "%u graphics composed; the game looked up %u texts in the language, %u kept in English, %u it lacks\n",
+                prefix, oracles_language_code(session->language), oracles_language_pack_source(session->pack), session->origin,
+                c->served, c->english, c->missing, c->graphics, served, english, missing);
+    if (session->layout.width)
+        fprintf(out, "%s%s text: the %s texts laid out again on %u pixels a line, %u of them, %u kept by their table or a call, %u that did not "
+                     "hold; %u boxes for the game's %u; the game looked up %u texts laid out again\n",
+                prefix, session->layout.fixed ? "classic" : "compact", oracles_language_code(session->language), session->layout.width, c->laid_out, c->layout_kept, c->layout_failed, c->boxes_laid_out,
+                c->boxes, oracles_guest_language_laid_out(guest));
+    if (session->pages.overflowed)
+        fprintf(out, "%s%u pages laid out again past the %u whose place is kept: the wide box centres them as kept pages\n", prefix, session->pages.overflowed, LAID_PAGES_MAX);
 }
 
 unsigned oracles_language_session_graphics(const OraclesLanguageSession *session) { return session ? session->composed.graphics : 0; }
+
+const OraclesLanguageReport *oracles_language_session_composed(const OraclesLanguageSession *session) { return session ? &session->composed : NULL; }
+
+int oracles_language_session_translated(const OraclesLanguageSession *session) { return session && session->pack; }
 
 void oracles_language_session_stop(OraclesLanguageSession *session)
 {
     if (!session) return;
     oracles_language_pack_free(session->pack);
+    free(session->pages.ranges);
     free(session);
 }

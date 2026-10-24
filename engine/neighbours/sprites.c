@@ -258,6 +258,37 @@ unsigned oracles_sprites_tags_for_oam(const OraclesSprites *s, const uint8_t oam
     return 0;
 }
 
+unsigned oracles_sprites_tags_for_moved_oam(const OraclesSprites *s, const uint8_t oam[160], OraclesSpriteTag out[], unsigned max)
+{
+    if (!s || !oam || !out) return 0;
+    /* The newest frame drawn whose wOam is the OAM given but for entries of special objects moved since, each by the
+     * same offset, their tiles and flags kept (or hidden at x or y 0, past the screen's edge): a scroll moving Link's
+     * entries without drawing him again. */
+    for (unsigned back = 1; back <= HISTORY; back++) {
+        const drawn_frame *d = &s->history[(s->history_head + HISTORY - back) % HISTORY];
+        if (!d->valid) continue;
+        int dx = 0, dy = 0, moved = 0, fits = 1;
+        for (unsigned k = 0; k < 40u && fits; k++) {
+            const uint8_t *was = d->oam + 4u * k, *now = oam + 4u * k;
+            if (!memcmp(was, now, 4)) continue;
+            fits = was[2] == now[2] && was[3] == now[3];
+            int special = 0;
+            for (unsigned i = 0; i < d->count && fits && !special; i++)
+                special = d->tags[i].kind == 0u && !d->tags[i].terrain_effect && k >= d->tags[i].first && k < (unsigned)d->tags[i].first + d->tags[i].count;
+            if (!fits || !special) { fits = 0; break; }
+            if (now[0] == 0u || now[1] == 0u) continue;   /* pushed past the screen's edge, where the game hides it */
+            const int ex = (int)now[1] - (int)was[1], ey = (int)now[0] - (int)was[0];
+            if (moved && (ex != dx || ey != dy)) fits = 0;
+            dx = ex; dy = ey; moved = 1;
+        }
+        if (!fits || !moved) continue;
+        const unsigned n = d->count < max ? d->count : max;
+        memcpy(out, d->tags, n * sizeof *out);
+        return n;
+    }
+    return 0;
+}
+
 unsigned oracles_sprites_tags(const OraclesSprites *s, OraclesSpriteTag out[], unsigned max)
 {
     if (!s || !out) return 0;

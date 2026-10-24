@@ -145,6 +145,7 @@ int oracles_enhanced_view_set_ghosts(OraclesEnhancedView *v, unsigned count)
         oracles_ghost_set_trace(lane->ghost, 1);
         oracles_ghost_set_prerun(lane->ghost, GHOST_PRERUN_FRAMES);
         oracles_ghost_set_capture(lane->ghost, v->neighbour_objects);
+        oracles_ghost_set_probe(lane->ghost, !v->poses_off);
         v->lane_count++;
     }
     return (int)v->lane_count;
@@ -189,6 +190,48 @@ void oracles_enhanced_view_set_neighbour_objects(OraclesEnhancedView *v, int ena
     }
     v->left_valid = 0; v->vanish_active = 0;
     ev_invalidate_all(v);   /* the cached renders were made without the objects */
+}
+
+/* The waves under Ages' sea, from the game's own sine (w2WaveScrollValues, where the profile binds it): the
+ * window's line i takes the step SCY + the frame counter + i, as checkUpdateUnderwaterWaves counts it, the wave held
+ * to the room's rows.  The game's screen shows them filled for the next frame from the registers of the one before,
+ * torn where its camera moves: a jolt of its water under a moving screen, a shake of the room the band shows still.
+ * 1 with the waves in `out`, 0 without the table. */
+static int room_waves(OraclesEnhancedView *v, int16_t out[ORACLES_ENHANCED_AREA_HEIGHT])
+{
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    const uint8_t *table = oracles_guest_ptr(v->guest, t->wave_scroll_values, ORACLES_ENHANCED_AREA_HEIGHT);
+    if (!table) return 0;
+    const OraclesEnhancedObservation *ob = &v->observation;
+    const unsigned phase = (unsigned)(ob->drawn_camera_y + ob->drawn_offset_y - (int)ORACLES_ENHANCED_HUD_HEIGHT) + oracles_guest_read8(v->guest, t->frame_counter);
+    for (unsigned i = 0; i < ORACLES_ENHANCED_AREA_HEIGHT; i++) out[i] = (int8_t)table[(phase + i) & (ORACLES_ENHANCED_AREA_HEIGHT - 1u)];
+    return 1;
+}
+
+/* Ages' sea floor and its houses: the tileset under water. */
+static int ob_underwater(const OraclesEnhancedView *v)
+{
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    const uint8_t *flags = oracles_guest_ptr(v->guest, t->tileset_flags, 1);
+    return flags && (*flags & ORACLES_TILESETFLAG_UNDERWATER);
+}
+
+/* Without the table, the waves' part common to the room's lines, the median of their scroll across over the lines its
+ * rows show (the window's, or a taller screen's, its 128 lines repeating): the greater part of its edge where it
+ * stands. */
+static int32_t wave_sway(const OraclesEnhancedView *v, int32_t world_top)
+{
+    const OraclesEnhancedWorld *w = &v->observation.world;
+    int16_t sorted[2u * ORACLES_ENHANCED_AREA_HEIGHT];
+    unsigned n = 0;
+    for (int32_t y = w->bounds_origin_y; y < w->bounds_origin_y + w->bounds_height && n < sizeof sorted / sizeof sorted[0]; y++) {
+        if (y < world_top || y >= world_top + (int32_t)v->band_height) continue;
+        sorted[n++] = v->line_shift[(uint32_t)(y - v->observation.window_top) % ORACLES_ENHANCED_AREA_HEIGHT];
+    }
+    if (!n) return 0;
+    for (unsigned i = 1; i < n; i++)
+        for (unsigned j = i; j > 0 && sorted[j - 1] > sorted[j]; j--) { const int16_t t = sorted[j]; sorted[j] = sorted[j - 1]; sorted[j - 1] = t; }
+    return sorted[n / 2u];
 }
 
 /* A ripple reads up to its largest shift past the band's own rectangle. */
@@ -384,7 +427,10 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
     ev_advance_neighbour_animations(v);
     v->animation_renders = 0;
     ev_track_fade(v);
+    ev_track_scene_tint(v);
+    ev_phase_observe(v);
     int tracking = oracles_enhanced_camera_reduce(v->camera, v->frame, &v->observation, &camera_x, &camera_y);
+    const int reducer_tracking = tracking;   /* the camera the reducer's own, its fraction the sub-pixel camera's */
     /* A scroll out of a room the game routes itself toward a side off the map
      * (the Lost Woods' west, which brings Link back into the woods from the
      * east): the game's window leaves the map, where the camera does not go.
@@ -402,6 +448,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         tracking = 1;
     }
     oracles_enhanced_camera_shown(v->camera, &v->shown_width, &v->shown_height);
+    ev_hold_camera(v, &camera_x, &camera_y);
     v->frame++;
     ev_update_neighbours(v);
     /* The first frame of a transition: the room in play becomes a neighbour,
@@ -431,6 +478,10 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
      * sequence's step unchanged, ev_check_routing_keys). */
     if (v->observation.in_transition && !v->was_in_transition) {
         ev_drop_routed_entries(v);
+        /* The objects of the room entered in the poses the game freezes them in during the scroll; the game has
+         * already made it its active room on this frame (getNextActiveRoom). */
+        const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+        ev_poses_reset(v, ev_find_entry(v, oracles_guest_read8(v->guest, t->active_group), oracles_guest_read8(v->guest, t->active_room)));
         v->scroll_from_valid = v->source_valid;   /* the capture of the room in play: the room being left */
         v->scroll_from_group = v->source_group;
         v->scroll_from_room = v->source_room;
@@ -441,7 +492,7 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
 
     OraclesEnhancedCompose in;
     memset(&in, 0, sizeof in);
-    in.border = 0xff101010u;
+    in.border = BORDER_COLOUR;
     in.size = v->size;
     /* The game's palette fade is in the core's window already; the rest of
      * the band takes it too, the frame's gutters included, so that a flash
@@ -461,7 +512,37 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         if (room_waiting_in_view(v, camera_x, camera_y)) v->waiting_frames++;
         v->large_was_in_scroll = !v->observation.grid && v->observation.large && v->observation.in_scroll;
         v->large_scroll_epoch = v->observation.epoch;
-        if (v->have_wave) { in.line_shift = v->line_shift; in.line_shift_y = v->line_shift_y; v->wave_frames++; }
+        v->wave_held = 0;
+        /* Under Ages' sea the game stops its waves for a scroll between two rooms (checkDisableUnderwaterWaves, until
+         * the room entered is loaded): the band goes on drawing them through it, with the game's own sine and phase
+         * (room_waves), which the game takes up again where they stand, the neighbours rippling with them. */
+        const int continued = !v->have_wave && ob_underwater(v) && v->observation.playing && !v->observation.cutscene
+            && (v->observation.in_scroll || v->waves_continued) && room_waves(v, v->held_shift);
+        v->waves_continued = continued;
+        if (continued) {
+            memset(v->line_shift, 0, sizeof v->line_shift);
+            memset(v->line_shift_y, 0, sizeof v->line_shift_y);
+            in.line_shift = v->held_shift; in.line_shift_y = v->line_shift_y;
+            v->wave_held = 1;
+            v->wave_frames++; v->continued_wave_frames++;
+        }
+        if (v->have_wave) {
+            in.line_shift = v->line_shift; in.line_shift_y = v->line_shift_y; v->wave_frames++;
+            /* Ages' waves under the sea are drawn from the game's sine (room_waves), held to the world's rows: the game's
+             * own lines, filled from the registers of the frame before and torn where its camera moves, would crawl
+             * and jolt over a room the band shows still while that camera moves inside it (a room shown whole, a
+             * dungeon's large room).  Elsewhere, or without the table, a room shown whole keeps the game's lines,
+             * their common part taken off (wave_sway): another effect's lines there (a split of the screen, a warp's
+             * ripple) are not that sine.  The core's image is drawn again so. */
+            const int whole = ev_room_whole(v), underwater = ob_underwater(v);
+            if (v->wave_lines && (whole || underwater)) {
+                if (underwater && room_waves(v, v->held_shift)) { in.line_shift = v->held_shift; v->wave_held = 1; }
+                else if (whole) { in.sway = wave_sway(v, camera_y); v->wave_held = 1; }
+                if (v->wave_held) v->sway_frames++;
+            }
+        }
+        v->sway = in.sway;
+        v->shown_shift = in.line_shift;
         in.neighbours = nbs;
         in.neighbour_count = count;
         in.shown_width = v->shown_width;
@@ -478,11 +559,20 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         }
     } else v->large_was_in_scroll = 0;
     const int load_band = ev_load_band(v, &in, tracking, camera_x, camera_y);
-    in.hud_fill = ev_hud_fill(v, in.mode);
-    v->uncovered = oracles_enhanced_compose(ev_scroll_window(v), &in, v->surface);
+    in.hud_fill = ev_hud_fill(v, in.mode, 1);
+    in.hud_place = ev_hud_place(v, in.mode, 1);
+    if (in.mode != ORACLES_ENHANCED_WORLD) { v->sway = 0; v->wave_held = 0; }
+    v->sub_x = v->sub_y = 0;
+    v->sub_layer_w = v->sub_layer_h = 0;
+    v->sub_fixed_count = 0;
+    v->uncovered = oracles_enhanced_compose(in.mode == ORACLES_ENHANCED_WORLD && v->wave_held ? ev_sway_window(v, ev_scroll_window(v)) : ev_scroll_window(v), &in, v->surface);
     if (load_band) { in.mode = ORACLES_ENHANCED_FRAMED; v->uncovered = 0; }
+    v->wide_shown = v->scaled_shown = v->enlarged_noted = 0;
     ev_find_area_blurb(v);
     if (in.mode == ORACLES_ENHANCED_WORLD) {
+        ev_overlay_link_phase(v, camera_x, camera_y);
+        ev_hold_note(v, camera_x, camera_y);
+        ev_subpixel_layer(v, reducer_tracking, camera_x, camera_y);
         ev_fade_vanishing(v, camera_x, camera_y);
         ev_overlay_large_objects(v, camera_x, camera_y);
         ev_overlay_edge_sprites(v, camera_x, camera_y);
@@ -491,11 +581,14 @@ const uint32_t *oracles_enhanced_view_compose(OraclesEnhancedView *v, OraclesEnh
         ev_overlay_warp_curtain(v, camera_x, camera_y);
         ev_overlay_text_box(v, camera_x, camera_y);
         black_outside_shown(v);
-    }
+        ev_overlay_text_box_above(v);
+        ev_subpixel_settle(v);
+    } else if (!load_band) ev_overlay_text_box_framed(v);
     /* In the HUD band's gutters, whatever the mode: they exist in the framed
      * surface too, beside the status bar wherever the image stands (centred
      * in the drawn-back surface). */
     v->hud_top = in.mode == ORACLES_ENHANCED_FRAMED && !load_band ? (v->size.height - ORACLES_PPU_HEIGHT) / 2u : 0u;
+    v->hotbar_framed = in.mode == ORACLES_ENHANCED_FRAMED && !load_band;
     ev_draw_hotbar(v);
     ev_measure_black(v, in.mode, camera_x, camera_y);
     v->have_view = in.mode == ORACLES_ENHANCED_WORLD;
@@ -519,6 +612,13 @@ int oracles_enhanced_view_framed_crop(void *opaque, uint32_t rect[4])
     rect[1] = (v->size.height - ORACLES_PPU_HEIGHT) / 2u;
     rect[2] = ORACLES_ENHANCED_CORE_WIDTH;
     rect[3] = ORACLES_PPU_HEIGHT;
+    /* With the host's wide box, the union of the frame and the box at its size, centred on it, whether a box shows or
+     * not: the same scale throughout, whatever the Text size, which the presenter applies within it. */
+    const unsigned box = v->wide_pixels ? v->wide_pixels + 16u : 8u * ORACLES_TEXT_BOX_GAME_COLUMNS;
+    if (box > rect[2] && rect[0] >= (box - rect[2]) / 2u) {
+        rect[0] -= (box - rect[2]) / 2u;
+        rect[2] = box;
+    }
     return 1;
 }
 
@@ -580,7 +680,11 @@ int oracles_enhanced_view_isolated(const OraclesEnhancedView *v) { return ev_iso
 unsigned oracles_enhanced_view_uncovered(const OraclesEnhancedView *v) { return v->uncovered; }
 void oracles_enhanced_view_shown(const OraclesEnhancedView *v, unsigned *width, unsigned *height) { *width = v->shown_width; *height = v->shown_height; }
 unsigned oracles_enhanced_view_off_camera_frames(const OraclesEnhancedView *v) { return v->off_camera_frames; }
+unsigned oracles_enhanced_view_world_off_camera_frames(const OraclesEnhancedView *v) { return v->world_off_camera_frames; }
 unsigned oracles_enhanced_view_wave_frames(const OraclesEnhancedView *v) { return v->wave_frames; }
+unsigned oracles_enhanced_view_sway_frames(const OraclesEnhancedView *v) { return v->sway_frames; }
+unsigned oracles_enhanced_view_continued_wave_frames(const OraclesEnhancedView *v) { return v->continued_wave_frames; }
+int oracles_enhanced_view_room_whole(const OraclesEnhancedView *v) { return ev_room_whole(v); }
 unsigned oracles_enhanced_view_shake_frames(const OraclesEnhancedView *v) { return v->shake_frames; }
 unsigned oracles_enhanced_view_waiting_frames(const OraclesEnhancedView *v) { return v->waiting_frames; }
 unsigned oracles_enhanced_view_routed_delivered(const OraclesEnhancedView *v) { return v->routed_delivered; }
@@ -613,190 +717,6 @@ int oracles_enhanced_view_neighbour_layout(const OraclesEnhancedView *v, unsigne
      * until it is delivered, less abrupt than black; one run again for a killed
      * enemy shows the terrain it must show. */
     return e->refresh && e->refresh_season ? 2 : 1;
-}
-
-/* ---- savestate ------------------------------------------------------------------------- */
-
-/* The surface a state was taken at: named by a record after the loops' when
- * it is not the normal one, so that a state of the normal surface is what it
- * was before the drawn-back view.  The camera's positions are the
- * places of that surface's corner: at another size they mean another frame. */
-static void size_record(OraclesEnhancedSize size, uint8_t out[SIZE_RECORD_SIZE])
-{
-    memcpy(out, SIZE_RECORD_TAG, 4);
-    out[4] = (uint8_t)size.width; out[5] = (uint8_t)(size.width >> 8);
-    out[6] = (uint8_t)size.height; out[7] = (uint8_t)(size.height >> 8);
-}
-
-/* The records after the loops': the surface's size when it is not the normal
- * one, then the camera's whole offsets (a state saved before them has none).
- * 1 when the state ends with them, with their places, 0 for a record absent. */
-static int tail_records(const uint8_t *data, size_t size, size_t *size_at, size_t *offsets_at)
-{
-    size_t at = 2u * ORACLES_E11_STATE_WIRE_SIZE + LOOP_RECORD_SIZE;
-    *size_at = 0; *offsets_at = 0;
-    if (size < at) return 0;
-    if (size - at >= SIZE_RECORD_SIZE && memcmp(data + at, SIZE_RECORD_TAG, 4) == 0) { *size_at = at; at += SIZE_RECORD_SIZE; }
-    if (size - at >= OFFSET_RECORD_SIZE && memcmp(data + at, OFFSET_RECORD_TAG, 4) == 0) { *offsets_at = at; at += OFFSET_RECORD_SIZE; }
-    return size == at;
-}
-
-static void put32(uint8_t *out, int32_t value) { for (unsigned b = 0; b < 4u; b++) out[b] = (uint8_t)((uint32_t)value >> (8u * b)); }
-static int32_t get32(const uint8_t *in) { uint32_t value = 0; for (unsigned b = 0; b < 4u; b++) value |= (uint32_t)in[b] << (8u * b); return (int32_t)value; }
-
-static const char *const surface_aspects[ORACLES_ENHANCED_ASPECTS] = { "16:9", "4:3" };
-
-/* The view's level and the screen's shape that give a surface, `fitted` the far view fitted to a screen; 0 for none. */
-static int surface_of(OraclesEnhancedSize size, unsigned *level, unsigned *aspect, int *fitted)
-{
-    if (!oracles_enhanced_size_known(size, fitted)) return 0;
-    if (*fitted) { *level = ORACLES_ENHANCED_FAR; *aspect = oracles_enhanced_screen_aspect(size.width, size.height); return 1; }
-    for (unsigned l = ORACLES_ENHANCED_LEVELS; l-- > 0;)
-        for (unsigned a = 0; a < ORACLES_ENHANCED_ASPECTS; a++) {
-            const OraclesEnhancedSize s = oracles_enhanced_view_size((OraclesEnhancedLevel)l, (OraclesEnhancedAspect)a);
-            if (s.width == size.width && s.height == size.height) { *level = l; *aspect = a; return 1; }
-        }
-    return 0;
-}
-
-/* A surface as the player chose it: the view's level and the screen's shape that give it. */
-static void surface_words(OraclesEnhancedSize size, char *out, size_t capacity)
-{
-    static const char *const levels[ORACLES_ENHANCED_LEVELS] = { "near", "medium", "far" };
-    unsigned l, a; int fitted;
-    if (!surface_of(size, &l, &a, &fitted)) snprintf(out, capacity, "a surface of %ux%u", size.width, size.height);
-    else if (fitted) snprintf(out, capacity, "the far view fitted to the screen, %ux%u", size.width, size.height);
-    else snprintf(out, capacity, "the %s view, %ux%u in %s", levels[l], size.width, size.height, surface_aspects[a]);
-}
-
-int oracles_enhanced_view_check_state(const OraclesEnhancedView *v, const uint8_t *data, size_t size, char *why, size_t capacity)
-{
-    OraclesEnhancedSize saved = oracles_enhanced_size(0);
-    size_t at, offsets_at;
-    if (tail_records(data, size, &at, &offsets_at) && at) {
-        saved.width = data[at + 4] | (unsigned)data[at + 5] << 8;
-        saved.height = data[at + 6] | (unsigned)data[at + 7] << 8;
-    }
-    if (saved.width == v->size.width && saved.height == v->size.height) return 0;
-    if (why && capacity) {
-        char taken[96], shown[96];
-        surface_words(saved, taken, sizeof taken);
-        surface_words(v->size, shown, sizeof shown);
-        /* The far view at another of its sizes, the settings that show the one it was taken on: its fixed size in the other
-         * shape (a far savestate of a 4:3 screen taken before far had its 4:3 size), aspect=; its fixed 4:3 size where it
-         * is fitted, far=fixed; its fitted size, far=screen on that screen.  Two fitted sizes are two screens. */
-        unsigned saved_level, saved_aspect, level, aspect; int saved_fitted, fitted;
-        const int same = surface_of(saved, &saved_level, &saved_aspect, &saved_fitted) && surface_of(v->size, &level, &aspect, &fitted) && saved_level == level;
-        char hint[128] = "";
-        if (same && saved_fitted && !fitted) snprintf(hint, sizeof hint, "; far=screen and aspect=auto in the settings show that surface on the screen it was taken on");
-        else if (same && !saved_fitted && (!fitted || saved_aspect == ORACLES_ENHANCED_16_9)) snprintf(hint, sizeof hint, "; aspect=%s in the settings shows that surface", surface_aspects[saved_aspect]);
-        else if (same && !saved_fitted) snprintf(hint, sizeof hint, "; far=fixed in the settings shows that surface");
-        snprintf(why, capacity, "the savestate was taken on %s, and this session shows %s: it loads only on its own surface%s", taken, shown, hint);
-    }
-    return -1;
-}
-
-/* The host state: the horizontal reducer's record, then the vertical one. */
-int oracles_enhanced_view_save_state(const OraclesEnhancedView *v, uint8_t *out, size_t capacity, size_t *written)
-{
-    size_t first = 0, second = 0;
-    if (oracles_e11_state_serialize(oracles_enhanced_camera_state(v->camera), out, capacity, &first) != ORACLES_E11_OK) return -1;
-    if (oracles_e11_state_serialize(oracles_enhanced_camera_state_vertical(v->camera), out + first, capacity - first, &second) != ORACLES_E11_OK) return -1;
-    /* The loops the epoch went through (camera.h): the camera's positions are in the world they shifted. */
-    if (capacity - first - second < LOOP_RECORD_SIZE) return -1;
-    uint8_t *loop = out + first + second;
-    memcpy(loop, LOOP_RECORD_TAG, 4);
-    for (unsigned b = 0; b < 4u; b++) { loop[4 + b] = (uint8_t)((uint32_t)v->observer.loop_cols >> (8u * b)); loop[8 + b] = (uint8_t)((uint32_t)v->observer.loop_rows >> (8u * b)); }
-    size_t total = first + second + LOOP_RECORD_SIZE;
-    if (v->size.width != ORACLES_ENHANCED_NARROW_WIDTH || v->size.height != ORACLES_ENHANCED_NARROW_HEIGHT) {
-        if (capacity - total < SIZE_RECORD_SIZE) return -1;
-        size_record(v->size, out + total);
-        total += SIZE_RECORD_SIZE;
-    }
-    /* The camera's whole offsets (camera.h): the camera loaded shows the pixel it showed. */
-    if (capacity - total < OFFSET_RECORD_SIZE) return -1;
-    OraclesEnhancedShownOffset across, down;
-    oracles_enhanced_camera_shown_offsets(v->camera, &across, &down);
-    memcpy(out + total, OFFSET_RECORD_TAG, 4);
-    put32(out + total + 4, across.valid ? across.offset : OFFSET_NONE);
-    put32(out + total + 8, down.valid ? down.offset : OFFSET_NONE);
-    total += OFFSET_RECORD_SIZE;
-    if (written) *written = total;
-    return 0;
-}
-
-int oracles_enhanced_view_load_state(OraclesEnhancedView *v, const uint8_t *data, size_t size)
-{
-    /* The wire state names its configuration by digest: a state saved under
-     * the other profile resumes under that profile, the savestate wins. */
-    OraclesE11State state, vertical;
-    unsigned profile = oracles_enhanced_camera_profile(v->camera);
-    /* One record (a state saved before the vertical reducer), two, or two and
-     * the loops, and the surface's size when it is not the normal one, and
-     * the camera's whole offsets. */
-    if (oracles_enhanced_view_check_state(v, data, size, NULL, 0) != 0) return -1;
-    size_t size_at, offsets_at;
-    const int have_loops = tail_records(data, size, &size_at, &offsets_at) && memcmp(data + 2u * ORACLES_E11_STATE_WIRE_SIZE, LOOP_RECORD_TAG, 4) == 0;
-    if (size != ORACLES_E11_STATE_WIRE_SIZE && size != 2u * ORACLES_E11_STATE_WIRE_SIZE && !have_loops) return -1;
-    OraclesE11Config config = *oracles_enhanced_camera_config(v->camera);
-    if (oracles_e11_state_restore(data, ORACLES_E11_STATE_WIRE_SIZE, &config, &state) != ORACLES_E11_OK) {
-        profile = profile == 2u ? 1u : 2u;
-        oracles_e11_config_profile(&config, profile);
-        if (oracles_e11_state_restore(data, ORACLES_E11_STATE_WIRE_SIZE, &config, &state) != ORACLES_E11_OK) return -1;
-        oracles_enhanced_camera_set_profile(v->camera, profile);
-    }
-    const int have_vertical = size >= 2u * ORACLES_E11_STATE_WIRE_SIZE
-        && oracles_e11_state_restore(data + ORACLES_E11_STATE_WIRE_SIZE, ORACLES_E11_STATE_WIRE_SIZE, &config, &vertical) == ORACLES_E11_OK;
-    oracles_enhanced_camera_set_state(v->camera, &state, have_vertical ? &vertical : NULL);
-    if (have_loops && offsets_at) {
-        /* For the reducers' epochs and segments restored; an axis without one takes it afresh. */
-        const int32_t saved[2] = { get32(data + offsets_at + 4), get32(data + offsets_at + 8) };
-        OraclesEnhancedShownOffset across = { saved[0] != OFFSET_NONE, saved[0], state.epoch, state.segment };
-        OraclesEnhancedShownOffset down = { 0, 0, 0, 0 };
-        if (have_vertical && saved[1] != OFFSET_NONE) { down.valid = 1; down.offset = saved[1]; down.epoch = vertical.epoch; down.segment = vertical.segment; }
-        oracles_enhanced_camera_set_shown_offsets(v->camera, &across, &down);
-    }
-    /* The ordinals continue from the saved state: the camera goes on from
-     * where it was, no re-bootstrap; the observer resumes at the saved epoch,
-     * or the reducer would ignore every observation of a lower one, and its
-     * reference room is rebuilt from the guest at the next frame. */
-    if (state.last_ordinal_present) v->frame = (uint32_t)(state.last_ordinal + 1u);
-    const unsigned map_width = v->observer.map_width, band_width = v->observer.band_width;
-    memset(&v->observer, 0, sizeof v->observer);
-    v->observer.map_width = map_width;
-    v->observer.band_width = band_width;
-    v->observer.epoch = state.epoch / 8u;
-    /* What the view remembered of the frames before the load is about
-     * another place: the room a scroll came from (an unrelated room would be
-     * drawn as connected), the captures, the reference room's edges and
-     * object, the place and the pre-runs of a load, the sprite bookkeeping. */
-    v->have_last_ref = 0; v->have_came_from = 0; v->have_last_scroll_dir = 0;
-    v->source_valid = 0; v->large_capture_valid = 0; v->large_prev_valid = 0; v->large_was_in_scroll = 0;
-    v->have_ref_collisions = 0; v->ref_maku = 0; v->load_area_held = 0;
-    v->blind_mask = 0; v->blind_epoch = 0;
-    v->have_live_tiles_prev = 0; v->have_wave = 0; v->shake_history = 0; v->blurb_shown = 0; v->blurb_mask = 0;
-    memset(v->blurb_drawings, 0, sizeof v->blurb_drawings);   /* drawings of another moment */
-    ev_scroll_reset(v);   /* a scroll's animation (view_scroll.c): the one under way stays frozen, as the state loaded has it */
-    v->strip_valid = 0;
-    /* The objects' bookkeeping: the image of the room left,
-     * the fade and the hand-off of an entry, the live numbering and tags,
-     * a large room's drawings. */
-    v->left_valid = 0; v->vanish_active = 0;
-    v->appear_active = 0; v->appear_ready = 0; v->appear_ended = 0;
-    v->handoff_count = 0; v->handoff_armed = 0;
-    oracles_sprites_forget(v->live_sprites);
-    oracles_objects_forget(v->live_objects);
-    for (unsigned i = 0; i < LARGE_OBJECT_FRAMES; i++) v->large_objects[i].valid = 0;
-    if (have_loops) {
-        const uint8_t *loop = data + 2u * ORACLES_E11_STATE_WIRE_SIZE;
-        uint32_t cols = 0, rows = 0;
-        for (unsigned b = 0; b < 4u; b++) { cols |= (uint32_t)loop[4 + b] << (8u * b); rows |= (uint32_t)loop[8 + b] << (8u * b); }
-        v->observer.loop_cols = (int32_t)cols; v->observer.loop_rows = (int32_t)rows; v->observer.loop_epoch = v->observer.epoch;
-    }
-    ev_invalidate_all(v);
-    v->coarse_len = 0;   /* the coarse list is taken again from the state loaded */
-    v->black_loaded = 1;   /* the band fills again (view_black.c) */
-    return 0;
 }
 
 OraclesEnhancedCamera *oracles_enhanced_view_camera(OraclesEnhancedView *v) { return v->camera; }

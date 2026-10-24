@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         if (older) { fprintf(older, "oracles-route 4\ngame ages\noptions swim-hold\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 5"));
         older = fopen(path, "w");
-        if (older) { fprintf(older, "oracles-route 9\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
+        if (older) { fprintf(older, "oracles-route 13\ngame ages\ninputs\n0 keys 00\n"); fclose(older); }
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);   /* a later format */
     }
     {
@@ -122,22 +122,110 @@ int main(int argc, char **argv)
         CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 7"));
     }
     {
-        /* A cheat changed during the session: a `cheat` line, the header's format raised to 8 in place at the first,
-         * whatever it was written with; two cheats at a same frame, one cheat's frames increasing. */
+        /* The compact text, with the cheats: format 9, which a reader of format 8 refuses rather than replay it without;
+         * an older format naming it is refused, and a `cheat` line leaves the format as it is. */
+        OraclesRouteHeader compact = route.header;
+        snprintf(compact.options, sizeof compact.options, "%s", "continuous-transitions," ORACLES_ROUTE_OPTION_TEXT_COMPACT "," ORACLES_ROUTE_OPTION_CHEAT "ammo");
+        OraclesRouteWriter writer_compact;
+        CHECK(oracles_route_writer_open(&writer_compact, path, &compact) == 0 && writer_compact.format == ORACLES_ROUTE_FORMAT_TEXT_COMPACT);
+        oracles_route_writer_record(&writer_compact, 0, 0x00);
+        CHECK(oracles_route_writer_cheat(&writer_compact, 10, "rupees", 1) == 0 && writer_compact.format == ORACLES_ROUTE_FORMAT_TEXT_COMPACT);
+        CHECK(oracles_route_writer_close(&writer_compact) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_TEXT_COMPACT && back.cheat_count == 1);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) && !strcmp(back.header.options, compact.options));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 8\ngame ages\noptions text-compact\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 9"));
+    }
+    {
+        /* The wide text box, classic or with the compact text: format 11, which a reader before it refuses; an older
+         * format naming it is refused; a session that may change a setting writes it in 11 too, with its `set` lines. */
+        OraclesRouteHeader wide = route.header;
+        snprintf(wide.options, sizeof wide.options, "%s", ORACLES_ROUTE_OPTION_TEXT_COMPACT "," ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
+        OraclesRouteWriter writer_wide;
+        CHECK(oracles_route_writer_open(&writer_wide, path, &wide) == 0 && writer_wide.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        oracles_route_writer_record(&writer_wide, 0, 0x00);
+        CHECK(oracles_route_writer_cheat(&writer_wide, 10, "rupees", 1) == 0 && writer_wide.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        CHECK(oracles_route_writer_close(&writer_wide) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == 11u && back.cheat_count == 1);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 9\ngame ages\noptions text-box-wide\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 11"));
+        CHECK(oracles_route_writer_open_format(&writer_wide, path, &wide, ORACLES_ROUTE_FORMAT_SET) == 0 && writer_wide.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        oracles_route_writer_record(&writer_wide, 0, 0x00);
+        CHECK(oracles_route_writer_set(&writer_wide, 20, ORACLES_ROUTE_SET_SWIM_HOLD, 1) == 0);
+        CHECK(oracles_route_writer_close(&writer_wide) == 0);
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == 11u && back.setting_count == 1
+              && oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE));
+        oracles_route_free(&back);
+    }
+    {
+        /* The instant text: format 12, which a reader before it refuses; an older format naming it is refused; its `set
+         * text-speed` lines are format 12's, a route of 10 or 11 carrying none, and a session that may change a setting
+         * writes 12 from the start. */
+        OraclesRouteHeader instant = route.header;
+        snprintf(instant.options, sizeof instant.options, "%s", ORACLES_ROUTE_OPTION_TEXT_COMPACT "," ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE "," ORACLES_ROUTE_OPTION_TEXT_INSTANT);
+        OraclesRouteWriter writer_instant;
+        CHECK(oracles_route_writer_open(&writer_instant, path, &instant) == 0 && writer_instant.format == ORACLES_ROUTE_FORMAT_TEXT_INSTANT);
+        oracles_route_writer_record(&writer_instant, 0, 0x00);
+        CHECK(oracles_route_writer_set(&writer_instant, 30, ORACLES_ROUTE_SET_TEXT_SPEED, 0) == 0);
+        CHECK(oracles_route_writer_set(&writer_instant, 40, ORACLES_ROUTE_SET_TEXT_SPEED, 2) == -1);   /* no such speed */
+        CHECK(oracles_route_writer_close(&writer_instant) == 0);
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == 12u && back.setting_count == 1
+              && back.settings[0].name == ORACLES_ROUTE_SET_TEXT_SPEED && back.settings[0].value == 0 && back.settings[0].frame == 30u);
+        CHECK(oracles_route_has_option(&back.header, ORACLES_ROUTE_OPTION_TEXT_INSTANT) && oracles_route_sets(&back, ORACLES_ROUTE_SET_TEXT_SPEED));
+        CHECK(!strcmp(oracles_route_setting_name(ORACLES_ROUTE_SET_TEXT_SPEED), "text-speed")
+              && !strcmp(oracles_route_setting_value(ORACLES_ROUTE_SET_TEXT_SPEED, 1), "instant"));
+        oracles_route_free(&back);
+        FILE *older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 11\ngame ages\noptions text-instant\ninputs\n0 keys 00\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1 && strstr(error, "format 12"));
+        older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 11\ngame ages\ninputs\n0 keys 00\n10 set text-speed instant\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);
+        older = fopen(path, "w");
+        if (older) { fprintf(older, "oracles-route 12\ngame ages\ninputs\n0 keys 00\n10 set text-speed instant\n20 set text-speed fast\n"); fclose(older); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);   /* a speed this reader does not know */
+        /* A route of format 11 opened by a session: no `set text-speed` line; the session opens the latest. */
+        OraclesRouteHeader wide = route.header;
+        snprintf(wide.options, sizeof wide.options, "%s", ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE);
+        CHECK(oracles_route_writer_open_format(&writer_instant, path, &wide, ORACLES_ROUTE_FORMAT_SET) == 0 && writer_instant.format == ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE);
+        CHECK(oracles_route_writer_set(&writer_instant, 10, ORACLES_ROUTE_SET_TEXT_SPEED, 1) == -1);
+        CHECK(oracles_route_writer_close(&writer_instant) == 0);
+        CHECK(oracles_route_writer_open_format(&writer_instant, path, &wide, ORACLES_ROUTE_FORMAT_LATEST) == 0 && writer_instant.format == ORACLES_ROUTE_FORMAT_TEXT_INSTANT);
+        oracles_route_writer_record(&writer_instant, 0, 0x00);
+        CHECK(oracles_route_writer_set(&writer_instant, 10, ORACLES_ROUTE_SET_TEXT_SPEED, 1) == 0);
+        CHECK(oracles_route_writer_close(&writer_instant) == 0);
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == 12u && back.settings[0].value == 1);
+        oracles_route_free(&back);
+    }
+    {
+        /* A cheat changed during the session: a `cheat` line, in a route opened in the format a session that may change
+         * one writes from the start (a route opened in an earlier one cannot carry it); two cheats at a same frame, one
+         * cheat's frames increasing. */
         OraclesRouteHeader plain = route.header;
         plain.mods[0] = 0;
         snprintf(plain.options, sizeof plain.options, "%s", ORACLES_ROUTE_OPTION_CHEAT "ammo");
         OraclesRouteWriter writer_verb;
         CHECK(oracles_route_writer_open(&writer_verb, path, &plain) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_CHEATS);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 600, "rupees", 1) == -1 && writer_verb.format == ORACLES_ROUTE_FORMAT_CHEATS);
+        CHECK(oracles_route_writer_close(&writer_verb) == 0);
+        CHECK(oracles_route_writer_open_format(&writer_verb, path, &plain, ORACLES_ROUTE_FORMAT_SET) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_SET);
         oracles_route_writer_record(&writer_verb, 0, 0x00);
-        CHECK(oracles_route_writer_cheat(&writer_verb, 600, "rupees", 1) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_CHEAT_VERB);
+        CHECK(oracles_route_writer_cheat(&writer_verb, 600, "rupees", 1) == 0 && writer_verb.format == ORACLES_ROUTE_FORMAT_SET);
         CHECK(oracles_route_writer_cheat(&writer_verb, 600, "no-damage", 1) == 0);
         oracles_route_writer_record(&writer_verb, 601, 0x10);
         CHECK(oracles_route_writer_cheat(&writer_verb, 900, "rupees", 0) == 0);
         CHECK(oracles_route_writer_cheat(&writer_verb, 901, "two words", 1) == -1 && oracles_route_writer_cheat(&writer_verb, 901, "", 1) == -1);
         CHECK(oracles_route_writer_close(&writer_verb) == 0);
         OraclesRoute back;
-        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_CHEAT_VERB);
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_SET);
         CHECK(!strcmp(back.header.options, plain.options) && back.count == 2 && back.action_count == 0 && back.cheat_count == 3);
         size_t first = 99;
         CHECK(oracles_route_cheats_at(&back, 600, &first) == 2 && first == 0);
@@ -165,6 +253,76 @@ int main(int argc, char **argv)
         CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.cheat_count == 3);
         oracles_route_free(&back);
     }
+    {
+        /* Format 10: a setting changed during the session, `set <name> <value>`, beside the cheats; each name's values
+         * written and read back, two settings at a same frame, one setting's frames increasing; a header of format 9,
+         * whose options name the compact text, opened in 10 from the start. */
+        OraclesRouteHeader compact = route.header;
+        compact.mods[0] = 0;
+        snprintf(compact.options, sizeof compact.options, "%s", ORACLES_ROUTE_OPTION_TEXT_COMPACT);
+        OraclesRouteWriter writer_set;
+        CHECK(oracles_route_writer_open(&writer_set, path, &compact) == 0 && writer_set.format == ORACLES_ROUTE_FORMAT_TEXT_COMPACT);
+        CHECK(oracles_route_writer_set(&writer_set, 10, ORACLES_ROUTE_SET_SWIM_HOLD, 1) == -1);   /* format 9 cannot carry it */
+        CHECK(oracles_route_writer_close(&writer_set) == 0);
+        CHECK(oracles_route_writer_open_format(&writer_set, path, &compact, ORACLES_ROUTE_FORMAT_SET) == 0 && writer_set.format == ORACLES_ROUTE_FORMAT_SET);
+        oracles_route_writer_record(&writer_set, 0, 0x00);
+        CHECK(oracles_route_writer_set(&writer_set, 300, ORACLES_ROUTE_SET_SWIM_HOLD, 1) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 300, ORACLES_ROUTE_SET_ITEM_HOTKEYS, 1) == 0);
+        CHECK(oracles_route_writer_cheat(&writer_set, 300, "ammo", 1) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 301, ORACLES_ROUTE_SET_WINDOW, 3) == 0);
+        oracles_route_writer_record(&writer_set, 302, 0x10);
+        CHECK(oracles_route_writer_set(&writer_set, 500, ORACLES_ROUTE_SET_SWIM_HOLD, 0) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 500, ORACLES_ROUTE_SET_ITEM_HOTKEYS, 0) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 600, ORACLES_ROUTE_SET_WINDOW, 0) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 601, ORACLES_ROUTE_SET_ITEM_HOTKEYS, 2) == 0);
+        CHECK(oracles_route_writer_set(&writer_set, 602, ORACLES_ROUTE_SET_SWIM_HOLD, 2) == -1);   /* no such value */
+        CHECK(oracles_route_writer_set(&writer_set, 602, ORACLES_ROUTE_SET_WINDOW, 1) == -1);
+        CHECK(oracles_route_writer_set(&writer_set, 602, ORACLES_ROUTE_SETTINGS, 0) == -1);
+        CHECK(oracles_route_writer_close(&writer_set) == 0);
+        FILE *text = fopen(path, "r");
+        char lines[512] = "";
+        if (text) { const size_t n = fread(lines, 1, sizeof lines - 1, text); lines[n] = 0; fclose(text); }
+        CHECK(!strncmp(lines, "oracles-route 10\n", 17) && strstr(lines, "\n300 set swim-hold on\n300 set item-hotkeys use\n300 cheat ammo on\n301 set window 3\n")
+              && strstr(lines, "\n600 set window full\n601 set item-hotkeys equip\n"));
+        OraclesRoute back;
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.format == ORACLES_ROUTE_FORMAT_SET);
+        CHECK(back.setting_count == 7 && back.cheat_count == 1 && back.count == 2);
+        size_t first = 99;
+        CHECK(oracles_route_settings_at(&back, 300, &first) == 2 && first == 0);
+        CHECK(back.settings[0].name == ORACLES_ROUTE_SET_SWIM_HOLD && back.settings[0].value == 1 && back.settings[1].name == ORACLES_ROUTE_SET_ITEM_HOTKEYS
+              && back.settings[1].value == 1);
+        CHECK(oracles_route_settings_at(&back, 301, &first) == 1 && first == 2 && back.settings[2].name == ORACLES_ROUTE_SET_WINDOW && back.settings[2].value == 3);
+        CHECK(oracles_route_settings_at(&back, 500, &first) == 2 && first == 3 && back.settings[3].value == 0 && back.settings[4].value == 0);
+        CHECK(oracles_route_settings_at(&back, 600, &first) == 1 && back.settings[5].name == ORACLES_ROUTE_SET_WINDOW && back.settings[5].value == 0);
+        CHECK(back.settings[6].name == ORACLES_ROUTE_SET_ITEM_HOTKEYS && back.settings[6].value == 2);
+        CHECK(oracles_route_settings_at(&back, 302, &first) == 0);
+        CHECK(oracles_route_sets(&back, ORACLES_ROUTE_SET_SWIM_HOLD) && oracles_route_sets(&back, ORACLES_ROUTE_SET_WINDOW));
+        CHECK(oracles_route_last_frame(&back) == 601);   /* the route lasts to its last line, a setting's too */
+        oracles_route_free(&back);
+        CHECK(!strcmp(oracles_route_setting_name(ORACLES_ROUTE_SET_ITEM_HOTKEYS), "item-hotkeys") && !oracles_route_setting_name(ORACLES_ROUTE_SETTINGS));
+        CHECK(!strcmp(oracles_route_setting_value(ORACLES_ROUTE_SET_WINDOW, 0), "full") && !oracles_route_setting_value(ORACLES_ROUTE_SET_WINDOW, 5));
+        static const char *const malformed[] = {
+            "oracles-route 9\ninputs\n0 keys 00\n10 set swim-hold on\n",                 /* the verb needs format 10 */
+            "oracles-route 10\ninputs\n10 set swim-hold on\n10 set swim-hold off\n",     /* a setting twice at a frame */
+            "oracles-route 10\ninputs\n10 set swim-hold on\n9 set window 2\n",           /* a frame going back */
+            "oracles-route 10\ninputs\n10 set swim-hold\n",
+            "oracles-route 10\ninputs\n10 set swim-hold yes\n",                           /* a value the name does not have */
+            "oracles-route 10\ninputs\n10 set window 1\n",
+            "oracles-route 10\ninputs\n10 set item-hotkeys on\n",
+            "oracles-route 10\ninputs\n10 set view far\n",                                /* a setting this reader does not know */
+            "oracles-route 10\ninputs\n10 set swim-hold on now\n",
+            "oracles-route 13\ninputs\n0 keys 00\n",                                      /* a later format */
+        };
+        for (unsigned i = 0; i < sizeof malformed / sizeof malformed[0]; i++) {
+            FILE *bad = fopen(path, "w");
+            if (bad) { fputs(malformed[i], bad); fclose(bad); }
+            CHECK(oracles_route_read(path, &back, error, sizeof error) == -1);
+        }
+        FILE *two = fopen(path, "w");   /* the routes of every earlier format still read: one of format 8 with its cheat */
+        if (two) { fputs("oracles-route 8\ninputs\n0 keys 00\n10 cheat ammo on\n", two); fclose(two); }
+        CHECK(oracles_route_read(path, &back, error, sizeof error) == 0 && back.cheat_count == 1 && back.setting_count == 0);
+        oracles_route_free(&back);
+    }
 
     unsigned mask = 99;
     CHECK(oracles_route_mask_at(&route, 0, &mask) == 1 && mask == 0x00);
@@ -183,7 +341,7 @@ int main(int argc, char **argv)
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     CHECK(strstr(error, "line 5") != NULL);
     f = fopen(path, "w");
-    fprintf(f, "oracles-route 9\ninputs\n");
+    fprintf(f, "oracles-route 13\ninputs\n");
     fclose(f);
     CHECK(oracles_route_read(path, &route, error, sizeof error) == -1);
     /* Format 2: the verbs that change the game's state, written and read back.  Two verbs may share a
@@ -227,7 +385,7 @@ int main(int argc, char **argv)
         "oracles-route 2\ninputs\n10 equip\n",
         "oracles-route 2\ninputs\n10 use s3 0a\n",                               /* a use is carried by a button */
         "oracles-route 2\nmods claw-game@2fd4e1c67a2d28fced849ee1bb76e7391b93eb12\ninputs\n0 keys 00\n",   /* mods need format 3 */
-        "oracles-route 9\ninputs\n0 keys 00\n",                                /* a format to come */
+        "oracles-route 13\ninputs\n0 keys 00\n",                                /* a format to come */
     };
     for (unsigned i = 0; i < sizeof refused / sizeof refused[0]; i++) {
         f = fopen(path, "w"); fputs(refused[i], f); fclose(f);

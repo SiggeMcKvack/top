@@ -18,11 +18,14 @@ typedef enum OraclesDialogResult {
     ORACLES_DIALOG_FAILED          /* a file chosen that could not be copied into the application's folder (Android) */
 } OraclesDialogResult;
 
-/* What a dialog chooses: a ROM, a fan game's BPS patch, or an Oracle's European ROM. */
+/* What a dialog chooses: a ROM, a fan game's BPS patch, an Oracle's European ROM, a save to import (read where it is,
+ * never copied), or where a copy of the save goes (Android's document picker, oracles_choose_export). */
 typedef enum OraclesDialogKind {
     ORACLES_DIALOG_ROM,
     ORACLES_DIALOG_PATCH,
-    ORACLES_DIALOG_EU_ROM
+    ORACLES_DIALOG_EU_ROM,
+    ORACLES_DIALOG_SAVE,
+    ORACLES_DIALOG_EXPORT
 } OraclesDialogKind;
 
 /* Opens the system's dialog for a file of `kind` for game `game`, starting in `folder` (may be empty), over `window`,
@@ -30,11 +33,20 @@ typedef enum OraclesDialogKind {
  * thread the system answers on. */
 void oracles_choose_file(struct SDL_Window *window, OraclesDialogKind kind, const char *folder, int game);
 
+/* Android's document picker making a document named `name` for a copy of game `game`'s save, and returning at once:
+ * the answer comes as oracles_choose_file's does, of kind ORACLES_DIALOG_EXPORT, its path the document's content://
+ * address.  UNAVAILABLE at once elsewhere, where Open folder shows the save. */
+void oracles_choose_export(const char *name, int game);
+
 /* 1 when `event` is a dialog's answer: its result, the kind and the game it was opened for and the path chosen (empty
  * unless CHOSEN), *copied set when that path is a copy made for this answer (Android), which the caller removes if it
  * refuses the file; the answer's memory is released.  0 for any other event. */
 int oracles_dialog_answer(const union SDL_Event *event, OraclesDialogResult *result, OraclesDialogKind *kind, int *game,
                           char *path, size_t capacity, int *copied);
+
+/* A file a dialog chose, as the page names it: its name and its folder; on Android, a content:// address's name as the
+ * picker shows it, and the folder its document says it is in ("Download"), empty when it says none. */
+void oracles_dialog_describe(const char *path, char *name, size_t name_capacity, char *folder, size_t folder_capacity);
 
 /* Keeps `size` bytes as `name` in `folder` (created if need be) without ever writing over a file: a file of that name
  * holding the same bytes is taken as it is (*fresh 0); else the first free name of "name", "name (2)"... before the

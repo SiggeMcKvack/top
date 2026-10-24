@@ -50,6 +50,18 @@ typedef struct OraclesTables {
      * section, from the symbol file's map); it runs to $7fff. */
     OraclesSym warp_bank_free;
     OraclesSym object_bank_free;
+    /* The prediction of the collisions of the room a scroll enters (docs/ROM_DATA_FORMATS.md, section 17): the tables
+     * applyAllTileSubstitutions reads, the lists of the rooms whose own code changes their tiles before
+     * (applyRoomSpecificTileChanges) and after the graphics (applyRoomSpecificTileChangesAfterGfxLoad), the Gasha
+     * spots' rooms, and Ages' time warps' replacements ({ 0, 0 } in Seasons). */
+    OraclesSym single_tile_change_group_table;
+    OraclesSym standard_tile_substitutions;
+    OraclesSym chest_data_group_table;
+    OraclesSym room_tile_changer_code_group_table;
+    OraclesSym tile_changes_after_gfx_group_table;
+    OraclesSym gasha_spot_rooms;
+    OraclesSym timewarp_entry_tile_replacement_dict;
+    OraclesSym timewarp_return_tile_replacement_dict;
     unsigned num_gfx_headers;
     unsigned num_unique_gfx_headers;
     unsigned num_palette_headers;
@@ -98,6 +110,7 @@ int oracles_rom_read16be(const OraclesRom *rom, size_t offset, unsigned *out);
 #define ORACLES_LANGUAGE_INDEX_CODE_BYTES 8u
 #define ORACLES_LANGUAGE_INDEX_GROUPS 32u
 #define ORACLES_LANGUAGE_KEPT 1u
+#define ORACLES_LANGUAGE_LAID_OUT 0x8000u   /* in an entry's address: the text laid out again for the compact text */
 
 /* A composed image's header: its size byte (6 for 2 MiB, 7 for 4 MiB), and its two sums. */
 void oracles_image_finish(uint8_t *image, size_t size);

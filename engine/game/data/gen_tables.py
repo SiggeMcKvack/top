@@ -20,7 +20,15 @@ LABELS = [
     "animationGroupTable", "animationGfxHeaders", "objectGfxHeaderTable",
     # A mod's composition: the tables it rewrites, and the parser whose bank the object streams share.
     "warpSourcesTable", "warpDestTable", "objectDataGroupTable", "musicAssignmentGroupTable", "parseObjectData",
+    # The prediction of a scroll's room: the tables applyAllTileSubstitutions reads, the rooms whose own code changes
+    # their tiles before and after the graphics, and the Gasha spots' rooms.
+    "singleTileChangeGroupTable", "standardTileSubstitutions", "chestDataGroupTable", "roomTileChangerCodeGroupTable",
+    "applyRoomSpecificTileChangesAfterGfxLoad@tileChangesGroupTable", "gashaSpotRooms",
 ]
+# Labels of one game only (Ages' time warps), { 0, 0 } in the other.
+OPTIONAL_LABELS = ["timewarpEntryTileReplacementDict", "timewarpReturnTileReplacementDict"]
+# Fields named otherwise than their label.
+FIELD_NAMES = {"applyRoomSpecificTileChangesAfterGfxLoad@tileChangesGroupTable": "tile_changes_after_gfx_group_table"}
 
 # Counts declared as assembler defines in the data files, not present in the symbol file.
 COUNTS = {
@@ -83,6 +91,9 @@ def main() -> int:
         if name not in labels:
             raise SystemExit(f"missing symbol {name} in {args.sym}")
         bank, addr = labels[name]
+        lines.append(f"    .{FIELD_NAMES.get(name, snake(name))} = {{ 0x{bank:02x}, 0x{addr:04x} }},")
+    for name in OPTIONAL_LABELS:
+        bank, addr = labels.get(name, (0, 0))
         lines.append(f"    .{snake(name)} = {{ 0x{bank:02x}, 0x{addr:04x} }},")
     ends = section_ends(args.sym)
     for field, anchor in FREE_TAILS:

@@ -29,13 +29,36 @@ void oracles_home_format_date(time_t when, char *out, size_t capacity)
     snprintf(out, capacity, "%d %s %d", local->tm_mday, months[local->tm_mon % 12], local->tm_year + 1900);
 }
 
-/* Reads and identifies a ROM. Returns 1 with *info, or 0 with the loader's reason. */
-static int identify(const char *path, OraclesRomInfo *info, char *error, size_t capacity)
+/* The text box's font of an original ROM of Ages or Seasons, its printable ASCII characters (OraclesHomeFont), where the
+ * game's tables say it starts. */
+static void read_font(const uint8_t *data, size_t size, const OraclesRomInfo *info, OraclesHomeFont *out)
+{
+    memset(out, 0, sizeof *out);
+    if (!oracles_rom_is_original(info)) return;
+    const OraclesGuestTables *tables = info->game == ORACLES_GAME_SEASONS ? &oracles_guest_tables_seasons : &oracles_guest_tables_ages;
+    const OraclesRom rom = { data, size };
+    const size_t start = oracles_rom_offset(tables->font_start.bank, tables->font_start.addr);
+    OraclesTextFont font;
+    if (oracles_text_font(&rom, start, &font) != ORACLES_OK) return;
+    for (unsigned i = 0; i < ORACLES_HOME_FONT_CHARACTERS; i++) {
+        const unsigned c = ORACLES_HOME_FONT_FIRST + i;
+        for (unsigned row = 0; row < 16u; row++) out->rows[i][row] = (uint8_t)(data[start + 16u * c + row] ^ 0xffu);
+        out->left[i] = font.left[c];
+        out->width[i] = font.width[c];
+        out->advance[i] = font.advance[c];
+    }
+    out->read = 1;
+}
+
+/* Reads and identifies a ROM, and reads its font when it is an original (`font`, NULL: not). Returns 1 with *info, or 0
+ * with the loader's reason. */
+static int identify(const char *path, OraclesRomInfo *info, OraclesHomeFont *font, char *error, size_t capacity)
 {
     size_t size = 0;
     uint8_t *rom = oracles_rom_read_file(path, &size, error, capacity);
     if (!rom) return 0;
     const int ok = oracles_rom_identify(rom, size, info, error, capacity) == 0;
+    if (ok && font) read_font(rom, size, info, font);
     free(rom);
     return ok;
 }
@@ -97,7 +120,7 @@ static OraclesRomState rom_found(OraclesHomeGames *games, OraclesSettingsGame g,
     if (!still_found(found, path, &file, &there)) {
         OraclesRomInfo info;
         OraclesRomState state = ORACLES_ROM_REFUSED;
-        if (identify(path, &info, reason, capacity)) {
+        if (identify(path, &info, &games->rom_font[g], reason, capacity)) {
             if (info.game == game_of(g)) state = oracles_rom_is_original(&info) ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
             /* A ROM of the other game, chosen under this one (or written so in settings.txt). */
             else snprintf(reason, capacity, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
@@ -133,6 +156,7 @@ static void inspect(OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeG
     split_path(path, state->rom_file, sizeof state->rom_file, state->rom_folder, sizeof state->rom_folder);
     state->rom = rom_found(games, g, path, state->rom_reason, sizeof state->rom_reason);
     state->usable = state->rom != ORACLES_ROM_REFUSED;
+    if (state->rom == ORACLES_ROM_ORIGINAL) state->font = games->rom_font[g];
     find_save(path, state);
 }
 
@@ -170,7 +194,7 @@ static OraclesGame european_game(const char *path)
 {
     OraclesRomInfo info;
     char error[ORACLES_HOME_TEXT_LENGTH];
-    return identify(path, &info, error, sizeof error) ? oracles_language_source_game(&info) : ORACLES_GAME_UNKNOWN;
+    return identify(path, &info, NULL, error, sizeof error) ? oracles_language_source_game(&info) : ORACLES_GAME_UNKNOWN;
 }
 
 /* An Oracle's European ROM as settings.txt names it, and its language, English unless the ROM is recognized. */
@@ -290,7 +314,20 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
     oracles_home_inspect_display(games->settings, &nav->display, window);
     nav->display.margin = oracles_session_screen_margin(games->options ? games->options->screen_margin : 0, games->settings);   /* --screen-margin's, for the run */
     nav->display.margin_fixed = games->options && games->options->screen_margin;
+    if (games->options && games->options->compact_text) {   /* --text's, for every game the home screen starts */
+        nav->display.text = games->options->compact_text == 2;
+        nav->display.text_fixed = 1;
+    }
+    if (games->options && games->options->text_box_wide) {   /* --text-box's, the same */
+        nav->display.text_box = games->options->text_box_wide == 2;
+        nav->display.text_box_fixed = 1;
+    }
+    if (games->options && games->options->text_size) {   /* --text-size's, the same */
+        nav->display.text_size = games->options->text_size - 1;
+        nav->display.text_size_fixed = 1;
+    }
     nav->cheats_fixed = games->options && games->options->cheats_given;   /* --cheats', for every game it starts */
+    nav->update_check = games->settings->update_check;
     nav->cheats_changed = 0;
     oracles_home_inspect_controls(games->settings, &nav->controls);
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
@@ -321,6 +358,7 @@ static void store(void *opaque, const OraclesHomeNav *nav)
     }
     oracles_home_store_controls(&nav->controls, prefs);
     oracles_home_store_display(&nav->display, nav->in_game, prefs);
+    prefs->update_check = nav->update_check;   /* About's: the next launch asks, or not */
     /* Each Oracle's active mods, those its Mods page switched on. */
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         prefs->mods[g][0] = 0;
@@ -352,7 +390,7 @@ static int offer(OraclesHomeGames *games, OraclesSettingsGame g, const char *pat
 {
     OraclesRomInfo info;
     char error[ORACLES_HOME_TEXT_LENGTH];
-    int ok = identify(path, &info, error, sizeof error);
+    int ok = identify(path, &info, NULL, error, sizeof error);
     if (ok && info.game != game_of(g)) {
         snprintf(error, sizeof error, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
         ok = 0;
@@ -481,23 +519,12 @@ static void file_chosen(void *opaque, int game, int kind, int result, const char
     if (!kept && copied && remove(path) == 0) fprintf(stderr, "oracles: %s removed, refused\n", path);
 }
 
-static void open_folder(void *opaque, int game, char *message, size_t capacity)
+void oracles_home_games_save_path(const OraclesHomeGames *games, int game, char *path, size_t capacity)
 {
-    const OraclesHomeGames *games = opaque;
-    char file[ORACLES_HOME_TEXT_LENGTH], folder[ORACLES_SETTINGS_PATH_LENGTH], error[256];
-    /* The folder of the save: beside the ROM, or a fan game's patch. */
     const OraclesHomeFanGame *fan = oracles_home_fan_game(game);
-    split_path(fan ? games->settings->patch[fan_index(fan)] : games->settings->rom[rom_setting(game)], file, sizeof file, folder, sizeof folder);
-#ifdef __ANDROID__
-    /* Android opens no file manager on a folder: the toast says where the saves are, from the shared storage's root, as
-     * a computer sees it over USB, as the page shows it. */
-    (void)error;
-    char shown[ORACLES_SETTINGS_PATH_LENGTH];
-    oracles_page_folder(1, folder, shown, sizeof shown);
-    snprintf(message, capacity, "Saves are in %s, reachable over USB", shown);
-#else
-    if (oracles_open_folder(folder[0] ? folder : ".", error, sizeof error) != 0) snprintf(message, capacity, "The folder does not open: %s", error);
-#endif
+    const char *file = fan ? games->settings->patch[fan_index(fan)] : games->settings->rom[rom_setting(game)];
+    path[0] = 0;
+    if (file[0]) oracles_session_default_save_path(file, path, capacity);
 }
 
 /* The mods folder, made when it is not there yet, in the system's file manager. */
@@ -572,7 +599,7 @@ static int drop(void *opaque, const char *path, int page_game, char *message, si
     if (page_game >= 0) { offer(games, rom_setting(page_game), path); return -1; }
     /* On the home screen it goes under the game it is, or a toast says why it is none. */
     OraclesRomInfo info;
-    if (!identify(path, &info, error, sizeof error)) {
+    if (!identify(path, &info, NULL, error, sizeof error)) {
         fprintf(stderr, "oracles: %s refused: %s\n", path, error);
         snprintf(message, capacity, "Refused: %s.", error);
         return -1;
@@ -653,9 +680,18 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
     o.continuous_transitions = profile != ORACLES_PROFILE_FAITHFUL && (o.continuous_transitions || games->settings->transitions);
     /* The swim's hold, in either profile: the command line's, else settings.txt's swim_hold=. */
     o.swim_hold = o.swim_hold || games->settings->swim_hold;
+    /* The text speed, in either profile, a fan game's too: the command line's, else settings.txt's text_speed=. */
+    if (!o.text_instant) o.text_instant = games->settings->text_instant ? 2 : 1;
     /* The cheats of the game's Oracle: the command line's, else settings.txt's cheats_<game>=; none for a fan game. */
     if (fan) o.cheats = 0;
     else if (!o.cheats_given) o.cheats = games->settings->cheats[g];
+    /* The compact text, in Enhanced alone: the command line's, else settings.txt's text=, a fan game's too (in its
+     * English, the only language the launcher starts it in); an image no profile qualifies plays without (check_profile). */
+    if (!o.compact_text) o.compact_text = games->settings->compact_text ? 2 : 1;
+    if (profile == ORACLES_PROFILE_FAITHFUL) o.compact_text = 1;
+    /* The wide text box, the same: the command line's, else settings.txt's text_box=. */
+    if (!o.text_box_wide) o.text_box_wide = games->settings->text_box_wide ? 2 : 1;
+    if (profile == ORACLES_PROFILE_FAITHFUL) o.text_box_wide = 1;
     /* No fan game's profile allows the item hotkeys yet: off, whatever the command line gave for the Oracles. */
     if (fan) o.hotkeys_option = hotkey_names[0];
     else if (!o.hotkeys_option) o.hotkeys_option = hotkey_names[state.hotkeys];
@@ -744,8 +780,8 @@ void oracles_home_games_host(OraclesHomeGames *games, OraclesHomeHost *host)
     host->choose_patch = choose_patch;
     host->choose_eu_rom = choose_eu_rom;
     host->file_chosen = file_chosen;
-    host->open_folder = open_folder;
     host->read_mods = read_mods;
     host->open_mods = open_mods;
     host->start = start;
+    oracles_home_save_host(games, host);
 }

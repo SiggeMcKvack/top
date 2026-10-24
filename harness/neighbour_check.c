@@ -1,6 +1,7 @@
 #include "neighbour_check.h"
 
 #include "ghost.h"
+#include "object_animation_check.h"
 #include "objects.h"
 #include "sprites.h"
 
@@ -45,6 +46,7 @@ struct OraclesNeighbourCheck {
     unsigned random_live_only, unnumbered_live_only, random_ghost_only, unnumbered_ghost_only;
     /* the capture: a second run of the same transition, objects frozen (T2) */
     int capture;
+    OraclesObjectAnimationCheck *animation;   /* the objects' animation, judged along; not owned */
     unsigned captures, capture_equal, capture_objects, capture_different, capture_missing, capture_undrawn;
 };
 
@@ -70,8 +72,8 @@ OraclesNeighbourCheck *oracles_neighbour_check_start(const uint8_t *rom, size_t 
         return NULL;
     }
     char path[4096];
-    snprintf(path, sizeof path, "%s/objects.tsv", dir);
-    c->tsv = fopen(path, "w");
+    snprintf(path, sizeof path, "%s/objects.tsv", dir ? dir : ".");
+    c->tsv = dir ? fopen(path, "w") : NULL;
     if (c->tsv) fprintf(c->tsv, "frame\tfrom\tdir\tto\tsnapshot_age\tkind\tnumber\tid\tsubid\tvar03\tverdict\tcause\tlive_pos\tghost_pos\tfields\n");
     return c;
 }
@@ -89,6 +91,13 @@ void oracles_neighbour_check_stop(OraclesNeighbourCheck *c)
 
 static void compare_now(OraclesNeighbourCheck *c, uint32_t frame);
 
+void oracles_neighbour_check_set_animation(OraclesNeighbourCheck *c, OraclesObjectAnimationCheck *animation)
+{
+    if (!c) return;
+    c->animation = animation;
+    if (animation) c->capture = 1;
+}
+
 /* The capture of the design (6.2): the same transition run again with the
  * objects frozen from the return of initializeRoom.  What it must produce is
  * the same objects as the run that let them live: freezing must not change
@@ -101,6 +110,7 @@ static void compare_capture(OraclesNeighbourCheck *c, const snapshot *s)
     oracles_ghost_set_capture(c->ghost, 0);
     if (rc != 1 || !frozen.settled || frozen.group != c->to_group || frozen.room != c->to_room) return;
     c->captures++;
+    oracles_object_animation_check_captured(c->animation, &frozen, s->frame);
     /* An object the capture kept but whose sprites are in no tag was not drawn:
      * the game stopped at its forty OAM entries, or it is invisible. */
     for (unsigned k = 0; k < frozen.object_count; k++) {
@@ -366,6 +376,10 @@ void oracles_neighbour_check_event(OraclesNeighbourCheck *c, const OraclesGuestE
     if (!c) return;
     oracles_objects_event(c->live_objects, event);
     oracles_sprites_event(c->live_sprites, event);
+    if (event->type == ORACLES_EVENT_OBJECTS_UPDATED && c->animation) {
+        OraclesObjectRecord now[ORACLES_OBJECT_RECORDS];
+        oracles_object_animation_check_updated(c->animation, now, oracles_objects_snapshot(c->live_objects, now, ORACLES_OBJECT_RECORDS), event->frame);
+    }
     const OraclesGuestTables *t = oracles_guest_tables(c->guest);
     if (event->type == ORACLES_EVENT_ROOM_ENTER) {
         if (oracles_guest_read8(c->guest, t->scroll_mode) != SCROLL_MODE_TRANSITION_LOAD || c->ring_count == 0) return;

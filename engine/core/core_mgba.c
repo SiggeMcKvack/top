@@ -470,6 +470,15 @@ static uint8_t *memory(OraclesCore *core, OraclesCoreRegion region, size_t *size
 
 static uint8_t peek(OraclesCore *core, uint16_t address) { return GBView8(cpu_of(core), address, -1); }
 
+/* mGBA's renderer keeps a cache of the tiles: it is told of every byte written, as the bus tells it. */
+static void write_vram(OraclesCore *core, size_t offset, const uint8_t *bytes, size_t count)
+{
+    struct GB *gb = gb_of(core);
+    if (offset + count > GB_SIZE_VRAM) return;
+    memcpy(gb->video.vram + offset, bytes, count);
+    for (size_t i = 0; i < count; i++) gb->video.renderer->writeVRAM(gb->video.renderer, (uint16_t)(offset + i));
+}
+
 static OraclesCoreRegisters registers(const OraclesCore *core)
 {
     const struct SM83Core *cpu = cpu_of(core);
@@ -492,6 +501,6 @@ static void set_registers(OraclesCore *core, const OraclesCoreRegisters *in)
 
 const OraclesCoreOps oracles_core_mgba_ops = {
     destroy, set_joypad_bouncing, set_keys, set_colour_correction, convert_rgb555, set_sample_rate, run_frame,
-    sram_size, load_sram, save_sram, state_size, save_state, load_state, memory, peek, registers, set_registers,
+    sram_size, load_sram, save_sram, state_size, save_state, load_state, memory, peek, write_vram, registers, set_registers,
     hooks_changed, "mgba-" ORACLES_MGBA_VERSION,
 };

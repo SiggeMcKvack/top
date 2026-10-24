@@ -59,7 +59,7 @@ static entry *loop_return_entry(OraclesEnhancedView *v, entry *e, const OraclesG
     v->failure_reasons[3]++;
     const uint8_t wanted[2] = { r->room, v->pending_room };
     entry *own = ev_take_slot(v, r->group, r->room, wanted, 2);
-    if (!own || (own->valid && ev_entry_key_current(v, own, r->key, r->key_len, own->group, own->room))) return NULL;
+    if (!own || (own->valid && ev_entry_key_current(v, own, r->key, r->key_len, own->group, own->room, NULL))) return NULL;
     v->pending_room = r->room;
     return own;
 }
@@ -159,9 +159,12 @@ static void accept_result(OraclesEnhancedView *v, entry *e, const OraclesGhostRe
     record_entry_reads(v, e, r);
     if (!e->settled_state) e->settled_state = malloc(v->state_size);
     e->settled_size = e->settled_state ? oracles_ghost_settled_state(v->ghost, e->settled_state, v->state_size) : 0;
-    e->valid = 1; e->failed = 0; e->live_valid = 0; e->refresh = 0; e->refresh_season = 0; e->refresh_failures = 0; e->rerun = 0;
+    e->settled_primeable = r->settled_primeable;
+    e->valid = 1; e->failed = 0; e->not_a_start = 0; e->waits_start = 0; e->strict_parent = 0; e->live_valid = 0; e->refresh = 0; e->refresh_season = 0; e->refresh_failures = 0; e->rerun = 0;
     e->accepted_at = v->frame;
     e->render_wanted_at = 0;
+    ev_poses_deliver(v, e);
+    if (r->probe_frames) { v->poses.probes++; v->poses.probe_frames += r->probe_frames; }
     v->completed++;
 }
 
@@ -218,7 +221,7 @@ static void record_failure(OraclesEnhancedView *v, entry *e, const OraclesGhostR
      * run from 0:a7 while the intro's script holds Link, never settling). */
     if (e->refresh && ++e->refresh_failures >= 2u) { e->refresh = 0; e->valid = 0; v->refresh_given_up++; }
     if (!e->refresh && !(e->valid && !e->rerun)) e->valid = 0;
-    e->failed = 1; e->failed_at = v->frame;
+    e->failed = 1; e->failed_at = v->frame; e->waits_start = 0;
     v->failed++;
     if (r->status == ORACLES_GHOST_OK && (r->group != v->pending_group || r->room != v->pending_room)) { record_wrong_room(v, e, r); return; }
     if (r->status == ORACLES_GHOST_NOT_PRIMEABLE) { v->failure_reasons[0]++; return; }
@@ -245,6 +248,37 @@ static void record_failure(OraclesEnhancedView *v, entry *e, const OraclesGhostR
     if (used + 24 < sizeof v->failure_log)
         snprintf(v->failure_log + used, sizeof v->failure_log - used, "%s%u:%02x>%u:%02x#text", used ? " " : "",
                  v->observer.ref_group, v->observer.ref_room, v->pending_group, v->pending_room);
+}
+
+/* A run chained from a parent's settled state was refused before it primed
+ * (oracles_ghost_primeable): that state is no start for any room, whichever
+ * the way, a scene its entry starts holding the transitions (Ages' Maku
+ * sapling in the past, 1:38, where the Moblins attack it).  The parent stays
+ * drawn and is marked until it is delivered again; the room asked is not at
+ * fault, and goes to another parent without waiting for the clock, settled
+ * for the band's fill meanwhile as a failed room is (ev_wait_for_start). */
+static void record_not_a_start(OraclesEnhancedView *v, entry *e, unsigned parent_slot)
+{
+    v->slots[parent_slot].not_a_start = 1;
+    e->failed = 0;
+    ev_wait_for_start(v, e, &v->slots[parent_slot]);
+}
+
+/* A room whose parent's state is no start, refused or found so: it waits for
+ * another parent, settled for the band's fill around this reference room (a
+ * room beyond such a parent that no room beside can start would otherwise
+ * keep the fill going for as long as the parent holds), and that parent is
+ * run again for it at the pace of a failure, from the first time it was
+ * found so for this reference room. */
+void ev_wait_for_start(OraclesEnhancedView *v, entry *e, const entry *parent)
+{
+    const unsigned place = (unsigned)parent->group << 8 | parent->room;
+    const unsigned ref = (unsigned)v->observer.ref_group << 8 | v->observer.ref_room;
+    if (e->waits_start && e->waits_parent == place && e->waits_ref == ref) return;
+    e->waits_start = 1;
+    e->waits_since = v->frame;
+    e->waits_parent = place;
+    e->waits_ref = ref;
 }
 
 /* A capture of no terrain is never kept (oracles_enhanced_capture_blank):
@@ -285,21 +319,38 @@ int oracles_enhanced_reads_hold(unsigned count, const uint16_t *addresses, const
  * ones, before it is kept.  Refused as a failed run (again on the clock)
  * when one differs, rather than drawn for a frame and thrown by the next
  * frame's invalidation, then asked again at once from the same parent for
- * as long as the scene lasts.  A trace that overflowed cannot say: refused. */
+ * as long as the scene lasts.  A trace that overflowed cannot say: refused.
+ * The time portal and a time warp's arrival are left out as the invalidation
+ * leaves them out (ev_key_byte_exempt): a room run during Ages' first
+ * arrival in the past, from a state with no arrival under way, was refused
+ * for the spot Link arrives on, which only the room he arrives in reads. */
 static int beside_reads_hold(OraclesEnhancedView *v, const OraclesGhostResult *r)
 {
     if (r->reads_dropped) return 0;
     uint16_t addresses[ORACLES_GHOST_RUN_READS];
     uint8_t seen[ORACLES_GHOST_RUN_READS], live[ORACLES_GHOST_RUN_READS];
+    uint8_t live_key[ORACLES_GHOST_KEY_BYTES];
+    const int whole_key = ev_read_key(v, live_key) == r->key_len;
     unsigned count = 0;
     for (unsigned i = 0; i < r->read_count && count < ORACLES_GHOST_RUN_READS; i++) {
         const uint16_t a = r->reads[i];
         const long at = ev_tracked_read(v, a) ? ev_key_offset(v, a) : -1;
         if (at < 0 || (size_t)at >= r->key_len) continue;
+        if (whole_key && ev_key_byte_exempt(v, at, r->key, live_key, r->group, r->room)) continue;
         addresses[count] = a; seen[count] = r->key[at]; live[count] = ev_live_byte(v, a);
         count++;
     }
     return oracles_enhanced_reads_hold(count, addresses, seen, live, ev_room_flags_address(v, r->group, r->room), oracles_guest_tables(v->guest)->roomflag_visited);
+}
+
+/* Whether an entry keeps the reads of a run to be judged on (record_entry_reads),
+ * rather than its whole key: no read dropped, and no more than an entry holds. */
+static int reads_kept(const OraclesEnhancedView *v, const OraclesGhostResult *r)
+{
+    if (r->reads_dropped) return 0;
+    unsigned n = 0;
+    for (unsigned i = 0; i < r->read_count; i++) if (ev_tracked_read(v, r->reads[i]) && ++n > ENTRY_READS) return 0;
+    return 1;
 }
 
 /* A direction asked from a room the game routes itself: the room the ghost
@@ -333,7 +384,7 @@ static void finish_routed_job(OraclesEnhancedView *v, entry *e, const OraclesGho
 /* The lane whose run the job fields are: its fields copied in, the lane
  * served before stored back. */
 #define LANE_FIELDS(X) X(ghost) X(job) X(pending) X(pending_slot) X(pending_group) X(pending_room) X(pending_generation) X(pending_pipeline) \
-    X(pending_chained) X(pending_beside) X(pending_parent) X(pending_parent_room) X(pending_parent_accepted) X(pending_serial) X(pending_blind) \
+    X(pending_chained) X(pending_beside) X(pending_visits) X(pending_parent) X(pending_parent_room) X(pending_parent_accepted) X(pending_serial) X(pending_blind) \
     X(pending_routed) X(pending_routed_from) X(pending_dir)
 void ev_lane_serve(OraclesEnhancedView *v, unsigned lane)
 {
@@ -384,27 +435,44 @@ static void finish_job(OraclesEnhancedView *v, const OraclesGhostResult *r, int 
         if (!e) return;
     }
     if (delivered && r->group == v->pending_group && r->room == v->pending_room) {
-        if (reject_other_season(v, e, r) || reject_blank_capture(v, e, r)) return;
-        if (v->pending_beside && !beside_reads_hold(v, r)) { v->beside_refused++; record_failure(v, e, r); return; }
+        /* A run from a parent judged with other rooms' visited bits aside that comes back in another season
+         * than the live one (its parent's state older than a season's change) or blank: that parent judged
+         * on the whole key from now on, run again from the live state first, rather than again as it is. */
+        if (reject_other_season(v, e, r) || reject_blank_capture(v, e, r)) { if (v->pending_visits) e->strict_parent = 1; return; }
+        /* From a parent judged with other rooms' visited bits aside, a room whose reads an entry cannot keep
+         * would be judged on its whole key, which differs from the live one by those bits, and dropped at the
+         * next frame to be run again. */
+        if (v->pending_beside && (!beside_reads_hold(v, r) || (v->pending_visits && !reads_kept(v, r)))) {
+            v->beside_refused++;
+            record_failure(v, e, r);
+            /* Then, or when the room reads one of those bits: judged on the whole key from now on, its parent
+             * run again first if it must be, without a failure's wait. */
+            if (v->pending_visits) { e->failed = 0; e->strict_parent = 1; }
+            return;
+        }
         accept_result(v, e, r);
-    } else record_failure(v, e, r);
+    } else {
+        record_failure(v, e, r);
+        if (v->pending_chained && r->status == ORACLES_GHOST_NOT_PRIMEABLE) record_not_a_start(v, e, v->pending_parent);
+    }
 }
 
 
 /* An entry whose trace overflowed is compared on the whole key, as is a
  * parent a room is chained from: for the terrain of `group`:`room` (the
- * entry's own, or the room chained), the time portal and a time warp's
- * arrival as in ev_invalidate_by_reads. */
-int ev_entry_key_current(const OraclesEnhancedView *v, const entry *e, const uint8_t *key, size_t key_len, uint8_t group, uint8_t room)
+ * entry's own, or the room chained), its own visited bit, the time portal
+ * and a time warp's arrival as in ev_invalidate_by_reads.  A parent judged
+ * with `visits` has the visited bits of the other rooms aside too
+ * (oracles_enhanced_parent_key_current), `*visits` set when one differs. */
+int ev_entry_key_current(const OraclesEnhancedView *v, const entry *e, const uint8_t *key, size_t key_len, uint8_t group, uint8_t room, int *visits)
 {
-    if (e->key_len != key_len) return 0;
-    const long own = ev_key_offset(v, ev_room_flags_address(v, e->group, e->room));   /* its visited bit aside, as in ev_invalidate_by_reads */
-    for (size_t i = 0; i < key_len; i++) {
-        const uint8_t differs = (uint8_t)(e->key_snapshot[i] ^ key[i]);
-        if (differs && !((long)i == own && !(differs & (uint8_t)~oracles_guest_tables(v->guest)->roomflag_visited))
-            && !ev_key_byte_exempt(v, (long)i, e->key_snapshot, key, group, room)) return 0;
-    }
-    return 1;
+    if (e->key_len != key_len || key_len > ORACLES_GHOST_KEY_BYTES) return 0;
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    uint8_t live[ORACLES_GHOST_KEY_BYTES];
+    memcpy(live, key, key_len);
+    for (size_t i = 0; i < key_len; i++) if (live[i] != e->key_snapshot[i] && ev_key_byte_exempt(v, (long)i, e->key_snapshot, key, group, room)) live[i] = e->key_snapshot[i];
+    return oracles_enhanced_parent_key_current(e->key_snapshot, live, key_len, visits ? ev_key_offset(v, t->group0_room_flags.addr) : -1, t->room_flags_size,
+                                               ev_key_offset(v, ev_room_flags_address(v, e->group, e->room)), t->roomflag_visited, visits);
 }
 
 /* Seasons: every run starts in the live season (the band in one season). */
@@ -438,8 +506,9 @@ int ev_start_job(OraclesEnhancedView *v, entry *e, const uint8_t *state, size_t 
         /* Synchronous: the state was refused (a parent's settled state that
          * cannot be primed); threaded: the worker is busy.  Tried again later. */
         v->failed++;
-        e->failed = 1; e->failed_at = v->frame;
+        e->failed = 1; e->failed_at = v->frame; e->waits_start = 0;
         if (v->sync_budget && v->job->status == ORACLES_GHOST_NOT_PRIMEABLE) {
+            if (chained) record_not_a_start(v, e, (unsigned)(parent - v->slots));
             v->failure_reasons[0]++;
             const size_t used = strlen(v->failure_log);
             if (used + 40 < sizeof v->failure_log)
@@ -464,6 +533,7 @@ int ev_start_job(OraclesEnhancedView *v, entry *e, const uint8_t *state, size_t 
     v->pending_pipeline = v->colours_pipeline;
     v->pending_chained = chained;
     v->pending_beside = 0;
+    v->pending_visits = 0;
     v->pending_parent = chained ? (unsigned)(parent - v->slots) : 0;
     v->pending_parent_room = chained ? parent->room : 0;
     v->pending_parent_accepted = chained ? parent->accepted_at : 0;
@@ -517,6 +587,7 @@ void ev_blind_prerun(OraclesEnhancedView *v)
         v->pending_dir = dir;
         v->pending_chained = 0;
         v->pending_beside = 0;
+        v->pending_visits = 0;
         v->pending_generation = v->generation;
         v->pending_pipeline = v->colours_pipeline;
         return;

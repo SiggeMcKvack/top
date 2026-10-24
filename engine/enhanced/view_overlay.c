@@ -35,6 +35,12 @@ static int link_column(const OraclesEnhancedView *v, const edge_sprite *e)
     return -1;
 }
 
+int ev_link_column(const OraclesEnhancedView *v, const uint8_t entry[4])
+{
+    const edge_sprite e = { entry[0], entry[1], entry[2], entry[3] };
+    return link_column(v, &e);
+}
+
 /* Whether Link's pose is one tile twice, flipped (swimming up or down). */
 static int link_pose_mirrored(OraclesEnhancedView *v)
 {
@@ -76,7 +82,7 @@ enum { ROWS_BELOW_BAR, ROWS_ALL, ROWS_UNDER_BAR };
  * game area.  The lines above the game area, under the status bar, are drawn
  * for ROWS_ALL, alone for ROWS_UNDER_BAR, not for ROWS_BELOW_BAR. */
 static void draw_sprite_outside(OraclesEnhancedView *v, int sx, int sy, uint8_t tile, uint8_t attr, unsigned height, int rows,
-                                int32_t camera_x, int32_t camera_y)
+                                int32_t camera_x, int32_t camera_y, int made)
 {
     const uint8_t *palettes = oracles_guest_obj_palettes(v->guest);
     const uint8_t *vram0 = oracles_guest_vram(v->guest, 0), *vram1 = oracles_guest_vram(v->guest, 1);
@@ -102,10 +108,15 @@ static void draw_sprite_outside(OraclesEnhancedView *v, int sx, int sy, uint8_t 
             const int32_t px = ob->window_left + gx - camera_x;
             if (px < 0 || px >= (int32_t)v->size.width || py < 0 || py >= (int32_t)v->band_height) continue;
             const uint16_t rgb = (uint16_t)(palette[colour * 2u] | (palette[colour * 2u + 1u] << 8));
-            *ev_band_pixel(v, (unsigned)px, (unsigned)py) = v->colours[rgb & 0x7fffu];
+            uint32_t *pixel = ev_band_pixel(v, (unsigned)px, (unsigned)py);
+            if (made) ev_subpixel_made(v, px, py, *pixel, v->colours[rgb & 0x7fffu]);   /* his, which the OAM does not hold */
+            *pixel = v->colours[rgb & 0x7fffu];
         }
     }
 }
+
+unsigned oracles_enhanced_view_link_unshown_frames(const OraclesEnhancedView *v) { return v->link_unshown_frames; }
+unsigned oracles_enhanced_view_link_built_frames(const OraclesEnhancedView *v) { return v->link_built_frames; }
 
 /* The sprites the game placed beyond the edges of its 160x128 game area:
  * the OAM still holds them (the game culls objects only past the room's
@@ -117,17 +128,28 @@ static void draw_sprite_outside(OraclesEnhancedView *v, int sx, int sy, uint8_t 
  * enemy half out of the window, keep their whole sprite. */
 void ev_overlay_edge_sprites(OraclesEnhancedView *v, int32_t camera_x, int32_t camera_y)
 {
+    v->edge_link_made = v->edge_link_built = 0;
+    v->sub_made_count = 0; v->sub_made_lost = 0;
     const uint8_t *oam = oracles_guest_oam(v->guest), *io = oracles_guest_io(v->guest);
     if (!oam || !io || !(io[IO_LCDC] & 0x02u)) return;
     const unsigned height = (io[IO_LCDC] & 0x04u) ? 16u : 8u;
     const OraclesEnhancedObservation *ob = &v->observation;
     edge_sprite entries[41];
     unsigned count = 0;
+    int link_present = 0, link_shown = 0;
     for (unsigned i = 0; i < 40u; i++) {
         /* x 0 is the game's hidden column as much as y 0 or 224: the LCD shows
          * neither, and a column pushed past the left edge lands on 0 whatever
          * its true place. */
-        if (oam[i * 4] == 0 || oam[i * 4] >= 160u || oam[i * 4 + 1] == 0) continue;
+        if (oam[i * 4] == 0 || oam[i * 4 + 1] == 0) continue;
+        const edge_sprite probe = { oam[i * 4], oam[i * 4 + 1], oam[i * 4 + 2], oam[i * 4 + 3] };
+        const int link_entry = link_column(v, &probe) >= 0;
+        if (link_entry) link_present = 1;
+        /* His graphics on the LCD, at his place or where an older drawing left them: the core's image shows him. */
+        if ((probe.tile & 0xfcu) == LINK_TILES && (probe.attr & OAM_ATTR_VRAM_BANK1) && probe.y < 160u && probe.x < 168u) link_shown = 1;
+        /* Past the screen's bottom (160 to 223), or past its top (224 and over, wrapped): Link's alone, which a
+         * continuous transition takes there, swimming down or up across the edge (up to 30 px past it). */
+        if (oam[i * 4] >= 160u && !link_entry) continue;
         if (v->blurb_mask & (1ull << i)) continue;   /* the area blurb: drawn apart (ev_overlay_area_blurb) */
         if (v->large_objects_entries & (1ull << i)) continue;   /* a large room's object: drawn from its model (ev_overlay_large_objects) */
         /* During a transition, the objects of the two rooms beyond the window
@@ -138,18 +160,56 @@ void ev_overlay_edge_sprites(OraclesEnhancedView *v, int32_t camera_x, int32_t c
         entries[count].y = oam[i * 4]; entries[count].x = oam[i * 4 + 1]; entries[count].tile = oam[i * 4 + 2]; entries[count].attr = oam[i * 4 + 3];
         count++;
     }
-    if (height == 16u) count = rebuild_link_column(v, entries, count);
+    unsigned rebuilt = 41u;   /* the column rebuilt, the last entry, when there is one */
+    if (height == 16u) {
+        const unsigned found = count;
+        count = rebuild_link_column(v, entries, count);
+        v->edge_link_made = count != found;
+        if (v->edge_link_made) rebuilt = count - 1u;
+    }
     for (int i = (int)count - 1; i >= 0; i--) {
         const uint8_t oy = entries[i].y, ox = entries[i].x;
-        /* The x byte wraps: past 208 it stands for the left of the window. */
+        /* The x byte wraps: past 208 it stands for the left of the window; the y byte past 224, for its top. */
         const int sx = ox >= 208u ? (int)ox - 8 - 256 : (int)ox - 8;
-        const int sy = (int)oy - 16 - (int)ORACLES_ENHANCED_HUD_HEIGHT;          /* game-area row of its top line */
+        const int sy = (oy >= 224u ? (int)oy - 256 : (int)oy) - 16 - (int)ORACLES_ENHANCED_HUD_HEIGHT;   /* game-area row of its top line */
+        if (link_column(v, &entries[i]) >= 0) link_shown = 1;
         if (sx >= 0 && sx + 8 <= (int)ORACLES_ENHANCED_CORE_WIDTH && sy >= 0 && sy + (int)height <= (int)ORACLES_ENHANCED_AREA_HEIGHT) continue;   /* wholly inside the window */
         /* The lines under the status bar: the bar's own sprites (the item
          * icons) live there, so only Link's sprite, walking up past the
          * room's top, is drawn into the world above the room. */
         const int link_entry = sy < 0 && link_column(v, &entries[i]) >= 0;
-        draw_sprite_outside(v, sx, sy, entries[i].tile, entries[i].attr, height, link_entry ? ROWS_ALL : ROWS_BELOW_BAR, camera_x, camera_y);
+        draw_sprite_outside(v, sx, sy, entries[i].tile, entries[i].attr, height, link_entry ? ROWS_ALL : ROWS_BELOW_BAR, camera_x, camera_y,
+                            (unsigned)i == rebuilt);
+    }
+    /* Further past the screen's edge the game writes none of his sprites (an own sprite only above OAM y $a0 and left
+     * of x $a8, object_sprites.h; the OAM on screen holds them hidden at 224), while a continuous transition takes him
+     * on, up to 30 px past it (a column at x 0, his last on the left, is the hidden one): in a scroll, when the OAM on
+     * screen has nothing of him on the screen nor past it, his sprites are built from his fields and the game's data
+     * and drawn at his place, placed by the game's camera as it stands less the one the frame on screen was drawn with.
+     * His position is a byte, which wraps past the room's left or top edge (247 for -9) where the builder, made for
+     * large rooms, unwraps only past 248: his place on the screen is taken from -64 to 191, the screen and 30 px around
+     * it with his sprite's size. */
+    const uint8_t *link = oracles_guest_object(v->guest, 0, 0);
+    if (ob->in_scroll && ob->playing && !ob->cutscene && link && v->rom && height == 16u) {
+        OraclesObjectSprite sprites[ORACLES_OBJECT_SPRITES_MAX];
+        const int built = oracles_object_sprites_build(v->guest, link, v->rom, v->rom_size, sprites, ORACLES_OBJECT_SPRITES_MAX);
+        int own = 0;
+        for (int i = 0; i < built; i++) own += sprites[i].effect == ORACLES_SPRITE_OWN;
+        if (own && !link_present && !link_shown) {
+            const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+            const int dx = (int16_t)oracles_guest_read16(v->guest, t->camera_x) - ob->drawn_camera_x;
+            const int dy = (int16_t)oracles_guest_read16(v->guest, t->camera_y) - ob->drawn_camera_y;
+            for (int i = built - 1; i >= 0; i--) {
+                if (sprites[i].effect != ORACLES_SPRITE_OWN) continue;
+                const int sx = ((sprites[i].x + 64) & 0xff) - 64, sy = ((sprites[i].y + 64) & 0xff) - 64;
+                draw_sprite_outside(v, sx + dx, sy - (int)ORACLES_ENHANCED_HUD_HEIGHT + dy, sprites[i].tile, sprites[i].attr, height, ROWS_ALL,
+                                    camera_x, camera_y, 1);
+            }
+            link_shown = 1;
+            v->edge_link_made = v->edge_link_built = 1;
+            v->link_built_frames++;
+        }
+        if (own && !link_shown) v->link_unshown_frames++;
     }
 }
 
@@ -289,6 +349,7 @@ void ev_overlay_area_blurb(OraclesEnhancedView *v, int32_t camera_x, int32_t cam
     for (unsigned n = 0; n < count; n++) {
         /* The line its room y gives on the LCD with the room's camera at 0: the top of the game area. */
         const int sx = (int)entries[n].x - 8 + shift, sy = (int)v->blurb_built_y + 24 - 16 - (int)ORACLES_ENHANCED_HUD_HEIGHT;
+        ev_subpixel_fixed(v, sx, sy, 8, (int32_t)height);   /* it stands on the screen */
         const uint8_t tile = entries[n].tile, attr = entries[n].attr;
         const uint8_t *bank = (attr & 0x08u) ? vram1 : vram0;
         const uint8_t *palette = palettes + (attr & 0x07u) * 8u;
@@ -467,7 +528,7 @@ void ev_overlay_large_objects(OraclesEnhancedView *v, int32_t camera_x, int32_t 
     v->large_objects_entries = f->entries;
     for (int i = (int)f->count - 1; i >= 0; i--) {
         const OraclesObjectSprite *s = &f->sprites[i];
-        draw_sprite_outside(v, s->x, s->y - (int)ORACLES_ENHANCED_HUD_HEIGHT, s->tile, s->attr, height, ROWS_ALL, camera_x, camera_y);
+        draw_sprite_outside(v, s->x, s->y - (int)ORACLES_ENHANCED_HUD_HEIGHT, s->tile, s->attr, height, ROWS_ALL, camera_x, camera_y, 0);
         if (!s->written) v->large_object_sprites_drawn++;
     }
 }

@@ -62,14 +62,15 @@ static void strokes(SDL_Renderer *renderer, float cx, float cy, float unit, cons
 }
 
 /* The frame where the logical presentation puts it in the band, centred, black beside it. */
-static void frame_direct(SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part, const OraclesTouchBox *safe, int fill)
+static void frame_direct(OraclesTouchScreen *screen, SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part, const OraclesTouchBox *safe, int fill)
 {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     const int w = part ? (int)part->w : frame->w, h = part ? (int)part->h : frame->h;
     const OraclesTouchBox box = oracles_touch_frame((int)safe->w, (int)safe->h, w, h, fill);
     const SDL_FRect to = { safe->x + box.x, safe->y + box.y, box.w, box.h };
-    SDL_RenderTexture(renderer, frame, part, &to);
+    if (!screen->draw_frame || !screen->draw_frame(screen->draw_frame_opaque, renderer, part, &to)) SDL_RenderTexture(renderer, frame, part, &to);
+    if (screen->over_frame) screen->over_frame(screen->over_frame_opaque, renderer, &to);
 }
 
 int oracles_touch_sdl_frame(OraclesTouchScreen *screen, SDL_Renderer *renderer, SDL_Texture *frame, const SDL_FRect *part)
@@ -85,7 +86,7 @@ int oracles_touch_sdl_frame(OraclesTouchScreen *screen, SDL_Renderer *renderer, 
         screen->direct = 1;
     }
     if (!sized) return 1;
-    frame_direct(renderer, frame, part, &safe, screen->fill);
+    frame_direct(screen, renderer, frame, part, &safe, screen->fill);
     if (screen->touch.shown) {
         OraclesTouchLayout l;
         oracles_touch_layout(safe.w, safe.h, &l);

@@ -32,6 +32,7 @@ static int line_scroll_shifts(OraclesEnhancedView *v, int16_t shift[ORACLES_ENHA
     int scx = -1, scy = -1;
     for (size_t i = 0; i < count; i++) if (j[i].ly >= ORACLES_PPU_HEIGHT) { if (j[i].reg == IO_SCX) scx = j[i].value; if (j[i].reg == IO_SCY) scy = j[i].value; }
     int varies = 0;
+    v->wave_lines = 0;
     for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) {
         for (size_t i = 0; i < count; i++) {
             if (j[i].ly >= ORACLES_PPU_HEIGHT) continue;
@@ -49,6 +50,7 @@ static int line_scroll_shifts(OraclesEnhancedView *v, int16_t shift[ORACLES_ENHA
         shift_y[line] = (int16_t)dy;
         if (dx != shift[0] || dy != shift_y[0]) varies = 1;
     }
+    v->wave_lines = varies;
     if (varies) return 1;
     /* The frame on screen shows the registers of an earlier logic, which
      * shook them and then counted down: the shake shows while the counter
@@ -92,6 +94,35 @@ static int area_drawn_off_camera(OraclesEnhancedView *v)
     return dx != 0 || dy != 0;
 }
 
+/* Whether the status bar is off the screen: the game splits the screen below
+ * the bar (wGfxRegs1.LYC, 15 in play: the LCD interrupt loads the game area's
+ * registers there); a screen of its own splits it nowhere (the registers of
+ * the first line hold for all 144, gfxRegisterStates 4, 9 or $13) or on the
+ * first line (blackTowerCompleteCutsceneHandler writes 0). */
+static int status_bar_off(OraclesEnhancedView *v)
+{
+    const uint8_t *regs = oracles_guest_ptr(v->guest, oracles_guest_tables(v->guest)->gfx_regs1, 6u);
+    return regs && (regs[5] == 0 || regs[5] >= ORACLES_PPU_HEIGHT);
+}
+
+/* The cutscenes that show full-screen pictures, or a room without its status
+ * bar, between rooms they play with it (the endings, the credits, the black
+ * tower's explanations, the flames lit in the room of rites): framed while
+ * the bar is off, in the band with the rooms.  So is the fade-out before a
+ * warp (cutscene03 to cutscene05) while the LCD is on: it shows the screen
+ * left, a picture's warp out, never the bar of play; the blank after it is
+ * a load's, as any warp's. */
+static int picture_cutscene(const OraclesGuestTables *t, uint8_t cutscene, int lcd_on)
+{
+    if (cutscene == t->cutscene_03 || cutscene == t->cutscene_04 || cutscene == t->cutscene_05) return lcd_on;
+    return cutscene == t->cutscene_black_tower_explanation || cutscene == t->cutscene_black_tower_escape
+        || cutscene == t->cutscene_flame_of_sorrow || cutscene == t->cutscene_flame_of_despair
+        || cutscene == t->cutscene_black_tower_complete || cutscene == t->cutscene_din_crystal_descending
+        || cutscene == t->cutscene_flame_of_destruction || cutscene == t->cutscene_princess_kidnapped
+        || cutscene == t->cutscene_room_of_rites_collapse || cutscene == t->cutscene_credits
+        || cutscene == t->cutscene_the_end_screen;
+}
+
 /* The ring menu and cutscenes (LCD behaviours 5 and 6), a scanned window and
  * a game area drawn elsewhere than the camera are not part of the wide
  * world: they use the framed fallback. */
@@ -106,17 +137,19 @@ static int framed_frame_menus(OraclesEnhancedView *v)
      * cleared), and in Seasons Din taken to Onox's castle (the tower rising
      * under a dark sky, then inside), the temple sinking and Onox's taunt
      * (a scene's graphics header and tile map, introCutscenes.s).  A scene
-     * played in the room itself (Din's dance, Nayru's song) moves objects
-     * over the room's own map and stays in the band. */
+     * played in the room itself (Din's dance, Nayru's song after its picture,
+     * which is drawn off the camera) moves objects over the room's own map
+     * and stays in the band. */
     const uint8_t cutscene = oracles_guest_read8(v->guest, t->cutscene_index);
     if (v->observation.playing && cutscene != 0xffu
         && (cutscene == t->cutscene_pregame_intro || cutscene == t->cutscene_din_imprisoned
             || cutscene == t->cutscene_temple_sinking || cutscene == t->cutscene_onox_taunting)) return 1;
+    const uint8_t *io = oracles_guest_io(v->guest);
+    if (v->observation.playing && cutscene != 0xffu && picture_cutscene(t, cutscene, io && (io[IO_LCDC] & 0x80u)) && status_bar_off(v)) return 1;
     /* An open menu (wOpenedMenuType: the inventory, the map, save and quit,
      * the ring appraisal, the warp menu...) draws its screens with the
      * game's own background map and registers: not part of the world. */
     if (oracles_guest_read8(v->guest, t->opened_menu_type) != 0) return 1;
-    const uint8_t *io = oracles_guest_io(v->guest);
     if (io && (io[IO_LCDC] & 0x20u) && io[IO_WY] < 144u && io[IO_WX] <= 166u) return 1;
     return 0;
 }
@@ -147,6 +180,7 @@ static int framed_area(OraclesEnhancedView *v)
 OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
+    v->enlarged_before = !v->have_view && !v->framed_load;
     const uint8_t *io = oracles_guest_io(v->guest);
     const int lcd_on = io && (io[IO_LCDC] & 0x80u);
     const int room_load = ob->in_transition && !ob->in_scroll;
@@ -160,6 +194,9 @@ OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
     v->framed_load = !v->framed_only && !menus && !off_camera && (ob->loading_room || (ob->playing && (loading || room_load || ob->link_warping)));
     if (v->framed_only || !ob->playing || loading || menus || off_camera || !tracking) return ORACLES_ENHANCED_FRAMED;
     v->framed_load = 0;
+    /* A cutscene's world frame drawn elsewhere than the camera, which the off-camera rule let through as a load:
+     * counted, never meant (the room left loaded is the camera's, the image on screen is not). */
+    if (ob->cutscene && !v->have_wave && area_drawn_off_camera(v)) v->world_off_camera_frames++;
     return ORACLES_ENHANCED_WORLD;
 }
 
@@ -169,8 +206,9 @@ OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
  * image still shows the room left; after the load's blank, the camera's for a large room, which it frames from the
  * room itself, else centred, where the camera frames an interior of one room (its observation of Link held outside
  * the room until the walk in ends, the camera says nothing of the room entered before).  The blank itself (the LCD
- * off, a full fade: one colour over the whole image) stays framed whole, as the game shows it.  Any other framed
- * frame lets the room left go. */
+ * off, a full fade: one colour over the whole image) stays framed whole, as the game shows it; after a frame the large
+ * menus enlarge (a picture's fade to white, a scene's room, the map) it is that screen's blank, and keeps their scale
+ * until the room shows, or it would shrink in place.  Any other framed frame lets the room left go. */
 int ev_load_band(OraclesEnhancedView *v, OraclesEnhancedCompose *in, int tracking, int32_t camera_x, int32_t camera_y)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
@@ -189,7 +227,12 @@ int ev_load_band(OraclesEnhancedView *v, OraclesEnhancedCompose *in, int trackin
     const uint32_t *image = ev_scroll_window(v);
     size_t i = 1;
     while (i < (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT && image[i] == image[0]) i++;
-    if (i == (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT) { v->load_area_held = 0; v->load_blank_frames++; return 0; }
+    if (i == (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT) {
+        v->load_area_held = 0;
+        v->load_blank_frames++;
+        if (v->enlarged_before) v->framed_load = 0;
+        return 0;
+    }
     in->mode = ORACLES_ENHANCED_WORLD;
     in->world_left = 0;
     in->world_top = 0;

@@ -7,6 +7,8 @@
 
 #include "ghost.h"
 
+#include "object_animation.h"
+
 #include "guest_struct_offsets.h"
 #include "oracles_rom.h"
 #include "ppu.h"
@@ -33,9 +35,15 @@ struct OraclesGhost {
     OraclesObjects *objects;            /* the room's objects and their creation numbers */
     OraclesSprites *sprites;            /* their sprites, tagged by object */
     int capture;                        /* freeze the objects of the room entered and keep their sprites */
+    int no_probe;                       /* the capture's probe left out (oracles_ghost_set_probe) */
     int frozen;                         /* wDisabledObjects raised for the capture */
     uint8_t prior_disabled_objects;
     uint8_t prior_visible[2];           /* Link's and his companion's, cleared while the capture runs */
+    /* the capture's probe (probe_animation) */
+    int probing;
+    unsigned probe_updates;
+    OraclesObjectAnimation probe_last[ORACLES_OBJECT_RECORDS];
+    uint8_t probe_ok[ORACLES_OBJECT_RECORDS];
     size_t state_size;
     /* the run in progress */
     int active;
@@ -100,6 +108,12 @@ struct OraclesGhost {
 /* ghost_key.c */
 void oracles_ghost_on_read(void *opaque, uint16_t address, uint16_t sp);
 void oracles_ghost_trace_stack_of_entry(OraclesGhost *g);
+/* ghost.c: whether a symbol is in WRAM bank 0, where the ghost writes.  ghost_probe.c: the capture's probe, which asks
+ * of each interaction and part whether its own code advances its animation, a step an update; an update of the objects
+ * during it. */
+int oracles_ghost_bank0_symbol(OraclesGuestSym sym);
+void oracles_ghost_probe_animation(OraclesGhost *g, OraclesGhostResult *result);
+void oracles_ghost_probe_update(OraclesGhost *g);
 
 /* ghost_data.c */
 void oracles_ghost_find_fixed_seasons(OraclesGhost *g, const uint8_t *rom, size_t rom_size);

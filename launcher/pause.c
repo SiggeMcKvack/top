@@ -163,19 +163,22 @@ void oracles_pause_prepare(OraclesPause *pause, SDL_Renderer *renderer)
 }
 
 int oracles_pause_paint(OraclesUiDraw *draw, SDL_Renderer *renderer, SDL_Texture *frame, int width, int height, int fill,
-                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms)
+                        int out_width, int out_height, OraclesUiHome *view, const OraclesHomeNav *nav, double now_ms,
+                        const OraclesPauseSession *session)
 {
     int moving = 0;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     /* The game's image as the session shows it: its whole scale, or Fill's size, centred in the drawing's band. */
+    if (session && session->game_size) session->game_size(session->opaque, &width, &height);
     if (frame && width > 0 && height > 0) {
         int band_top, band_height;
         oracles_ui_draw_band_of(draw, out_height, &band_top, &band_height);
         const OraclesTouchBox box = oracles_touch_frame(out_width, band_height, width, height, fill);
         const SDL_FRect image = { box.x, (float)band_top + box.y, box.w, box.h };
-        SDL_RenderTexture(renderer, frame, NULL, &image);
+        if (session && session->game_image) session->game_image(session->opaque, renderer, &image);
+        else SDL_RenderTexture(renderer, frame, NULL, &image);
     }
     /* Darkened, more on the right where the menu is. */
     const SDL_FColor left = { (float)((SHADE >> 16) & 0xffu) / 255.0f, (float)((SHADE >> 8) & 0xffu) / 255.0f, (float)(SHADE & 0xffu) / 255.0f,
@@ -270,6 +273,18 @@ static void margin_changed(pause_loop *p, int margin)
     p->dirty = 1;
 }
 
+/* Display changed the window: the menu takes its new size at once, its glyphs rasterised for it (none counted late). */
+static void window_changed(pause_loop *p)
+{
+    int w = 0, h = 0;
+    if (!SDL_GetRenderOutputSize(p->renderer, &w, &h) || (w == p->pause->prepared_width && h == p->pause->prepared_height)) return;
+    oracles_safe_area_edges(p->window, p->pause->edges.margin, &p->pause->edges);
+    const unsigned before = oracles_ui_draw_glyphs_rasterised(p->pause->draw);
+    prepare(p->pause, w, h, "at the pause (the window changed)");
+    p->glyphs_before += oracles_ui_draw_glyphs_rasterised(p->pause->draw) - before;
+    p->dirty = 1;
+}
+
 static void command(pause_loop *p, OraclesHomeCommand c)
 {
     char message[256] = "";
@@ -286,11 +301,15 @@ static void command(pause_loop *p, OraclesHomeCommand c)
             break;
         case ORACLES_HOME_STORE:
             if (p->pause->host && p->pause->host->store) p->pause->host->store(p->pause->host->opaque, &p->nav);
+            if (p->nav.display.window_chosen && p->session->window_chosen)
+                p->session->window_chosen(p->session->opaque, p->nav.display.window < 3 ? p->nav.display.window + 2 : 0);
+            p->nav.display.window_chosen = 0;
             if (p->nav.screen == ORACLES_SCREEN_CHEATS && p->session->cheats_changed)
                 p->session->cheats_changed(p->session->opaque, p->nav.games[p->pause->game].cheats);
             if (p->session->settings_changed) {
                 const int margin = p->session->settings_changed(p->session->opaque);
                 if (margin != p->pause->edges.margin) margin_changed(p, margin);
+                else window_changed(p);
             }
             return;
         default: return;
@@ -410,6 +429,16 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     /* Cheats shows the running game's, not the settings', and changes them. */
     p.nav.cheats_fixed = 0;
     p.nav.cheats_refused = !session->has_cheats;
+    p.nav.text_speed_refused = !session->has_text_instant;
+    if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) {
+        p.nav.swim_refused = !session->has_swim;
+        p.nav.hotkeys_refused = !session->has_hotkeys;
+    }
+    /* Window shows the window the game has, and leaves alone those that would take Display from the pause. */
+    if (session->window != -1) p.nav.display.window = session->window == -2 ? -1 : session->window ? session->window - 2 : 3;
+    p.nav.display.window_w = session->window_w;
+    p.nav.display.window_h = session->window_h;
+    p.nav.display.windows_refused = session->windows_refused;
     if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) p.nav.games[pause->game].cheats = session->cheats;
     /* The hints follow the device that opened the pause, else the one used last before. */
     oracles_pause_input(pause, &p.nav);
@@ -428,7 +457,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
             /* Fill as the session presents it (oracles_sdl_presentation): Scaling, which Display changes here, in fullscreen. */
             const int fill = p.nav.display.scaling && window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
             band(pause, out_w, out_h);
-            p.moving = oracles_pause_paint(pause->draw, renderer, frame, width, height, fill, out_w, out_h, &p.view, &p.nav, now);
+            p.moving = oracles_pause_paint(pause->draw, renderer, frame, width, height, fill, out_w, out_h, &p.view, &p.nav, now, session);
             SDL_RenderPresent(renderer);
             presented = now;
             p.dirty = 0;

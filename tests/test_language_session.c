@@ -2,7 +2,8 @@
  * 77, without them): English gives no session; a pack is extracted from the European ROM found in a directory, whatever
  * the case of its extension, and written; read back; a pack of another fingerprint or of another game is extracted again
  * when the European ROM is given and refused without it; without the European ROM or its pack, or on another ROM, the
- * language is refused; a pack that cannot be written serves all the same, and the session says so. */
+ * language is refused; a pack that cannot be written serves all the same, and the session says so.  The compact text's
+ * layout: English (US) composed laid out, a language's identity with the layout's, the European ROM refused. */
 #include "language_internal.h"
 #include "language_session.h"
 
@@ -171,6 +172,62 @@ int main(int argc, char **argv)
     /* A pack that cannot be written: the session plays with the pack in memory, and says so. */
     CHECK(start(&session, eu_path, unwritable, &info, &ages, error, sizeof error) == 0 && session != NULL);
     CHECK(strstr(oracles_language_session_note(session), "could not be written") && strstr(report(session), "not written to"));
+    oracles_language_session_stop(session);
+
+    /* The compact text's layout: English (US) gets a session of its own, its index served in "en"; a language keeps
+     * its pack's identity and adds the layout's; the European ROM, which no layout plays on, is refused. */
+    session = NULL;
+    const OraclesLanguageLayout compact = { 128, 0, 0, NULL }, classic_wide = { 192, 1, 0, NULL }, compact_wide = { 192, 0, 0, NULL }, three = { 192, 0, 3, NULL };
+    CHECK(oracles_language_session_lay_out(&session, &info, &compact, error, sizeof error) == 0 && session != NULL);
+    CHECK(!strncmp(oracles_language_session_identity(session), "text-compact@", 13) && strlen(oracles_language_session_identity(session)) == 53u);
+    uint8_t *image = malloc(ages.size);
+    size_t size = ages.size;
+    if (image) memcpy(image, ages.data, ages.size);
+    CHECK(image && oracles_language_session_compose(session, &image, &size, error, sizeof error) == 0 && size == 2u * ages.size);
+    CHECK(image && !memcmp(image + (size_t)ORACLES_IMAGE_LANGUAGE_BANK * 0x4000u + ORACLES_LANGUAGE_INDEX_CODE, "en\0", 3));
+    CHECK(oracles_language_session_composed(session)->laid_out > 1000u && strstr(report(session), "compact text: the en texts laid out again"));
+    free(image);
+    oracles_language_session_stop(session);
+    CHECK(start(&session, NULL, pack, &info, &ages, error, sizeof error) == 0 && session != NULL);
+    snprintf(identity, sizeof identity, "%s", oracles_language_session_identity(session));
+    CHECK(oracles_language_session_lay_out(&session, &info, &compact, error, sizeof error) == 0);
+    CHECK(!strncmp(oracles_language_session_identity(session), identity, strlen(identity)) && strstr(oracles_language_session_identity(session), ",text-compact@"));
+    /* The wide box's layouts: the mode, the width and the lines in the layout's name, each apart from the language's. */
+    CHECK(oracles_language_session_lay_out(&session, &info, &classic_wide, error, sizeof error) == 0);
+    CHECK(!strcmp(oracles_language_session_language_identity(session), identity) && !strncmp(oracles_language_session_layout_identity(session), "text-classic-192x2@", 19));
+    char classic_name[96];
+    snprintf(classic_name, sizeof classic_name, "%s", oracles_language_session_layout_identity(session));
+    CHECK(oracles_language_session_lay_out(&session, &info, &compact_wide, error, sizeof error) == 0);
+    CHECK(!strncmp(oracles_language_session_layout_identity(session), "text-compact-192x2@", 19) && strcmp(classic_name + 19, oracles_language_session_layout_identity(session) + 19) != 0);
+    CHECK(strstr(oracles_language_session_identity(session), ",text-compact-192x2@") && !strncmp(oracles_language_session_identity(session), identity, strlen(identity)));
+    CHECK(oracles_language_session_lay_out(&session, &info, &three, error, sizeof error) == -1);   /* three lines: not laid out yet */
+    oracles_language_session_stop(session);
+    /* Classic in the wide box, English (US): the US texts laid out at the fixed advance. */
+    session = NULL;
+    CHECK(oracles_language_session_lay_out(&session, &info, &classic_wide, error, sizeof error) == 0 && session != NULL);
+    image = malloc(ages.size);
+    size = ages.size;
+    if (image) memcpy(image, ages.data, ages.size);
+    CHECK(image && oracles_language_session_compose(session, &image, &size, error, sizeof error) == 0);
+    CHECK(oracles_language_session_composed(session)->laid_out > 1000u && strstr(report(session), "classic text: the en texts laid out again on 192 pixels"));
+    CHECK(oracles_language_session_composed(session)->boxes_laid_out < oracles_language_session_composed(session)->boxes);
+    free(image);
+    oracles_language_session_stop(session);
+    session = NULL;
+    CHECK(oracles_language_session_lay_out(&session, &eu_info, &compact, error, sizeof error) == -1 && session == NULL);
+    /* A fan game made on Ages is laid out in its English alone, its kept texts its own. */
+    OraclesRomInfo fan_info = info;
+    fan_info.revision = ORACLES_ROM_REVISION_MOONRISE_1_0_6;
+    CHECK(!oracles_rom_is_original(&fan_info) && oracles_language_session_lay_out(&session, &fan_info, &compact, error, sizeof error) == 0 && session != NULL);
+    snprintf(identity, sizeof identity, "%s", oracles_language_session_identity(session));
+    oracles_language_session_stop(session);
+    session = NULL;
+    CHECK(oracles_language_session_lay_out(&session, &fan_info, &classic_wide, error, sizeof error) == -1 && strstr(error, "game's text box alone") && !session);
+    CHECK(oracles_language_session_lay_out(&session, &fan_info, &compact_wide, error, sizeof error) == -1 && !session);
+    CHECK(oracles_language_session_lay_out(&session, &info, &compact, error, sizeof error) == 0 && strcmp(identity, oracles_language_session_identity(session)) != 0);
+    oracles_language_session_stop(session);
+    CHECK(start(&session, NULL, pack, &info, &ages, error, sizeof error) == 0 && session != NULL);
+    CHECK(oracles_language_session_lay_out(&session, &fan_info, &compact, error, sizeof error) == -1 && strstr(error, "English alone"));
     oracles_language_session_stop(session);
 
     remove(pack);

@@ -6,92 +6,14 @@
  * Controller by default: d-pad or left stick, A, B, Start, Back = Select; the left stick's click (L3) and Guide open
  * the pause menu of a game the home screen started, and do nothing with --rom, which has none.
  * Both are rebindable through oracles_sdl_options. */
-#include "backends.h"
-#include "compositor.h"
-#include "safe_area.h"
-#include "touch_sdl.h"
-#include "window_icon.h"
-
-#include <SDL3/SDL.h>
-
-#include <math.h>
-
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define PENDING_EVENTS 16u
-/* The device starts once this much audio is queued, so that a device pull
- * never finds the queue empty during the first frames; above the limit the
- * host is ahead of the device and the chunk is dropped. */
-#define AUDIO_PREBUFFER_MS 50u
-#define AUDIO_QUEUE_LIMIT_MS 1000u /* only reached if the device stalls; rate control holds the queue near its target */
-#define AXIS_THRESHOLD 12000
+#include "sdl_backend_internal.h"
 
 const char *const oracles_sdl_binding_names[ORACLES_BINDINGS] = { "right", "left", "up", "down", "a", "b", "select", "start" };
 const char *const oracles_sdl_default_key_names[ORACLES_BINDINGS] = { "Right", "Left", "Up", "Down", "X", "Z", "Backspace", "Return" };
 const char *const oracles_sdl_default_pad_names[4] = { "a", "b", "back", "start" };
 const char *const oracles_sdl_default_menu_pad_name = "leftstick";
 
-typedef struct sdl_backend {
-    SDL_Keycode keys[ORACLES_BINDINGS];
-    SDL_GamepadButton pad[4];   /* A, B, Select, Start */
-    SDL_Keycode hotkey_keys[ORACLES_SDL_HOTKEY_SLOTS], hotkey_bind_b, hotkey_bind_a;   /* SDLK_UNKNOWN: none */
-    SDL_GamepadButton hotkey_pad[ORACLES_SDL_HOTKEY_SLOTS];
-    SDL_GamepadButton menu_pad;   /* Escape's on a controller, besides Guide; SDL_GAMEPAD_BUTTON_INVALID: none */
-    SDL_GamepadAxis menu_trigger; /* or a trigger's (SDL_GAMEPAD_AXIS_INVALID: none), pressed as oracles_sdl_trigger_pressed says */
-    int menu_trigger_held;
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
-    int frame_width, frame_height;   /* the texture's: the session's surface */
-    int logical_w, logical_h;        /* the renderer's logical size: the surface's, or the part shown alone */
-    int fill;                        /* Scaling's Fill chosen */
-    int filled;                      /* and presented: the window fullscreen at the last frame */
-    int pause_menu;         /* Escape pauses rather than quits */
-    int borrowed;           /* the window and the renderer are the launcher's: known from the start, never destroyed here */
-    int subsystems;         /* the audio and controller subsystems a borrowed window started, to quit at the end */
-    int window_closed;
-    OraclesTouchScreen touch;   /* the game's buttons on a touch screen (Android), and those its fingers press */
-    unsigned touch_buttons;
-    int touch_enabled;
-    int (*overlay)(void *, SDL_Renderer *);   /* over the frames while it returns 1 (oracles_sdl_options) */
-    void *overlay_opaque;
-    void (*on_suspend)(void *);   /* the host's store at a suspension (watch_suspend), and its argument */
-    void *on_suspend_opaque;
-    int suspended;   /* the watch saw a suspension, which the next poll hands to the host */
-    SDL_AudioStream *audio;          /* bound to the device, which pulls from it */
-    OraclesSdlPads pads;               /* every gamepad plugged in (oracles_sdl_pads_open) */
-    uint32_t sample_rate_hz;
-    int audio_started;
-    unsigned audio_underruns;
-    unsigned audio_drops;
-    uint64_t last_chunk_ns;          /* when the previous chunk was queued, and what the queue held after it */
-    Uint32 last_chunk_queued_bytes;
-    uint64_t last_present_ns_spent;  /* the duration of the last SDL_RenderPresent */
-    /* A game frame's presentation by step, summed and at most: the texture's upload, the drawing, SDL_RenderPresent. */
-    uint64_t step_ns_total[3], step_ns_max[3];
-    unsigned stepped_presents;
-    oracles_sdl_underrun underrun_log[ORACLES_SDL_UNDERRUNS_LOGGED];
-    Uint32 audio_peak_bytes;
-    uint64_t audio_queued_sum_bytes;
-    uint64_t audio_queued_samples_count;
-    unsigned scale;
-    int fullscreen;
-    int vsync;
-    unsigned presents;
-    uint64_t first_present_ns, last_present_ns;
-    uint64_t hold_started_ns, held_ns;   /* the pauses between two presents: no present waited then */
-    char renderer_name[32];   /* the SDL renderer the session presents with, and whether it said it had vsync */
-    int renderer_vsync;
-    unsigned axis_buttons;  /* ORACLES_KEY_* currently held through the left stick */
-    oracles_sdl_menu_source menu_source;   /* what asked for the pause menu last */
-    oracles_host_event pending[PENDING_EVENTS];
-    unsigned pending_count;
-} sdl_backend;
-
-static void push_button(sdl_backend *backend, unsigned button, int pressed)
+void sb_push_button(sdl_backend *backend, unsigned button, int pressed)
 {
     if (backend->pending_count >= PENDING_EVENTS) return;
     oracles_host_event *event = &backend->pending[backend->pending_count++];
@@ -100,7 +22,7 @@ static void push_button(sdl_backend *backend, unsigned button, int pressed)
     event->pressed = pressed;
 }
 
-static void push_event(sdl_backend *backend, oracles_host_event_type type)
+void sb_push_event(sdl_backend *backend, oracles_host_event_type type)
 {
     if (backend->pending_count >= PENDING_EVENTS) return;
     oracles_host_event *event = &backend->pending[backend->pending_count++];
@@ -108,214 +30,15 @@ static void push_event(sdl_backend *backend, oracles_host_event_type type)
     event->type = type;
 }
 
-static void push_quit(sdl_backend *backend) { push_event(backend, ORACLES_HOST_EVENT_QUIT); }
+void sb_push_quit(sdl_backend *backend) { sb_push_event(backend, ORACLES_HOST_EVENT_QUIT); }
 
-static void push_command(sdl_backend *backend, int command)
+void sb_push_command(sdl_backend *backend, int command)
 {
     if (backend->pending_count >= PENDING_EVENTS) return;
     oracles_host_event *event = &backend->pending[backend->pending_count++];
     memset(event, 0, sizeof *event);
     event->type = ORACLES_HOST_EVENT_COMMAND;
     event->command = command;
-}
-
-uint64_t oracles_sdl_window_flags(void)
-{
-    /* A Retina display has two pixels a point, which a window that does not ask for them gets stretched from one, text
-     * and pixels blurred (with NSHighResolutionCapable, which the executable's embedded Info.plist says).  Sizes stay
-     * in points, the renderer has the pixels.  Windows and X11 count a window in pixels already. */
-#ifdef __APPLE__
-    return SDL_WINDOW_HIGH_PIXEL_DENSITY;
-#else
-    return 0;
-#endif
-}
-
-/* Android's Back is Escape there (SDLK_AC_BACK); elsewhere, a media keyboard's Back is a key like any other. */
-#ifdef __ANDROID__
-#define ANDROID_BACK(key) ((key) == SDLK_AC_BACK)
-#else
-#define ANDROID_BACK(key) 0
-#endif
-
-int oracles_sdl_fullscreen_only(void)
-{
-#ifdef __ANDROID__
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-int oracles_sdl_screen_size(struct SDL_Window *window, unsigned *width, unsigned *height)
-{
-    /* The display's desktop mode, a Retina display's points by its density. */
-    *width = *height = 0;
-    if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) return 0;
-    const SDL_DisplayID display = window ? SDL_GetDisplayForWindow(window) : SDL_GetPrimaryDisplay();
-    const SDL_DisplayMode *mode = display ? SDL_GetDesktopDisplayMode(display) : NULL;
-    if (!mode || mode->w <= 0 || mode->h <= 0) return 0;
-    const float density = mode->pixel_density > 0.0f ? mode->pixel_density : 1.0f;
-    *width = (unsigned)((float)mode->w * density + 0.5f);
-    *height = (unsigned)((float)mode->h * density + 0.5f);
-    return 1;
-}
-
-int oracles_sdl_screen_4_3(struct SDL_Window *window)
-{
-    /* The display's shape, as the view takes it (oracles_enhanced_screen_aspect). */
-    unsigned w, h;
-    if (!oracles_sdl_screen_size(window, &w, &h)) return 0;
-    return oracles_enhanced_screen_aspect(w, h) == ORACLES_ENHANCED_4_3;
-}
-
-float oracles_sdl_pixel_ratio(struct SDL_Window *window)
-{
-    const float density = window ? SDL_GetWindowPixelDensity(window) : 0.0f;
-    return density > 0.0f ? density : 1.0f;
-}
-
-float oracles_sdl_point_scale(struct SDL_Window *window)
-{
-    /* SDL 2, with the DPI scaling it was asked for on Windows, counted a window in points there, 4 for 5 pixels at
-     * 125 %; SDL 3 counts it in pixels.  The launcher's own sizes keep SDL 2's points, settings.txt's included: its
-     * window opens as large as before on a scaled display.  Elsewhere SDL 3 counts as SDL 2 did. */
-#ifdef _WIN32
-    const float scale = window ? SDL_GetWindowDisplayScale(window) : SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-    return scale > 0.0f ? scale : 1.0f;
-#else
-    (void)window;
-    return 1.0f;
-#endif
-}
-
-struct SDL_Window *oracles_sdl_create_window(int width, int height, uint64_t flags)
-{
-    const SDL_PropertiesID properties = SDL_CreateProperties();
-    SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "The Oracles Project");
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, width);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, (Sint64)flags);
-    SDL_Window *window = SDL_CreateWindowWithProperties(properties);
-    SDL_DestroyProperties(properties);
-#if !defined(__APPLE__) && !defined(__ANDROID__)
-    /* The application's icon on the window and in the taskbar; macOS takes a bundle's, Android the manifest's. */
-    SDL_Surface *icon = window ? SDL_CreateSurfaceFrom(ORACLES_WINDOW_ICON_SIZE, ORACLES_WINDOW_ICON_SIZE, SDL_PIXELFORMAT_RGBA32,
-                                                       (void *)oracles_window_icon, ORACLES_WINDOW_ICON_SIZE * 4) : NULL;
-    if (icon) {
-        SDL_SetWindowIcon(window, icon);
-        SDL_DestroySurface(icon);
-    }
-#endif
-    return window;
-}
-
-struct SDL_Renderer *oracles_sdl_create_renderer(struct SDL_Window *window, int vsync)
-{
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
-    if (!renderer) renderer = SDL_CreateRenderer(window, SDL_SOFTWARE_RENDERER);
-    if (renderer && vsync) SDL_SetRenderVSync(renderer, 1);
-    return renderer;
-}
-
-static void pads_drop(OraclesSdlPads *pads, unsigned i)
-{
-    SDL_CloseGamepad(pads->pad[i]);
-    pads->pad[i] = pads->pad[--pads->count];
-    pads->pad[pads->count] = NULL;
-}
-
-static void pads_take(OraclesSdlPads *pads, SDL_JoystickID id)
-{
-    for (unsigned i = 0; i < pads->count; i++) if (SDL_GetGamepadID(pads->pad[i]) == id) return;
-    if (pads->count >= ORACLES_SDL_PADS) return;
-    SDL_Gamepad *pad = SDL_OpenGamepad(id);
-    if (pad) pads->pad[pads->count++] = pad;
-}
-
-void oracles_sdl_pads_open(OraclesSdlPads *pads)
-{
-    for (unsigned i = pads->count; i-- > 0;) if (!SDL_GamepadConnected(pads->pad[i])) pads_drop(pads, i);
-    int count = 0;
-    SDL_JoystickID *ids = SDL_GetGamepads(&count);
-    for (int i = 0; i < count; i++) pads_take(pads, ids[i]);
-    SDL_free(ids);
-}
-
-void oracles_sdl_pads_event(OraclesSdlPads *pads, const SDL_Event *event)
-{
-    if (event->type == SDL_EVENT_GAMEPAD_ADDED) pads_take(pads, event->gdevice.which);
-    else if (event->type == SDL_EVENT_GAMEPAD_REMOVED)
-        for (unsigned i = 0; i < pads->count; i++) if (SDL_GetGamepadID(pads->pad[i]) == event->gdevice.which) { pads_drop(pads, i); break; }
-}
-
-void oracles_sdl_pads_close(OraclesSdlPads *pads)
-{
-    while (pads->count) pads_drop(pads, pads->count - 1u);
-}
-
-void oracles_sdl_pads_describe(const OraclesSdlPads *pads, char *out, size_t capacity)
-{
-    size_t used = (size_t)snprintf(out, capacity, "%u open", pads->count);
-    for (unsigned i = 0; i < pads->count && used < capacity; i++) {
-        const char *name = SDL_GetGamepadName(pads->pad[i]);
-        used += (size_t)snprintf(out + used, capacity - used, "%s%s", i ? ", " : ": ", name ? name : "unnamed");
-    }
-}
-
-int oracles_sdl_pad_button(const SDL_Event *event)
-{
-    /* SDL 2 named a Nintendo controller's face buttons by their labels (SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, on
-     * by default); SDL 3 names them by their places, "a" being the south button whatever it reads.  The names of
-     * settings.txt keep SDL 2's meaning: a face button labelled with a letter is that letter's, as on an Xbox pad. */
-    /* The label from the gamepad's own mapping when it is open: a pad SDL knows by a line of its database (8BitDo, a
-     * SNES pad) has a standard type whose labels would be Xbox's. */
-    const SDL_GamepadButton button = (SDL_GamepadButton)event->gbutton.button;
-    SDL_Gamepad *gamepad = SDL_GetGamepadFromID(event->gbutton.which);
-    const SDL_GamepadButtonLabel label = gamepad ? SDL_GetGamepadButtonLabel(gamepad, button)
-                                                 : SDL_GetGamepadButtonLabelForType(SDL_GetGamepadTypeForID(event->gbutton.which), button);
-    switch (label) {
-        case SDL_GAMEPAD_BUTTON_LABEL_A: return SDL_GAMEPAD_BUTTON_SOUTH;
-        case SDL_GAMEPAD_BUTTON_LABEL_B: return SDL_GAMEPAD_BUTTON_EAST;
-        case SDL_GAMEPAD_BUTTON_LABEL_X: return SDL_GAMEPAD_BUTTON_WEST;
-        case SDL_GAMEPAD_BUTTON_LABEL_Y: return SDL_GAMEPAD_BUTTON_NORTH;
-        default: return button;
-    }
-}
-
-void oracles_sdl_size_window(struct SDL_Window *window, int width, int height)
-{
-    /* Sizes are in points where the display has more pixels than points (a Retina display: 1 point for 2 pixels): the
-     * points that give at least those pixels, one more where the display's rounding falls short, so that the
-     * renderer's integer scale is the one asked for.  Elsewhere points are pixels and nothing changes.  SDL 3 may
-     * apply a size after the call returns: it is waited for before it is read back. */
-    const float ratio = oracles_sdl_pixel_ratio(window);
-    int w = (int)ceilf((float)width / ratio - 0.001f), h = (int)ceilf((float)height / ratio - 0.001f);
-    SDL_SetWindowSize(window, w, h);
-    SDL_SyncWindow(window);
-    int pixel_w, pixel_h;
-    if (ratio != 1.0f && SDL_GetWindowSizeInPixels(window, &pixel_w, &pixel_h) && (pixel_w < width || pixel_h < height)) {
-        SDL_SetWindowSize(window, w + (pixel_w < width), h + (pixel_h < height));
-        SDL_SyncWindow(window);
-    }
-}
-
-void oracles_sdl_place_window(struct SDL_Window *window, int centre_x, int centre_y)
-{
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
-    int x = centre_x - w / 2, y = centre_y - h / 2;
-    SDL_Rect usable;
-    const SDL_DisplayID display = SDL_GetDisplayForWindow(window);
-    if (display && SDL_GetDisplayUsableBounds(display, &usable)) {
-        if (x + w > usable.x + usable.w) x = usable.x + usable.w - w;
-        if (y + h > usable.y + usable.h) y = usable.y + usable.h - h;
-        if (x < usable.x) x = usable.x;
-        if (y < usable.y) y = usable.y;
-    }
-    SDL_SetWindowPosition(window, x, y);
 }
 
 /* The launcher's window takes the session's size, the surface's integer scale kept whole on the display, around its
@@ -349,17 +72,17 @@ void oracles_sdl_presentation(int fullscreen, int fill, int *presentation, int *
     *scale_mode = filled ? SDL_SCALEMODE_PIXELART : SDL_SCALEMODE_NEAREST;
 }
 
-static int window_fullscreen(const sdl_backend *backend)
+int sb_window_fullscreen(const sdl_backend *backend)
 {
     return backend->window && (SDL_GetWindowFlags(backend->window) & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
 /* The presentation of a logical size for the window's state and Scaling: SDL's logical presentation (none once the
  * touch controls draw the frame themselves, where SDL would put it) and the frame's sampling. */
-static void present_as(sdl_backend *backend, int logical_w, int logical_h)
+void sb_present_as(sdl_backend *backend, int logical_w, int logical_h)
 {
     int presentation, scale_mode;
-    oracles_sdl_presentation(window_fullscreen(backend), backend->fill, &presentation, &scale_mode);
+    oracles_sdl_presentation(sb_window_fullscreen(backend), backend->fill, &presentation, &scale_mode);
     if (!backend->touch.direct)
         SDL_SetRenderLogicalPresentation(backend->renderer, logical_w, logical_h, (SDL_RendererLogicalPresentation)presentation);
     SDL_SetTextureScaleMode(backend->texture, (SDL_ScaleMode)scale_mode);
@@ -404,7 +127,7 @@ static int sdl_start(void *opaque, uint32_t width, uint32_t height, uint32_t sam
     backend->frame_width = (int)width;
     backend->frame_height = (int)height;
     oracles_safe_area_edges(backend->window, backend->touch.edges.margin, &backend->touch.edges);
-    present_as(backend, (int)width, (int)height);
+    sb_present_as(backend, (int)width, (int)height);
     oracles_safe_area_report(backend->window, "game", "started", &backend->touch.edges);
     oracles_sdl_pads_open(&backend->pads);
     {
@@ -429,341 +152,11 @@ static Uint32 audio_bytes_for_ms(const sdl_backend *backend, unsigned ms)
     return (Uint32)((uint64_t)backend->sample_rate_hz * 2u * sizeof(int16_t) * ms / 1000u);
 }
 
-static int translate_key(const sdl_backend *backend, SDL_Keycode key, unsigned *button)
+void oracles_sdl_backend_set_vsync(const oracles_host_backend *backend, int vsync)
 {
-    for (unsigned i = 0; i < ORACLES_BINDINGS; i++) {
-        if (backend->keys[i] != SDLK_UNKNOWN && backend->keys[i] == key) { *button = 1u << i; return 1; }
-    }
-    return 0;
-}
-
-static int translate_controller_button(const sdl_backend *backend, SDL_GamepadButton button, unsigned *out)
-{
-    static const unsigned pad_buttons[4] = { ORACLES_KEY_A, ORACLES_KEY_B, ORACLES_KEY_SELECT, ORACLES_KEY_START };
-    switch (button) {
-        case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: *out = ORACLES_KEY_RIGHT; return 1;
-        case SDL_GAMEPAD_BUTTON_DPAD_LEFT: *out = ORACLES_KEY_LEFT; return 1;
-        case SDL_GAMEPAD_BUTTON_DPAD_UP: *out = ORACLES_KEY_UP; return 1;
-        case SDL_GAMEPAD_BUTTON_DPAD_DOWN: *out = ORACLES_KEY_DOWN; return 1;
-        default: break;
-    }
-    for (unsigned i = 0; i < 4; i++) {
-        if (backend->pad[i] != SDL_GAMEPAD_BUTTON_INVALID && backend->pad[i] == button) { *out = pad_buttons[i]; return 1; }
-    }
-    return 0;
-}
-
-/* Resolves the names of the options; an unknown name keeps the default and is reported once, an empty one leaves
- * the button without a key. */
-static void resolve_bindings(sdl_backend *backend, const oracles_sdl_options *options)
-{
-    for (unsigned i = 0; i < ORACLES_BINDINGS; i++) {
-        const char *wanted = options && options->key_names[i] ? options->key_names[i] : oracles_sdl_default_key_names[i];
-        if (!wanted[0]) { backend->keys[i] = SDLK_UNKNOWN; continue; }
-        SDL_Keycode key = SDL_GetKeyFromName(wanted);
-        if (key == SDLK_UNKNOWN) {
-            SDL_Log("unknown key name '%s' for %s; using %s", wanted, oracles_sdl_binding_names[i], oracles_sdl_default_key_names[i]);
-            key = SDL_GetKeyFromName(oracles_sdl_default_key_names[i]);
-        }
-        backend->keys[i] = key;
-    }
-    for (unsigned i = 0; i < 4; i++) {
-        const char *wanted = options && options->pad_names[i] ? options->pad_names[i] : oracles_sdl_default_pad_names[i];
-        if (!wanted[0]) { backend->pad[i] = SDL_GAMEPAD_BUTTON_INVALID; continue; }
-        SDL_GamepadButton button = SDL_GetGamepadButtonFromString(wanted);
-        if (button == SDL_GAMEPAD_BUTTON_INVALID) {
-            SDL_Log("unknown controller button '%s'; using %s", wanted, oracles_sdl_default_pad_names[i]);
-            button = SDL_GetGamepadButtonFromString(oracles_sdl_default_pad_names[i]);
-        }
-        backend->pad[i] = button;
-    }
-}
-
-/* The item hotkeys' keys: an unknown or absent name leaves the slot without a key. */
-static void resolve_hotkeys(sdl_backend *backend, const oracles_sdl_options *options)
-{
-    for (unsigned i = 0; i < ORACLES_SDL_HOTKEY_SLOTS; i++) {
-        backend->hotkey_keys[i] = options && options->hotkey_key_names[i] ? SDL_GetKeyFromName(options->hotkey_key_names[i]) : SDLK_UNKNOWN;
-        backend->hotkey_pad[i] = options && options->hotkey_pad_names[i] ? SDL_GetGamepadButtonFromString(options->hotkey_pad_names[i]) : SDL_GAMEPAD_BUTTON_INVALID;
-        /* A key or a button the game already has stays the game's. */
-        for (unsigned k = 0; k < ORACLES_BINDINGS; k++) if (backend->hotkey_keys[i] == backend->keys[k]) backend->hotkey_keys[i] = SDLK_UNKNOWN;
-        for (unsigned k = 0; k < 4; k++) if (backend->hotkey_pad[i] == backend->pad[k]) backend->hotkey_pad[i] = SDL_GAMEPAD_BUTTON_INVALID;
-        if (options && options->hotkey_key_names[i] && !options->hotkey_key_names[i][0]) backend->hotkey_keys[i] = SDLK_UNKNOWN;
-        if (options && options->hotkey_pad_names[i] && !options->hotkey_pad_names[i][0]) backend->hotkey_pad[i] = SDL_GAMEPAD_BUTTON_INVALID;
-    }
-    backend->hotkey_bind_b = options && options->hotkey_bind_b ? SDL_GetKeyFromName(options->hotkey_bind_b) : SDLK_UNKNOWN;
-    backend->hotkey_bind_a = options && options->hotkey_bind_a ? SDL_GetKeyFromName(options->hotkey_bind_a) : SDLK_UNKNOWN;
-}
-
-static int key_is_down(SDL_Keycode key)
-{
-    if (key == SDLK_UNKNOWN) return 0;
-    const SDL_Scancode code = SDL_GetScancodeFromKey(key, NULL);
-    int count = 0;
-    const bool *state = SDL_GetKeyboardState(&count);
-    return code != SDL_SCANCODE_UNKNOWN && (int)code < count && state[code];
-}
-
-static void push_hotkey(sdl_backend *backend, unsigned slot, int pressed, int keyboard)
-{
-    const unsigned modifier = !keyboard ? 3u : !pressed ? 0u : key_is_down(backend->hotkey_bind_a) ? 2u : key_is_down(backend->hotkey_bind_b) ? 1u : 0u;
-    push_command(backend, ORACLES_COMMAND_HOTKEY + (int)(slot * 8u + modifier * 2u + (pressed ? 1u : 0u)));
-}
-
-static int translate_hotkey(const sdl_backend *backend, SDL_Keycode key, unsigned *slot)
-{
-    for (unsigned i = 0; i < ORACLES_SDL_HOTKEY_SLOTS; i++) if (key != SDLK_UNKNOWN && backend->hotkey_keys[i] == key) { *slot = i; return 1; }
-    return 0;
-}
-
-static int translate_hotkey_button(const sdl_backend *backend, SDL_GamepadButton button, unsigned *slot)
-{
-    for (unsigned i = 0; i < ORACLES_SDL_HOTKEY_SLOTS; i++)
-        if (backend->hotkey_pad[i] != SDL_GAMEPAD_BUTTON_INVALID && backend->hotkey_pad[i] == button) { *slot = i; return 1; }
-    return 0;
-}
-
-int oracles_sdl_menu_input(const char *name, int *button, int *axis)
-{
-    *button = SDL_GAMEPAD_BUTTON_INVALID;
-    *axis = SDL_GAMEPAD_AXIS_INVALID;
-    if (!name || !name[0]) return 1;
-    const SDL_GamepadAxis trigger = SDL_GetGamepadAxisFromString(name);
-    if (trigger == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || trigger == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) { *axis = trigger; return 1; }
-    *button = SDL_GetGamepadButtonFromString(name);
-    return *button != SDL_GAMEPAD_BUTTON_INVALID;
-}
-
-int oracles_sdl_trigger_pressed(int value, int *held)
-{
-    const int was = *held;
-    if (value > SDL_JOYSTICK_AXIS_MAX / 2) *held = 1;
-    else if (value < SDL_JOYSTICK_AXIS_MAX / 4) *held = 0;
-    return *held && !was;
-}
-
-int oracles_sdl_trigger_moved(const SDL_Event *event, int axis, int *held)
-{
-    if (event->type != SDL_EVENT_GAMEPAD_AXIS_MOTION || axis == SDL_GAMEPAD_AXIS_INVALID || event->gaxis.axis != axis) return 0;
-    int value = event->gaxis.value, count = 0;
-    SDL_JoystickID *ids = SDL_GetGamepads(&count);
-    for (int i = 0; i < count; i++) {
-        SDL_Gamepad *pad = ids[i] == event->gaxis.which ? NULL : SDL_GetGamepadFromID(ids[i]);
-        const int other = pad ? SDL_GetGamepadAxis(pad, (SDL_GamepadAxis)axis) : 0;
-        if (other > value) value = other;
-    }
-    SDL_free(ids);
-    return oracles_sdl_trigger_pressed(value, held);
-}
-
-int oracles_sdl_trigger_held(int axis)
-{
-    int count = 0, held = 0;
-    SDL_JoystickID *ids = axis == SDL_GAMEPAD_AXIS_INVALID ? NULL : SDL_GetGamepads(&count);
-    for (int i = 0; i < count && !held; i++) {
-        SDL_Gamepad *pad = SDL_GetGamepadFromID(ids[i]);
-        held = pad && SDL_GetGamepadAxis(pad, (SDL_GamepadAxis)axis) >= SDL_JOYSTICK_AXIS_MAX / 4;
-    }
-    SDL_free(ids);
-    return held;
-}
-
-/* The menu's button or trigger, after the game's buttons and the hotkeys': a button of theirs, or of the d-pad, stays
- * theirs, as a hotkey's button the game has stays the game's, and Guide alone opens the menu; an unknown name keeps
- * the default.  The game reads no trigger. */
-static void resolve_menu(sdl_backend *backend, const oracles_sdl_options *options)
-{
-    const char *wanted = options && options->menu_pad_name ? options->menu_pad_name : oracles_sdl_default_menu_pad_name;
-    int button, axis;
-    if (!oracles_sdl_menu_input(wanted, &button, &axis)) {
-        SDL_Log("unknown controller button '%s' for the menu; using %s", wanted, oracles_sdl_default_menu_pad_name);
-        oracles_sdl_menu_input(oracles_sdl_default_menu_pad_name, &button, &axis);
-    }
-    unsigned taken;
-    const char *owner = NULL;
-    if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) owner = "the d-pad's";
-    else if (button != SDL_GAMEPAD_BUTTON_INVALID && translate_controller_button(backend, (SDL_GamepadButton)button, &taken)) owner = "the game's";
-    else if (button != SDL_GAMEPAD_BUTTON_INVALID && translate_hotkey_button(backend, (SDL_GamepadButton)button, &taken)) owner = "an item hotkey's";
-    if (owner && backend->pause_menu) {
-        fprintf(stderr, "oracles: menu_pad=%s is %s already and stays so: Guide alone opens the menu\n",
-                SDL_GetGamepadStringForButton((SDL_GamepadButton)button), owner);
-    }
-    if (owner) button = SDL_GAMEPAD_BUTTON_INVALID;
-    backend->menu_pad = (SDL_GamepadButton)button;
-    backend->menu_trigger = (SDL_GamepadAxis)axis;
-    backend->menu_trigger_held = oracles_sdl_trigger_held(axis);
-}
-
-/* The menu's button or trigger, or Guide, went down on a controller: the pause, and which input of which controller
- * asked, for a device whose buttons are not those expected.  Without a pause menu (--rom) nothing: Escape alone ends
- * such a session, as before the controller had an Escape. */
-static void push_menu(sdl_backend *backend, SDL_JoystickID id, const char *input)
-{
-    if (!backend->pause_menu) return;
-    const char *name = SDL_GetGamepadNameForID(id);
-    fprintf(stderr, "oracles: controller input %s of %s (%s) opens the pause menu\n", input, name ? name : "an unnamed controller",
-            SDL_GetGamepadStringForType(SDL_GetGamepadTypeForID(id)));
-    backend->menu_source = ORACLES_SDL_MENU_FROM_PAD;
-    push_event(backend, ORACLES_HOST_EVENT_PAUSE);
-}
-
-/* Android's Back, said with the device it came from, as the activity saw it: a handheld's Back is often its built-in
- * controller's. */
-static void push_android_back(sdl_backend *backend)
-{
-    char source[256];
-    oracles_android_activity_text("backSource", source, sizeof source);
-    fprintf(stderr, "oracles: Back of %s %s\n", source[0] ? source : "an unknown device", backend->pause_menu ? "opens the pause menu" : "ends the session");
-    push_event(backend, backend->pause_menu ? ORACLES_HOST_EVENT_PAUSE : ORACLES_HOST_EVENT_QUIT);
-}
-
-static void update_axis(sdl_backend *backend, unsigned negative, unsigned positive, Sint16 value)
-{
-    const unsigned wanted = value < -AXIS_THRESHOLD ? negative : value > AXIS_THRESHOLD ? positive : 0;
-    const unsigned held = backend->axis_buttons & (negative | positive);
-    if (held == wanted) return;
-    if (held) push_button(backend, held, 0);
-    if (wanted) push_button(backend, wanted, 1);
-    backend->axis_buttons = (backend->axis_buttons & ~(negative | positive)) | wanted;
-}
-
-static void toggle_fullscreen(sdl_backend *backend)
-{
-    if (oracles_sdl_fullscreen_only()) return;
-    backend->fullscreen = !backend->fullscreen;
-    SDL_SetWindowFullscreen(backend->window, backend->fullscreen != 0);
-}
-
-/* A finger shows the game's buttons over the game and presses them (touch_controls.h); a key of the game, a controller's
- * button or its stick hide them, not Back, a media key or a pointer.  1 when the event was a finger's. */
-static int touch_event(sdl_backend *backend, const SDL_Event *e)
-{
-    if (!backend->touch_enabled) return 0;
-    unsigned now = backend->touch_buttons, button;
-    int pause = 0;
-    const int finger = oracles_touch_sdl_event(&backend->touch, backend->renderer, e, &now, &pause);
-    if (!finger) {
-        const int game = (e->type == SDL_EVENT_KEY_DOWN && (translate_key(backend, e->key.key, &button) || translate_hotkey(backend, e->key.key, &button)))
-                         || e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
-                         || (e->type == SDL_EVENT_GAMEPAD_AXIS_MOTION && (e->gaxis.value > AXIS_THRESHOLD || e->gaxis.value < -AXIS_THRESHOLD));
-        if (!backend->touch.touch.shown || !game) return 0;
-        oracles_touch_hide(&backend->touch.touch);
-        now = 0;
-    }
-    for (unsigned bit = 1; bit <= ORACLES_KEY_START; bit <<= 1)
-        if ((now ^ backend->touch_buttons) & bit) push_button(backend, bit, (now & bit) != 0);
-    backend->touch_buttons = now;
-    if (pause && backend->pause_menu) { backend->menu_source = ORACLES_SDL_MENU_FROM_TOUCH; push_event(backend, ORACLES_HOST_EVENT_PAUSE); }
-    return finger;
-}
-
-static void handle_event(sdl_backend *backend, const SDL_Event *e)
-{
-    unsigned button;
-    if (touch_event(backend, e)) return;
-    /* The window's focus and screen changes, said on the standard error: on a device of two screens, the input follows
-     * the screen that has the focus. */
-    oracles_safe_area_event(backend->window, "game", e, &backend->touch.edges);
-    if (e->type == SDL_EVENT_WINDOW_FOCUS_GAINED || e->type == SDL_EVENT_WINDOW_FOCUS_LOST || e->type == SDL_EVENT_WINDOW_DISPLAY_CHANGED)
-        fprintf(stderr, "oracles: game window: %s\n", e->type == SDL_EVENT_WINDOW_FOCUS_GAINED ? "focus gained"
-                : e->type == SDL_EVENT_WINDOW_FOCUS_LOST ? "focus lost" : "moved to another display");
-    switch (e->type) {
-        case SDL_EVENT_QUIT: backend->window_closed = 1; push_quit(backend); break;
-        case SDL_EVENT_KEY_DOWN:
-            if (e->key.repeat) break;
-            if (ANDROID_BACK(e->key.key)) { backend->menu_source = ORACLES_SDL_MENU_FROM_NONE; push_android_back(backend); break; }
-            if (e->key.key == SDLK_ESCAPE) {
-                backend->menu_source = ORACLES_SDL_MENU_FROM_KEY;
-                push_event(backend, backend->pause_menu ? ORACLES_HOST_EVENT_PAUSE : ORACLES_HOST_EVENT_QUIT);
-                break;
-            }
-            if (e->key.key == SDLK_F11) { toggle_fullscreen(backend); break; }
-            if (e->key.key == SDLK_F2) { push_command(backend, ORACLES_COMMAND_TOGGLE_COLOUR_CORRECTION); break; }
-            if (e->key.key == SDLK_F3) { push_command(backend, ORACLES_COMMAND_TOGGLE_ENHANCED); break; }
-            if (e->key.key == SDLK_F5) { push_command(backend, ORACLES_COMMAND_SAVE_STATE); break; }
-            if (e->key.key == SDLK_F7) { push_command(backend, ORACLES_COMMAND_LOAD_STATE); break; }
-            if (translate_key(backend, e->key.key, &button)) push_button(backend, button, 1);
-            else if (translate_hotkey(backend, e->key.key, &button)) push_hotkey(backend, button, 1, 1);
-            break;
-        case SDL_EVENT_KEY_UP:
-            if (translate_key(backend, e->key.key, &button)) push_button(backend, button, 0);
-            else if (translate_hotkey(backend, e->key.key, &button)) push_hotkey(backend, button, 0, 1);
-            break;
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-        case SDL_EVENT_GAMEPAD_BUTTON_UP: {
-            const SDL_GamepadButton pressed = (SDL_GamepadButton)oracles_sdl_pad_button(e);
-            if (translate_controller_button(backend, pressed, &button)) push_button(backend, button, e->gbutton.down);
-            else if (translate_hotkey_button(backend, pressed, &button)) push_hotkey(backend, button, e->gbutton.down, 0);
-            /* Escape's, never the game's: its release, perhaps after the pause, is nobody's. */
-            else if ((pressed == backend->menu_pad || pressed == SDL_GAMEPAD_BUTTON_GUIDE) && e->gbutton.down)
-                push_menu(backend, e->gbutton.which, SDL_GetGamepadStringForButton(pressed));
-            break;
-        }
-        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            if (e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX) update_axis(backend, ORACLES_KEY_LEFT, ORACLES_KEY_RIGHT, e->gaxis.value);
-            else if (e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY) update_axis(backend, ORACLES_KEY_UP, ORACLES_KEY_DOWN, e->gaxis.value);
-            else if (oracles_sdl_trigger_moved(e, backend->menu_trigger, &backend->menu_trigger_held))
-                push_menu(backend, e->gaxis.which, SDL_GetGamepadStringForAxis((SDL_GamepadAxis)e->gaxis.axis));
-            break;
-        case SDL_EVENT_GAMEPAD_ADDED:
-        case SDL_EVENT_GAMEPAD_REMOVED:
-            oracles_sdl_pads_event(&backend->pads, e);
-            break;
-        default: break;   /* a file or a text dropped on the window during the game: SDL keeps and frees its copy */
-    }
-}
-
-static int sdl_poll_event(void *opaque, oracles_host_event *event, int *has_event)
-{
-    sdl_backend *backend = opaque;
-    SDL_Event e;
-    *has_event = 0;
-    /* The pause a suspension brings was asked by no device: its hints keep the one used last. */
-    if (backend->suspended) { backend->suspended = 0; backend->menu_source = ORACLES_SDL_MENU_FROM_NONE; push_event(backend, ORACLES_HOST_EVENT_SUSPEND); }
-    while (backend->pending_count == 0 && SDL_PollEvent(&e)) handle_event(backend, &e);
-    if (backend->pending_count == 0) return 1;
-    *event = backend->pending[0];
-    memmove(backend->pending, backend->pending + 1, (backend->pending_count - 1) * sizeof backend->pending[0]);
-    backend->pending_count--;
-    *has_event = 1;
-    return 1;
-}
-
-static uint64_t sdl_monotonic_ns(void *opaque);
-
-static int sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
-{
-    sdl_backend *backend = opaque;
-    if (frame->pitch_bytes > INT_MAX) return 0;
-    const uint64_t upload_started_ns = sdl_monotonic_ns(backend);
-    if (!SDL_UpdateTexture(backend->texture, NULL, frame->pixels, (int)frame->pitch_bytes)) return 0;
-    const uint64_t draw_started_ns = sdl_monotonic_ns(backend);
-    /* A part shown alone (the game's menus enlarged) takes its own whole scale: the logical size follows it.  Fill
-     * follows the window into fullscreen and out (F11), and a change of Scaling from the pause, whose menu lifted the
-     * presentation and set back the one it found. */
-    const SDL_FRect part = { (float)frame->crop_x, (float)frame->crop_y, (float)frame->crop_w, (float)frame->crop_h };
-    const int cropped = frame->crop_w > 0 && frame->crop_h > 0;
-    const int logical_w = cropped ? (int)frame->crop_w : backend->frame_width, logical_h = cropped ? (int)frame->crop_h : backend->frame_height;
-    const int filled = backend->fill && window_fullscreen(backend);
-    if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) present_as(backend, logical_w, logical_h);
-    if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
-        if (!SDL_RenderClear(backend->renderer)) return 0;
-        if (!SDL_RenderTexture(backend->renderer, backend->texture, cropped ? &part : NULL, NULL)) return 0;
-    }
-    if (backend->overlay && !backend->overlay(backend->overlay_opaque, backend->renderer)) backend->overlay = NULL;
-    const uint64_t present_started_ns = sdl_monotonic_ns(backend);
-    SDL_RenderPresent(backend->renderer);
-    backend->last_present_ns = sdl_monotonic_ns(backend);
-    backend->last_present_ns_spent = backend->last_present_ns - present_started_ns;
-    const uint64_t steps[3] = { draw_started_ns - upload_started_ns, present_started_ns - draw_started_ns, backend->last_present_ns_spent };
-    for (unsigned i = 0; i < 3; i++) {
-        backend->step_ns_total[i] += steps[i];
-        if (steps[i] > backend->step_ns_max[i]) backend->step_ns_max[i] = steps[i];
-    }
-    backend->stepped_presents++;
-    if (!backend->presents) backend->first_present_ns = backend->last_present_ns;
-    backend->presents++;
-    return 1;
+    sdl_backend *state = backend->opaque;
+    state->vsync = vsync != 0;
+    if (state->renderer) SDL_SetRenderVSync(state->renderer, state->vsync ? 1 : 0);
 }
 
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill)
@@ -771,7 +164,27 @@ void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill)
     sdl_backend *state = backend->opaque;
     state->fill = fill != 0;
     int presentation, scale_mode;
-    oracles_sdl_presentation(window_fullscreen(state), state->fill, &presentation, &scale_mode);
+    oracles_sdl_presentation(sb_window_fullscreen(state), state->fill, &presentation, &scale_mode);
+    if (state->texture) SDL_SetTextureScaleMode(state->texture, (SDL_ScaleMode)scale_mode);   /* the pause's image of the game too */
+}
+
+void oracles_sdl_backend_set_window(const oracles_host_backend *backend, int fullscreen, unsigned scale)
+{
+    sdl_backend *state = backend->opaque;
+    if (!state || !state->window || oracles_sdl_fullscreen_only() || !scale) return;
+    state->fullscreen = fullscreen != 0;
+    state->scale = scale;
+    SDL_SetWindowFullscreen(state->window, state->fullscreen != 0);
+    SDL_SyncWindow(state->window);   /* the window's state read below is the one asked for */
+    if (!(SDL_GetWindowFlags(state->window) & SDL_WINDOW_FULLSCREEN)) {
+        int x, y, w, h;
+        SDL_GetWindowPosition(state->window, &x, &y);
+        SDL_GetWindowSize(state->window, &w, &h);
+        oracles_sdl_size_window(state->window, (int)((unsigned)state->frame_width * scale), (int)((unsigned)state->frame_height * scale));
+        oracles_sdl_place_window(state->window, x + w / 2, y + h / 2);
+    }
+    int presentation, scale_mode;
+    oracles_sdl_presentation(sb_window_fullscreen(state), state->fill, &presentation, &scale_mode);
     if (state->texture) SDL_SetTextureScaleMode(state->texture, (SDL_ScaleMode)scale_mode);   /* the pause's image of the game too */
 }
 
@@ -787,6 +200,17 @@ void oracles_sdl_backend_scaling(const oracles_host_backend *backend, int *chose
     const sdl_backend *state = backend->opaque;
     *chosen = state && state->fill;
     *in_effect = state && state->filled;
+}
+
+unsigned oracles_sdl_backend_whole_scale(const oracles_host_backend *backend)
+{
+    const sdl_backend *state = backend->opaque;
+    int w = 0, h = 0;
+    if (!state || !state->renderer || state->frame_width <= 0 || state->frame_height <= 0 || !SDL_GetRenderOutputSize(state->renderer, &w, &h) || w <= 0 || h <= 0)
+        return 0;
+    const OraclesTouchBox band = oracles_touch_band(w, h, &state->touch.edges);
+    const float kx = band.w / (float)state->frame_width, ky = band.h / (float)state->frame_height, k = kx < ky ? kx : ky;
+    return k >= 1.0f ? (unsigned)k : 1u;
 }
 
 int oracles_sdl_backend_window_closed(const oracles_host_backend *backend)
@@ -830,7 +254,7 @@ static int sdl_queue_audio(void *opaque, const oracles_host_audio_chunk *chunk)
     if (queued > backend->audio_peak_bytes) backend->audio_peak_bytes = queued;
     backend->audio_queued_sum_bytes += queued;
     backend->audio_queued_samples_count++;
-    const uint64_t now = sdl_monotonic_ns(backend);
+    const uint64_t now = sb_sdl_monotonic_ns(backend);
     if (backend->audio_started && queued == 0) {
         /* The device drained everything: a gap was heard. Refill before resuming. */
         if (backend->audio_underruns < ORACLES_SDL_UNDERRUNS_LOGGED) {
@@ -886,7 +310,7 @@ unsigned oracles_sdl_backend_underruns(const oracles_host_backend *backend, cons
     return state->audio_underruns < ORACLES_SDL_UNDERRUNS_LOGGED ? state->audio_underruns : ORACLES_SDL_UNDERRUNS_LOGGED;
 }
 
-static uint64_t sdl_monotonic_ns(void *opaque)
+uint64_t sb_sdl_monotonic_ns(void *opaque)
 {
     (void)opaque;
     const uint64_t frequency = SDL_GetPerformanceFrequency();
@@ -901,9 +325,9 @@ static int sdl_sleep_ns(void *opaque, uint64_t duration_ns)
 {
     /* Sleep for whole milliseconds minus one, then spin on the clock for the
      * rest: SDL_Delay has a granularity of about a millisecond. */
-    const uint64_t start = sdl_monotonic_ns(opaque);
+    const uint64_t start = sb_sdl_monotonic_ns(opaque);
     if (duration_ns >= UINT64_C(2000000)) SDL_Delay((Uint32)(duration_ns / UINT64_C(1000000) - 1));
-    while (sdl_monotonic_ns(opaque) - start < duration_ns) { /* spin */ }
+    while (sb_sdl_monotonic_ns(opaque) - start < duration_ns) { /* spin */ }
     return 1;
 }
 
@@ -918,8 +342,8 @@ static void sdl_present_unpaced(void *opaque)
 /* SDL calls its event watches on the thread that sends the event, the host's here, at the moment it sends it: on
  * Android the suspension's event comes from inside a present or a poll, right before SDL blocks the thread while the
  * application is in the background, and SDL puts none of the application's events in the queue there.  The host
- * stores the save at once; the next poll, back from the background, hands it the suspension, which pauses. */
-static bool SDLCALL suspension(void *opaque, SDL_Event *e)
+ * stores the save at once; the next poll, back from the background, hands it the sb_suspension, which pauses. */
+bool SDLCALL sb_suspension(void *opaque, SDL_Event *e)
 {
     sdl_backend *backend = opaque;
     if (e->type != SDL_EVENT_WILL_ENTER_BACKGROUND) return true;
@@ -931,10 +355,10 @@ static bool SDLCALL suspension(void *opaque, SDL_Event *e)
 static void sdl_watch_suspend(void *opaque, void (*callback)(void *), void *callback_opaque)
 {
     sdl_backend *backend = opaque;
-    if (backend->on_suspend) SDL_RemoveEventWatch(suspension, backend);
+    if (backend->on_suspend) SDL_RemoveEventWatch(sb_suspension, backend);
     backend->on_suspend = callback;
     backend->on_suspend_opaque = callback_opaque;
-    if (callback) SDL_AddEventWatch(suspension, backend);
+    if (callback) SDL_AddEventWatch(sb_suspension, backend);
 }
 
 static void sdl_stop(void *opaque)
@@ -944,6 +368,8 @@ static void sdl_stop(void *opaque)
     oracles_sdl_pads_close(&backend->pads);
     if (backend->texture) SDL_DestroyTexture(backend->texture);
     backend->texture = NULL;
+    if (backend->layer) SDL_DestroyTexture(backend->layer);
+    backend->layer = NULL; backend->layer_w = backend->layer_h = 0;
     if (backend->borrowed) {
         /* The launcher's window goes back as it was lent, even when the start failed half way: no logical size, the
          * launcher sets its own size again; only the subsystems the loan started are quit. */
@@ -978,17 +404,17 @@ int oracles_sdl_backend_init(oracles_host_backend *backend, const oracles_sdl_op
 #else
     state->touch_enabled = options && options->touch_controls;
 #endif
-    resolve_bindings(state, options);
-    resolve_hotkeys(state, options);
-    resolve_menu(state, options);
+    sb_resolve_bindings(state, options);
+    sb_resolve_hotkeys(state, options);
+    sb_resolve_menu(state, options);
     memset(backend, 0, sizeof *backend);
     backend->opaque = state;
     backend->start = sdl_start;
-    backend->poll_event = sdl_poll_event;
-    backend->present_frame = sdl_present_frame;
+    backend->poll_event = sb_sdl_poll_event;
+    backend->present_frame = sb_sdl_present_frame;
     backend->queue_audio = sdl_queue_audio;
     backend->audio_queued_frames = sdl_audio_queued_frames;
-    backend->monotonic_ns = sdl_monotonic_ns;
+    backend->monotonic_ns = sb_sdl_monotonic_ns;
     backend->sleep_ns = sdl_sleep_ns;
     backend->present_unpaced = sdl_present_unpaced;
     backend->watch_suspend = sdl_watch_suspend;
@@ -1015,6 +441,43 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
     *height = state->frame_height;
 }
 
+void oracles_sdl_backend_pause_size(const oracles_host_backend *backend, int *width, int *height)
+{
+    const sdl_backend *state = backend->opaque;
+    *width = state->shown_cropped ? (int)state->shown_part.w : state->frame_width;
+    *height = state->shown_cropped ? (int)state->shown_part.h : state->frame_height;
+}
+
+void oracles_sdl_backend_pause_crop(const oracles_host_backend *backend, const uint32_t rect[4])
+{
+    sb_show_crop(backend->opaque, rect);
+}
+
+void oracles_sdl_backend_pause_box(const oracles_host_backend *backend, const uint32_t rect[4], int bottom, uint32_t reserve_w, unsigned size)
+{
+    sb_show_box(backend->opaque, rect, bottom, reserve_w, size);
+}
+
+void oracles_sdl_backend_pause_pixels(const oracles_host_backend *backend, const uint32_t *pixels)
+{
+    const sdl_backend *state = backend->opaque;
+    if (state->texture) SDL_UpdateTexture(state->texture, NULL, pixels, state->frame_width * (int)sizeof *pixels);
+}
+
+int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image)
+{
+    sdl_backend *state = backend->opaque;
+    if (!state->texture) return 0;
+    if (!state->shown_subpixel) {
+        if (!SDL_RenderTexture(state->renderer, state->texture, state->shown_cropped ? &state->shown_part : NULL, image)) return 0;
+        sb_draw_shown_box(state, image);   /* Text size Large's box, which the presenter drew over the frame */
+        return 1;
+    }
+    const int drawn = sb_draw_subpixel_cut(state, image);
+    if (drawn) sb_draw_shown_box(state, image);
+    return drawn;
+}
+
 oracles_sdl_menu_source oracles_sdl_backend_menu_source(const oracles_host_backend *backend)
 {
     const sdl_backend *state = backend->opaque;
@@ -1033,7 +496,7 @@ void oracles_sdl_backend_suspend_audio(const oracles_host_backend *backend)
 void oracles_sdl_backend_hold(const oracles_host_backend *backend, int held)
 {
     sdl_backend *state = backend->opaque;
-    const uint64_t now = sdl_monotonic_ns(state);
+    const uint64_t now = sb_sdl_monotonic_ns(state);
     if (held) state->hold_started_ns = now;
     else if (state->hold_started_ns && state->presents) state->held_ns += now - state->hold_started_ns;
     if (!held) state->hold_started_ns = 0;
@@ -1054,9 +517,9 @@ void oracles_sdl_backend_hold(const oracles_host_backend *backend, int held)
 void oracles_sdl_backend_rebind(const oracles_host_backend *backend, const oracles_sdl_options *options)
 {
     sdl_backend *state = backend->opaque;
-    resolve_bindings(state, options);
-    resolve_hotkeys(state, options);
-    resolve_menu(state, options);
+    sb_resolve_bindings(state, options);
+    sb_resolve_hotkeys(state, options);
+    sb_resolve_menu(state, options);
     state->axis_buttons = 0;
 }
 

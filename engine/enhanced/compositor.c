@@ -67,6 +67,62 @@ unsigned oracles_enhanced_hud_fill(const OraclesEnhancedBar *bar, uint32_t (*pix
     return filled;
 }
 
+/* The cells of each layout's frame that sign it in the bar's map, row and column, tile and attributes, as the game
+ * loads them (docs/GAME_HOOKS.md, section 1): the brackets no icon, count or heart is written over. */
+typedef struct bar_cell { uint8_t row, column, tile, attributes; } bar_cell;
+#define BAR_SIGNATURE 4u
+static const bar_cell bar_signatures[ORACLES_ENHANCED_BAR_BIGGORON + 1u][BAR_SIGNATURE] = {
+    [ORACLES_ENHANCED_BAR_NORMAL] = { { 0, 4, 0x06, 0xe0 }, { 1, 4, 0x06, 0xa0 }, { 0, 9, 0x06, 0xe0 }, { 1, 9, 0x06, 0xa0 } },
+    [ORACLES_ENHANCED_BAR_TIGHT] = { { 0, 4, 0x07, 0xc0 }, { 1, 4, 0x07, 0x80 }, { 0, 8, 0x08, 0xa0 }, { 1, 8, 0x06, 0xa0 } },
+    [ORACLES_ENHANCED_BAR_BIGGORON] = { { 0, 1, 0x05, 0x80 }, { 1, 1, 0x06, 0x80 }, { 0, 7, 0x08, 0xa0 }, { 1, 7, 0x06, 0xa0 } },
+};
+
+OraclesEnhancedBarLayout oracles_enhanced_bar_layout(const OraclesEnhancedBar *bar)
+{
+    for (unsigned l = ORACLES_ENHANCED_BAR_NORMAL; l <= ORACLES_ENHANCED_BAR_BIGGORON; l++) {
+        unsigned i = 0;
+        for (const bar_cell *c = bar_signatures[l]; i < BAR_SIGNATURE; i++, c++)
+            if (bar->tiles[c->row * 32u + c->column] != c->tile || bar->attributes[c->row * 32u + c->column] != c->attributes) break;
+        if (i == BAR_SIGNATURE) return (OraclesEnhancedBarLayout)l;
+    }
+    return ORACLES_ENHANCED_BAR_NONE;
+}
+
+int oracles_enhanced_bar_layout_shown(const OraclesEnhancedBar *bar, OraclesEnhancedBarLayout layout, uint32_t (*pixel)(void *opaque, uint16_t rgb555),
+                                      void *opaque, const uint32_t *core)
+{
+    if (layout <= ORACLES_ENHANCED_BAR_NONE || layout > ORACLES_ENHANCED_BAR_BIGGORON) return 0;
+    uint8_t tiles[64] = { 0 }, attributes[64] = { 0 };
+    OraclesEnhancedBar frame = *bar;
+    frame.tiles = tiles;
+    frame.attributes = attributes;
+    for (unsigned i = 0; i < BAR_SIGNATURE; i++) {
+        const bar_cell *c = &bar_signatures[layout][i];
+        tiles[c->row * 32u + c->column] = c->tile;
+        attributes[c->row * 32u + c->column] = c->attributes;
+        for (unsigned y = c->row * 8u; y < c->row * 8u + 8u; y++)
+            for (unsigned x = c->column * 8u; x < c->column * 8u + 8u; x++) {
+                const uint16_t rgb555 = oracles_enhanced_bar_pixel(&frame, x, y, NULL);
+                if (core[y * CORE_W + x] != (pixel ? pixel(opaque, rgb555) : pixel_of(NULL, rgb555))) return 0;
+            }
+    }
+    return 1;
+}
+
+/* One line of the HUD band with the bar laid out: the background (the left gutter's to the band's middle, the right's
+ * beyond), then each block from the bar's line, the hearts' second row beside their first on the middle eight lines. */
+static void hud_wide_line(const OraclesEnhancedHudPlace *p, const uint32_t *core, unsigned y, unsigned W, uint32_t left, uint32_t right, uint32_t *line)
+{
+    const uint32_t *bar = core + y * CORE_W;
+    const unsigned hearts_x = CORE_W - p->hearts, top = (HUD - 8u) / 2u;
+    for (unsigned x = 0; x < W; x++) line[x] = x < W / 2u ? left : right;
+    memcpy(line + p->buttons_at, bar, p->buttons * sizeof *line);
+    memcpy(line + p->money_at, bar + p->buttons, ORACLES_ENHANCED_BAR_MONEY * sizeof *line);
+    if (!p->one_row) memcpy(line + p->hearts_at, bar + hearts_x, p->hearts * sizeof *line);
+    else if (y >= top && y < top + 8u)
+        for (unsigned row = 0; row < 2u; row++) memcpy(line + p->hearts_at + row * p->hearts, core + (y - top + row * 8u) * CORE_W + hearts_x, p->hearts * sizeof *line);
+}
+
 /* The gutters and what no source covers: black, faded with the game (the
  * border colour when nothing fades). */
 static uint32_t gutter_pixel(const OraclesEnhancedCompose *in, uint32_t border)
@@ -140,19 +196,26 @@ static void compose_framed(const uint32_t *core, const OraclesEnhancedCompose *i
             out[y * W + x] = (x >= HUD_X && x < HUD_X + CORE_W && y >= top && y < top + ORACLES_PPU_HEIGHT) ? core[(y - top) * CORE_W + (x - HUD_X)] : gutter;
 }
 
-static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
+/* HUD band: the status bar, centred, gutters in the border colour (faded with the game), or the bar's own background
+ * on the lines it is given; or the bar laid out across it. */
+static void compose_hud(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
 {
-    unsigned uncovered = 0;
-    const unsigned W = size.width, HUD_X = oracles_enhanced_hud_x(size), band_h = oracles_enhanced_band_height(size);
-    /* HUD band: the status bar, centred, gutters in the border colour (faded with the game), or the bar's own
-     * background on the lines it is given. */
+    const unsigned W = size.width, HUD_X = oracles_enhanced_hud_x(size);
     const uint32_t gutter = gutter_pixel(in, in->border);
     for (unsigned y = 0; y < HUD; y++) {
         const uint32_t left = in->hud_fill && in->hud_fill[y] ? in->hud_fill[y] : gutter;
         const uint32_t right = in->hud_fill && in->hud_fill[HUD + y] ? in->hud_fill[HUD + y] : gutter;
+        if (in->hud_place) { hud_wide_line(in->hud_place, core, y, W, left, right, out + y * W); continue; }
         for (unsigned x = 0; x < W; x++)
             out[y * W + x] = x < HUD_X ? left : x < HUD_X + CORE_W ? core[y * CORE_W + (x - HUD_X)] : right;
     }
+}
+
+static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose *in, OraclesEnhancedSize size, uint32_t *out)
+{
+    unsigned uncovered = 0;
+    const unsigned W = size.width, band_h = oracles_enhanced_band_height(size);
+    compose_hud(core, in, size, out);
     /* World band: the game area placed by the camera; uncovered pixels black.
      * A band row shows the LCD line of the window that stands there, and that
      * line's own scroll: the shifts are read by line, not by band row, or the
@@ -171,7 +234,7 @@ static unsigned compose_world(const uint32_t *core, const OraclesEnhancedCompose
         if (y < y0 || y >= y0 + shown_h) { for (unsigned x = 0; x < W; x++) row[x] = black; continue; }
         const int32_t world_y = in->world_top + (int32_t)y;
         const int32_t line = (int32_t)((uint32_t)(world_y - in->window_world_top) % AREA_H);   /* AREA_H a power of two: a floor modulo */
-        const int32_t shift_x = in->line_shift ? in->line_shift[line] : 0, shift_y = in->line_shift_y ? in->line_shift_y[line] : 0;
+        const int32_t shift_x = in->line_shift ? in->line_shift[line] - in->sway : 0, shift_y = in->line_shift_y ? in->line_shift_y[line] : 0;
         for (unsigned x = 0; x < x0; x++) row[x] = black;
         for (unsigned x = x0 + shown_w; x < W; x++) row[x] = black;
         uncovered += compose_row(in, core, row, x0, x0 + shown_w, world_y, shift_x, shift_y, black);
@@ -184,6 +247,11 @@ unsigned oracles_enhanced_compose(const uint32_t *core, const OraclesEnhancedCom
     const OraclesEnhancedSize size = in->size.width ? in->size : oracles_enhanced_size(0);
     if (in->mode == ORACLES_ENHANCED_FRAMED) { compose_framed(core, in, size, out); return 0; }
     return compose_world(core, in, size, out);
+}
+
+void oracles_enhanced_compose_hud(const uint32_t *core, const OraclesEnhancedCompose *in, uint32_t *out)
+{
+    compose_hud(core, in, in->size.width ? in->size : oracles_enhanced_size(0), out);
 }
 
 void oracles_enhanced_far_fitting_words(unsigned screen_w, unsigned screen_h, char *out, size_t capacity)

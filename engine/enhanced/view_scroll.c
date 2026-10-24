@@ -352,3 +352,59 @@ void oracles_enhanced_view_scroll_animation_counts(const OraclesEnhancedView *v,
         out->pace_max = p;
     }
 }
+
+/* The image the band would show (`core`: the core's, or a scroll's drawn again with the view's tiles) with its waves
+ * as the band shows them, in a room shown whole or through a scroll the game stopped them for (ev_wave_shown): its
+ * background drawn again from the VRAM and the registers it was drawn with, each line at its own scroll and at the one
+ * shown, and the second render's pixel wherever the first gives the image's own (a sprite over it keeps its place, as
+ * the game's sprites do under the waves).  Only the lines whose scroll shown differs from their own are drawn again:
+ * the others would give the image as it is.  The status bar's lines as they are. */
+const uint32_t *ev_sway_window(OraclesEnhancedView *v, const uint32_t *core)
+{
+    const OraclesGuestTables *t = oracles_guest_tables(v->guest);
+    const uint8_t *regs = oracles_guest_ptr(v->guest, t->gfx_regs3, 6), *palettes = oracles_guest_bg_palettes(v->guest);
+    const uint8_t *vram0 = oracles_guest_vram(v->guest, 0), *vram1 = oracles_guest_vram(v->guest, 1);
+    if (!core || !regs || !palettes || !vram0 || !vram1) return core;
+    const OraclesEnhancedObservation *ob = &v->observation;
+    static const uint8_t no_sprites[160];
+    OraclesPpuInput own, shown;
+    own.oam = no_sprites;
+    own.bg_palettes = palettes;
+    own.obj_palettes = palettes;
+    own.colours = v->colours;
+    own.vram = vram0;   /* bank 1 follows it (oracles_guest_vram) */
+    if (core == v->scroll_window) {   /* the scroll's own tiles */
+        memcpy(v->hybrid_vram, vram0, 0x2000u);
+        memcpy(v->hybrid_vram + 0x2000u, vram1, 0x2000u);
+        ev_scroll_overlay(v->hybrid_vram, 0x2000u, v->scroll_images, v->scroll_touched, v->scroll_game_wrote);
+        own.vram = v->hybrid_vram;
+    }
+    const OraclesPpuRegs r = { (uint8_t)(regs[0] | 0x80u), (uint8_t)(ob->drawn_camera_y + ob->drawn_offset_y - (int)ORACLES_ENHANCED_HUD_HEIGHT),
+                               (uint8_t)(ob->drawn_camera_x + ob->drawn_offset_x), regs[3], regs[4] };
+    uint8_t differs[ORACLES_PPU_HEIGHT] = { 0 };   /* the lines drawn again */
+    for (unsigned ly = 0; ly < ORACLES_PPU_HEIGHT; ly++) {
+        own.lines[ly] = r;
+        if (ly >= ORACLES_ENHANCED_HUD_HEIGHT) {
+            const unsigned line = ly - ORACLES_ENHANCED_HUD_HEIGHT;
+            own.lines[ly].scx = (uint8_t)(r.scx + v->line_shift[line]);
+            own.lines[ly].scy = (uint8_t)(r.scy + v->line_shift_y[line]);
+        }
+    }
+    shown = own;
+    for (unsigned ly = ORACLES_ENHANCED_HUD_HEIGHT; ly < ORACLES_PPU_HEIGHT; ly++) {
+        shown.lines[ly].scx = (uint8_t)(r.scx + ev_wave_shown(v, ly - ORACLES_ENHANCED_HUD_HEIGHT));
+        differs[ly] = shown.lines[ly].scx != own.lines[ly].scx;
+    }
+    memcpy(v->sway_window, core, sizeof v->sway_window);
+    for (unsigned first = ORACLES_ENHANCED_HUD_HEIGHT; first < ORACLES_PPU_HEIGHT;) {
+        if (!differs[first]) { first++; continue; }
+        unsigned end = first + 1u;
+        while (end < ORACLES_PPU_HEIGHT && differs[end]) end++;
+        oracles_ppu_render_wide_lines(&own, v->hybrid_frame, ORACLES_PPU_WIDTH, first, end);
+        oracles_ppu_render_wide_lines(&shown, v->scroll_frame, ORACLES_PPU_WIDTH, first, end);
+        for (unsigned at = first * ORACLES_PPU_WIDTH; at < end * ORACLES_PPU_WIDTH; at++)
+            if (core[at] == v->hybrid_frame[at]) v->sway_window[at] = v->scroll_frame[at];
+        first = end;
+    }
+    return v->sway_window;
+}

@@ -77,6 +77,9 @@ void oracles_ui_draw_to_scene(const OraclesUiDraw *draw, float x, float y, float
 void oracles_ui_draw_to_scene_anchored(const OraclesUiDraw *draw, float x, float y, float anchor_x, float anchor_y, float *scene_x, float *scene_y);
 
 void oracles_ui_fill_rect(OraclesUiDraw *draw, float x, float y, float w, float h, OraclesUiColor color);
+/* `count` rectangles (x, y, w, h each, in the scene's units) of one colour, plain, without the feathered edge of the
+ * shapes above: drawn in a few calls, for many small ones. */
+void oracles_ui_fill_rects(OraclesUiDraw *draw, const float *rects, int count, OraclesUiColor color);
 void oracles_ui_fill_round_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, OraclesUiColor color);
 /* A border of `border` scene pixels inside the box, as CSS draws one. */
 void oracles_ui_stroke_round_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, float border, OraclesUiColor color);
@@ -84,6 +87,11 @@ void oracles_ui_stroke_round_rect(OraclesUiDraw *draw, float x, float y, float w
 void oracles_ui_stroke_dashed_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, float border, OraclesUiColor color);
 /* A convex polygon of `count` points, x then y. */
 void oracles_ui_fill_polygon(OraclesUiDraw *draw, const float *points, int count, OraclesUiColor color);
+/* A picture of `w` x `h` pixels (0xAARRGGBB, a row `w`) over the box `rect` (x, y, w, h) of the scene, its edges on the
+ * output's whole pixels, cut to the box `clip`: sampled for pixel art (each pixel of the output takes the colour of the
+ * picture's pixel it covers, those astride two blending them; the nearest pixel's on a renderer without that sampling,
+ * SDL's software one).  One picture is kept in a texture, uploaded again only when its pixels change. */
+void oracles_ui_draw_picture(OraclesUiDraw *draw, const uint32_t *pixels, int w, int h, const float *rect, const float *clip);
 /* One line of text starting at `x` with its baseline at `baseline`. */
 void oracles_ui_draw_text(OraclesUiDraw *draw, const OraclesUiTextStyle *style, float x, float baseline, const char *utf8, OraclesUiColor color);
 /* A motif over the whole scene, slid by `shift` scene pixels (negative: left). */

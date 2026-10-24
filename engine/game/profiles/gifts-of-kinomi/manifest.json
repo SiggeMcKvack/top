@@ -514,6 +514,7 @@
       "bank": 0,
       "address": "0xcd24"
     },
+    "tileset_layout": null,
     "gasha_spots_planted": {
       "bank": 0,
       "address": "0xc64d"
@@ -710,6 +711,30 @@
       "bank": 4,
       "address": "0x77fd"
     },
+    "interaction_animation_table": {
+      "bank": 22,
+      "address": "0x5875"
+    },
+    "interaction_oam_data_table": {
+      "bank": 22,
+      "address": "0x5a4f"
+    },
+    "enemy_animation_table": {
+      "bank": 28,
+      "address": "0x5dc0"
+    },
+    "enemy_oam_data_table": {
+      "bank": 28,
+      "address": "0x5ec0"
+    },
+    "part_animation_table": {
+      "bank": 22,
+      "address": "0x77b1"
+    },
+    "part_oam_data_table": {
+      "bank": 22,
+      "address": "0x786b"
+    },
     "gfx_regs1": {
       "bank": 0,
       "address": "0xc485"
@@ -766,6 +791,7 @@
       "bank": 2,
       "address": "0xde80"
     },
+    "wave_scroll_values": null,
     "status_bar_tile_map": {
       "bank": 4,
       "address": "0xd240"
@@ -1024,7 +1050,100 @@
     "link_damage_to_apply": null,
     "dec_num_bombs": null,
     "get_rupee_value": null,
-    "bomb_fairy_lose_all_bombs": null
+    "bomb_fairy_lose_all_bombs": null,
+    "draw_line_of_text": {
+      "bank": 63,
+      "address": "0x5077"
+    },
+    "set_line_text_buffers": {
+      "bank": 63,
+      "address": "0x50c8"
+    },
+    "display_next_text_character": {
+      "bank": 63,
+      "address": "0x51fd"
+    },
+    "text_control_code_option": {
+      "bank": 63,
+      "address": "0x5921"
+    },
+    "text_gfx_buffer": {
+      "bank": 7,
+      "address": "0xd200"
+    },
+    "line_text_buffer": {
+      "bank": 7,
+      "address": "0xd400"
+    },
+    "line_attributes_buffer": {
+      "bank": 7,
+      "address": "0xd410"
+    },
+    "line_delays_buffer": {
+      "bank": 7,
+      "address": "0xd420"
+    },
+    "line_sounds_buffer": {
+      "bank": 7,
+      "address": "0xd430"
+    },
+    "line_sound_effects_buffer": {
+      "bank": 7,
+      "address": "0xd440"
+    },
+    "next_text_column": {
+      "bank": 7,
+      "address": "0xd0d0"
+    },
+    "text_line_tiles": {
+      "bank": 7,
+      "address": "0xd0d3"
+    },
+    "textbox_column": {
+      "bank": 7,
+      "address": "0xd0cc"
+    },
+    "text_display_state": {
+      "bank": 7,
+      "address": "0xd0c0"
+    },
+    "text_display_mode": {
+      "bank": 0,
+      "address": "0xcba1"
+    },
+    "textbox_attributes": {
+      "bank": 7,
+      "address": "0xd100"
+    },
+    "textbox_option_positions": {
+      "bank": 7,
+      "address": "0xd0e0"
+    },
+    "secret_text": {
+      "bank": 7,
+      "address": "0xd460"
+    },
+    "secret_text_end": {
+      "bank": 7,
+      "address": "0xd478"
+    },
+    "dma_text_gfx_buffer": null,
+    "vblank_dma_function": null,
+    "textbox_vram_pos": null,
+    "character_display_timer": null,
+    "text_address": null,
+    "update_character_display_timer": {
+      "bank": 63,
+      "address": "0x51db"
+    },
+    "text_flags": {
+      "bank": 7,
+      "address": "0xd0c1"
+    },
+    "text_slowdown_timer": {
+      "bank": 7,
+      "address": "0xd0d7"
+    }
   },
   "guest_table_sizes": {
     "global_flags_size": 16,
@@ -1058,6 +1177,20 @@
     "cutscene_din_imprisoned": "0xff",
     "cutscene_temple_sinking": "0xff",
     "cutscene_onox_taunting": "0xff",
+    "cutscene_black_tower_explanation": "0x08",
+    "cutscene_black_tower_escape": "0x09",
+    "cutscene_flame_of_sorrow": "0x11",
+    "cutscene_flame_of_despair": "0x20",
+    "cutscene_black_tower_complete": "0x21",
+    "cutscene_din_crystal_descending": "0xff",
+    "cutscene_flame_of_destruction": "0xff",
+    "cutscene_princess_kidnapped": "0xff",
+    "cutscene_room_of_rites_collapse": "0x0f",
+    "cutscene_credits": "0xff",
+    "cutscene_the_end_screen": "0x22",
+    "cutscene_03": "0x03",
+    "cutscene_04": "0x04",
+    "cutscene_05": "0x05",
     "interac_wild_tokay_controller": "0x70",
     "interac_golden_cave_subrosian": "0xff",
     "tilesetflag_bit_sidescroll": "0x05",
@@ -1067,6 +1200,10 @@
     "specialobject_raft": "0x13",
     "first_dynamic_interaction_index": "0xd2",
     "roomflag_visited": "0x10",
+    "tileindex_chest_opened": "0xff",
+    "roomflag_item": "0xff",
+    "transition_dest_timewarp": "0xff",
+    "globalflag_water_pollution_fixed": "0xff",
     "treasure_rupees": "0x28",
     "treasure_heart_refill": "0x29",
     "treasure_ring": "0x2d",
@@ -1147,7 +1284,15 @@
     "parse_object_data": "mods not qualified for this revision: they play on the original ROMs only",
     "warp_bank_free": "mods not qualified for this revision: they play on the original ROMs only",
     "warp_dest_table": "mods not qualified for this revision: they play on the original ROMs only",
-    "warp_sources_table": "mods not qualified for this revision: they play on the original ROMs only"
+    "warp_sources_table": "mods not qualified for this revision: they play on the original ROMs only",
+    "single_tile_change_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "standard_tile_substitutions": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "chest_data_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "room_tile_changer_code_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "tile_changes_after_gfx_group_table": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "gasha_spot_rooms": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "timewarp_entry_tile_replacement_dict": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "timewarp_return_tile_replacement_dict": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load"
   },
   "guest_table_absent": {
     "in_boxing_match": "a Seasons symbol: Ages' engine has none",
@@ -1171,6 +1316,13 @@
     "link_damage_to_apply": "the cheats play on the original ROMs alone",
     "dec_num_bombs": "the cheats play on the original ROMs alone",
     "get_rupee_value": "the cheats play on the original ROMs alone",
-    "bomb_fairy_lose_all_bombs": "the cheats play on the original ROMs alone"
+    "bomb_fairy_lose_all_bombs": "the cheats play on the original ROMs alone",
+    "dma_text_gfx_buffer": "the host's text box not qualified for this revision",
+    "vblank_dma_function": "the host's text box not qualified for this revision",
+    "textbox_vram_pos": "the host's text box not qualified for this revision",
+    "character_display_timer": "the host's text box not qualified for this revision",
+    "text_address": "the host's text box not qualified for this revision",
+    "tileset_layout": "the collisions of the room a scroll enters are not predicted for this image: the scroll waits for its load",
+    "wave_scroll_values": "the waves held to a room shown whole not qualified for this revision"
   }
 }

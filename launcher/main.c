@@ -6,7 +6,7 @@
  *                       [--mute] [--frames N] [--no-window]
  *                       [--screenshot PATH.ppm] [--record ROUTE] [--play ROUTE] [--continuous-transitions] [--continuous-swim] [--item-hotkeys=off|use|equip]
  *                       [--continuous-diagonal]
- *                       [--swim-hold] [--cheats LIST]
+ *                       [--swim-hold] [--cheats LIST] [--text classic|compact] [--text-speed classic|instant]
  *                       [--zoom-out]
  *   the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,...]
  *
@@ -112,7 +112,11 @@ static int usage(void)
                     "                           [--continuous-diagonal]   (the continuous transitions with a diagonal held carrying Link across their axis too; implies --continuous-transitions)\n"
                     "                           [--swim-hold]   (swimming, a direction held swims at full speed where the game wants A tapped with the flippers, the direction with Ages' mermaid suit)\n"
                     "                           [--cheats no-damage,ammo,rupees]   (Ages and Seasons: Link loses no heart, seeds and bombs are not used up, buying costs nothing;\n"
-                    "                           a mod's prices still apply; an empty list for none)\n");
+                    "                           a mod's prices still apply; an empty list for none)\n"
+                    "                           [--text classic|compact]   (Enhanced, the Oracles and their fan games: the text box's lines in the font's own widths, at the game's pace)\n"
+                    "                           [--text-box standard|wide]   (Enhanced, Ages and Seasons: the game's box, or a wider one drawn by the port, 192 pixels of text)\n"
+                    "                           [--text-size normal|large|xlarge]   (Enhanced: the text box three halves as large, in whole screen pixels, or twice)\n"
+                    "                           [--text-speed classic|instant]   (the text letter by letter at the file screen's speed, or each line whole; A still turns the page)\n");
     fprintf(stderr, "                           [--zoom-out]   (Enhanced drawn back, 480x270 or 480x360 in 4:3, three rooms across outdoors; --fullscreen --scale 4 fills 1920x1080; --view far)\n"
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
                     "                           [--core sameboy|mgba]   (the core: Accurate, the reference, or Fast, lighter)\n"
@@ -130,7 +134,7 @@ static int usage(void)
                     "       --patch: a fan game, the BPS patch applied to --rom in memory at each start; its save beside the patch\n"
                     "       without --rom, the home screen opens; the game options apply to the games it starts, --record to the first,\n"
                     "       --language-pack to none: each game keeps its pack beside settings.txt\n"
-                    "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow,key,pad,android]\n"
+                    "       the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,left,right,ok,back,slow,key,pad,android,moonrise,import]\n"
                     "                           [--launcher-frame GAME.ppm]\n"
                     "                           (the home screen drawn offscreen, 1920x1080 by default, and written as a PPM, Display's sizes those\n"
                     "                           of a screen that size; with a game's image\n"
@@ -188,6 +192,26 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
         else if (!strcmp(argv[i], "--cheats") && more) {
             if (oracles_cheats_parse(argv[++i], NULL, &o->cheats) != 0) return 1;
             o->cheats_given = 1;
+        }
+        else if (!strcmp(argv[i], "--text") && more) {
+            const char *text = argv[++i];
+            o->compact_text = !strcmp(text, "classic") ? 1 : !strcmp(text, "compact") ? 2 : 0;
+            if (!o->compact_text) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-speed") && more) {
+            const char *speed = argv[++i];
+            o->text_instant = !strcmp(speed, "classic") ? 1 : !strcmp(speed, "instant") ? 2 : 0;
+            if (!o->text_instant) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-size") && more) {
+            const char *size = argv[++i];
+            o->text_size = !strcmp(size, "normal") ? 1 : !strcmp(size, "large") ? 2 : !strcmp(size, "xlarge") ? 3 : 0;
+            if (!o->text_size) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-box") && more) {
+            const char *box = argv[++i];
+            o->text_box_wide = !strcmp(box, "standard") ? 1 : !strcmp(box, "wide") ? 2 : 0;
+            if (!o->text_box_wide) return 1;
         }
         else if (!strcmp(argv[i], "--zoom-out")) { o->zoom_out = 1; o->enhanced = 1; o->view = 3; }
         else if (!strcmp(argv[i], "--view") && more) {

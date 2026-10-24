@@ -25,6 +25,10 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-zip PRIVATE oracles_core)
     oracles_set_warnings(oracles-test-zip)
     add_test(NAME oracles-zip COMMAND oracles-test-zip ${CMAKE_CURRENT_BINARY_DIR}/test_zip.tmp)
+    add_executable(oracles-test-save test_save.c)
+    target_link_libraries(oracles-test-save PRIVATE oracles_core)
+    oracles_set_warnings(oracles-test-save)
+    add_test(NAME oracles-save COMMAND oracles-test-save)
 
     add_executable(oracles-test-compat test_compat.c)
     target_link_libraries(oracles-test-compat PRIVATE oracles_guest)
@@ -52,16 +56,32 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-swim-hold)
     add_test(NAME oracles-swim-hold COMMAND oracles-test-swim-hold)
 
+    add_executable(oracles-test-text-instant test_text_instant.c)
+    target_link_libraries(oracles-test-text-instant PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-text-instant)
+    add_test(NAME oracles-text-instant COMMAND oracles-test-text-instant)
+
     add_executable(oracles-test-cheats test_cheats.c)
     target_link_libraries(oracles-test-cheats PRIVATE oracles_guest)
     oracles_set_warnings(oracles-test-cheats)
     add_test(NAME oracles-cheats COMMAND oracles-test-cheats)
+
+    add_executable(oracles-test-compact-text test_compact_text.c)
+    target_link_libraries(oracles-test-compact-text PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-compact-text)
+    add_test(NAME oracles-compact-text COMMAND oracles-test-compact-text)
 
     add_executable(oracles-test-language test_language.c)
     target_include_directories(oracles-test-language PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
     target_link_libraries(oracles-test-language PRIVATE oracles_language)
     oracles_set_warnings(oracles-test-language)
     add_test(NAME oracles-language COMMAND oracles-test-language ${CMAKE_CURRENT_BINARY_DIR})
+    # The texts laid out again for the compact text, on texts built by the test.
+    add_executable(oracles-test-language-wrap test_language_wrap.c)
+    target_include_directories(oracles-test-language-wrap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
+    target_link_libraries(oracles-test-language-wrap PRIVATE oracles_language)
+    oracles_set_warnings(oracles-test-language-wrap)
+    add_test(NAME oracles-language-wrap COMMAND oracles-test-language-wrap)
     # The same on the user's ROMs: skipped unless ORACLES_ROM_DIR names a directory with them.
     add_executable(oracles-test-language-roms test_language_roms.c)
     target_include_directories(oracles-test-language-roms PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../engine/language)
@@ -81,6 +101,11 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-guest-threads PRIVATE oracles_guest)
     oracles_set_warnings(oracles-test-guest-threads)
     add_test(NAME oracles-guest-threads COMMAND oracles-test-guest-threads)
+
+    add_executable(oracles-test-text-box test_text_box.c)
+    target_link_libraries(oracles-test-text-box PRIVATE oracles_enhanced oracles_render)
+    oracles_set_warnings(oracles-test-text-box)
+    add_test(NAME oracles-text-box COMMAND oracles-test-text-box)
 
     add_executable(oracles-test-render test_render.c)
     target_link_libraries(oracles-test-render PRIVATE oracles_render)
@@ -102,11 +127,18 @@ if(BUILD_TESTING)
     add_test(NAME oracles-room-transition COMMAND oracles-test-room-transition)
     # The policy built alone, the guest's few calls answered by the test.
     set(ORACLES_ENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../engine)
-    add_executable(oracles-test-room-transition-policy test_room_transition_policy.c ${ORACLES_ENGINE_DIR}/gameplay/room_transition.c)
+    add_executable(oracles-test-room-transition-policy test_room_transition_policy.c ${ORACLES_ENGINE_DIR}/gameplay/room_transition.c
+                   ${ORACLES_ENGINE_DIR}/gameplay/room_predict.c)
     target_include_directories(oracles-test-room-transition-policy PRIVATE ${ORACLES_ENGINE_DIR}/gameplay ${ORACLES_ENGINE_DIR}/game/guest
                                ${ORACLES_ENGINE_DIR}/game/profiles ${ORACLES_ENGINE_DIR}/game/data ${ORACLES_ENGINE_DIR}/core ${ORACLES_ENGINE_DIR}/rom)
+    target_link_libraries(oracles-test-room-transition-policy PRIVATE oracles_data)
     oracles_set_warnings(oracles-test-room-transition-policy)
     add_test(NAME oracles-room-transition-policy COMMAND oracles-test-room-transition-policy)
+
+    add_executable(oracles-test-room-predict test_room_predict.c)
+    target_link_libraries(oracles-test-room-predict PRIVATE oracles_gameplay)
+    oracles_set_warnings(oracles-test-room-predict)
+    add_test(NAME oracles-room-predict COMMAND oracles-test-room-predict)
 
     add_executable(oracles-test-item-hotkeys test_item_hotkeys.c)
     target_link_libraries(oracles-test-item-hotkeys PRIVATE oracles_gameplay)
@@ -144,6 +176,10 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-zoom-out PRIVATE oracles_enhanced)
     oracles_set_warnings(oracles-test-zoom-out)
     add_test(NAME oracles-zoom-out COMMAND oracles-test-zoom-out)
+    add_executable(oracles-test-hud-wide test_hud_wide.c)
+    target_link_libraries(oracles-test-hud-wide PRIVATE oracles_enhanced)
+    oracles_set_warnings(oracles-test-hud-wide)
+    add_test(NAME oracles-hud-wide COMMAND oracles-test-hud-wide)
     add_executable(oracles-test-far-fitted test_far_fitted.c)
     target_link_libraries(oracles-test-far-fitted PRIVATE oracles_enhanced)
     oracles_set_warnings(oracles-test-far-fitted)
@@ -152,6 +188,10 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-scroll-animation PRIVATE oracles_enhanced)
     oracles_set_warnings(oracles-test-scroll-animation)
     add_test(NAME oracles-scroll-animation COMMAND oracles-test-scroll-animation)
+    add_executable(oracles-test-object-animation test_object_animation.c)
+    target_link_libraries(oracles-test-object-animation PRIVATE oracles_neighbours)
+    oracles_set_warnings(oracles-test-object-animation)
+    add_test(NAME oracles-object-animation COMMAND oracles-test-object-animation)
     add_executable(oracles-test-routed-order test_routed_order.c)
     target_link_libraries(oracles-test-routed-order PRIVATE oracles_enhanced)
     oracles_set_warnings(oracles-test-routed-order)
@@ -172,6 +212,9 @@ if(BUILD_TESTING)
         # The same routes on mGBA: the rows of both cores and its own.
         add_test(NAME oracles-routes-mgba COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/check_routes.py --harness $<TARGET_FILE:oracles-harness> --core mgba)
         set_tests_properties(oracles-routes-mgba PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 3600)
+        # The rules the script holds a row to, without the ROMs.
+        add_test(NAME oracles-check-routes-rules COMMAND ${Python3_EXECUTABLE} -B -m unittest test_check_routes
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../tools)
     endif()
     # Each fan game's table against its manifest and the guest table's fields: a field the guest gains fails here,
     # before it takes the zero of C in a checked-in table (engine/game/profiles/gen_tables.py).
@@ -197,11 +240,27 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-launcher-page)
     add_test(NAME oracles-launcher-page COMMAND oracles-test-launcher-page ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-save test_launcher_save.c layout_reference.c)
+    target_link_libraries(oracles-test-launcher-save PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-save)
+    add_test(NAME oracles-launcher-save COMMAND oracles-test-launcher-save ${ORACLES_LAYOUT_REFERENCE})
+
+    add_executable(oracles-test-launcher-text-page test_launcher_text_page.c layout_reference.c)
+    target_include_directories(oracles-test-launcher-text-page PRIVATE ${ORACLES_ENHANCED_DIR})
+    target_link_libraries(oracles-test-launcher-text-page PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-text-page)
+    add_test(NAME oracles-launcher-text-page COMMAND oracles-test-launcher-text-page ${ORACLES_LAYOUT_REFERENCE})
+
     add_executable(oracles-test-launcher-mods test_launcher_mods.c layout_reference.c)
     target_link_libraries(oracles-test-launcher-mods PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-mods)
     add_test(NAME oracles-launcher-mods COMMAND oracles-test-launcher-mods ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-picture test_launcher_picture.c layout_reference.c)
+    target_include_directories(oracles-test-launcher-picture PRIVATE ${ORACLES_ENHANCED_DIR})
+    target_link_libraries(oracles-test-launcher-picture PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-picture)
+    add_test(NAME oracles-launcher-picture COMMAND oracles-test-launcher-picture ${ORACLES_LAYOUT_REFERENCE})
     add_executable(oracles-test-launcher-cheats test_launcher_cheats.c layout_reference.c)
     target_link_libraries(oracles-test-launcher-cheats PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-cheats)
@@ -229,11 +288,17 @@ if(BUILD_TESTING)
 
     # The launcher's own tests need its SDL backend (the settings' key names) or its binary.
     if(TARGET oracles)
-        add_executable(oracles-test-launcher-settings test_launcher_settings.c ${ORACLES_LAUNCHER_DIR}/settings.c ${ORACLES_LAUNCHER_DIR}/home_choices.c ${ORACLES_LAUNCHER_DIR}/session_options.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-settings test_launcher_settings.c ${ORACLES_LAUNCHER_DIR}/settings.c ${ORACLES_LAUNCHER_DIR}/home_choices.c ${ORACLES_LAUNCHER_DIR}/session_options.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-settings PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-settings PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-settings)
         add_test(NAME oracles-launcher-settings COMMAND oracles-test-launcher-settings ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_settings.tmp)
+
+        add_executable(oracles-test-launcher-save-transfer test_launcher_save_transfer.c ${ORACLES_LAUNCHER_DIR}/save_transfer.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c)
+        target_include_directories(oracles-test-launcher-save-transfer PRIVATE ${ORACLES_LAUNCHER_DIR})
+        target_link_libraries(oracles-test-launcher-save-transfer PRIVATE oracles_core ${ORACLES_SDL_TARGET})
+        oracles_set_warnings(oracles-test-launcher-save-transfer)
+        add_test(NAME oracles-launcher-save-transfer COMMAND oracles-test-launcher-save-transfer ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_save_transfer.tmp)
 
         # The update check on GitHub's answer for v1.1.0 (update_release.json) and variants of it, and on its thread from a
         # file: no test asks the network.
@@ -256,10 +321,10 @@ if(BUILD_TESTING)
                     --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
         set_tests_properties(oracles-launcher-update-check PROPERTIES PASS_REGULAR_EXPRESSION "update check: version 99\\.0\\.0 available"
             FAIL_REGULAR_EXPRESSION "https://|update_release_newer" TIMEOUT 30 ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")
-        # The home screen shows it above the version at a handheld's 640x480, highlighted by Up from Start game, after a
-        # controller's button (the layout reference's frame 24d).
+        # The home screen shows it above the version at a handheld's 640x480, highlighted by Up from Start game past the
+        # version number, after a controller's button (the layout reference's frame 24d).
         add_test(NAME oracles-launcher-screenshot-update-draw
-            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm --launcher-size 640x480 --launcher-input pad,up
+            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm --launcher-size 640x480 --launcher-input pad,up,up
                     --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
         set_tests_properties(oracles-launcher-screenshot-update-draw PROPERTIES FIXTURES_SETUP launcher_update TIMEOUT 30
             ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")
@@ -279,7 +344,7 @@ if(BUILD_TESTING)
         # The launcher's window lent to a session whose start fails (no audio driver by that name) comes back intact; what
         # is dropped on it is left to SDL; a controller unplugged and plugged in during a session is taken back; the file
         # dialog answers on the queue, and one that cannot open is no dialog.
-        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-sdl-backend PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-sdl-backend PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-sdl-backend)
@@ -287,7 +352,7 @@ if(BUILD_TESTING)
 
         # The controller's Escape: the menu's button, its trigger and Guide in play, on the home screen and in the pause,
         # the device an event comes from, kept from the home screen to the pause, and the first game's toast.
-        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/pause.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/pause.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-menu PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-menu PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui_sdl ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-menu)

@@ -49,6 +49,25 @@ typedef struct oracles_host_event {
     int command;       /* launcher-defined, for ORACLES_HOST_EVENT_COMMAND */
 } oracles_host_event;
 
+/* A frame's world band moved by less than a pixel when it is shown (the Enhanced sub-pixel camera): lines
+ * `band_top` to `band_top + band_height` drawn `x` and `y` 256ths of a frame pixel left and up (negative: right and
+ * down), at the screen's resolution rounded down, the lines above and below unmoved; then `patch` moved with the band
+ * and `layer` over it (0xAARRGGBB, alpha 0 where they show nothing), at `layer_x`, `layer_y` of the frame, the layer
+ * moved `layer_fx`, `layer_fy` 256ths of a pixel right and down, inside the band; then the `fixed` rectangles of the
+ * frame (x, y, w, h) unmoved over them.  The frame itself is whole: shown as it is, it is the picture at whole pixels. */
+#define ORACLES_HOST_SUBPIXEL_FIXED 16u
+typedef struct oracles_host_video_subpixel {
+    int32_t x, y;
+    uint32_t band_top, band_height;
+    const uint32_t *layer;
+    int32_t layer_x, layer_y;
+    uint32_t layer_w, layer_h, layer_pitch;   /* layer_pitch in pixels */
+    int32_t layer_fx, layer_fy;
+    const uint32_t *patch;                     /* the layer's size and pitch; NULL: none */
+    uint32_t fixed_count;
+    uint32_t fixed[ORACLES_HOST_SUBPIXEL_FIXED][4];
+} oracles_host_video_subpixel;
+
 typedef struct oracles_host_video_frame {
     const uint32_t *pixels;   /* numeric 0xAARRGGBB */
     uint32_t width;
@@ -57,6 +76,18 @@ typedef struct oracles_host_video_frame {
     /* The part of the frame to show alone, at its own largest whole scale (the game's menus enlarged); crop_w 0: the
      * whole frame. */
     uint32_t crop_x, crop_y, crop_w, crop_h;
+    const oracles_host_video_subpixel *subpixel;   /* NULL: shown as it is */
+    /* A part of the frame shown again above it larger, in whole screen pixels (the text box with Text size Large or
+     * Very large): drawn at box_size's factor of k, the frame's whole scale (text_box_enlarge.h: 1 Large, k + ceil(k / 2);
+     * 2 Very large, 2 k), or the next size down, centred on that part across and against its bottom edge when
+     * box_bottom, else its top, where it fits the frame shown; box_w 0: none. */
+    uint32_t box_x, box_y, box_w, box_h;
+    int box_bottom;
+    /* With the part shown alone (crop): the width of a box the backend may show so, whether one shows or not, which the
+     * part takes in too where its own scale holds it, so that the part's scale neither drops nor changes when a box
+     * opens; 0: none. */
+    uint32_t box_reserve_w;
+    unsigned box_size;
 } oracles_host_video_frame;
 
 typedef struct oracles_host_audio_chunk {
@@ -144,6 +175,14 @@ typedef struct oracles_host_run_config {
      * largest whole scale: the game's menus, which the Enhanced view shows framed, enlarged on a small screen. */
     int (*frame_crop)(void *opaque, uint32_t rect[4]);
     void *frame_crop_opaque;
+    /* When set and it returns 1, the frame's band is moved by less than a pixel when it is shown (an uncropped frame). */
+    int (*frame_subpixel)(void *opaque, oracles_host_video_subpixel *out);
+    void *frame_subpixel_opaque;
+    /* When set and it returns 1, the part of the frame the backend shows again above it larger (oracles_host_video_frame's
+     * box): x, y, width, height, and whether it stands against its bottom edge; whatever it returns, the box's
+     * reserve and size. */
+    int (*frame_box)(void *opaque, uint32_t rect[4], int *bottom, uint32_t *reserve_w, unsigned *size);
+    void *frame_box_opaque;
     /* The surface the frame source fills; 0 means the core screen (160x144). */
     uint32_t frame_width, frame_height;
     /* Once the backend has started (its window is open and sized), before the first frame: what must be ready before
@@ -153,7 +192,11 @@ typedef struct oracles_host_run_config {
      * core does not run meanwhile and no frame is counted, so a recorded route holds no frame of the pause; at the
      * resume the player's keys are released and the pacing starts again from the clock. */
     oracles_host_pause_result (*on_pause)(void *opaque);
-    void *pause_opaque;   /* for on_started and on_pause */
+    /* After a pause that resumes, when set: 1 when the presentation waits for the display from now on (vsync turned on
+     * there), the host then watching that it does as with display_paces; 0 when it no longer does (turned off), the host
+     * pacing; -1 when the pause left it as it was. */
+    int (*display_paces_now)(void *opaque);
+    void *pause_opaque;   /* for on_started, on_pause and display_paces_now */
 } oracles_host_run_config;
 
 typedef struct oracles_host_run_report {

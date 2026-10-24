@@ -11,7 +11,8 @@
  * coordinates.  Columns the active room does not cover are neighbours,
  * black until the ghost instance fills them (a declared fallback).  The
  * gutters beside the status bar are the border, or with the bar drawn full
- * width (`hud=full`) the bar's own background, line by line.
+ * width (`hud=full`) the bar's own background, line by line; with the bar laid
+ * out (`hud=wide`) its blocks stand at the band's corners on that background.
  *
  * Frames the software PPU does not reconstruct, the ring menu and cutscenes
  * (LCD behaviours 2 to 6) and frames where the window is scanned, use the
@@ -181,6 +182,7 @@ typedef struct OraclesEnhancedCompose {
     int fade;                                                    /* the game's palette fade, -32 (black) to 31 (white), 0 none: applied to every source but the core's window, which carries it already */
     const uint32_t *colours;                                     /* ORACLES_PPU_COLOURS pixels by RGB555 colour, the live pipeline; NULL for a plain expansion */
     const int16_t *line_shift, *line_shift_y;                    /* world mode: the scroll each of the game area's 128 lines was drawn with, less the camera's (the per-line ripples, SCX and SCY), repeated above and below the window; NULL: none */
+    int32_t sway;                                                /* world mode: the part of line_shift common to its lines, taken off them (the core's image drawn again without it) */
     const OraclesEnhancedNeighbour *neighbours;                  /* world mode; may be NULL */
     unsigned neighbour_count;
     OraclesEnhancedSize size;                                    /* the surface's; {0, 0}: the normal 256x144 */
@@ -188,6 +190,7 @@ typedef struct OraclesEnhancedCompose {
     int32_t counted_left, counted_top;                           /* world mode: the world rectangle whose uncovered pixels are counted (a large room and the one a scroll enters, */
     unsigned counted_width, counted_height;                      /* the black around them decided); width 0: all of the part shown */
     const uint32_t *hud_fill;                                    /* world mode: the HUD band's gutters line by line (oracles_enhanced_hud_fill), 0 where a line keeps the border; NULL: the border */
+    const struct OraclesEnhancedHudPlace *hud_place;             /* world mode: the status bar cut into its blocks and laid out (oracles_enhanced_hud_place); NULL: centred */
 } OraclesEnhancedCompose;
 
 /* The game's status bar as it keeps it: its map (two rows of 32 cells, tiles and attributes), the LCDC of its lines
@@ -210,11 +213,68 @@ uint16_t oracles_enhanced_bar_pixel(const OraclesEnhancedBar *bar, unsigned x, u
 unsigned oracles_enhanced_hud_fill(const OraclesEnhancedBar *bar, uint32_t (*pixel)(void *opaque, uint16_t rgb555), void *opaque,
                                    const uint32_t *core, uint32_t fill[2u * ORACLES_ENHANCED_HUD_HEIGHT]);
 
+/* The status bar's layouts, which the game chooses and loads as its map (loadStatusBarMap, docs/GAME_HOOKS.md, section 1):
+ * the normal one; the one tightened for a fifteenth and a sixteenth heart, B and A 36 wide each where they are 40, the
+ * money and the hearts a column further left, eight hearts a row where they are seven; Biggoron's sword, B and A one
+ * frame, the money and the hearts where the hearts put them.  Each is four blocks side by side: B and A, the money (the
+ * rupees, a dungeon's keys, Seasons' ore in Subrosia), 24 wide, and the hearts to the bar's right edge. */
+typedef enum OraclesEnhancedBarLayout {
+    ORACLES_ENHANCED_BAR_NONE = 0,     /* a map that signs none: the bar hidden by a cutscene, or a game's own */
+    ORACLES_ENHANCED_BAR_NORMAL,
+    ORACLES_ENHANCED_BAR_TIGHT,
+    ORACLES_ENHANCED_BAR_BIGGORON
+} OraclesEnhancedBarLayout;
+#define ORACLES_ENHANCED_BAR_BUTTONS 80u         /* B and A's width: 40 each */
+#define ORACLES_ENHANCED_BAR_BUTTONS_TIGHT 72u   /* 36 each, the hearts tightened */
+#define ORACLES_ENHANCED_BAR_MONEY 24u
+/* The layout the bar's map signs: the cells of its frame as the game loads them, tile and attributes. */
+OraclesEnhancedBarLayout oracles_enhanced_bar_layout(const OraclesEnhancedBar *bar);
+/* Whether the core's image (160x144) shows `layout`'s frame, its cells drawn from the bar's VRAM and palettes and
+ * converted by `pixel` (as for oracles_enhanced_hud_fill), pixel for pixel. */
+int oracles_enhanced_bar_layout_shown(const OraclesEnhancedBar *bar, OraclesEnhancedBarLayout layout, uint32_t (*pixel)(void *opaque, uint16_t rgb555),
+                                      void *opaque, const uint32_t *core);
+
+/* The status bar cut into its blocks and laid out across the HUD band (`hud=wide`): the hearts at the left edge, the
+ * money after them, B and A against the right edge, the hotbar's slots against B where they fit; the rest of the band
+ * the bar's background, as full width paints it.  The hearts' two rows stand side by side on the band's middle eight
+ * lines, the game's cells as they are, where the band holds them with the hotbar's width (`hotbar`) beside, whether the
+ * hotbar is drawn or not.  The blocks keep a margin from the band's edges, eight pixels each side, or what the band
+ * leaves beside them and the hotbar's width where it fits: none in near 16:9, four in medium 4:3, none there with the
+ * hearts tightened.  Each block is the core's own pixels: icons, counts, fades and a sprite over them follow. */
+#define ORACLES_ENHANCED_HUD_MARGIN 8u
+typedef struct OraclesEnhancedHudPlace {
+    unsigned buttons;                  /* B and A's width, the bar's columns from 0: 80, or 72 tightened */
+    unsigned hearts;                   /* the hearts' width, the bar's last columns: 56 or 64, two rows of seven or eight cells */
+    int one_row;                       /* the hearts' rows side by side */
+    unsigned margin;                   /* the band's columns left at each edge */
+    unsigned hearts_at, money_at, buttons_at;   /* the band's columns of the hearts, of the money and of B and A */
+    int hotbar;                        /* the hotbar's slots fit between the money and B, */
+    unsigned hotbar_at;                /* from this column */
+} OraclesEnhancedHudPlace;
+static inline OraclesEnhancedHudPlace oracles_enhanced_hud_place(unsigned width, unsigned buttons, unsigned hotbar)
+{
+    OraclesEnhancedHudPlace p;
+    p.buttons = buttons;
+    p.hearts = ORACLES_ENHANCED_CORE_WIDTH - buttons - ORACLES_ENHANCED_BAR_MONEY;
+    p.one_row = width >= 2u * p.hearts + ORACLES_ENHANCED_BAR_MONEY + hotbar + buttons;   /* 312 wide, 320 tightened */
+    const unsigned left = (p.one_row ? 2u : 1u) * p.hearts + ORACLES_ENHANCED_BAR_MONEY;
+    p.hotbar = width >= left + hotbar + buttons;
+    const unsigned blocks = left + (p.hotbar ? hotbar : 0u) + buttons, room = width > blocks ? (width - blocks) / 2u : 0u;
+    p.margin = room < ORACLES_ENHANCED_HUD_MARGIN ? room : ORACLES_ENHANCED_HUD_MARGIN;
+    p.hearts_at = p.margin;
+    p.money_at = p.margin + left - ORACLES_ENHANCED_BAR_MONEY;
+    p.buttons_at = width - p.margin - buttons;
+    p.hotbar_at = p.buttons_at - hotbar;
+    return p;
+}
+
 /* Writes size.width * size.height pixels of 0xffRRGGBB. `core` is the 160x144 image
  * of the core (or the software PPU): its top sixteen lines are the status
  * bar, its bottom 128 the game area of the active room.  Returns the number
  * of world-band pixels no source covered (black), 0 in framed mode. */
 unsigned oracles_enhanced_compose(const uint32_t *core, const OraclesEnhancedCompose *in, uint32_t *out);
+/* The HUD band alone, the world mode's sixteen lines at the top of `out`, the rest left as it is. */
+void oracles_enhanced_compose_hud(const uint32_t *core, const OraclesEnhancedCompose *in, uint32_t *out);
 /* An RGB555 colour of a source that does not carry the game's palette fade, as the compose draws it: the fade
  * (-32 to 31) applied as the game applies it, then the pixel of `colours` (NULL: plain RGB). */
 uint32_t oracles_enhanced_faded_pixel(const uint32_t *colours, uint32_t rgb555, int fade);
