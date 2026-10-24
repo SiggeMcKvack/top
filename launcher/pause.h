@@ -40,7 +40,8 @@ typedef struct OraclesPauseSession {
     unsigned cheats;   /* the running game's cheats, --cheats' perhaps, which its Cheats page starts from */
     int has_cheats;    /* its profile has them: else the menu has no Cheats */
     /* Draws the game's last image into `image`, in the window's pixels, as its last frame showed it (the sub-pixel
-     * camera's band at its fraction of a pixel, Link at his place); NULL: the frame drawn there as it is. */
+     * camera's band at its fraction of a pixel, Link at his place, Text size's box enlarged); NULL: the frame drawn there
+     * as it is. */
     int (*game_image)(void *opaque, SDL_Renderer *renderer, const SDL_FRect *image);
     int has_swim, has_hotkeys;   /* its profile has the swim's hold, the item hotkeys: else an Oracle's Controls dims them */
     /* Its window as window_scale= counts it (2 to 4, 0 fullscreen), F11's toggle included, which Display shows, -2 for

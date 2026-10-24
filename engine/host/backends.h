@@ -164,7 +164,8 @@ void oracles_sdl_backend_pause_view(const oracles_host_backend *backend, struct 
 /* For the pause menu, between two frames: the game's last image drawn into `image`, in the window's pixels (the
  * logical presentation lifted), as its last frame showed it: the sub-pixel camera's band at its fraction of a pixel,
  * the patch and Link's layer at their places, the fixed rectangles unmoved; the frame as it is when the last frame was
- * shown so (no sub-pixel camera, the touch controls' or the screen margin's drawing). */
+ * shown so (no sub-pixel camera, the touch controls' or the screen margin's drawing); then the text box Text size
+ * showed again larger over it, at that size over the image. */
 int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const struct SDL_FRect *image);
 /* What asked for the pause menu last: a key (Escape), a controller (Guide, the menu's button or trigger) or a finger
  * (the touch controls' pause); NONE before any, for Android's Back, which a finger or a controller gives too, and for

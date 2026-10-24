@@ -120,20 +120,19 @@ static int present_subpixel(sdl_backend *backend, const oracles_host_video_frame
 }
 
 /* Text size Large or Very large: the frame's text box (oracles_host_video_frame's box) shown again above the frame, in
- * whole screen pixels, at its size or the next down where the frame drawn at `to` (screen pixels) holds it; `direct`
- * when the screen's pixels are drawn to already, else the logical presentation is set aside for it. */
-static void draw_box(sdl_backend *backend, const SDL_FRect *to, int direct)
+ * whole screen pixels, at its size or the next down where the frame drawn at `to` (screen pixels) holds it; `part` the
+ * frame's part shown alone, NULL for the whole frame; `direct` when the screen's pixels are drawn to already, else the
+ * logical presentation is set aside for it.  1 when it is drawn. */
+static int draw_box_of(sdl_backend *backend, const oracles_host_video_frame *frame, const SDL_FRect *part, const SDL_FRect *to, int direct)
 {
-    const oracles_host_video_frame *frame = backend->presenting;
-    if (!frame || !frame->box_w || !frame->box_h) return;
-    const SDL_FRect *part = backend->presenting_cropped ? &backend->presenting_part : NULL;
+    if (!frame || !frame->box_w || !frame->box_h) return 0;
     const float ox = part ? part->x : 0.0f, oy = part ? part->y : 0.0f, lw = part ? part->w : (float)frame->width, lh = part ? part->h : (float)frame->height;
     if ((float)frame->box_x < ox || (float)frame->box_y < oy || (float)(frame->box_x + frame->box_w) > ox + lw || (float)(frame->box_y + frame->box_h) > oy + lh
-        || lw <= 0.0f || to->w <= 0.0f) return;
+        || lw <= 0.0f || to->w <= 0.0f) return 0;
     int32_t out[4];
     unsigned factor = 0;
     if (!oracles_text_box_enlarge(to->x, to->y, to->w, to->h, (double)to->w / (double)lw, frame->box_x - (uint32_t)ox, frame->box_y - (uint32_t)oy, frame->box_w,
-                                  frame->box_h, frame->box_size, frame->box_bottom, out, &factor)) return;
+                                  frame->box_h, frame->box_size, frame->box_bottom, out, &factor)) return 0;
     int logical_w = 0, logical_h = 0;
     SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
     if (!direct) {
@@ -148,7 +147,23 @@ static void draw_box(sdl_backend *backend, const SDL_FRect *to, int direct)
     SDL_RenderTexture(backend->renderer, backend->texture, &source, &drawn);
     SDL_SetTextureScaleMode(backend->texture, sampling);
     if (!direct) SDL_SetRenderLogicalPresentation(backend->renderer, logical_w, logical_h, mode);
+    return 1;
+}
+
+/* The frame being presented's box; kept for the pause, which shows it again over its image of the frame. */
+static void draw_box(sdl_backend *backend, const SDL_FRect *to, int direct)
+{
+    const oracles_host_video_frame *frame = backend->presenting;
+    if (!draw_box_of(backend, frame, backend->presenting_cropped ? &backend->presenting_part : NULL, to, direct)) return;
+    backend->shown_box = *frame;
+    backend->shown_box.pixels = NULL;
+    backend->shown_box.subpixel = NULL;
     backend->boxes_enlarged++;
+}
+
+int sb_draw_shown_box(sdl_backend *backend, const SDL_FRect *to)
+{
+    return draw_box_of(backend, &backend->shown_box, NULL, to, 1);
 }
 
 static void draw_box_direct(void *opaque, SDL_Renderer *renderer, const SDL_FRect *to)
@@ -187,6 +202,7 @@ int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame)
     backend->touch.over_frame_opaque = backend;
     if (logical_w != backend->logical_w || logical_h != backend->logical_h || filled != backend->filled) sb_present_as(backend, logical_w, logical_h);
     backend->shown_subpixel = 0;
+    backend->shown_box.box_w = 0;
     if (!oracles_touch_sdl_frame(&backend->touch, backend->renderer, backend->texture, cropped ? &part : NULL)) {   /* the touch controls' own drawing */
         if (!SDL_RenderClear(backend->renderer)) return 0;
         if (frame->subpixel && !cropped) { if (!present_subpixel(backend, frame)) return 0; }

@@ -507,10 +507,11 @@ static long differing(const SDL_Surface *a, const SDL_Surface *b)
 
 /* The pause shows the game's last frame as it was shown: the band at its fraction of a pixel (here half a pixel left
  * and three quarters up, the sliver it uncovers filled), the patch and Link's layer at their places, the status bar
- * and a fixed rectangle unmoved; drawn where the pause puts the image, in the window's pixels, it is the frame's
- * picture pixel for pixel, at 4x in a 1920x1080 window, at 2x in a 960x540 one, and with Fill in fullscreen on
- * 1280x720 (8/3), though the view's layer has changed since.  With the screen margin, whose drawing shows the frame as it is, the
- * frame as it is. */
+ * and a fixed rectangle unmoved, the text box Text size Large enlarges over them; drawn where the pause puts the image,
+ * in the window's pixels, it is the frame's picture pixel for pixel, at 4x in a 1920x1080 window, at 2x in a 960x540
+ * one, and with Fill in fullscreen on 1280x720 (8/3), though the view's layer has changed since; so is it without the
+ * sub-pixel camera, the box enlarged over the frame as it is.  With the screen margin, whose drawing shows the frame as
+ * it is, the frame as it is, the box enlarged over it. */
 static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
 {
     static uint32_t pixels[480 * 270], layer[64 * 64], patch[64 * 64];
@@ -534,7 +535,8 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
         if (backend.start(backend.opaque, 480, 270, 48000, 0)) {
             for (unsigned y = 0; y < 2; y++) for (unsigned x = 0; x < 2; x++) { layer[y * 64 + x] = 0xff00ff00u; patch[y * 64 + x] = 0xff000000u; }
             const oracles_host_video_subpixel sub = { 128, 192, 16, 254, layer, 20, 40, 2, 2, 64, 64, -32, patch, 1, { { 100, 200, 40, 20 } } };
-            const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 0, 0, 0, 0, 0, 0, 0 };
+            const oracles_host_video_frame image = { pixels, 480, 270, 480 * sizeof(uint32_t), 0, 0, 0, 0, &sub, 160, 200, 160, 48, 1, 0,
+                                                     ORACLES_TEXT_BOX_ENLARGE_LARGE };
             CHECK(backend.present_frame(backend.opaque, &image));
             SDL_FRect area;
             CHECK(SDL_GetRenderLogicalPresentationRect(renderer, &area) && area.w == (fullscreen ? 1280.0f : 480.0f * (float)sizes[i][2]));
@@ -564,6 +566,24 @@ static void pause_image(SDL_Window *window, SDL_Renderer *renderer)
             SDL_DestroySurface(played);
             SDL_DestroySurface(whole);
             SDL_DestroySurface(paused);
+            SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
+            /* Without the sub-pixel camera: the box enlarged over the frame as it is, in play and in the pause. */
+            oracles_host_video_frame flat = image;
+            flat.subpixel = NULL;
+            CHECK(backend.present_frame(backend.opaque, &flat));
+            SDL_Surface *played_flat = picture(renderer);
+            SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+            SDL_RenderClear(renderer);
+            CHECK(SDL_RenderTexture(renderer, kept, NULL, &at));
+            SDL_Surface *unboxed = picture(renderer);
+            CHECK(differing(played_flat, unboxed) > 0);
+            SDL_RenderClear(renderer);
+            CHECK(oracles_sdl_backend_pause_image(&backend, &at));
+            SDL_Surface *paused_flat = picture(renderer);
+            CHECK(differing(played_flat, paused_flat) == 0);
+            SDL_DestroySurface(played_flat);
+            SDL_DestroySurface(unboxed);
+            SDL_DestroySurface(paused_flat);
             SDL_SetRenderLogicalPresentation(renderer, logical_w, logical_h, presentation);
             /* The screen margin draws the frame as it is: so does the pause. */
             if (i == 1) {

@@ -43,6 +43,7 @@ typedef struct sdl_backend {
      * the layer as `shown` placed them, the layer's texture holding them when `shown_layered`), or the texture as it is. */
     oracles_host_video_subpixel shown;
     int shown_layered, shown_subpixel;
+    oracles_host_video_frame shown_box;   /* its text box shown again larger (box_w 0: none), without its pixels */
     int frame_width, frame_height;   /* the texture's: the session's surface */
     int logical_w, logical_h;        /* the renderer's logical size: the surface's, or the part shown alone */
     int fill;                        /* Scaling's Fill chosen */
@@ -109,10 +110,11 @@ void sb_resolve_bindings(sdl_backend *backend, const oracles_sdl_options *option
 void sb_resolve_hotkeys(sdl_backend *backend, const oracles_sdl_options *options);
 void sb_resolve_menu(sdl_backend *backend, const oracles_sdl_options *options);
 int sb_sdl_poll_event(void *opaque, oracles_host_event *event, int *has_event);
-/* sdl_present.c: a texture's part drawn at a place of the frame; the band moved by the sub-pixel camera; a frame
- * presented. */
+/* sdl_present.c: a texture's part drawn at a place of the frame; the band moved by the sub-pixel camera; the last
+ * frame's text box shown again larger over the whole frame drawn at `to`, in the window's pixels; a frame presented. */
 int sb_draw_subpixel(sdl_backend *backend, const oracles_host_video_subpixel *sp, int layered, const SDL_FRect *to);
 int sb_put(SDL_Renderer *r, SDL_Texture *texture, const SDL_FRect *src, const SDL_FRect *dst, const SDL_FRect *to, float sx, float sy);
+int sb_draw_shown_box(sdl_backend *backend, const SDL_FRect *to);
 int sb_sdl_present_frame(void *opaque, const oracles_host_video_frame *frame);
 
 #endif

@@ -427,7 +427,11 @@ int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const s
 {
     sdl_backend *state = backend->opaque;
     if (!state->texture) return 0;
-    if (!state->shown_subpixel) return SDL_RenderTexture(state->renderer, state->texture, NULL, image);
+    if (!state->shown_subpixel) {
+        if (!SDL_RenderTexture(state->renderer, state->texture, NULL, image)) return 0;
+        sb_draw_shown_box(state, image);   /* Text size Large's box, which the presenter drew over the frame */
+        return 1;
+    }
     /* At the image's whole pixels and cut to it, as the logical presentation's viewport places and cuts the frame. */
     const SDL_FRect at = { SDL_floorf(image->x), SDL_floorf(image->y), image->w, image->h };
     const SDL_Rect cut = { (int)at.x, (int)at.y, (int)at.w, (int)at.h };
@@ -437,6 +441,7 @@ int oracles_sdl_backend_pause_image(const oracles_host_backend *backend, const s
     SDL_SetRenderClipRect(state->renderer, &cut);
     const int drawn = sb_draw_subpixel(state, &state->shown, state->shown_layered, &at);
     SDL_SetRenderClipRect(state->renderer, clipped ? &before : NULL);
+    if (drawn) sb_draw_shown_box(state, image);
     return drawn;
 }
 
