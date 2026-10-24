@@ -1,0 +1,92 @@
+/* The harness's run (harness.c): what one replay holds, shared with its reports (harness_report.c). */
+#ifndef ORACLES_HARNESS_INTERNAL_H
+#define ORACLES_HARNESS_INTERNAL_H
+
+#include "backends.h"
+#include "core.h"
+#include "enhanced_check.h"
+#include "room_transition.h"
+#include "animation_check.h"
+#include "object_sprites_check.h"
+#include "hotkeys_check.h"
+#include "harness_options.h"
+#include "coverage.h"
+#include "neighbour_check.h"
+#include "object_animation_check.h"
+#include "frame_check.h"
+#include "ghost_check.h"
+#include "guest.h"
+#include "guest_fingerprint.h"
+#include "guest_struct_offsets.h"
+#include "mod_session.h"
+#include "language_session.h"
+#include "bps.h"
+#include "rom.h"
+#include "route.h"
+#include "sha1.h"
+#include "text_box.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+typedef struct run {
+    OraclesCore *core;
+    const OraclesCompatProfile *profile;
+    OraclesGuest *guest;      /* NULL with --hooks off */
+    OraclesFrameCheck *check; /* NULL without --render-check */
+    OraclesGhostCheck *ghost; /* NULL without --ghost-check */
+    OraclesEnhancedCheck *enhanced; /* NULL without --enhanced-check */
+    OraclesRoomTransition *transition; /* NULL without --continuous-transitions */
+    OraclesCoverage *coverage; /* what the route covers, with a guest */
+    OraclesAnimationCheck *animation; /* the neighbours' animation reader against the live game, with the Enhanced check */
+    OraclesObjectSpritesCheck *object_sprites; /* the objects' sprites built from the game's data against the live OAM, with the Enhanced check */
+    OraclesNeighbourCheck *neighbours; /* NULL without --neighbour-objects-check or --object-animation-check */
+    OraclesObjectAnimationCheck *object_animation; /* NULL without --object-animation-check */
+    OraclesHotkeysCheck *hotkeys; /* with --hotkeys-check, or when the route carries inventory exchanges */
+    OraclesHotkeysLive *hotkeys_live; /* with --hotkeys-live: scripted keys over the route's inputs */
+    unsigned dumps;               /* --dump-at, as many times as wanted */
+    uint32_t dump_at[HARNESS_MAX_DUMPS];
+    const char *dump_path[HARNESS_MAX_DUMPS];
+    harness_poke pokes[HARNESS_MAX_POKES];   /* --poke-at */
+    unsigned poke_count;
+    OraclesModSession *mod;   /* --mods */
+    OraclesLanguageSession *language;   /* --language */
+    OraclesGame game;
+    OraclesRoute route;
+    FILE *out;
+    FILE *positions;          /* --positions */
+    FILE *keys_read;          /* --keys-read */
+    FILE *frame_times;        /* --frame-times */
+    uint32_t keys_polls;      /* the game's input polls counted by the guest at the last frame's end */
+    uint32_t corrupt_at;      /* 0: never */
+    uint32_t colour_toggle_at; /* --colour-toggle-at, F2 in the launcher; 0: never */
+    unsigned events;
+    size_t journal_writes;
+    const uint8_t *rom;       /* the ROM the transitions read, with them */
+    size_t rom_size;
+    int swam_before;          /* Link swimming at the last frame of normal play, with the continuous transitions */
+    int swam_into;            /* and at the start of the transition in progress */
+    int in_transition, landing;   /* a transition seen in progress; Link swam into the one that just ended */
+    int carried_off;          /* 8.8: what the last transition carried him off its straight path, across its axis */
+    unsigned landing_direction;
+    unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
+    unsigned cheats_changed;  /* the cheats the route's `cheat` lines change, their points armed from the start */
+    int swim_changed;         /* the route's `set swim-hold` lines change the swim's hold, its tests armed from the start */
+} run;
+
+/* harness_report.c: each check's figures, to the standard error and the summary (--summary): the renderer's verdict (1
+ * when it passes), the continuous transitions', the Enhanced view's and the other checks', the item hotkeys' (1 when
+ * they hold), the language's. */
+int harness_report_renderer(run *r, const harness_options *o, FILE *summary);
+void harness_report_transitions(run *r, FILE *summary, uint8_t *rom);
+void harness_report_checks(run *r, const harness_options *o, FILE *summary, uint8_t *rom);
+int harness_report_hotkeys(run *r, FILE *summary);
+void harness_report_language(run *r, FILE *summary);
+
+#endif

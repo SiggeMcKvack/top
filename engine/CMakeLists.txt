@@ -52,7 +52,7 @@ target_link_libraries(oracles_ghost PUBLIC oracles_guest oracles_render oracles_
 oracles_set_warnings(oracles_ghost)
 
 # Enhanced presentation: the smooth camera reducer fed from the guest bus.
-add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_poses.c enhanced/view_textbox.c enhanced/text_box.c enhanced/view_hotbar.c enhanced/view_scroll.c enhanced/view_phase.c enhanced/hotbar.c)
+add_library(oracles_enhanced STATIC enhanced/camera.c enhanced/compositor.c enhanced/view.c enhanced/view_state.c enhanced/view_mode.c enhanced/view_black.c enhanced/view_cache.c enhanced/view_map.c enhanced/view_ghost.c enhanced/view_schedule.c enhanced/view_render.c enhanced/view_tint.c enhanced/view_overlay.c enhanced/view_objects.c enhanced/view_poses.c enhanced/view_textbox.c enhanced/text_box.c enhanced/view_hotbar.c enhanced/view_scroll.c enhanced/view_phase.c enhanced/hotbar.c)
 target_include_directories(oracles_enhanced PUBLIC enhanced)
 target_link_libraries(oracles_enhanced PUBLIC oracles_guest oracles_core oracles_ghost)
 oracles_set_warnings(oracles_enhanced)
@@ -117,7 +117,7 @@ endforeach()
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/language_config.c "${ORACLES_LANGUAGE_CONFIG_C}")
 add_library(oracles_language STATIC language/language_rom.c language/language_pack.c language/language_table.c language/language_rules.c
             language/language_own.c language/language_corrections.c language/language_extract.c language/language_fan.c language/language_compose.c language/language_gfx.c
-            language/language_wrap.c ${CMAKE_CURRENT_BINARY_DIR}/language_config.c)
+            language/language_wrap.c language/language_keep.c language/language_words.c ${CMAKE_CURRENT_BINARY_DIR}/language_config.c)
 target_include_directories(oracles_language PUBLIC language)
 target_link_libraries(oracles_language PUBLIC oracles_guest oracles_data oracles_core)
 oracles_set_warnings(oracles_language)

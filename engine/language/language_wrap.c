@@ -20,7 +20,7 @@
  * text's.  A text laid out again must give the same commands as before (oracles_text_same_commands), the same characters
  * but its spaces, breaks and the hyphens of the words it joined, every line within the width and no break before its end nor empty line the
  * layout made (a page kept as it is keeps its own); one that does not keeps its layout. */
-#include "language_internal.h"
+#include "language_wrap_internal.h"
 #include "sha1.h"
 
 #include <stdio.h>
@@ -28,7 +28,6 @@
 #include <string.h>
 
 #define CODE_END 0x00u
-#define CODE_NEWLINE 0x01u
 #define CODE_DICTIONARY_FIRST 0x02u
 #define CODE_SYMBOL 0x06u
 #define CODE_JUMP 0x07u
@@ -43,12 +42,10 @@
 #define COMMAND_HEART_PIECE 5u
 #define COMMAND_NUMBER_2 6u
 #define SPACE 0x20u
-#define HYPHEN 0x2du
 #define NAME_LETTERS 5u
 #define NUMBER_DIGITS 3u
 #define COLOURS 5u
 #define WORDS 512u
-#define LEARNED_BYTES 24u
 /* What a layout's choices cost, against a line's empty pixels squared (lay_out). */
 #define COST_COLOUR 4096u   /* a break within a colour: a name, an item */
 #define COST_HYPHEN 2500u   /* a word broken at a hyphen */
@@ -61,29 +58,10 @@ static const uint8_t colour_attribute[COLOURS] = { 0x80, 0x80, 0x81, 0x81, 0x81 
 /* The attribute a box opens with: $80, or $81 with TEXTBOXFLAG_ALTPALETTE1 (initTextboxStuff). */
 static const uint8_t opening_attribute[2] = { 0x80, 0x81 };
 
-struct language_wrap {
-    OraclesTextFont font;
-    unsigned width;
-    uint8_t name_letter, digit;   /* the widest letter a name may hold, the widest digit */
-    int syllables;                /* the language breaks a word by its syllables at a line's end (German, Italian) */
-    unsigned learned, learned_capacity;
-    uint8_t (*words)[LEARNED_BYTES];   /* the words the language writes with a hyphen inside a line, 0-padded */
-    unsigned written, written_capacity;   /* a power of two */
-    uint8_t (*whole)[LEARNED_BYTES];      /* the words it writes, without a hyphen, its capitals A to Z small, 0-padded; an empty slot 0 */
-};
-
-static int is_small(uint8_t c) { return (c >= 'a' && c <= 'z') || c == 0x91u || (c >= 0xa0u && c <= 0xb0u) || (c >= 0xd0u && c <= 0xd8u); }
-static int is_capital(uint8_t c) { return (c >= 'A' && c <= 'Z') || (c >= 0x80u && c <= 0x90u) || (c >= 0xc0u && c <= 0xc8u); }
-static int is_letter(uint8_t c) { return is_small(c) || is_capital(c); }
-/* A control code's bytes: one for the break and the end, two from the dictionary's on. */
-static size_t code_bytes(uint8_t c) { return c >= ORACLES_TEXT_FIRST_CHARACTER || c <= CODE_NEWLINE ? 1u : 2u; }
-
 /* English compounds the games write closed but break at a line's end with a hyphen, both of whose parts they write
  * alone and none of whose texts writes them whole (Kinomi's "after-life", "under-water", Ages' and Moonrise's
  * "head-stone"): written whole, so that the layout joins them. */
 static const char *const closed_compounds[] = { "afterlife", "headstone", "underwater" };
-
-static void write_whole(language_wrap *wrap, const uint8_t *text, size_t length);
 
 language_wrap *language_wrap_new(const OraclesTextFont *font, unsigned width, OraclesLanguage language)
 {
@@ -102,7 +80,7 @@ language_wrap *language_wrap_new(const OraclesTextFont *font, unsigned width, Or
         if (font->advance[c] > font->advance[wrap->digit]) wrap->digit = (uint8_t)c;
     if (language == ORACLES_LANGUAGE_ENGLISH || language == ORACLES_LANGUAGE_ENGLISH_EU)
         for (size_t i = 0; i < sizeof closed_compounds / sizeof closed_compounds[0]; i++)
-            write_whole(wrap, (const uint8_t *)closed_compounds[i], strlen(closed_compounds[i]));
+            language_wrap_write_whole(wrap, (const uint8_t *)closed_compounds[i], strlen(closed_compounds[i]));
     return wrap;
 }
 
@@ -112,109 +90,6 @@ void language_wrap_free(language_wrap *wrap)
     free(wrap->words);
     free(wrap->whole);
     free(wrap);
-}
-
-static int learned(const language_wrap *wrap, const uint8_t *word, size_t length)
-{
-    if (length >= LEARNED_BYTES) return 0;
-    for (unsigned i = 0; i < wrap->learned; i++)
-        if (!memcmp(wrap->words[i], word, length) && !wrap->words[i][length]) return 1;
-    return 0;
-}
-
-/* Whether the language writes `word` after a hyphen, as the last part of a word it hyphenates ("-vous", "-ce"). */
-static int learned_tail(const language_wrap *wrap, const uint8_t *word, size_t length)
-{
-    for (unsigned i = 0; i < wrap->learned && length; i++) {
-        size_t tail = 0;
-        for (size_t k = 0; k < LEARNED_BYTES && wrap->words[i][k]; k++)
-            if (wrap->words[i][k] == HYPHEN) tail = k + 1u;
-        if (tail && tail + length < LEARNED_BYTES && !memcmp(wrap->words[i] + tail, word, length) && !wrap->words[i][tail + length]) return 1;
-    }
-    return 0;
-}
-
-/* The slot of the word `word` (letters, `length` < LEARNED_BYTES, folded) in the words written whole: its own, or the
- * empty one it would take. */
-static uint8_t *written_slot(const language_wrap *wrap, const uint8_t *word, size_t length)
-{
-    uint32_t hash = 2166136261u;
-    for (size_t i = 0; i < length; i++) hash = (hash ^ word[i]) * 16777619u;
-    for (unsigned at = hash & (wrap->written_capacity - 1u);; at = (at + 1u) & (wrap->written_capacity - 1u)) {
-        uint8_t *slot = wrap->whole[at];
-        if (!slot[0] || (!memcmp(slot, word, length) && !slot[length])) return slot;
-    }
-}
-
-static uint8_t folded(uint8_t c) { return c >= 'A' && c <= 'Z' ? (uint8_t)(c + ('a' - 'A')) : c; }
-
-/* Whether the language writes `left` and `right` (letters) as one word, whatever the case of A to Z. */
-static int written_whole(const language_wrap *wrap, const uint8_t *left, size_t left_length, const uint8_t *right, size_t right_length)
-{
-    uint8_t word[LEARNED_BYTES];
-    if (!wrap->written || left_length + right_length >= LEARNED_BYTES) return 0;
-    for (size_t i = 0; i < left_length; i++) word[i] = folded(left[i]);
-    for (size_t i = 0; i < right_length; i++) word[left_length + i] = folded(right[i]);
-    return written_slot(wrap, word, left_length + right_length)[0] != 0;
-}
-
-/* The word `text`[at, end) (letters) among those written whole. */
-static void write_whole(language_wrap *wrap, const uint8_t *text, size_t length)
-{
-    uint8_t word[LEARNED_BYTES];
-    if (!length || length >= LEARNED_BYTES) return;
-    for (size_t i = 0; i < length; i++) word[i] = folded(text[i]);
-    if (2u * (wrap->written + 1u) > wrap->written_capacity) {
-        const unsigned capacity = wrap->written_capacity ? 2u * wrap->written_capacity : 1024u;
-        uint8_t (*grown)[LEARNED_BYTES] = calloc(capacity, sizeof *grown), (*old)[LEARNED_BYTES] = wrap->whole;
-        if (!grown) return;
-        const unsigned old_capacity = wrap->written_capacity;
-        wrap->whole = grown;
-        wrap->written_capacity = capacity;
-        for (unsigned i = 0; i < old_capacity; i++)
-            if (old[i][0]) memcpy(written_slot(wrap, old[i], strlen((const char *)old[i])), old[i], LEARNED_BYTES);
-        free(old);
-    }
-    uint8_t *slot = written_slot(wrap, word, length);
-    if (slot[0]) return;
-    memcpy(slot, word, length);
-    wrap->written++;
-}
-
-void language_wrap_learn(language_wrap *wrap, const uint8_t *text, size_t length)
-{
-    /* The words written whole, in a language whose hyphens at a line's end are its compounds': but the parts of a word
-     * broken at a line's end. */
-    for (size_t at = 0; !wrap->syllables && at < length;) {
-        if (!is_letter(text[at])) { at += code_bytes(text[at]); continue; }
-        size_t end = at;
-        while (end < length && is_letter(text[end])) end++;
-        const int broken = (end + 1u < length && text[end] == HYPHEN && text[end + 1u] == CODE_NEWLINE)
-            || (at >= 2u && text[at - 1u] == CODE_NEWLINE && text[at - 2u] == HYPHEN);
-        if (!broken) write_whole(wrap, text + at, end - at);
-        at = end;
-    }
-    for (size_t at = 0; at < length;) {
-        if (!is_letter(text[at])) { at += code_bytes(text[at]); continue; }
-        size_t end = at;
-        int inside = 0;
-        while (end < length && (is_letter(text[end]) || text[end] == HYPHEN)) {
-            if (text[end] == HYPHEN && end + 1u < length && is_letter(text[end + 1u]) && end > at) inside = 1;
-            end++;
-        }
-        if (inside && end - at < LEARNED_BYTES && !learned(wrap, text + at, end - at)) {
-            if (wrap->learned == wrap->learned_capacity) {
-                const unsigned capacity = wrap->learned_capacity ? 2u * wrap->learned_capacity : 64u;
-                uint8_t (*grown)[LEARNED_BYTES] = realloc(wrap->words, capacity * sizeof *grown);
-                if (!grown) return;
-                wrap->words = grown;
-                wrap->learned_capacity = capacity;
-            }
-            memset(wrap->words[wrap->learned], 0, LEARNED_BYTES);
-            memcpy(wrap->words[wrap->learned++], text + at, end - at);
-        }
-        at = end;
-    }
 }
 
 /* ---- measuring a line ------------------------------------------------------------------------------------------- */
@@ -473,9 +348,9 @@ static int words_of(const language_wrap *wrap, const uint8_t *text, size_t from,
                 while (right < to && text[right] < ORACLES_TEXT_FIRST_CHARACTER && text[right] > CODE_NEWLINE) right += 2u;
                 const size_t tail = n;
                 for (size_t i = right; i < to && is_letter(text[i]) && n < LEARNED_BYTES; i++) joined[n++] = text[i];
-                const int own = learned(wrap, joined, n) || learned_tail(wrap, joined + tail, n - tail);
-                const int broken = wrap->syllables || (tail && written_whole(wrap, joined, tail - 1u, joined + tail, n - tail))
-                    || (tail && n > tail && !written_whole(wrap, joined, tail - 1u, NULL, 0) && !written_whole(wrap, joined + tail, n - tail, NULL, 0));
+                const int own = language_wrap_learned(wrap, joined, n) || language_wrap_learned_tail(wrap, joined + tail, n - tail);
+                const int broken = wrap->syllables || (tail && language_wrap_written_whole(wrap, joined, tail - 1u, joined + tail, n - tail))
+                    || (tail && n > tail && !language_wrap_written_whole(wrap, joined, tail - 1u, NULL, 0) && !language_wrap_written_whole(wrap, joined + tail, n - tail, NULL, 0));
                 p->after[w] = is_small(next) && !own && broken ? GAP_SOFT : GAP_HARD;
             } else if (gap_end == at && dash) p->after[w] = GAP_HARD;   /* a dash of two hyphens: the line goes on without a space */
             line_start = 1;
@@ -809,158 +684,6 @@ language_wrap_result language_wrap_text_pages(const language_wrap *wrap, const u
     if (!same || empty_line || !oracles_text_same_commands(text, length, out, used) || !language_wrap_fits(wrap, out, used)
         || language_text_boxes(out, used) > language_text_boxes(text, length)) return WRAP_FAILED;
     return WRAP_DONE;
-}
-
-/* ---- the texts kept ----------------------------------------------------------------------------------------------- */
-
-extern const unsigned char oracles_vwf_keep_ages[], oracles_vwf_keep_seasons[], oracles_vwf_keep_moonrise[], oracles_vwf_keep_kinomi[], oracles_vwf_keep_temple[];
-
-#define KEEP_RANGES 16u
-
-typedef struct keep_row {
-    unsigned ranges, first[KEEP_RANGES], last[KEEP_RANGES];
-    unsigned languages;   /* a bit per OraclesLanguage */
-} keep_row;
-
-struct language_keep {
-    keep_row *rows;
-    unsigned count;
-};
-
-static int keep_field(const char **at, const char *end, const char **start, size_t *length)
-{
-    *start = *at;
-    const char *tab = memchr(*at, '\t', (size_t)(end - *at));
-    *length = (size_t)((tab ? tab : end) - *at);
-    *at = tab ? tab + 1 : end;
-    return *length ? 0 : -1;
-}
-
-static int keep_texts(const char *texts, size_t length, keep_row *row)
-{
-    char copy[256];
-    if (length >= sizeof copy) return -1;
-    memcpy(copy, texts, length);
-    copy[length] = 0;
-    row->ranges = 0;
-    for (const char *at = copy; *at;) {
-        unsigned first = 0, last = 0;
-        int used = 0;
-        if (sscanf(at, "%4x-%4x%n", &first, &last, &used) == 2 && used == 9) {}
-        else if (sscanf(at, "%4x%n", &first, &used) == 1 && used == 4) last = first;
-        else return -1;
-        if (row->ranges == KEEP_RANGES || last < first) return -1;
-        row->first[row->ranges] = first;
-        row->last[row->ranges++] = last;
-        at += used;
-        if (*at && *at != ' ') return -1;
-        while (*at == ' ') at++;
-    }
-    return row->ranges ? 0 : -1;
-}
-
-static int keep_languages(const char *languages, size_t length, unsigned *mask)
-{
-    *mask = 0;
-    if (length == 3 && !memcmp(languages, "all", 3)) {
-        *mask = (1u << ORACLES_LANGUAGE_COUNT) - 1u;
-        return 0;
-    }
-    for (const char *at = languages, *end = languages + length; at < end;) {
-        const char *comma = memchr(at, ',', (size_t)(end - at));
-        const size_t n = (size_t)((comma ? comma : end) - at);
-        char code[8] = { 0 };
-        OraclesLanguage language;
-        if (!n || n >= sizeof code) return -1;
-        memcpy(code, at, n);
-        if (oracles_language_parse(code, &language) != 0) return -1;
-        *mask |= 1u << language;
-        at += n + 1u;
-    }
-    return *mask ? 0 : -1;
-}
-
-void language_keep_free(language_keep *keep)
-{
-    if (!keep) return;
-    free(keep->rows);
-    free(keep);
-}
-
-language_keep *language_keep_parse(const char *table, char *error, size_t capacity)
-{
-    language_keep *k = calloc(1, sizeof *k);
-    unsigned lines = 1, number = 0;
-    for (const char *t = table; *t; t++) lines += *t == '\n';
-    if (!k || !(k->rows = calloc(lines, sizeof *k->rows))) {
-        snprintf(error, capacity, "out of memory");
-        language_keep_free(k);
-        return NULL;
-    }
-    for (const char *line = table; *line;) {
-        const char *end = strchr(line, '\n');
-        if (!end) end = line + strlen(line);
-        const char *next = *end ? end + 1 : end;
-        number++;
-        if (end > line && end[-1] == '\r') end--;
-        if (*line != '#' && end > line) {
-            const char *at = line, *t, *l, *why;
-            size_t tl, ll, wl;
-            keep_row *row = &k->rows[k->count];
-            if (keep_field(&at, end, &t, &tl) != 0 || keep_field(&at, end, &l, &ll) != 0 || keep_field(&at, end, &why, &wl) != 0
-                || keep_texts(t, tl, row) != 0 || keep_languages(l, ll, &row->languages) != 0) {
-                snprintf(error, capacity, "the compact text's kept texts: row %u is not one", number);
-                language_keep_free(k);
-                return NULL;
-            }
-            k->count++;
-        }
-        line = next;
-    }
-    return k;
-}
-
-const char *language_keep_table(OraclesRomRevision revision)
-{
-    switch (revision) {
-    case ORACLES_ROM_REVISION_AGES_US: return (const char *)oracles_vwf_keep_ages;
-    case ORACLES_ROM_REVISION_SEASONS_US: return (const char *)oracles_vwf_keep_seasons;
-    case ORACLES_ROM_REVISION_MOONRISE_1_0_6: return (const char *)oracles_vwf_keep_moonrise;
-    case ORACLES_ROM_REVISION_KINOMI_1_1_2: return (const char *)oracles_vwf_keep_kinomi;
-    case ORACLES_ROM_REVISION_TEMPLE_1_073: return (const char *)oracles_vwf_keep_temple;
-    default: return "";
-    }
-}
-
-language_keep *language_keep_load(OraclesRomRevision revision, char *error, size_t capacity)
-{
-    return language_keep_parse(language_keep_table(revision), error, capacity);
-}
-
-void oracles_language_layout_digest(const OraclesLanguageLayout *layout, OraclesRomRevision revision, char out[41])
-{
-    const char *table = language_keep_table(revision);
-    const size_t n = strlen(table);
-    char *bytes = malloc(n + 64u);
-    if (!bytes) { snprintf(out, 41, "%040u", 0u); return; }
-    const unsigned lines = layout && layout->lines ? layout->lines : 2u;
-    char extra[32] = "";
-    if (layout && layout->fixed) snprintf(extra, sizeof extra, " fixed");
-    if (lines != 2u) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " lines %u", lines);
-    const int head = snprintf(bytes, 64u, "layout %u width %u%s\n", ORACLES_LANGUAGE_LAYOUT_REVISION, layout ? layout->width : 0u, extra);
-    memcpy(bytes + head, table, n);
-    oracles_sha1_hex((const uint8_t *)bytes, (size_t)head + n, out);
-    free(bytes);
-}
-
-int language_keep_has(const language_keep *keep, OraclesLanguage language, unsigned id)
-{
-    for (unsigned r = 0; keep && r < keep->count; r++) {
-        if (!(keep->rows[r].languages & 1u << language)) continue;
-        for (unsigned i = 0; i < keep->rows[r].ranges; i++)
-            if (id >= keep->rows[r].first[i] && id <= keep->rows[r].last[i]) return 1;
-    }
-    return 0;
 }
 
 unsigned language_text_inline_targets(const uint8_t *text, size_t length, uint8_t *targets, unsigned capacity)

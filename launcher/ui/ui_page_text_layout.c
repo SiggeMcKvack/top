@@ -7,7 +7,7 @@
 #include <math.h>
 #include <string.h>
 
-/* As ui_page_layout.c's, in scene pixels. */
+/* As ui_page_layout_internal.h's, in scene pixels. */
 #define HEAD_X 96.0f
 #define HEAD_W 520.0f
 #define LABEL_PAD_TOP 18.0f

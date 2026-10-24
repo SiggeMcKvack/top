@@ -102,6 +102,27 @@ void oracles_session_stop_recording(session *s, const char *why);
 /* session_route.c: --play's route read and its options taken on, --record's opened; 1, or 0 with the reason in `error`. */
 int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
 int oracles_session_record_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
+/* session_live.c: the settings a running game takes from `frame` on, before it runs: the guest attached at the first
+ * that needs it (1 when there is one); the cheats, the swim's hold, the item hotkeys' mode asked and the one the policy
+ * settled on; the surface a window is a whole multiple of, and the window Display chose (window_scale=: 2 to 4, 0
+ * fullscreen) opened as Play opens it. */
+int oracles_session_ensure_guest(session *s, uint32_t frame);
+void oracles_session_change_cheats(session *s, uint32_t frame, unsigned cheats);
+void oracles_session_change_swim_hold(session *s, uint32_t frame, int on);
+void oracles_session_hotkeys_settled(session *s, uint32_t frame, int settled);
+void oracles_session_change_hotkeys(session *s, uint32_t frame, OraclesHotkeysMode mode);
+OraclesEnhancedSize oracles_session_window_surface(const session *s);
+void oracles_session_apply_window(session *s, int window);
+/* session_pause.c: the item hotkeys' keys taken from the game or given back to it; the pause's renderer prepared once the
+ * window is open; the pause menu run over the game. */
+void oracles_session_hotkey_keys(session *s, int on);
+void oracles_session_started(void *opaque);
+oracles_host_pause_result oracles_session_pause(void *opaque);
+/* session_report.c: the frames a run presented late; its report on the standard error; the session ended, its save
+ * written, its screenshot taken and its resources freed. */
+uint32_t oracles_session_late_frames(const oracles_host_run_report *report);
+void oracles_session_report_frames(const session *s, const oracles_host_run_report *report);
+void oracles_session_finish(session *s, const OraclesSessionOptions *o);
 /* F5 and F7: 1 when done; otherwise 0, and *message says why, shortly (the pause menu shows it). */
 int oracles_session_save_state(session *s, char *message, size_t capacity);
 int oracles_session_load_state(session *s, char *message, size_t capacity);

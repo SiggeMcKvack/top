@@ -254,7 +254,7 @@ if(BUILD_TESTING)
 
     # The launcher's own tests need its SDL backend (the settings' key names) or its binary.
     if(TARGET oracles)
-        add_executable(oracles-test-launcher-settings test_launcher_settings.c ${ORACLES_LAUNCHER_DIR}/settings.c ${ORACLES_LAUNCHER_DIR}/home_choices.c ${ORACLES_LAUNCHER_DIR}/session_options.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-settings test_launcher_settings.c ${ORACLES_LAUNCHER_DIR}/settings.c ${ORACLES_LAUNCHER_DIR}/home_choices.c ${ORACLES_LAUNCHER_DIR}/session_options.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-settings PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-settings PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-settings)
@@ -304,7 +304,7 @@ if(BUILD_TESTING)
         # The launcher's window lent to a session whose start fails (no audio driver by that name) comes back intact; what
         # is dropped on it is left to SDL; a controller unplugged and plugged in during a session is taken back; the file
         # dialog answers on the queue, and one that cannot open is no dialog.
-        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-sdl-backend test_launcher_sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_SESSION_DIR}/hotkey_lines.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-sdl-backend PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-sdl-backend PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-sdl-backend)
@@ -312,7 +312,7 @@ if(BUILD_TESTING)
 
         # The controller's Escape: the menu's button, its trigger and Guide in play, on the home screen and in the pause,
         # the device an event comes from, kept from the home screen to the pause, and the first game's toast.
-        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/pause.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
+        add_executable(oracles-test-launcher-menu test_launcher_menu.c ${ORACLES_LAUNCHER_DIR}/sdl_backend.c ${ORACLES_LAUNCHER_DIR}/sdl_window.c ${ORACLES_LAUNCHER_DIR}/sdl_input.c ${ORACLES_LAUNCHER_DIR}/sdl_present.c ${ORACLES_LAUNCHER_DIR}/safe_area.c ${ORACLES_LAUNCHER_DIR}/home_input.c ${ORACLES_LAUNCHER_DIR}/pause.c ${ORACLES_LAUNCHER_DIR}/touch_controls.c ${ORACLES_LAUNCHER_DIR}/touch_sdl.c)
         target_include_directories(oracles-test-launcher-menu PRIVATE ${ORACLES_LAUNCHER_DIR} ${ORACLES_SESSION_DIR} ${ORACLES_ENHANCED_DIR})
         target_link_libraries(oracles-test-launcher-menu PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui_sdl ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-menu)
