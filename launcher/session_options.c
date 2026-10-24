@@ -23,6 +23,16 @@ int oracles_session_screen_margin(int option, const oracles_settings *settings)
     return settings->screen_margin >= 0 && settings->screen_margin < ORACLES_SCREEN_MARGINS ? settings->screen_margin : ORACLES_SCREEN_MARGIN_OFF;
 }
 
+int oracles_session_vsync_on(const char *vsync, unsigned display_hz)
+{
+    if (!strcmp(vsync, "on")) return 1;
+#ifdef __ANDROID__
+    return !strcmp(vsync, "auto") && oracles_settings_auto_vsync(display_hz, 1);
+#else
+    return !strcmp(vsync, "auto") && oracles_settings_auto_vsync(display_hz, 0);
+#endif
+}
+
 void oracles_session_far_screen(const OraclesSessionOptions *o, const oracles_settings *settings, struct SDL_Window *window, unsigned *width, unsigned *height)
 {
     *width = *height = 0;
@@ -53,6 +63,9 @@ unsigned oracles_session_settings_changed(const oracles_settings *settings, int 
         applied->text_instant = settings->text_instant;
         changed |= ORACLES_SESSION_CHANGED_TEXT_SPEED;
     }
+    const int vsync = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
+    if (vsync != applied->vsync) { applied->vsync = vsync; changed |= ORACLES_SESSION_CHANGED_VSYNC; }
+    if (applied->menus_large >= 0 && settings->menus_large != applied->menus_large) { applied->menus_large = settings->menus_large; changed |= ORACLES_SESSION_CHANGED_MENUS; }
     if (applied->hotkeys_game >= 0 && applied->hotkeys_game < ORACLES_SETTINGS_GAMES && (int)settings->item_hotkeys[applied->hotkeys_game] != applied->hotkeys) {
         applied->hotkeys = (int)settings->item_hotkeys[applied->hotkeys_game];
         changed |= ORACLES_SESSION_CHANGED_HOTKEYS;

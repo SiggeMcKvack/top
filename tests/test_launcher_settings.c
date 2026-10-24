@@ -1,9 +1,10 @@
 /* The home screen's keys of settings.txt: each game's ROM, European ROM, language, profile and
  * gameplay options and the launcher window's size are written and read back,
  * a file without them keeps the defaults, a value the launcher does not know
- * leaves its key alone, and names that were never the launcher's (zoom-out as
- * a profile, per-game profile and transitions keys) are neither read nor
- * written; menu_pad= is taken as the session plays it. */
+ * leaves its key alone, names that were never the launcher's (zoom-out as
+ * a profile, per-game profile and transitions keys) are not read, a key it does
+ * not know is kept as it was, spaces and capitals are read as meant; menu_pad=
+ * is taken as the session plays it. */
 #include "compositor.h"
 #include "home_choices.h"
 #include "session.h"
@@ -45,6 +46,78 @@ static int file_has_line(const char *path, const char *wanted)
     while (f && fgets(line, sizeof line, f)) found |= !strcmp(line, wanted);
     if (f) fclose(f);
     return found;
+}
+
+/* The lines of `path`, without their line ends, at most `capacity`: their count. */
+static unsigned read_lines(const char *path, char lines[][256], unsigned capacity)
+{
+    unsigned count = 0;
+    FILE *f = fopen(path, "r");
+    while (f && count < capacity && fgets(lines[count], sizeof lines[0], f)) lines[count][strcspn(lines[count], "\r\n")] = 0, count++;
+    if (f) fclose(f);
+    return count;
+}
+
+/* The index of the line `wanted` among `count`, or -1. */
+static int line_at(char lines[][256], unsigned count, const char *wanted)
+{
+    for (unsigned i = 0; i < count; i++) if (!strcmp(lines[i], wanted)) return (int)i;
+    return -1;
+}
+
+/* The keys this version does not know (a later version's, a test build's): kept as they were, each after the key read
+ * before it, at the file's start before any, at its end when that key is not written, and once however often the file is
+ * read and written; a comment is not a key. */
+static void unknown_keys(const char *path)
+{
+    static char lines[400][256];
+    oracles_settings s;
+    write_text(path, "later_first=1\n# a comment of the player's\nprofile=faithful\nlater_lens = Wide View\nview=near\n"
+                     "quality_hint=low\nlater_after_hint=C:\\Games\\a=b\n");
+    oracles_settings_defaults(&s);
+    snprintf(s.path, sizeof s.path, "%s", path);
+    oracles_settings_load(&s);
+    CHECK(s.profile == ORACLES_PROFILE_FAITHFUL && s.view == 0 && s.quality_hint == ORACLES_QUALITY_LOW);
+    s.quality_hint = -1;   /* not written: what followed it goes at the end */
+    for (int round = 0; round < 2; round++) {
+        CHECK(oracles_settings_store(&s) == 1);
+        const unsigned count = read_lines(path, lines, 400);
+        const int first = line_at(lines, count, "later_first=1"), lens = line_at(lines, count, "later_lens = Wide View");
+        const int hint = line_at(lines, count, "later_after_hint=C:\\Games\\a=b");
+        CHECK(first >= 0 && first < line_at(lines, count, "colour_correction=1") && lines[first - 1][0] == '#');
+        CHECK(lens == line_at(lines, count, "profile=faithful") + 1);
+        CHECK(hint == (int)count - 1);
+        CHECK(line_at(lines, count, "# a comment of the player's") < 0);
+        int copies = 0;
+        for (unsigned i = 0; i < count; i++) copies += !strncmp(lines[i], "later_", 6);
+        CHECK(copies == 3);
+        oracles_settings_defaults(&s);
+        snprintf(s.path, sizeof s.path, "%s", path);
+        oracles_settings_load(&s);
+    }
+    /* A file without any keeps none. */
+    write_text(path, "profile=faithful\n");
+    oracles_settings_load(&s);
+    CHECK(s.unknown[0] == 0);
+}
+
+/* Spaces around a key's name and its value, and capitals, as a player writes them by hand: `update_check = OFF` turns
+ * the check off, and is written back update_check=off; a path keeps its own spaces and case. */
+static void spaces_and_case(const char *path)
+{
+    oracles_settings s;
+    write_text(path, "update_check = OFF\n Menus=Large \t\nVIEW= Medium\nrom_ages =  C:\\My Games\\Ages.gbc  \nkey_a = X\nghosts= 2\n");
+    oracles_settings_defaults(&s);
+    snprintf(s.path, sizeof s.path, "%s", path);
+    oracles_settings_load(&s);
+    CHECK(s.update_check == 0 && s.menus_large == 1 && s.view == 1 && s.ghosts == 2);
+    CHECK(!strcmp(s.rom[ORACLES_SETTINGS_AGES], "C:\\My Games\\Ages.gbc") && !strcmp(s.key_names[4], "X"));
+    CHECK(s.unknown[0] == 0);
+    oracles_settings_store(&s);
+    CHECK(file_has_line(path, "update_check=off\n") && file_has_line(path, "menus=large\n") && file_has_line(path, "view=medium\n"));
+    write_text(path, "Update_Check=On\n");
+    oracles_settings_load(&s);
+    CHECK(s.update_check == 1);
 }
 
 /* menu_pad= `name` with pad_select= `select` and pad_hotkey1= `hotkey`, read as every screen takes it: the menu's
@@ -133,6 +206,16 @@ static void display_stored(void)
     CHECK(s.text_box_wide == 1 && s.text_size == 2);
     oracles_home_inspect_display(&s, &display, NULL);
     CHECK(display.text_box == 1 && display.text_size == 2);
+    /* Display › Picture: Menus & scenes the platform's default (View on the desktops), stored from the pause too; Far
+     * size Fitted, stored from the home screen alone. */
+    CHECK(display.menus == 0 && display.far_fixed == 0);
+    display.menus = display.far_fixed = 1;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.menus_large == 1 && s.far_fixed == 0);
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.far_fixed == 1);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.menus == 1 && display.far_fixed == 1);
 }
 
 /* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the
@@ -141,7 +224,7 @@ static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0, -1 };
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0, -1, 0, -1 };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.hud = !s.hud;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
@@ -202,8 +285,30 @@ static void pause_live_changes(void)
     oracles_settings s;
     oracles_settings_defaults(&s);
     OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
-                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS], s.text_instant };
+                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS], s.text_instant, 0, s.menus_large };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    /* Vsync, at once: off, then on, then auto again; it presents in step with a display near 60 Hz alone on auto
+     * (never on Android), always on on, never on off. */
+    snprintf(s.vsync, sizeof s.vsync, "off");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 2);
+    snprintf(s.vsync, sizeof s.vsync, "on");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 1);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    snprintf(s.vsync, sizeof s.vsync, "auto");
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_VSYNC && applied.vsync == 0);
+#ifdef __ANDROID__
+    CHECK(!oracles_session_vsync_on("auto", 60u));
+#else
+    CHECK(oracles_session_vsync_on("auto", 60u) && !oracles_session_vsync_on("auto", 144u));
+#endif
+    CHECK(oracles_session_vsync_on("on", 144u) && !oracles_session_vsync_on("off", 60u));
+    /* The large menus, at once, in a game with the Enhanced view; none without it. */
+    s.menus_large = !s.menus_large;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_MENUS && applied.menus_large == s.menus_large);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    applied.menus_large = -1;
+    s.menus_large = !s.menus_large;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.menus_large == -1);
     s.swim_hold = !s.swim_hold;
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
@@ -756,8 +861,8 @@ int main(int argc, char **argv)
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
     CHECK(read_back.core == -1 && oracles_settings_core(&read_back) == ORACLES_CORE_SAMEBOY);
-    /* zoom-out is not a profile, and the per-game keys are not the launcher's: the defaults stay, and the next store
-     * writes the global keys alone. */
+    /* zoom-out is not a profile, and the per-game keys are not the launcher's: the defaults stay, the profile is written
+     * back as it plays, and the per-game keys, which a later version may have, are kept as they were, unread. */
     write_text(path, "profile=zoom-out\nprofile_ages=enhanced\ntransitions_ages=off\nprofile_seasons=enhanced\n");
     oracles_settings_defaults(&read_back);
     oracles_settings_load(&read_back);
@@ -768,10 +873,11 @@ int main(int argc, char **argv)
     while (f && fgets(line, sizeof line, f)) {
         if (!strcmp(line, "profile=enhanced\n")) seen |= 1;
         if (!strcmp(line, "transitions=on\n")) seen |= 2;
-        if (strstr(line, "zoom-out") || !strncmp(line, "profile_", 8) || !strncmp(line, "transitions_", 12)) seen |= 4;
+        if (strstr(line, "zoom-out")) seen |= 4;
+        if (!strcmp(line, "profile_ages=enhanced\n") || !strcmp(line, "transitions_ages=off\n") || !strcmp(line, "profile_seasons=enhanced\n")) seen += 8;
     }
     if (f) fclose(f);
-    CHECK(seen == 3);
+    CHECK(seen == 3 + 3 * 8);
 
     /* The file is written through a temporary one: none is left, and a write that cannot start leaves the old file. */
     char temporary[1100];
@@ -960,6 +1066,8 @@ int main(int argc, char **argv)
         CHECK(file_has_line(path, chosen ? "subpixel_camera=1\n" : "subpixel_camera=0\n"));
     }
 
+    unknown_keys(path);
+    spaces_and_case(path);
     menu_pad_resolved();
     display_stored();
     pause_changes();

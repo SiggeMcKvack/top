@@ -208,8 +208,8 @@ static void layout_4_3(void)
     keys_probes("21r", &l, 1);
 }
 
-/* Display's colour correction after a controller's input: its explanation without F2, on one line beside its choices
- * (21u, the row and the panel shorter); in 4:3's help, without F2 (21v) and, after a key, with it (21w). */
+/* Display › Picture's colour correction after a controller's input: its explanation without F2, on one line beside its
+ * choices (21u, the row two lines tall all the same); in 4:3's help, without F2 (21v) and, after a key, with it (21w). */
 static void colour_help(void)
 {
     OraclesHomeNav nav;
@@ -217,6 +217,8 @@ static void colour_help(void)
     nav.games[0].usable = 1;
     nav.games[0].rom = ORACLES_ROM_ORIGINAL;
     nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.picture_page = 1;   /* Display › Picture, since turn 34 */
+    nav.row = ORACLES_DISPLAY_COLOUR;
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
     nav.display.window = 2;
     OraclesUiDisplayTexts t;

@@ -68,7 +68,11 @@ uint32_t oracles_update_check_event(void);
 void oracles_update_check_events(int on);
 /* Asks a running check to give up and waits for it a moment, before the process ends. */
 void oracles_update_check_close(void);
-/* Opens a newer release's page in the system's browser (SDL_OpenURL): 1 when asked. */
-int oracles_update_check_open(void);
+/* Opens a newer release's page in the system's browser (SDL_OpenURL): 1 when asked; 0 without a newer release, or with
+ * the message for the screen in `message` when no browser takes it (a console without one): what
+ * oracles_update_open_failed says. */
+int oracles_update_check_open(char *message, size_t capacity);
+/* That message for the page `url`: "No browser opened the release page: github.com/...", its address without https://. */
+void oracles_update_open_failed(const char *url, char *message, size_t capacity);
 
 #endif

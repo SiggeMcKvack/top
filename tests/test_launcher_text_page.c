@@ -281,7 +281,7 @@ static void link(void)
     layout_near("26e", "text explanation", "top", l.explanations[8].lines[0].y);
     layout_near("26e", "text explanation", "width", l.explanations[8].w);
     layout_box("26e", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
-    layout_box("26e", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("26e", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("26e", "panel", &l.panel);
     layout_box("26e", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
     /* Its hints: it opens, nothing changes with left and right. */
@@ -298,7 +298,7 @@ static void link(void)
     layout_box("text link 4:3", "link", &l.text_link);
     layout_line("text link 4:3", "summary text", &l.text_summary);
     layout_box("text link 4:3", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
-    layout_box("text link 4:3", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("text link 4:3", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("text link 4:3", "Profile row", &l.rows[ORACLES_DISPLAY_PROFILE]);
     layout_box("text link 4:3", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
     layout_line("text link 4:3", "help text", &l.help);

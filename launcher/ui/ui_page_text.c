@@ -48,7 +48,7 @@ int oracles_display_text_applies(const OraclesHomeNav *nav) { return nav->displa
 
 int oracles_display_text_link_applies(const OraclesHomeNav *nav)
 {
-    for (unsigned r = ORACLES_DISPLAY_LETTERS; r < ORACLES_DISPLAY_ROWS; r++)
+    for (unsigned r = ORACLES_DISPLAY_LETTERS; r <= ORACLES_DISPLAY_TEXT_SPEED; r++)
         if (oracles_display_text_row_live(nav, r)) return 1;
     return oracles_display_text_applies(nav) || !(nav->in_game && nav->text_speed_refused);
 }
@@ -88,7 +88,7 @@ const char *oracles_display_text_explanation(unsigned row, int four_three)
         { "Classic: letter by letter, at the speed chosen on the file screen. Instant: each line appears whole; A still turns the page.",
           "Instant: each line appears whole." },
     };
-    const int i = row == ORACLES_DISPLAY_TEXT ? 0 : row >= ORACLES_DISPLAY_LETTERS && row < ORACLES_DISPLAY_ROWS ? (int)(row - ORACLES_DISPLAY_LETTERS) + 1 : -1;
+    const int i = row == ORACLES_DISPLAY_TEXT ? 0 : row >= ORACLES_DISPLAY_LETTERS && row <= ORACLES_DISPLAY_TEXT_SPEED ? (int)(row - ORACLES_DISPLAY_LETTERS) + 1 : -1;
     return i < 0 ? "" : texts[i][four_three != 0];
 }
 

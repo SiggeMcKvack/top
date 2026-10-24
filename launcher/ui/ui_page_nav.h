@@ -33,27 +33,29 @@
  * chosen; dimmed and inert in Faithful and from a game), the window (the profile's surface at 2x, 3x, 4x, or fullscreen
  * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, its colour
  * across the whole view, or laid out on it, hearts left and items right; dimmed and inert in Faithful), Text (the link to Display › Text, ui_page_text.h, its
- * settings summed up beside it, "Compact · Wide · Normal"), color
- * correction, then Advanced
+ * settings summed up beside it, "Compact · Wide · Normal"), Picture (the link to Display › Picture, its settings summed
+ * up beside it, "Sharp · No margin · Color off"), then Advanced
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
- * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
- * (Sharp, the whole scales; Fill, the whole screen in the image's
- * proportions, in fullscreen only), the camera (Pixel, Smooth: the sub-pixel camera; dimmed and inert in Faithful; the
- * platform's default shown until one is chosen), the screen margin (Off, Auto, Small, Large: the band of the screen the
- * picture keeps to, in either profile).  Left and right change the option of the row, OK takes its
+ * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the camera (Pixel,
+ * Smooth: the sub-pixel camera; dimmed and inert in Faithful; the platform's default shown until one is chosen).
+ * Display › Picture, which Picture opens in their place, the diagram kept: the scaling (Sharp, the whole scales; Fill,
+ * the whole screen in the image's proportions, in fullscreen only), the screen margin (Off, Auto, Small, Large: the band
+ * of the screen the picture keeps to), color correction, the three in either profile, then Far size where it changes
+ * something and Menus & scenes (below).  Left and right change the option of the row, OK takes its
  * next one (Quality stops at Low and at Max; from Custom, right takes Low and
  * left Max); on Advanced, OK and right open it, on Core, or from a game on
- * Scaling; on Text, OK and right open Display › Text, on its Text row.  Where
+ * Vsync; on Picture, on Scaling; on Text, OK and right open Display › Text, on its Text row.  Where
  * every window comes to one size (a 640x480 screen, a
  * platform always fullscreen), the Window row is dimmed and changes no
  * more, and says so; it keeps the highlight.  The choices apply at the
- * next Play; Back returns from the Advanced rows to Advanced, from the Text
- * rows to Text, from Display to Display in the menu.  From a game a row acts
+ * next Play; Back returns from the Advanced rows to Advanced, from the Picture
+ * rows to Picture, from the Text rows to Text, from Display to Display in the menu.  From a game a row acts
  * at once or not at all: the profile, the quality, the view, the core, the
- * transitions, Vsync, the workers, the text and the text box, which the game
- * keeps, are dimmed and inert, "Change it from the home screen."; the window,
- * color correction, the HUD, the scaling, the camera, the screen margin and
- * the text size apply at once there, the text speed when the game resumes. */
+ * transitions, the workers, the text, the text box and the far size, which the
+ * game keeps, are dimmed and inert, "Change it from the home screen."; the
+ * window, color correction, the HUD, Vsync, the scaling, the camera, the screen
+ * margin, the menus and the text size apply at once there, the text speed when
+ * the game resumes. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
 
@@ -158,9 +160,10 @@ void oracles_page_keep_row(OraclesHomeNav *nav);
  * `option` -1 for the row itself. */
 OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row, int option);
 
-/* Display's rows in the order of the keys: its own, Advanced last; then the Advanced rows, which show in their place;
- * then the Text rows (Display › Text, ui_page_text.h), which Text, the link among Display's own rows, opens in their
- * place. */
+/* Display's rows: its own, Advanced the last for the keys, Picture before it (Color correction's former place); the
+ * Advanced rows, which show in their place; the Text rows (Display › Text, ui_page_text.h); and the Picture rows,
+ * Scaling, Screen margin, Color correction, Far size and Menus & scenes for the keys (Display › Picture), which Picture
+ * opens in their place. */
 typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_PROFILE,
     ORACLES_DISPLAY_QUALITY,
@@ -168,7 +171,7 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_VIEW,
     ORACLES_DISPLAY_HUD,
     ORACLES_DISPLAY_TEXT,          /* the link to Display › Text, its settings summed up beside it */
-    ORACLES_DISPLAY_COLOUR,
+    ORACLES_DISPLAY_COLOUR,        /* Display › Picture's Color correction */
     ORACLES_DISPLAY_ADVANCED,
     ORACLES_DISPLAY_CORE,
     ORACLES_DISPLAY_TRANSITIONS,
@@ -181,10 +184,14 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_TEXT_BOX,
     ORACLES_DISPLAY_TEXT_SIZE,
     ORACLES_DISPLAY_TEXT_SPEED,    /* Display › Text's Text speed: Classic or Instant */
+    ORACLES_DISPLAY_PICTURE,       /* the link to Display › Picture, its settings summed up beside it */
+    ORACLES_DISPLAY_MENUS,         /* Display › Picture's Menus & scenes: View or Large */
+    ORACLES_DISPLAY_FAR_SIZE,      /* its Far size: Fitted or Fixed, where it changes something */
     ORACLES_DISPLAY_ROWS
 } OraclesDisplayRow;
 
-/* The row shows: one of Display's own, of the Advanced rows or of the Text rows, those of the page open. */
+/* The row shows: one of Display's own, of the Advanced rows, of the Text rows or of the Picture rows, those of the page
+ * open. */
 int oracles_display_row_shown(const OraclesHomeNav *nav, unsigned row);
 /* The workers Auto takes: two on a device of four processor cores or more, one otherwise, as the session counts them. */
 int oracles_display_auto_workers(const OraclesHomeNav *nav);
@@ -286,10 +293,11 @@ extern const char *const oracles_display_core_choices[2];   /* "Accurate (SameBo
 extern const char *const oracles_display_core_names[2];     /* "Accurate", "Fast" */
 /* The workers' choices: "Auto · 2" (the count Auto takes), "1", "2". */
 void oracles_display_workers_choice(const OraclesHomeNav *nav, int choice, char *out, size_t capacity);
-/* Display's section name: "Display", or "Display › Advanced" or "Display › Text" while those rows show. */
+/* Display's section name: "Display", or "Display › Advanced", "Display › Picture" or "Display › Text" while those rows
+ * show. */
 const char *oracles_display_section(const OraclesHomeNav *nav);
-/* From the pause a row acts at once or not at all: Profile, Quality, View, Core, Continuous transitions, Vsync, Neighbor
- * workers, Text and Text box, which a running game keeps, are dimmed and inert there, saying why
+/* From the pause a row acts at once or not at all: Profile, Quality, View, Core, Continuous transitions, Neighbor
+ * workers, Text, Text box and Far size, which a running game keeps, are dimmed and inert there, saying why
  * (oracles_display_pause_reason). */
 int oracles_display_pause_locked(const OraclesHomeNav *nav, unsigned row);
 extern const char oracles_display_pause_reason[];   /* "Change it from the home screen." */
@@ -305,10 +313,26 @@ const char *oracles_display_explanation(unsigned row);
 /* Color correction's, 16:9's or 4:3's shorter one, which names F2 only where a keyboard is at hand
  * (oracles_home_keys_shown). */
 const char *oracles_display_colour_explanation(const OraclesHomeNav *nav, int four_three);
+/* Display › Picture's last two: Far size, "Fitted" or "Fixed" (far=screen|fixed), the far view fitted to a screen its
+ * size fills badly or kept at its own, a row only where far is fitted to the screen (oracles_display_far_size_shown:
+ * aspect=auto, 1280x960 or 1240x1080); Menus & scenes, "View" or "Large" (menus=view|large, Large Android's default),
+ * the game's menus, map, cutscenes and file screen framed at the view's scale or shown alone at their own largest one.
+ * Both apply in Enhanced, as the HUD does (the profile chosen, from the pause the running game's): dimmed and inert
+ * elsewhere, "Enhanced only.".  From the pause Menus & scenes applies at once; Far size, which changes the view, is dimmed
+ * there.  A row's note, under its explanation (16:9) or on the help's note line (4:3): that reason, else Far size's sizes
+ * on this screen, "Here Fitted is 426x320 at 3x; Fixed is 480x360 at 2x."; empty for none.  Picture's summary: the
+ * scaling, the margin and the colors, "Sharp · No margin · Color off", then " · Far fixed" and " · Large menus" (" · View
+ * menus" on Android) where they apply and differ from the platform's default. */
+int oracles_display_far_size_shown(const OraclesHomeNav *nav);
+void oracles_display_picture_summary(const OraclesHomeNav *nav, char *out, size_t capacity);
+extern const char *const oracles_display_menus_choices[2];
+extern const char *const oracles_display_far_size_choices[2];
+int oracles_display_size_row_live(const OraclesHomeNav *nav, unsigned row);
+void oracles_display_size_note(const OraclesHomeNav *nav, unsigned row, char *out, size_t capacity);
 
 OraclesHomeCommand oracles_display_act(OraclesHomeNav *nav, OraclesHomeAction action);
 /* A click on a row, or on one of its options (a profile, a quality, a window, Off/On, Auto/On/Off): `option` -1 for the
- * row itself; one on Advanced or Text opens it. */
+ * row itself; one on Advanced, Picture or Text opens it. */
 OraclesHomeCommand oracles_display_click(OraclesHomeNav *nav, unsigned row, int option);
 
 /* ---- Mods ------------------------------------------------------------------------
@@ -377,5 +401,27 @@ int oracles_cheats_row_live(const OraclesHomeNav *nav, unsigned row);
 OraclesHomeCommand oracles_cheats_act(OraclesHomeNav *nav, OraclesHomeAction action);
 /* A click on a row, or on its Off (0) or On (1): `option` -1 for the row itself. */
 OraclesHomeCommand oracles_cheats_click(OraclesHomeNav *nav, unsigned row, int option);
+
+/* ---- About -----------------------------------------------------------------------
+ *
+ * About, opened by the home screen's version number, laid out as Cheats: "The
+ * Oracles Project" for its title, the version and, when the home screen shows
+ * one, the newer version's notice for its note ("v1.2.0 (abc1234) · 1.3.0
+ * available"), and one row, Update check, On or Off (settings.txt's
+ * update_check=): Off hides the notice at once, and the next launch asks
+ * nothing.  Left, right and OK turn it off and on, a click on On or Off sets
+ * it; each change is kept at once.  Back returns to the home screen, on the
+ * version number. */
+
+extern const char oracles_about_label[];          /* "Update check" */
+extern const char *const oracles_about_choices[2];  /* "On", "Off" */
+extern const char oracles_about_explanation[];    /* 16:9's, beside the choices */
+extern const char oracles_about_help[], oracles_about_help_note[];   /* 4:3's, under the row */
+/* The note under the title: `version` ("v1.2.0 (abc1234)"), and " · 1.3.0 available" while the home screen shows a newer
+ * one. */
+void oracles_about_note(const OraclesHomeNav *nav, const char *version, char *out, size_t capacity);
+OraclesHomeCommand oracles_about_act(OraclesHomeNav *nav, OraclesHomeAction action);
+/* A click on the row, or on its On (0) or Off (1): `option` -1 for the row itself. */
+OraclesHomeCommand oracles_about_click(OraclesHomeNav *nav, int option);
 
 #endif

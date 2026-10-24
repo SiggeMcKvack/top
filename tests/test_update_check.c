@@ -205,6 +205,10 @@ static void checked(const char *path)
     CHECK(oracles_update_check_wait(10000));
     oracles_update_check_status(&s);
     CHECK(s.state == ORACLES_UPDATE_NEWER && !strcmp(s.version, "99.0.0") && !strcmp(s.url, "https://github.com/thibautbus/top/releases/tag/v1.1.0"));
+    /* Where no browser takes the page (a console without one), the screen says its address. */
+    char message[256];
+    oracles_update_open_failed(s.url, message, sizeof message);
+    CHECK(!strcmp(message, "No browser opened the release page: github.com/thibautbus/top/releases/tag/v1.1.0"));
     /* Once a run: a second start changes nothing. */
     oracles_update_check_start("no such file", "1.1.0");
     oracles_update_check_status(&s);

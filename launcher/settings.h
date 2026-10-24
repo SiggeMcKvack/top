@@ -19,6 +19,9 @@
 #define ORACLES_SETTINGS_MODS_MAX 8
 #define ORACLES_SETTINGS_MOD_NAME 64
 #define ORACLES_SETTINGS_MODS_LENGTH (ORACLES_SETTINGS_MODS_MAX * ORACLES_SETTINGS_MOD_NAME)
+/* The unknown keys kept, at most this many bytes and lines (oracles_settings.unknown). */
+#define ORACLES_SETTINGS_UNKNOWN_LENGTH 16384
+#define ORACLES_SETTINGS_UNKNOWN_LINES 128
 
 /* The games of the home screen's entries, in settings.txt's order. */
 typedef enum OraclesSettingsGame {
@@ -150,11 +153,16 @@ typedef struct oracles_settings {
     int quality_hint;             /* quality_hint=low|medium|high|max|custom: the quality a game that ran slowly was last suggested to leave,
                                    * -1 none: the suggestion is made once a quality, until the view, the core or the workers change */
     int first_run;                /* no settings.txt was read: the first opening, which takes the device's profile */
+    /* The lines of settings.txt whose key this version does not know (a later version's, a test build's), as they were,
+     * each after the name of the known key read before it ("" at the file's start), "name\tline\n": written back after
+     * that key, or at the file's end when it is not written. */
+    char unknown[ORACLES_SETTINGS_UNKNOWN_LENGTH];
 } oracles_settings;
 
 void oracles_settings_defaults(oracles_settings *settings);
 void oracles_settings_load(oracles_settings *settings);
-/* Writes every setting through a temporary file renamed over settings.txt: 1 when done; 0 leaves the file as it was. */
+/* Writes every setting through a temporary file renamed over settings.txt, the unknown keys read kept after the key they
+ * followed: 1 when done; 0 leaves the file as it was. */
 int oracles_settings_store(const oracles_settings *settings);
 /* The core the games run on: the one chosen, else the build's default. */
 int oracles_settings_core(const oracles_settings *settings);

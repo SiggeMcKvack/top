@@ -313,6 +313,17 @@ void oracles_ui_layout_update(OraclesUiLayout layout, const OraclesUiLine *versi
     out->text.baseline = out->text.y + offset;
 }
 
+void oracles_ui_layout_version_link(OraclesUiLayout layout, const OraclesUiLine *version, OraclesUiBox *box, float *outline)
+{
+    const metrics *m = metrics_of(layout);
+    const OraclesUiLine line = line_at(oracles_ui_home_styles(layout)->version, "", 0.0f, 0.0f, m->update_line);
+    box->x = version->x - m->update_pad_x;
+    box->y = version->baseline - line.baseline - m->update_pad_y;
+    box->w = version->w + 2.0f * m->update_pad_x;
+    box->h = line.h + 2.0f * m->update_pad_y;
+    *outline = m->update_border;
+}
+
 void oracles_ui_layout_toast(OraclesUiLayout layout, const char *text, OraclesUiToastLayout *out)
 {
     const metrics *m = metrics_of(layout);

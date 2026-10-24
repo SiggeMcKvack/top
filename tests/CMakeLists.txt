@@ -252,6 +252,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-launcher-mods)
     add_test(NAME oracles-launcher-mods COMMAND oracles-test-launcher-mods ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-picture test_launcher_picture.c layout_reference.c)
+    target_include_directories(oracles-test-launcher-picture PRIVATE ${ORACLES_ENHANCED_DIR})
+    target_link_libraries(oracles-test-launcher-picture PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-picture)
+    add_test(NAME oracles-launcher-picture COMMAND oracles-test-launcher-picture ${ORACLES_LAYOUT_REFERENCE})
     add_executable(oracles-test-launcher-cheats test_launcher_cheats.c layout_reference.c)
     target_link_libraries(oracles-test-launcher-cheats PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-cheats)
@@ -312,10 +317,10 @@ if(BUILD_TESTING)
                     --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
         set_tests_properties(oracles-launcher-update-check PROPERTIES PASS_REGULAR_EXPRESSION "update check: version 99\\.0\\.0 available"
             FAIL_REGULAR_EXPRESSION "https://|update_release_newer" TIMEOUT 30 ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")
-        # The home screen shows it above the version at a handheld's 640x480, highlighted by Up from Start game, after a
-        # controller's button (the layout reference's frame 24d).
+        # The home screen shows it above the version at a handheld's 640x480, highlighted by Up from Start game past the
+        # version number, after a controller's button (the layout reference's frame 24d).
         add_test(NAME oracles-launcher-screenshot-update-draw
-            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm --launcher-size 640x480 --launcher-input pad,up
+            COMMAND oracles --launcher-screenshot ${CMAKE_CURRENT_BINARY_DIR}/launcher_update_open.ppm --launcher-size 640x480 --launcher-input pad,up,up
                     --update-check-url ${CMAKE_CURRENT_BINARY_DIR}/update_release_newer.json)
         set_tests_properties(oracles-launcher-screenshot-update-draw PROPERTIES FIXTURES_SETUP launcher_update TIMEOUT 30
             ENVIRONMENT "ORACLES_SETTINGS_DIR=${CMAKE_CURRENT_BINARY_DIR}/launcher-test-home")

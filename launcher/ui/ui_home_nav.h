@@ -103,7 +103,8 @@ typedef enum OraclesScreen {
     ORACLES_SCREEN_CONTROLS,
     ORACLES_SCREEN_MODS,
     ORACLES_SCREEN_CHEATS,
-    ORACLES_SCREEN_PAUSE         /* the menu over a paused game */
+    ORACLES_SCREEN_PAUSE,        /* the menu over a paused game */
+    ORACLES_SCREEN_ABOUT         /* the home screen's version number opened */
 } OraclesScreen;
 
 /* What the launcher found at a game's ROM path (the statuses of the design, screen 2). */
@@ -252,7 +253,10 @@ typedef struct OraclesHomeDisplay {
     int cores;                  /* the device's logical processor cores, which Auto's count follows */
     int screen_w, screen_h;     /* the display's size, for the sizes the page shows */
     int aspect;                 /* the settings' aspect= (an OraclesAspect): the shape of those sizes, the screen's when auto */
-    int far_fixed;              /* the settings' far=fixed: far keeps its size, else fitted to the screen where it fills it badly */
+    int far_fixed;              /* Far size: 0 Fitted, 1 Fixed, the settings' far=fixed: far keeps its size, else fitted to the screen where it
+                                 * fills it badly; in Enhanced only, not from a game */
+    int menus;                  /* Menus: 0 View, 1 Large, the settings' menus= (Large Android's default); in Enhanced only, from a game
+                                 * too, where it applies at once */
     int room_w, room_h;         /* the room a window has there: the usable area, less the title bar */
     int fullscreen_only;        /* the platform plays every game fullscreen (Android): one size whatever Window says */
     unsigned windows_refused;   /* from the pause, the windows (1 << Window's value) whose pause would keep only its own
@@ -335,6 +339,7 @@ typedef struct OraclesHomeNav {
     OraclesHomeSaveFlow save_flow;
     int advanced;                      /* Display shows its Advanced rows in place of its own */
     int text_page;                     /* Display shows its Text rows in place of its own (Display › Text) */
+    int picture_page;                  /* Display shows its Picture rows in place of its own (Display › Picture) */
     /* The fan games' Language row, their language beside Cartridge and their games started in it: 0 in the product,
      * whose host leaves them off (OraclesHomeGames); 1 lays them out as the mockup's fanLang does. */
     int fan_languages;
@@ -368,8 +373,10 @@ typedef struct OraclesHomeNav {
     int keyboard_used;
     int android;
     /* The newer version the update check found (update_check.h), "1.3.0", empty while there is none: the home screen
-     * alone shows it by the version, a place after the menu's last item for the highlight (oracles_home_update_shown). */
+     * alone shows it by the version, a place after the menu's last item for the highlight (oracles_home_update_shown),
+     * while the update check is on (`update_check`, settings.txt's update_check=, About's row). */
     char update[ORACLES_HOME_NAME_LENGTH];
+    int update_check;
 } OraclesHomeNav;
 
 typedef struct OraclesHomeItem {
@@ -395,15 +402,19 @@ void oracles_home_pause(OraclesHomeNav *nav, int game, OraclesProfile playing, i
 OraclesHomeHero oracles_home_hero(const OraclesHomeNav *nav);
 /* The menu of what the right half shows; returns the number of items. */
 unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS]);
-/* The highlighted item, within the menu; the menu's count while the newer version's notice has the highlight. */
+/* The highlighted item, within the menu; past it, the newer version's notice or the version number while they have the
+ * highlight (the menu's count, and the next). */
 unsigned oracles_home_focus(const OraclesHomeNav *nav);
 /* A page closed: the highlight on its item in the menu shown now, or on the first (Resume) when that menu has lost it
  * (the pause's, made narrow while the page was open). */
 void oracles_home_focus_item(OraclesHomeNav *nav, OraclesHomeItemId id);
-/* The newer version's notice is shown (on the home screen, nav->update set), and highlighted: down from the menu's last
- * item, up from its first, the menu no longer wrapping from one to the other; OK opens its page. */
+/* The newer version's notice is shown (on the home screen, nav->update set, the update check on), and highlighted: down
+ * from the menu's last item; OK opens its page.  The version number, on the home screen alone, is the place after it
+ * (after the menu's last item without the notice), up from the menu's first, the menu no longer wrapping from one to the
+ * other: OK opens About, which Back leaves for it. */
 int oracles_home_update_shown(const OraclesHomeNav *nav);
 int oracles_home_update_focused(const OraclesHomeNav *nav);
+int oracles_home_version_focused(const OraclesHomeNav *nav);
 /* The entries of the left stack, in order. */
 void oracles_home_others(const OraclesHomeNav *nav, OraclesHomeEntry others[2]);
 OraclesHomeHero oracles_home_entry_hero(OraclesHomeEntry entry);
@@ -436,7 +447,7 @@ int oracles_home_slow_text(const OraclesHomeNav *nav, char *text, size_t capacit
 void oracles_home_slow_open(OraclesHomeNav *nav);
 
 /* The pointer: an entry of the left stack clicked, an item hovered or clicked; the newer version's notice is the item
- * after the menu's last. */
+ * after the menu's last, the version number the one after (the notice's place when it is not shown). */
 void oracles_home_select(OraclesHomeNav *nav, OraclesHomeEntry entry);
 void oracles_home_hover(OraclesHomeNav *nav, unsigned item);
 OraclesHomeCommand oracles_home_click(OraclesHomeNav *nav, unsigned item);

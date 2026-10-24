@@ -36,8 +36,8 @@ void oracles_session_hotkey_keys(session *s, int on)
     s->sdl.hotkey_bind_a = on ? prefs->hotkey_bind_a : NULL;
 }
 
-/* Controls or Display changed the settings: the keys, the colour correction, the scaling, the status bar's width and
- * the screen margin apply at once, the swim's hold, the text speed and the item hotkeys from the frame the game resumes on (the item
+/* Controls or Display changed the settings: the keys, the colour correction, vsync, the scaling, the status bar's width,
+ * the large menus and the screen margin apply at once, the swim's hold, the text speed and the item hotkeys from the frame the game resumes on (the item
  * hotkeys turned off once their policy is at rest), the rest at the next Play (the window: pause_window_chosen).  The
  * colour correction, the swim's hold and the item hotkeys apply when the pause changed them: --colour-correction,
  * --swim-hold, --text-speed and --item-hotkeys hold until then; --screen-margin holds for the run. */
@@ -46,7 +46,8 @@ static int pause_settings_changed(void *opaque)
     session *s = opaque;
     OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin,
                                       s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1,
-                                      s->swim_setting, s->hotkeys_game, s->hotkeys_setting, s->text_speed_setting };
+                                      s->swim_setting, s->hotkeys_game, s->hotkeys_setting, s->text_speed_setting, s->vsync_setting,
+                                      s->view ? s->menus_large : -1 };
     const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, s->text_size_option, &applied);
     if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
         s->colour_applied = s->colour_setting = applied.colour;
@@ -62,6 +63,11 @@ static int pause_settings_changed(void *opaque)
         oracles_enhanced_view_set_hud(s->view, applied.hud);
         fprintf(stderr, "oracles: status bar %s\n", oracles_settings_hud_names[applied.hud >= 0 && applied.hud < 3 ? applied.hud : 0]);
     }
+    if (changed & ORACLES_SESSION_CHANGED_MENUS) {
+        s->menus_large = applied.menus_large;
+        oracles_enhanced_view_set_large_menus(s->view, s->menus_large);
+        fprintf(stderr, "oracles: menus %s\n", s->menus_large ? "large" : "at the view's scale");
+    }
     if (changed & ORACLES_SESSION_CHANGED_TEXT_SIZE) {
         oracles_enhanced_view_set_text_size(s->view, (unsigned)applied.text_size);
         fprintf(stderr, "oracles: text size %s\n", applied.text_size == 2 ? "very large" : applied.text_size ? "large" : "normal");
@@ -70,6 +76,17 @@ static int pause_settings_changed(void *opaque)
         s->sdl.screen_margin = applied.margin;
         fprintf(stderr, "oracles: screen margin %s\n", oracles_screen_margin_names[applied.margin]);
         oracles_sdl_backend_set_screen_margin(&s->backend, applied.margin);
+    }
+    if (changed & ORACLES_SESSION_CHANGED_VSYNC) {
+        s->vsync_setting = applied.vsync;
+        s->vsync = s->settings->vsync;   /* --vsync's gives way */
+        const int on = oracles_session_vsync_on(s->vsync, s->display_hz);
+        fprintf(stderr, "oracles: vsync %s (setting %s, display %u Hz)\n", on ? "on" : "off", s->vsync, s->display_hz);
+        if (on != s->sdl.vsync) {
+            s->sdl.vsync = on;
+            oracles_sdl_backend_set_vsync(&s->backend, on);
+            s->paces_changed = 1;
+        }
     }
     if (changed & ORACLES_SESSION_CHANGED_SWIM) {
         s->swim_setting = s->swim_next = applied.swim_hold;
@@ -151,6 +168,16 @@ static unsigned windows_refused(const session *s, SDL_Window *window)
     unsigned scales[3];
     for (unsigned v = 0; v < 3; v++) scales[v] = oracles_home_fitting_scale(window, v + 2u, surface);
     return oracles_session_windows_refused(scales, (int)surface.width, (int)surface.height, s->settings->aspect);
+}
+
+/* After the pause: whether the display paces the frames from now on, vsync turned on or off there; -1 when it stays. */
+int oracles_session_display_paces_now(void *opaque)
+{
+    session *s = opaque;
+    if (!s->paces_changed) return -1;
+    s->paces_changed = 0;
+    fprintf(stderr, "oracles: %s\n", s->sdl.vsync ? "the display paces the frames from here" : "the host paces the frames at 59.7275 Hz from here");
+    return s->sdl.vsync;
 }
 
 oracles_host_pause_result oracles_session_pause(void *opaque)

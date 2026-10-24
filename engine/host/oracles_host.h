@@ -192,7 +192,11 @@ typedef struct oracles_host_run_config {
      * core does not run meanwhile and no frame is counted, so a recorded route holds no frame of the pause; at the
      * resume the player's keys are released and the pacing starts again from the clock. */
     oracles_host_pause_result (*on_pause)(void *opaque);
-    void *pause_opaque;   /* for on_started and on_pause */
+    /* After a pause that resumes, when set: 1 when the presentation waits for the display from now on (vsync turned on
+     * there), the host then watching that it does as with display_paces; 0 when it no longer does (turned off), the host
+     * pacing; -1 when the pause left it as it was. */
+    int (*display_paces_now)(void *opaque);
+    void *pause_opaque;   /* for on_started, on_pause and display_paces_now */
 } oracles_host_run_config;
 
 typedef struct oracles_host_run_report {

@@ -97,18 +97,25 @@ struct OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions
 /* The screen margin the games play with, an OraclesScreenMargin: the command line's (`option`, --screen-margin's as
  * OraclesSessionOptions holds it, 0 for none), else the settings' screen_margin=. */
 int oracles_session_screen_margin(int option, const oracles_settings *settings);
+/* Whether a game presents in step with the display for vsync= `vsync` ("auto", "on" or "off") on a display of
+ * `display_hz`: on, off, or auto's (oracles_settings_auto_vsync, never on Android). */
+int oracles_session_vsync_on(const char *vsync, unsigned display_hz);
 
 /* What a running game shows of the settings the pause applies while it runs: the colour correction as the settings
  * had it when the game last took it, Scaling's Fill, the HUD (OraclesEnhancedHud, -1 without the Enhanced view, which alone
  * draws it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
  * took them, the swim's hold (-1 where the game's profile has none), the item hotkeys' mode (an OraclesHotkeysMode) of
- * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none), the instant text.  The window is not among
+ * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none), the instant text, vsync= (0 auto,
+ * 1 on, 2 off: what --vsync gave holds until the pause changes it), the large menus (-1 without the Enhanced view).  The
+ * window is not among
  * them: the pause applies it when its row is chosen (OraclesPauseSession's window_chosen). */
 typedef struct OraclesSessionApplied {
     int colour, fill, hud, margin;
     int text_size;   /* Text size, 0 normal, 1 large, 2 xlarge (-1 without the Enhanced view, or for a fan game, which keeps the game's box) */
     int swim_hold, hotkeys_game, hotkeys;
     int text_instant;   /* the instant text (-1 where the game's profile has none), as the settings had it when the game last took it */
+    int vsync;
+    int menus_large;   /* menus=large (-1 without the Enhanced view) */
 } OraclesSessionApplied;
 #define ORACLES_SESSION_CHANGED_COLOUR 1u
 #define ORACLES_SESSION_CHANGED_FILL 2u
@@ -118,6 +125,8 @@ typedef struct OraclesSessionApplied {
 #define ORACLES_SESSION_CHANGED_HOTKEYS 32u
 #define ORACLES_SESSION_CHANGED_TEXT_SIZE 64u
 #define ORACLES_SESSION_CHANGED_TEXT_SPEED 128u
+#define ORACLES_SESSION_CHANGED_VSYNC 256u
+#define ORACLES_SESSION_CHANGED_MENUS 512u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
  * gives one (oracles_session_screen_margin), and the text size --text-size's when `text_size_option` gives one (the

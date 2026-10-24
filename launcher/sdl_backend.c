@@ -152,6 +152,13 @@ static Uint32 audio_bytes_for_ms(const sdl_backend *backend, unsigned ms)
     return (Uint32)((uint64_t)backend->sample_rate_hz * 2u * sizeof(int16_t) * ms / 1000u);
 }
 
+void oracles_sdl_backend_set_vsync(const oracles_host_backend *backend, int vsync)
+{
+    sdl_backend *state = backend->opaque;
+    state->vsync = vsync != 0;
+    if (state->renderer) SDL_SetRenderVSync(state->renderer, state->vsync ? 1 : 0);
+}
+
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill)
 {
     sdl_backend *state = backend->opaque;

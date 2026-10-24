@@ -128,6 +128,16 @@ static void restore_window(home_app *app)
     SDL_SetRenderVSync(app->renderer, HOME_VSYNC);
 }
 
+/* The update check's answer: a newer version, shown by the version from then on (it fades in). */
+static void read_update(home_app *app)
+{
+    OraclesUpdateStatus status;
+    oracles_update_check_status(&status);
+    if (status.state != ORACLES_UPDATE_NEWER || app->nav.update[0]) return;
+    snprintf(app->nav.update, sizeof app->nav.update, "%s", status.version);
+    changed(app);
+}
+
 static void start(home_app *app, OraclesHomeCommand game)
 {
     if (!app->host || !app->host->start) return;
@@ -163,18 +173,9 @@ static void start(home_app *app, OraclesHomeCommand game)
     char platform[256];
     oracles_android_activity_text("inputState", platform, sizeof platform);   /* its counts start now */
     refresh(app);
+    read_update(app);   /* an answer that came during the game, whose loop took its event */
     changed(app);
     if (message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
-}
-
-/* The update check's answer: a newer version, shown by the version from then on (it fades in). */
-static void read_update(home_app *app)
-{
-    OraclesUpdateStatus status;
-    oracles_update_check_status(&status);
-    if (status.state != ORACLES_UPDATE_NEWER || app->nav.update[0]) return;
-    snprintf(app->nav.update, sizeof app->nav.update, "%s", status.version);
-    changed(app);
 }
 
 /* The game's page asks the host for a file, a folder, or to keep a choice. */
@@ -244,8 +245,11 @@ static int input(const SDL_Event *e)
 
 static void command(home_app *app, OraclesHomeCommand c)
 {
+    char message[256];
     if (c == ORACLES_HOME_EXIT) app->running = 0;
-    else if (c == ORACLES_HOME_OPEN_UPDATE) oracles_update_check_open();   /* the browser opens; the launcher stays */
+    else if (c == ORACLES_HOME_OPEN_UPDATE) {   /* the browser opens, the launcher staying; without one, the page's address */
+        if (!oracles_update_check_open(message, sizeof message) && message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
+    }
     else if (c == ORACLES_HOME_START_AGES || c == ORACLES_HOME_START_SEASONS || c == ORACLES_HOME_START_AGES_MODS || c == ORACLES_HOME_START_SEASONS_MODS
              || oracles_home_fan_game_started(c)) start(app, c);
     else if (c != ORACLES_HOME_STAY) page_command(app, c);
@@ -295,6 +299,7 @@ static void pointer(home_app *app, float x, float y, int click)
         const OraclesHomeCommand c = app->nav.screen == ORACLES_SCREEN_GAME ? oracles_page_click(&app->nav, hit.index, hit.option)
                                      : app->nav.screen == ORACLES_SCREEN_MODS ? oracles_mods_click(&app->nav, hit.index)
                                      : app->nav.screen == ORACLES_SCREEN_CHEATS ? oracles_cheats_click(&app->nav, hit.index, hit.option)
+                                     : app->nav.screen == ORACLES_SCREEN_ABOUT ? oracles_about_click(&app->nav, hit.option)
                                                                               : oracles_display_click(&app->nav, hit.index, hit.option);
         changed(app);
         command(app, c);

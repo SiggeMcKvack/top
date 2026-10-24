@@ -255,6 +255,12 @@ int oracles_host_run(const oracles_host_run_config *config, const oracles_host_b
                  * during it; the pacing takes the clock as it finds it rather than catching up the pause, and the display's
                  * watch leaves the pause out of its window. */
                 buttons = 0;
+                const int paces = config->display_paces_now ? config->display_paces_now(config->pause_opaque) : -1;
+                if (paces >= 0 && paces != watching) {
+                    watching = paces;
+                    pacing = !paces;
+                    memset(&watch, 0, sizeof watch);   /* a new watch: the display's first window judged from the resume */
+                }
                 if (pacing) {
                     p.deadline_ns = backend->monotonic_ns(backend->opaque);
                     p.remainder = 0;

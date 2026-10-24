@@ -327,6 +327,7 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
         nav->display.text_size_fixed = 1;
     }
     nav->cheats_fixed = games->options && games->options->cheats_given;   /* --cheats', for every game it starts */
+    nav->update_check = games->settings->update_check;
     nav->cheats_changed = 0;
     oracles_home_inspect_controls(games->settings, &nav->controls);
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
@@ -357,6 +358,7 @@ static void store(void *opaque, const OraclesHomeNav *nav)
     }
     oracles_home_store_controls(&nav->controls, prefs);
     oracles_home_store_display(&nav->display, nav->in_game, prefs);
+    prefs->update_check = nav->update_check;   /* About's: the next launch asks, or not */
     /* Each Oracle's active mods, those its Mods page switched on. */
     for (int g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         prefs->mods[g][0] = 0;

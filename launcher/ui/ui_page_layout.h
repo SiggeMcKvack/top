@@ -155,8 +155,10 @@ void oracles_ui_layout_import(OraclesUiLayout layout, const char *file, const ch
 
 /* The texts of Display. */
 typedef struct OraclesUiDisplayTexts {
-    const char *section;                  /* "Display", "Display › Advanced" or "Display › Text" */
+    const char *section;                  /* "Display", "Display › Advanced", "Display › Picture" or "Display › Text" */
     int advanced;                         /* the Advanced rows in place of Display's own, and no Advanced under the diagram */
+    int picture;                          /* the Picture rows in their place, the same */
+    int far_size;                         /* Far size among them, where far is fitted to the screen */
     int text_page;                        /* the Text rows in place of Display's own, the preview in the diagram's place */
     const char *over, *title;           /* no state line: the profile is Display's first row */
     char window_names[4][32], window_sizes[4][48];
@@ -173,16 +175,21 @@ typedef struct OraclesUiDisplayTexts {
     const char *explanations[9];          /* color correction, continuous transitions, vsync, core, the workers, the scaling, the HUD,
                                            * the screen margin, the Text link */
     char text_summary[64];                /* beside the Text link: "Compact · Wide · Normal" */
+    char picture_summary[96];             /* beside the Picture link: "Sharp · No margin · Color off" */
+    const char *picture_explanation;      /* the Picture link's */
     /* Display › Text: each row's explanation and note (empty: none), Text, Text box, Text size; the preview. */
     const char *text_explanations[ORACLES_DISPLAY_TEXT_ROWS], *text_notes[ORACLES_DISPLAY_TEXT_ROWS];
     OraclesDisplayTextPreview preview;
     const char *view_explanation;
     /* Under View's explanation, Core's, the transitions', Vsync's and the workers': their notes, from a game why they are
-     * dimmed (NULL: none). */
+     * dimmed (NULL: none; Vsync's always, live from a game). */
     const char *view_note, *core_note, *transitions_note, *vsync_note, *workers_note;
     char workers_names[3][16];            /* "Auto · 2", "1", "2" */
     char scaling_sizes[2][24];            /* the image's size in fullscreen with Sharp, with Fill */
     const char *camera_explanation, *camera_note;   /* Camera's, and its note (NULL: none) where it has no effect */
+    /* Display › Picture's Menus & scenes and Far size: their explanations and notes (empty: none). */
+    const char *size_explanations[2];
+    char size_notes[2][ORACLES_HOME_TEXT_LENGTH];
     char profile_sizes[ORACLES_PROFILES][24], view_sizes[3][24];   /* the sizes of the screen's shape, Enhanced's at the view chosen */
     float diagram_box_w;                  /* the diagram's box, the screen's shape at its height (0: 16:9's) */
     float diagram_w, diagram_h;           /* the window drawn in the diagram's box */
@@ -203,11 +210,14 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiBox diagram, diagram_window;
     OraclesUiLine diagram_label;
     OraclesUiBox panel;
-    /* Profile, Quality, Window, View, HUD, Text, Color correction, or Core, Continuous transitions, Vsync, Neighbour workers,
-     * Scaling, Camera, Screen margin, or Text, Text box, Text size, Text speed; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
-     * framed button beside it in 4:3. */
+    /* Profile, Quality, Window, View, HUD, Text, Picture, or Core, Continuous transitions, Vsync, Neighbour workers, Camera,
+     * or Scaling, Screen margin, Color correction, Far size, Menus & scenes, or Text, Text box, Text size, Text speed; zero
+     * for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
+     * framed button beside it in 4:3; `link` is ORACLES_DISPLAY_ADVANCED on Display's own rows, ORACLES_DISPLAY_ROWS on
+     * the other pages, which have none. */
     OraclesUiWrapped labels[ORACLES_DISPLAY_ROWS];
     OraclesUiBox rows[ORACLES_DISPLAY_ROWS];         /* each row's highlight, the pointer's target */
+    unsigned link;
     OraclesUiLine advanced_label;
     OraclesUiBox advanced_arrow;                     /* a triangle pointing right, in this box */
     OraclesUiOptionLayout profiles[ORACLES_PROFILES];
@@ -228,9 +238,11 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiWrapped explanations[9];
     OraclesUiOptionLayout colour[2], vsync[3], core[2], workers[3], scaling[2];   /* each scaling with its size */
     OraclesUiOptionLayout hud[3];
-    /* The Text link: its summary and its arrow at the right of its row, both in `text_link`, the summary's box. */
-    OraclesUiLine text_summary;
-    OraclesUiBox text_arrow, text_link;
+    /* The Text and Picture links: each one's summary and its arrow at the right of its row, both in `text_link` or
+     * `picture_link`, the summary's box; Picture's explanation (16:9). */
+    OraclesUiLine text_summary, picture_summary;
+    OraclesUiBox text_arrow, text_link, picture_arrow, picture_link;
+    OraclesUiWrapped picture_explanation;
     /* Display › Text: Text's, Text box's, Text size's and Text speed's choices, their explanations (16:9, two lines kept)
      * and notes (16:9, under them; 4:3 says them on the help's note line). */
     OraclesUiOptionLayout text[2], text_box[2], text_size[ORACLES_DISPLAY_TEXT_SIZES], text_speed[2];
@@ -244,6 +256,11 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine preview_label, preview_note;
     OraclesUiOptionLayout margin[ORACLES_DISPLAY_MARGINS];   /* 16:9: above its explanation, from the row's left */
     OraclesUiOptionLayout camera[2];
+    /* Display › Picture's Menus & scenes and Far size: their choices, explanations (16:9, two lines kept) and notes (16:9,
+     * under them; 4:3 says them on the help's note line). */
+    OraclesUiOptionLayout menus[2], far_size[2];
+    OraclesUiWrapped size_explanations[2];
+    OraclesUiLine size_notes[2];
     OraclesUiWrapped camera_explanation;              /* 16:9 */
     OraclesUiLine camera_note;                        /* 16:9: under its explanation */
     OraclesUiLine help, help_note;                   /* 4:3: in the header, the highlighted row's explanation and its note */
@@ -273,6 +290,9 @@ float oracles_ui_display_options_row_4_3(float y, unsigned row, const char *cons
  * 4:3 in the rows' column.  Returns the row's height (16:9) or its bottom (4:3). */
 float oracles_ui_text_link_16_9(const OraclesUiDisplayTexts *t, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
 float oracles_ui_text_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesUiDisplayLayout *out);
+/* The Picture link the same, under the Text link. */
+float oracles_ui_picture_link_16_9(const OraclesUiDisplayTexts *t, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
+float oracles_ui_picture_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesUiDisplayLayout *out);
 /* Display › Text: 16:9 its preview in the left column from `preview_y`, its rows in the panel's values from (x, y), `w`
  * wide, their labels at `label_x`, returning the rows' bottom; 4:3 its preview from the rows' top, its rows under it. */
 float oracles_ui_text_page_16_9(const OraclesUiDisplayTexts *t, float preview_y, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
@@ -314,7 +334,7 @@ extern const OraclesUiTextStyle oracles_ui_mod_games;
 
 void oracles_ui_layout_mods(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiModsLayout *out);
 
-/* Cheats (ui_page_cheats.c): the head and the note on the save under the title (16:9: in the head's column, wrapped;
+/* Cheats (ui_page_cheats.c), and About as it: the head and the note on the save under the title (16:9: in the head's column, wrapped;
  * 4:3: one line), each row's label and Off and On; 16:9 has the panel, each row's explanation beside its choices and
  * each row's highlight the value's cell, 4:3 the whole row and the highlighted row's explanation and note under the
  * rows (`help`, `help_note`). */
@@ -330,6 +350,9 @@ typedef struct OraclesUiCheatsLayout {
 } OraclesUiCheatsLayout;
 
 void oracles_ui_layout_cheats(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiCheatsLayout *out);
+/* About (ui_page_nav.h), laid out as Cheats with its one row, its note (oracles_about_note, made in `note` for `version`)
+ * under the title. */
+void oracles_ui_layout_about(OraclesUiLayout layout, const OraclesHomeNav *nav, const char *version, char *note, size_t capacity, OraclesUiCheatsLayout *out);
 
 /* `text` broken into lines of at most `width`, the first at (x, y). */
 void oracles_ui_wrap(const OraclesUiTextStyle *style, const char *text, float width, float x, float y, OraclesUiWrapped *out);

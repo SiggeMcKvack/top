@@ -1,4 +1,4 @@
-/* Cheats (ui_page_nav.h): its rows, its keys and pointer, and its layout (ui_page_layout.h). */
+/* Cheats and About (ui_page_nav.h): their rows, their keys and pointer, and their layout (ui_page_layout.h). */
 #include "ui_page_layout.h"
 #include "ui_page_nav.h"
 
@@ -66,6 +66,51 @@ OraclesHomeCommand oracles_cheats_click(OraclesHomeNav *nav, unsigned row, int o
     if (row >= ORACLES_CHEATS_ROWS) return ORACLES_HOME_STAY;
     nav->row = row;
     return option < 0 ? ORACLES_HOME_STAY : set_cheat(nav, row, option == 1);
+}
+
+const char oracles_about_label[] = "Update check";
+const char *const oracles_about_choices[2] = { "On", "Off" };
+const char oracles_about_explanation[] = "On: the launcher asks GitHub once at launch whether a newer version is out. Off: no network request.";
+const char oracles_about_help[] = "On: one request to GitHub at launch.";
+const char oracles_about_help_note[] = "Off: no network request.";
+
+void oracles_about_note(const OraclesHomeNav *nav, const char *version, char *out, size_t capacity)
+{
+    if (nav->update[0] && nav->update_check) snprintf(out, capacity, "%s \xc2\xb7 %s available", version, nav->update);
+    else snprintf(out, capacity, "%s", version);
+}
+
+static OraclesHomeCommand set_update_check(OraclesHomeNav *nav, int on)
+{
+    if (nav->update_check == on) return ORACLES_HOME_STAY;
+    nav->update_check = on;
+    return ORACLES_HOME_STORE;
+}
+
+OraclesHomeCommand oracles_about_act(OraclesHomeNav *nav, OraclesHomeAction action)
+{
+    nav->row = 0;
+    switch (action) {
+        case ORACLES_HOME_UP:
+        case ORACLES_HOME_DOWN: return ORACLES_HOME_STAY;
+        case ORACLES_HOME_LEFT:
+        case ORACLES_HOME_RIGHT:
+        case ORACLES_HOME_OK: return set_update_check(nav, !nav->update_check);
+        case ORACLES_HOME_BACK: {
+            /* Back to the home screen, on the version number. */
+            OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+            nav->screen = ORACLES_SCREEN_HOME;
+            nav->focus = oracles_home_items(nav, items) + (oracles_home_update_shown(nav) ? 1u : 0u);
+            return ORACLES_HOME_STAY;
+        }
+    }
+    return ORACLES_HOME_STAY;
+}
+
+OraclesHomeCommand oracles_about_click(OraclesHomeNav *nav, int option)
+{
+    nav->row = 0;
+    return option < 0 ? ORACLES_HOME_STAY : set_update_check(nav, option == 0);
 }
 
 /* ---- the layout ------------------------------------------------------------------------------------------------ */
@@ -159,39 +204,47 @@ static void wrap_lines(const OraclesUiTextStyle *style, const char *text, float 
     out->h = (float)out->count * line_height;
 }
 
-/* Off and On, right-aligned at `right` from `top`. */
-static void choices_16_9(float right, float top, OraclesUiOptionLayout out[2])
+/* The two choices `names`, right-aligned at `right` from `top`. */
+static void choices_16_9(const char *const *names, float right, float top, OraclesUiOptionLayout out[2])
 {
     float x = right;
     for (int i = 1; i >= 0; i--) {
         OraclesUiOptionLayout *o = &out[i];
         memset(&o->size, 0, sizeof o->size);
-        o->name = line_at(&oracles_ui_choice, choice_names[i], 0.0f, 0.0f, 0.0f);
+        o->name = line_at(&oracles_ui_choice, names[i], 0.0f, 0.0f, 0.0f);
         o->box = box(x - o->name.w - 2.0f * (CHOICE_PAD_X + BORDER), top, o->name.w + 2.0f * (CHOICE_PAD_X + BORDER), o->name.h + 2.0f * (CHOICE_PAD_Y + BORDER));
         move_line(&o->name, o->box.x + BORDER + CHOICE_PAD_X, top + BORDER + CHOICE_PAD_Y);
         x = o->box.x - CHOICE_GAP;
     }
 }
 
-static void cheats_16_9(const OraclesHomeNav *nav, OraclesUiCheatsLayout *out)
+/* A page of rows laid out as Cheats: its head, the note under it, and each row's label, explanation (16:9's) and two
+ * choices; 4:3's help, the highlighted row's explanation and note. */
+typedef struct list_page {
+    const char *section, *over, *title, *note;
+    unsigned rows;
+    const char *labels[ORACLES_CHEATS_ROWS];
+    char explanations[ORACLES_CHEATS_ROWS][ORACLES_HOME_TEXT_LENGTH];
+    const char *const *choices;
+    const char *help, *help_note;
+} list_page;
+
+static void list_16_9(const list_page *page, OraclesUiCheatsLayout *out)
 {
-    const OraclesHomeHero hero = oracles_home_hero(nav);
-    oracles_ui_layout_page_head(ORACLES_UI_LAYOUT_16_9, "Cheats", oracles_home_over(hero), oracles_home_title(hero), NULL, &out->head);
+    oracles_ui_layout_page_head(ORACLES_UI_LAYOUT_16_9, page->section, page->over, page->title, NULL, &out->head);
     const float note_y = out->head.title.lines[0].y + out->head.title.h + NOTE_GAP;
-    wrap_lines(&oracles_ui_row_text, oracles_cheats_note, HEAD_W, HEAD_X, note_y, NOTE_LINE, &out->note);
+    wrap_lines(&oracles_ui_row_text, page->note, HEAD_W, HEAD_X, note_y, NOTE_LINE, &out->note);
 
     const float left = PANEL_X + PANEL_BORDER + PANEL_PAD_X, width = PANEL_W - 2.0f * (PANEL_BORDER + PANEL_PAD_X);
     const float value_x = left + LABEL_W + GRID_GAP, value_w = width - LABEL_W - GRID_GAP;
     const float inner_x = value_x + ROW_PAD_X, right = value_x + value_w - ROW_PAD_X;
     float y = PANEL_Y + PANEL_BORDER + PANEL_PAD_Y;
-    for (unsigned r = 0; r < ORACLES_CHEATS_ROWS; r++) {
-        out->labels[r] = line_at(&oracles_ui_row_label, oracles_cheats_labels[r], left, y + LABEL_PAD_TOP, 0.0f);
-        /* The explanation beside Off and On, two lines kept, the two centred on the row. */
+    for (unsigned r = 0; r < page->rows; r++) {
+        out->labels[r] = line_at(&oracles_ui_row_label, page->labels[r], left, y + LABEL_PAD_TOP, 0.0f);
+        /* The explanation beside the two choices, two lines kept, the two centred on the row. */
         OraclesUiOptionLayout *o = out->choices[r];
-        choices_16_9(right, 0.0f, o);
-        char explanation[ORACLES_HOME_TEXT_LENGTH];
-        oracles_cheats_explanation(r, explanation, sizeof explanation);
-        wrap_lines(&oracles_ui_row_text, explanation, o[0].box.x - TEXT_GAP - inner_x, inner_x, 0.0f, TEXT_LINE, &out->explanations[r]);
+        choices_16_9(page->choices, right, 0.0f, o);
+        wrap_lines(&oracles_ui_row_text, page->explanations[r], o[0].box.x - TEXT_GAP - inner_x, inner_x, 0.0f, TEXT_LINE, &out->explanations[r]);
         const float text_h = max_f(out->explanations[r].h, TEXT_H), inner_h = max_f(text_h, o[0].box.h);
         const float inner_y = y + ROW_PAD_Y;
         for (unsigned i = 0; i < out->explanations[r].count; i++)
@@ -202,36 +255,35 @@ static void cheats_16_9(const OraclesHomeNav *nav, OraclesUiCheatsLayout *out)
             move_line(&o[c].name, o[c].name.x, o[c].name.y + dy);
         }
         out->rows[r] = box(value_x, y, value_w, inner_h + 2.0f * ROW_PAD_Y);
-        y += max_f(LABEL_PAD_TOP + out->labels[r].h, out->rows[r].h) + (r + 1u < ORACLES_CHEATS_ROWS ? ROW_GAP : 0.0f);
+        y += max_f(LABEL_PAD_TOP + out->labels[r].h, out->rows[r].h) + (r + 1u < page->rows ? ROW_GAP : 0.0f);
     }
     out->panel = box(PANEL_X, PANEL_Y, PANEL_W, y + PANEL_PAD_Y + PANEL_BORDER - PANEL_Y);
 }
 
-static void cheats_4_3(const OraclesHomeNav *nav, OraclesUiCheatsLayout *out)
+static void list_4_3(const list_page *page, OraclesUiCheatsLayout *out)
 {
-    const OraclesHomeHero hero = oracles_home_hero(nav);
-    oracles_ui_layout_page_head(ORACLES_UI_LAYOUT_4_3, "Cheats", oracles_home_over(hero), oracles_home_title(hero), NULL, &out->head);
+    oracles_ui_layout_page_head(ORACLES_UI_LAYOUT_4_3, page->section, page->over, page->title, NULL, &out->head);
     out->note.count = 1;
-    snprintf(out->note.text[0], sizeof out->note.text[0], "%s", oracles_cheats_note);
-    out->note.lines[0] = line_at(&oracles_ui_page_note_4_3, oracles_cheats_note, HEAD_X_4_3, out->head.title.lines[0].y + out->head.title.h + HEAD_GAP_4_3, 0.0f);
+    snprintf(out->note.text[0], sizeof out->note.text[0], "%s", page->note);
+    out->note.lines[0] = line_at(&oracles_ui_page_note_4_3, page->note, HEAD_X_4_3, out->head.title.lines[0].y + out->head.title.h + HEAD_GAP_4_3, 0.0f);
     out->note.w = out->note.lines[0].w;
     out->note.h = out->note.lines[0].h;
 
     const float left = ROWS_X_4_3 + ROW_PAD_X_4_3, value_x = left + LABEL_W_4_3 + GRID_GAP_4_3;
     float y = ROWS_Y_4_3;
-    for (unsigned r = 0; r < ORACLES_CHEATS_ROWS; r++) {
-        /* Off and On framed from the values' column, the label and they centred on the row. */
+    for (unsigned r = 0; r < page->rows; r++) {
+        /* The two choices framed from the values' column, the label and they centred on the row. */
         OraclesUiOptionLayout *o = out->choices[r];
         float x = value_x, options_h = 0.0f;
         for (int c = 0; c < 2; c++) {
             memset(&o[c].size, 0, sizeof o[c].size);
-            o[c].name = line_at(&oracles_ui_row_button_4_3, choice_names[c], 0.0f, 0.0f, OPTION_NAME_LINE_4_3);
+            o[c].name = line_at(&oracles_ui_row_button_4_3, page->choices[c], 0.0f, 0.0f, OPTION_NAME_LINE_4_3);
             o[c].box = box(x, 0.0f, max_f(OPTION_MIN_W_4_3, o[c].name.w + 2.0f * (OPTION_PAD_X_4_3 + OPTION_BORDER_4_3)),
                            max_f(OPTION_MIN_H_4_3, o[c].name.h + 2.0f * (OPTION_PAD_Y_4_3 + OPTION_BORDER_4_3)));
             x += o[c].box.w + OPTION_GAP_4_3;
             options_h = max_f(options_h, o[c].box.h);
         }
-        out->labels[r] = line_at(&oracles_ui_row_label_4_3, oracles_cheats_labels[r], left, 0.0f, 0.0f);
+        out->labels[r] = line_at(&oracles_ui_row_label_4_3, page->labels[r], left, 0.0f, 0.0f);
         const float track = max_f(ROW_MIN_H_4_3 - 2.0f * ROW_PAD_Y_4_3, max_f(out->labels[r].h, options_h));
         out->rows[r] = box(ROWS_X_4_3, y, ROWS_W_4_3, track + 2.0f * ROW_PAD_Y_4_3);
         move_line(&out->labels[r], left, y + ROW_PAD_Y_4_3 + (track - out->labels[r].h) * 0.5f);
@@ -242,14 +294,37 @@ static void cheats_4_3(const OraclesHomeNav *nav, OraclesUiCheatsLayout *out)
         y += out->rows[r].h + ROW_GAP_4_3;
     }
     /* Under the rows, the highlighted row's explanation on one line, and its note on the next, kept when empty. */
-    const unsigned row = nav->row < ORACLES_CHEATS_ROWS ? nav->row : 0u;
-    out->help = line_at(&oracles_ui_help_4_3, oracles_cheats_texts[row], left, y + HELP_MARGIN_4_3, HELP_LINE_4_3);
-    out->help_note = line_at(&oracles_ui_row_note_4_3, oracles_cheats_notes[row], left, out->help.y + out->help.h + HELP_NOTE_GAP_4_3, HELP_NOTE_LINE_4_3);
+    out->help = line_at(&oracles_ui_help_4_3, page->help, left, y + HELP_MARGIN_4_3, HELP_LINE_4_3);
+    out->help_note = line_at(&oracles_ui_row_note_4_3, page->help_note, left, out->help.y + out->help.h + HELP_NOTE_GAP_4_3, HELP_NOTE_LINE_4_3);
+}
+
+static void list_layout(OraclesUiLayout layout, const list_page *page, OraclesUiCheatsLayout *out)
+{
+    memset(out, 0, sizeof *out);
+    if (layout == ORACLES_UI_LAYOUT_4_3) list_4_3(page, out);
+    else list_16_9(page, out);
 }
 
 void oracles_ui_layout_cheats(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiCheatsLayout *out)
 {
-    memset(out, 0, sizeof *out);
-    if (layout == ORACLES_UI_LAYOUT_4_3) cheats_4_3(nav, out);
-    else cheats_16_9(nav, out);
+    const OraclesHomeHero hero = oracles_home_hero(nav);
+    const unsigned row = nav->row < ORACLES_CHEATS_ROWS ? nav->row : 0u;
+    list_page page = { "Cheats", oracles_home_over(hero), oracles_home_title(hero), oracles_cheats_note, ORACLES_CHEATS_ROWS, { NULL }, { "" },
+                       choice_names, oracles_cheats_texts[row], oracles_cheats_notes[row] };
+    for (unsigned r = 0; r < ORACLES_CHEATS_ROWS; r++) {
+        page.labels[r] = oracles_cheats_labels[r];
+        oracles_cheats_explanation(r, page.explanations[r], sizeof page.explanations[r]);
+    }
+    list_layout(layout, &page, out);
+}
+
+void oracles_ui_layout_about(OraclesUiLayout layout, const OraclesHomeNav *nav, const char *version, char *note, size_t capacity, OraclesUiCheatsLayout *out)
+{
+    /* 16:9: "The Oracles" over the title "Project"; 4:3: the whole name on the title's line. */
+    oracles_about_note(nav, version, note, capacity);
+    const int four_three = layout == ORACLES_UI_LAYOUT_4_3;
+    list_page page = { "About", four_three ? NULL : "The Oracles", four_three ? "The Oracles Project" : "Project", note, 1u, { oracles_about_label },
+                       { "" }, oracles_about_choices, oracles_about_help, oracles_about_help_note };
+    snprintf(page.explanations[0], sizeof page.explanations[0], "%s", oracles_about_explanation);
+    list_layout(layout, &page, out);
 }

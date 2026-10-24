@@ -306,6 +306,12 @@ static int run(void *opaque)
     return 0;
 }
 
+void oracles_update_open_failed(const char *url, char *message, size_t capacity)
+{
+    const char *shown = !strncmp(url, "https://", 8) ? url + 8 : url;
+    snprintf(message, capacity, "No browser opened the release page: %s", shown);
+}
+
 void oracles_update_check_start(const char *source, const char *running)
 {
     if (check.started) return;
@@ -381,13 +387,15 @@ void oracles_update_check_close(void)
     oracles_update_check_wait(1000);
 }
 
-int oracles_update_check_open(void)
+int oracles_update_check_open(char *message, size_t capacity)
 {
     OraclesUpdateStatus status;
+    if (capacity) message[0] = 0;
     oracles_update_check_status(&status);
     if (status.state != ORACLES_UPDATE_NEWER) return 0;
     if (!SDL_OpenURL(status.url)) {
         fprintf(stderr, "oracles: update check: the release page cannot be opened: %s\n", SDL_GetError());
+        oracles_update_open_failed(status.url, message, capacity);
         return 0;
     }
     fprintf(stderr, "oracles: update check: the release page opened\n");

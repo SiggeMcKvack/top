@@ -372,12 +372,7 @@ static void window_options(session *s, const OraclesSessionOptions *o)
     oracles_settings *prefs = s->settings;
     if (!o->no_window) {
         s->display_hz = oracles_sdl_display_refresh_hz();
-        if (!strcmp(s->vsync, "on")) s->sdl.vsync = 1;
-#ifdef __ANDROID__
-        else if (!strcmp(s->vsync, "auto")) s->sdl.vsync = oracles_settings_auto_vsync(s->display_hz, 1);
-#else
-        else if (!strcmp(s->vsync, "auto")) s->sdl.vsync = oracles_settings_auto_vsync(s->display_hz, 0);
-#endif
+        if (oracles_session_vsync_on(s->vsync, s->display_hz)) s->sdl.vsync = 1;
     }
     s->sdl.pause_menu = s->pause != NULL && !o->no_window;
     /* Over the first frames, the pause's toast when one is due (oracles_pause_toast); dropped at once when none is. */
@@ -610,6 +605,13 @@ static int view_subpixel(void *opaque, oracles_host_video_subpixel *out)
     return 1;
 }
 
+/* The host's frame_crop: the framed core with the large menus. */
+static int menus_crop(void *opaque, uint32_t rect[4])
+{
+    const session *s = opaque;
+    return s->menus_large && oracles_enhanced_view_framed_crop(s->view, rect);
+}
+
 static void configure(session *s, const OraclesSessionOptions *o, oracles_host_run_config *config)
 {
     memset(config, 0, sizeof *config);
@@ -634,15 +636,22 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
      * a guest. */
     if (s->guest || s->sdl.pause_menu || s->play.setting_count) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
     if (s->check) { config->frame_source = native_frame; config->frame_source_opaque = s->check; }
-    if (s->sdl.pause_menu) { config->on_started = oracles_session_started; config->on_pause = oracles_session_pause; config->pause_opaque = s; }
+    if (s->sdl.pause_menu) {
+        config->on_started = oracles_session_started;
+        config->on_pause = oracles_session_pause;
+        config->display_paces_now = oracles_session_display_paces_now;
+        config->pause_opaque = s;
+    }
     if (s->view) {
         config->frame_source = oracles_enhanced_view_frame_source;
         config->frame_source_opaque = s->view;
-        /* The game's menus enlarged: the framed core shown alone, at its own whole scale. */
-        if (s->settings->menus_large) { config->frame_crop = oracles_enhanced_view_framed_crop; config->frame_crop_opaque = s->view; }
+        /* The game's menus enlarged: the framed core shown alone, at its own whole scale, while the pause leaves them so. */
+        s->menus_large = s->settings->menus_large;
+        config->frame_crop = menus_crop;
+        config->frame_crop_opaque = s;
         config->frame_subpixel = view_subpixel;   /* none while the camera keeps whole pixels */
         config->frame_subpixel_opaque = s->view;
-        oracles_enhanced_view_set_large_menus(s->view, s->settings->menus_large);
+        oracles_enhanced_view_set_large_menus(s->view, s->menus_large);
         /* Text size: the text box shown again larger by the presenter, in whole screen pixels. */
         config->frame_box = oracles_enhanced_view_text_box_enlarged;
         config->frame_box_opaque = s->view;
@@ -677,6 +686,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->colour_setting = settings->colour_correction;
     s->colour_applied = o->colour_option ? !strcmp(o->colour_option, "on") : settings->colour_correction;
     s->vsync = o->vsync_option ? o->vsync_option : settings->vsync;
+    s->vsync_setting = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     s->ghosts = o->ghosts ? o->ghosts - 1 : settings->ghosts;
     s->record_path = o->record_path;
     s->enhanced = o->enhanced || o->zoom_out || o->view || o->continuous_transitions || o->continuous_swim || o->continuous_diagonal;

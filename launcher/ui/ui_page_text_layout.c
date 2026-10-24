@@ -1,5 +1,5 @@
-/* Display's Text link and the Display › Text page (ui_page_layout.h), without SDL: the link's summary and arrow at the
- * right of its row; the page's rows as Advanced lays its own out, and its preview, the band at its proportions in a frame
+/* Display's Text and Picture links and the Display › Text page (ui_page_layout.h), without SDL: a link's summary and
+ * arrow at the right of its row; the page's rows as Advanced lays its own out, and its preview, the band at its proportions in a frame
  * of at most 520x293 in 16:9's left column, under the title, its label and note under it, or of at most 314x236 at the
  * top of 4:3's rows, its label and note at its right, at its bottom, so that the four rows fit under it. */
 #include "ui_page_layout.h"
@@ -90,38 +90,66 @@ static void move_wrapped(OraclesUiWrapped *w, float y)
 /* JavaScript's Math.round, as the mockup rounds the preview. */
 static float round_d(double v) { return (float)floor(v + 0.5); }
 
+/* A link's pieces: its summary, its arrow, both in its box. */
+typedef struct link_out { OraclesUiLine *summary; OraclesUiBox *arrow, *link; } link_out;
+
 /* The link's summary and arrow from (x, y) in a box `h` tall, the arrow `arrow_w` x `arrow_h` `gap` after the summary,
  * both centred on it: the box. */
 static OraclesUiBox link_at(const OraclesUiTextStyle *style, const char *summary, float x, float y, float h, float gap, float arrow_w, float arrow_h,
-                            OraclesUiDisplayLayout *out)
+                            link_out o)
 {
-    out->text_summary = line_at(style, summary, x, 0.0f, 0.0f);
-    move_line(&out->text_summary, x, y + (h - out->text_summary.h) * 0.5f);
-    out->text_arrow = box(x + out->text_summary.w + gap, y + (h - arrow_h) * 0.5f, arrow_w, arrow_h);
-    out->text_link = box(x, y, out->text_summary.w + gap + arrow_w, h);
-    return out->text_link;
+    *o.summary = line_at(style, summary, x, 0.0f, 0.0f);
+    move_line(o.summary, x, y + (h - o.summary->h) * 0.5f);
+    *o.arrow = box(x + o.summary->w + gap, y + (h - arrow_h) * 0.5f, arrow_w, arrow_h);
+    *o.link = box(x, y, o.summary->w + gap + arrow_w, h);
+    return *o.link;
+}
+
+/* A link row of Display, `row`, its explanation beside the link (16:9). */
+static float link_16_9(unsigned row, const char *text, const char *summary, float x, float y, float w, float label_x, OraclesUiWrapped *explanation,
+                       link_out o, OraclesUiDisplayLayout *out)
+{
+    OraclesUiWrapped *label = &out->labels[row];
+    oracles_ui_wrap(&oracles_ui_row_label, oracles_display_labels[row], DISPLAY_LABEL_W, label_x, y + LABEL_PAD_TOP, label);
+    const float inner_x = x + ROW_PAD_X, inner_y = y + DISPLAY_ROW_PAD_Y, right = x + w - ROW_PAD_X;
+    const float link_w = oracles_ui_text_width(&oracles_ui_choice, summary) + LINK_GAP + LINK_ARROW_W;
+    oracles_ui_wrap(&oracles_ui_row_text, text, right - inner_x - ROW_GAP - link_w, inner_x, inner_y, explanation);
+    const float inner_h = fmaxf(explanation->h, LINK_H);
+    move_wrapped(explanation, inner_y + (inner_h - explanation->h) * 0.5f);
+    link_at(&oracles_ui_choice, summary, right - link_w, inner_y + (inner_h - LINK_H) * 0.5f, LINK_H, LINK_GAP, LINK_ARROW_W, LINK_ARROW_H, o);
+    out->rows[row] = box(x, y, w, inner_h + 2.0f * DISPLAY_ROW_PAD_Y);
+    return fmaxf(LABEL_PAD_TOP + label->h, out->rows[row].h);
+}
+
+static float link_4_3(unsigned row, const char *summary, float y, link_out o, OraclesUiDisplayLayout *out)
+{
+    const float top = oracles_ui_display_row_4_3(y, oracles_display_labels[row], LINK_H_4_3, &out->labels[row], &out->rows[row]);
+    link_at(&oracles_ui_row_button_4_3, summary, DISPLAY_VALUE_X_4_3, top, LINK_H_4_3, LINK_GAP_4_3, LINK_ARROW_W_4_3, LINK_ARROW_H_4_3, o);
+    return out->rows[row].y + out->rows[row].h;
 }
 
 float oracles_ui_text_link_16_9(const OraclesUiDisplayTexts *t, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out)
 {
-    OraclesUiWrapped *label = &out->labels[ORACLES_DISPLAY_TEXT], *explanation = &out->explanations[8];
-    oracles_ui_wrap(&oracles_ui_row_label, oracles_display_labels[ORACLES_DISPLAY_TEXT], DISPLAY_LABEL_W, label_x, y + LABEL_PAD_TOP, label);
-    const float inner_x = x + ROW_PAD_X, inner_y = y + DISPLAY_ROW_PAD_Y, right = x + w - ROW_PAD_X;
-    const float link_w = oracles_ui_text_width(&oracles_ui_choice, t->text_summary) + LINK_GAP + LINK_ARROW_W;
-    oracles_ui_wrap(&oracles_ui_row_text, t->explanations[8], right - inner_x - ROW_GAP - link_w, inner_x, inner_y, explanation);
-    const float inner_h = fmaxf(explanation->h, LINK_H);
-    move_wrapped(explanation, inner_y + (inner_h - explanation->h) * 0.5f);
-    link_at(&oracles_ui_choice, t->text_summary, right - link_w, inner_y + (inner_h - LINK_H) * 0.5f, LINK_H, LINK_GAP, LINK_ARROW_W, LINK_ARROW_H, out);
-    out->rows[ORACLES_DISPLAY_TEXT] = box(x, y, w, inner_h + 2.0f * DISPLAY_ROW_PAD_Y);
-    return fmaxf(LABEL_PAD_TOP + label->h, out->rows[ORACLES_DISPLAY_TEXT].h);
+    const link_out o = { &out->text_summary, &out->text_arrow, &out->text_link };
+    return link_16_9(ORACLES_DISPLAY_TEXT, t->explanations[8], t->text_summary, x, y, w, label_x, &out->explanations[8], o, out);
 }
 
 float oracles_ui_text_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesUiDisplayLayout *out)
 {
-    const float top = oracles_ui_display_row_4_3(y, oracles_display_labels[ORACLES_DISPLAY_TEXT], LINK_H_4_3, &out->labels[ORACLES_DISPLAY_TEXT],
-                                                 &out->rows[ORACLES_DISPLAY_TEXT]);
-    link_at(&oracles_ui_row_button_4_3, t->text_summary, DISPLAY_VALUE_X_4_3, top, LINK_H_4_3, LINK_GAP_4_3, LINK_ARROW_W_4_3, LINK_ARROW_H_4_3, out);
-    return out->rows[ORACLES_DISPLAY_TEXT].y + out->rows[ORACLES_DISPLAY_TEXT].h;
+    const link_out o = { &out->text_summary, &out->text_arrow, &out->text_link };
+    return link_4_3(ORACLES_DISPLAY_TEXT, t->text_summary, y, o, out);
+}
+
+float oracles_ui_picture_link_16_9(const OraclesUiDisplayTexts *t, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out)
+{
+    const link_out o = { &out->picture_summary, &out->picture_arrow, &out->picture_link };
+    return link_16_9(ORACLES_DISPLAY_PICTURE, t->picture_explanation, t->picture_summary, x, y, w, label_x, &out->picture_explanation, o, out);
+}
+
+float oracles_ui_picture_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesUiDisplayLayout *out)
+{
+    const link_out o = { &out->picture_summary, &out->picture_arrow, &out->picture_link };
+    return link_4_3(ORACLES_DISPLAY_PICTURE, t->picture_summary, y, o, out);
 }
 
 /* The band's frame from (x, y), at most `room_w` x `room_h`, and what it holds: the status bar's band, the box at the

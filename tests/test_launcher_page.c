@@ -1086,7 +1086,7 @@ static void hud_probes_4_3(const char *frame, const OraclesUiDisplayLayout *l)
     layout_line(frame, "hud Full text", &l->hud[1].name);
     layout_line(frame, "hud Wide text", &l->hud[2].name);
     layout_box(frame, "hud row", &l->rows[ORACLES_DISPLAY_HUD]);
-    layout_box(frame, "Color row", &l->rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box(frame, "picture row", &l->rows[ORACLES_DISPLAY_PICTURE]);
     layout_line(frame, "help text", &l->help);
     layout_near(frame, "help", "y", l->help.y);
     layout_near(frame, "help", "h", l->help.h);
@@ -1159,16 +1159,12 @@ static void display_2a_2b(void)
         /* HUD under it, Full width chosen: its explanation on two lines beside Original and Full width. */
         CHECK(nav.display.hud == 1);
         hud_probes(frame, &l);
-        /* Color correction: its label and its explanation each on two lines, the panel's last row. */
-        CHECK(l.labels[ORACLES_DISPLAY_COLOUR].count == 2 && l.explanations[0].count == 2);
-        CHECK(!strcmp(l.labels[ORACLES_DISPLAY_COLOUR].text[0], "Color"));
-        layout_near(frame, "Color correction", "top", l.labels[ORACLES_DISPLAY_COLOUR].lines[0].y);
-        layout_near(frame, "Color correction", "width", l.labels[ORACLES_DISPLAY_COLOUR].w);
-        layout_near(frame, "color explanation", "top", l.explanations[0].lines[0].y);
-        layout_near(frame, "color explanation", "width", l.explanations[0].w);
-        layout_box(frame, "color Off", &l.colour[0].box);
-        layout_box(frame, "color On", &l.colour[1].box);
-        layout_box(frame, "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+        /* Picture, in Color correction's former place (turn 34): the panel's last row, a link with its summary; Color
+         * correction is on its page. */
+        CHECK(l.rows[ORACLES_DISPLAY_COLOUR].w == 0.0f && l.colour[0].box.w == 0.0f);
+        layout_text(frame, "Picture", &l.labels[ORACLES_DISPLAY_PICTURE].lines[0]);
+        layout_box(frame, "picture link", &l.picture_link);
+        layout_box(frame, "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
         /* Advanced sits under the diagram, its highlight past its label on both sides; the Advanced rows, the transitions
          * among them, are not laid out. */
         CHECK(l.rows[ORACLES_DISPLAY_TRANSITIONS].w == 0.0f && l.transitions_note.h == 0.0f);
@@ -1207,10 +1203,12 @@ static void display_2a_2b(void)
         CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_VIEW, 0) == ORACLES_HOME_STAY && nav.display.view == (int)view);
         nav.row = ORACLES_DISPLAY_QUALITY;
         CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && oracles_display_click(&nav, ORACLES_DISPLAY_QUALITY, 0) == ORACLES_HOME_STAY);
-        /* The Text link opens all the same, and Color correction changes. */
+        /* The Text and Picture links open all the same, and Color correction changes there. */
         CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, -1) == ORACLES_HOME_STAY && nav.text_page);
         oracles_display_act(&nav, ORACLES_HOME_BACK);
+        CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_PICTURE, -1) == ORACLES_HOME_STAY && nav.picture_page);
         CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_COLOUR, 1) == ORACLES_HOME_STORE && nav.display.colour == 1);
+        oracles_display_act(&nav, ORACLES_HOME_BACK);
         nav.display.colour = 0;
         nav.row = ORACLES_DISPLAY_PROFILE;
         oracles_ui_display_texts(&nav, &t);
@@ -1223,8 +1221,7 @@ static void display_2a_2b(void)
     layout_near("2g", "Window row", "y", l.rows[ORACLES_DISPLAY_WINDOW].y);
     layout_near("2g", "View row", "y", l.rows[ORACLES_DISPLAY_VIEW].y);
     layout_near("2g", "View row", "h", l.rows[ORACLES_DISPLAY_VIEW].h);
-    layout_near("2g", "Color row", "y", l.rows[ORACLES_DISPLAY_COLOUR].y);
-    CHECK(l.explanations[0].count == 2);
+    layout_near("2g", "picture row", "y", l.rows[ORACLES_DISPLAY_PICTURE].y);
     layout_box("2g", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
     layout_box("2g", "hud Original", &l.hud[0].box);
     layout_box("2g", "panel", &l.panel);
@@ -1232,7 +1229,7 @@ static void display_2a_2b(void)
     layout_text("2g", "Advanced", &l.advanced_label);
     layout_box("2g", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
     /* Its rows end above the pause's key hints, which start at 1025 in 1080p. */
-    CHECK(l.rows[ORACLES_DISPLAY_COLOUR].y + l.rows[ORACLES_DISPLAY_COLOUR].h <= 1025.0f);
+    CHECK(l.rows[ORACLES_DISPLAY_PICTURE].y + l.rows[ORACLES_DISPLAY_PICTURE].h <= 1025.0f);
     nav.in_game = 0;
 
     /* 2b: Faithful; the window fullscreen, seven times on a 1080p screen, never reduced. */
@@ -1308,7 +1305,7 @@ static void display_advanced_rows(const char *frame, const OraclesUiDisplayTexts
     layout_text(frame, "section", &l->head.section);
     CHECK(!strcmp(t->section, "Display \xe2\x80\xba Advanced"));
     CHECK(l->rows[ORACLES_DISPLAY_PROFILE].w == 0.0f && l->rows[ORACLES_DISPLAY_HUD].w == 0.0f && l->rows[ORACLES_DISPLAY_ADVANCED].w == 0.0f
-          && l->advanced_label.w == 0.0f);
+          && l->link == ORACLES_DISPLAY_ROWS && l->rows[ORACLES_DISPLAY_PICTURE].w == 0.0f && l->rows[ORACLES_DISPLAY_SCALING].w == 0.0f);
     CHECK(l->labels[ORACLES_DISPLAY_TRANSITIONS].count == 2 && l->explanations[1].count == 2);
     layout_near(frame, "Continuous transitions", "top", l->labels[ORACLES_DISPLAY_TRANSITIONS].lines[0].y);
     layout_near(frame, "Continuous transitions", "width", l->labels[ORACLES_DISPLAY_TRANSITIONS].w);
@@ -1396,15 +1393,16 @@ static void display_9a_9b_9c(void)
     display_advanced_rows("9c", &t, &l);
     layout_text("9c", "page note", &l.page_note.lines[0]);
     layout_box("9c", "diagram", &l.diagram);
-    /* From the game (turn 29) Core, the transitions, Vsync and the workers, which it keeps, are dimmed and inert, their
-     * reason in place of their notes, Vsync's and the workers' rows growing by its line; Scaling, the camera and the margin
+    /* From the game (turn 29) Core, the transitions and the workers, which it keeps, are dimmed and inert, their reason
+     * in place of their notes, the workers' row growing by its line; Vsync (turn 32), Scaling, the camera and the margin
      * change. */
-    layout_text("9c", "vsync note", &l.vsync_note);
     layout_text("9c", "workers note", &l.workers_note);
-    CHECK(!strcmp(t.core_note, "Change it from the home screen.") && t.transitions_note == t.core_note && t.vsync_note == t.core_note
-          && t.workers_note == t.core_note);
-    for (unsigned r = ORACLES_DISPLAY_CORE; r < ORACLES_DISPLAY_LETTERS; r++) {
-        const int locked = r != ORACLES_DISPLAY_SCALING && r != ORACLES_DISPLAY_CAMERA && r != ORACLES_DISPLAY_MARGIN;
+    CHECK(!strcmp(t.core_note, "Change it from the home screen.") && t.transitions_note == t.core_note && !t.vsync_note
+          && t.workers_note == t.core_note && l.vsync_note.w == 0.0f);
+    static const unsigned advanced[5] = { ORACLES_DISPLAY_CORE, ORACLES_DISPLAY_TRANSITIONS, ORACLES_DISPLAY_VSYNC, ORACLES_DISPLAY_WORKERS, ORACLES_DISPLAY_CAMERA };
+    for (unsigned i = 0; i < 5u; i++) {
+        const unsigned r = advanced[i];
+        const int locked = r == ORACLES_DISPLAY_CORE || r == ORACLES_DISPLAY_TRANSITIONS || r == ORACLES_DISPLAY_WORKERS;
         nav.row = r;
         CHECK(oracles_display_row_fixed(&nav, r) == locked);
         CHECK((oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY) == locked);
@@ -1467,10 +1465,14 @@ static void display_navigation(void)
     CHECK(nav.row == ORACLES_DISPLAY_TEXT && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && !nav.text_page);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.text_page && nav.row == ORACLES_DISPLAY_LETTERS);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !nav.text_page && nav.row == ORACLES_DISPLAY_TEXT);
+    /* Picture, a link too (turn 34), in Color correction's former place: right opens Display › Picture on Scaling, Back
+     * returns on the link (test_launcher_picture.c has the page). */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
-    CHECK(nav.row == ORACLES_DISPLAY_COLOUR && oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.colour == 1);
-    /* Advanced after Color correction, last: left does nothing there, right and OK open its rows on Core.  Down from it
-     * wraps to Profile, up from Profile to it. */
+    CHECK(nav.row == ORACLES_DISPLAY_PICTURE && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && !nav.picture_page);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.picture_page && nav.row == ORACLES_DISPLAY_SCALING);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !nav.picture_page && nav.row == ORACLES_DISPLAY_PICTURE);
+    /* Advanced after Picture, last: left does nothing there, right and OK open its rows on Core.  Down from it wraps to
+     * Profile, up from Profile to it. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_DISPLAY_ADVANCED && !nav.advanced);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && !nav.advanced);
@@ -1478,12 +1480,16 @@ static void display_navigation(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_ADVANCED);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_CORE);
     CHECK(!strcmp(oracles_display_section(&nav), "Display \xe2\x80\xba Advanced"));
-    /* Its rows: Core, the transitions, Vsync, the workers, the scaling, the camera, the screen margin, going round;
-     * Display's own are not there. */
+    /* Its five rows (turn 34): Core, the transitions, Vsync, the workers, the camera, going round; Display's own, the
+     * Picture rows and the Text rows are not there. */
     CHECK(oracles_display_row_shown(&nav, ORACLES_DISPLAY_WORKERS) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_PROFILE)
-          && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_ADVANCED));
+          && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_ADVANCED) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_PICTURE)
+          && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_SCALING) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_MARGIN)
+          && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_LETTERS) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_MENUS));
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_PROFILE, 0) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_MARGIN);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CAMERA);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_WORKERS);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CAMERA);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
     /* The two cores by a key and by a click; from a game the core is the game's and does not change. */
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.core == 1);
@@ -1505,9 +1511,10 @@ static void display_navigation(void)
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TRANSITIONS, 1) == ORACLES_HOME_STAY);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_DISPLAY_VSYNC && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.vsync == 2);
-    /* Vsync does not change from a game, which keeps it. */
+    /* Vsync changes from a game too, which takes it at once (turn 32). */
     nav.in_game = 1;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.vsync == 2);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.vsync == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.vsync == 2);
     nav.in_game = 0;
     /* The workers go round Auto, 1, 2, by a key and by a click; from a game they are the game's and do not change. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
@@ -1519,18 +1526,6 @@ static void display_navigation(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.workers == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WORKERS, 2) == ORACLES_HOME_STAY && nav.display.workers == 1);
     nav.in_game = 0;
-    /* The scaling last, Sharp then Fill, by a key and by a click; from a game too, where it applies at once. */
-    oracles_home_act(&nav, ORACLES_HOME_DOWN);
-    CHECK(nav.row == ORACLES_DISPLAY_SCALING && nav.display.scaling == 0 && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING));
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.scaling == 1);
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.scaling == 0);
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_SCALING, 1) == ORACLES_HOME_STORE && nav.display.scaling == 1);
-    nav.in_game = 1;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.scaling == 0);
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_SCALING, 1) == ORACLES_HOME_STORE && nav.display.scaling == 1);
-    CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING));
-    nav.in_game = 0;
-    nav.display.scaling = 0;
     /* The camera, Pixel then Smooth, the platform's default shown until one is chosen (Smooth on the desktops, on
      * Android from three times on): the shown value changes nothing, the other is stored; from a game too, where it
      * applies at once, and not in Faithful, nor from a game running in Faithful. */
@@ -1552,7 +1547,32 @@ static void display_navigation(void)
     nav.in_game = 0;
     nav.display.camera = -1;
     nav.display.profile = ORACLES_PROFILE_FAITHFUL;
-    /* The screen margin last, Off, Auto, Small, Large, going round, by a key and by a click; in Faithful and from a game
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CAMERA);
+    /* Back closes them on Advanced; a click on Advanced opens them again, Back closes them. */
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY && !nav.advanced
+          && nav.row == ORACLES_DISPLAY_ADVANCED && !strcmp(oracles_display_section(&nav), "Display"));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_CORE);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_VSYNC, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
+    oracles_home_act(&nav, ORACLES_HOME_BACK);
+    CHECK(!nav.advanced && nav.row == ORACLES_DISPLAY_ADVANCED);
+    /* Display › Picture's scaling and screen margin, which turn 34 took from Advanced. */
+    nav.row = ORACLES_DISPLAY_PICTURE;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.picture_page && nav.row == ORACLES_DISPLAY_SCALING);
+    oracles_home_act(&nav, ORACLES_HOME_UP);
+    /* The scaling first, Sharp then Fill, by a key and by a click; from a game too, where it applies at once. */
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_DISPLAY_SCALING && nav.display.scaling == 0 && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.scaling == 1);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.scaling == 0);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_SCALING, 1) == ORACLES_HOME_STORE && nav.display.scaling == 1);
+    nav.in_game = 1;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.scaling == 0);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_SCALING, 1) == ORACLES_HOME_STORE && nav.display.scaling == 1);
+    CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING));
+    nav.in_game = 0;
+    nav.display.scaling = 0;
+    /* The screen margin under it, Off, Auto, Small, Large, going round, by a key and by a click; in Faithful and from a game
      * too, where it applies at once. */
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_DISPLAY_MARGIN && nav.display.margin == 0 && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_MARGIN));
@@ -1565,20 +1585,15 @@ static void display_navigation(void)
     CHECK(nav.display.profile == ORACLES_PROFILE_FAITHFUL && oracles_display_click(&nav, ORACLES_DISPLAY_MARGIN, 1) == ORACLES_HOME_STORE
           && nav.display.margin == 1);
     nav.display.margin = 0;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_MARGIN);
-    /* Back closes them on Advanced; a click on Advanced opens them again, Back closes them. */
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY && !nav.advanced
-          && nav.row == ORACLES_DISPLAY_ADVANCED && !strcmp(oracles_display_section(&nav), "Display"));
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_CORE);
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_VSYNC, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
-    oracles_home_act(&nav, ORACLES_HOME_BACK);
-    CHECK(!nav.advanced && nav.row == ORACLES_DISPLAY_ADVANCED);
-    /* From a game, Advanced opens on Scaling, the first of its rows that changes there, by a key as by a click. */
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_COLOUR);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !nav.picture_page && nav.row == ORACLES_DISPLAY_PICTURE);
+    nav.row = ORACLES_DISPLAY_ADVANCED;
+
+    /* From a game, Advanced opens on Vsync, the first of its rows that changes there, by a key as by a click. */
     nav.in_game = 1;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_SCALING);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_SCALING);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     nav.in_game = 0;
     CHECK(!nav.advanced && nav.row == ORACLES_DISPLAY_ADVANCED);
@@ -1864,12 +1879,10 @@ static void display_4_3(void)
     layout_line("10f", "hud Original text", &l.hud[0].name);
     layout_line("10f", "hud Full text", &l.hud[1].name);
     layout_box("10f", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
-    CHECK(l.labels[ORACLES_DISPLAY_COLOUR].count == 2 && l.rows[ORACLES_DISPLAY_TRANSITIONS].w == 0.0f);
-    layout_line("10f", "Color correction", &l.labels[ORACLES_DISPLAY_COLOUR].lines[0]);
-    layout_line("10f", "color Off text", &l.colour[0].name);
-    layout_box("10f", "color Off", &l.colour[0].box);
-    layout_box("10f", "color On", &l.colour[1].box);
-    layout_box("10f", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    CHECK(l.rows[ORACLES_DISPLAY_COLOUR].w == 0.0f && l.rows[ORACLES_DISPLAY_TRANSITIONS].w == 0.0f);
+    layout_line("10f", "Picture", &l.labels[ORACLES_DISPLAY_PICTURE].lines[0]);
+    layout_box("10f", "picture link", &l.picture_link);
+    layout_box("10f", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     CHECK(l.explanations[0].count == 0 && l.view_explanation.count == 0 && l.transitions_note.h == 0.0f);
     CHECK(l.quality_text.h == 0.0f && l.quality_note.h == 0.0f);
     CHECK(l.advanced_arrow.x == l.advanced_label.x + l.advanced_label.w + 16.0f && l.advanced_arrow.w == 13.0f && l.advanced_arrow.h == 18.0f);
@@ -1879,8 +1892,9 @@ static void display_4_3(void)
     layout_near("10f", "help", "h", l.help.h);
     layout_near("10f", "help note", "y", l.help_note.y);
     layout_near("10f", "help note", "h", l.help_note.h);
-    for (unsigned r = 0; r <= ORACLES_DISPLAY_ADVANCED; r++) CHECK(l.rows[r].h >= 90.0f);
-    for (unsigned r = 0; r < ORACLES_DISPLAY_ADVANCED; r++) CHECK(l.rows[r].h == 100.0f);
+    for (unsigned r = 0; r <= ORACLES_DISPLAY_ADVANCED; r++) CHECK(r == ORACLES_DISPLAY_COLOUR || l.rows[r].h >= 90.0f);
+    for (unsigned r = 0; r < ORACLES_DISPLAY_ADVANCED; r++) CHECK(r == ORACLES_DISPLAY_COLOUR || l.rows[r].h == 100.0f);
+    CHECK(l.rows[ORACLES_DISPLAY_PICTURE].h == 100.0f);
 
     /* 10g: View highlighted, its explanation under the rows; the window's note and the reduced line under Window's. */
     nav.row = ORACLES_DISPLAY_VIEW;
@@ -1899,7 +1913,7 @@ static void display_4_3(void)
     nav.display.window = 2;
     nav.row = ORACLES_DISPLAY_ADVANCED;
     oracles_ui_display_texts(&nav, &t);
-    CHECK(!strcmp(t.help, "Core, transitions, Vsync, workers, scaling, margin.") && !t.help_note);
+    CHECK(!strcmp(t.help, "Core, transitions, Vsync, workers, camera.") && !t.help_note);
     nav.row = ORACLES_DISPLAY_TRANSITIONS;
     oracles_ui_display_texts(&nav, &t);
     CHECK(!strcmp(t.help, "Rooms scroll into one another, swimming too.") && !strcmp(t.help_note, "Savestates with it on need it on."));
@@ -1940,7 +1954,7 @@ static void display_4_3(void)
         layout_near(frame, "help", "y", l.help.y);
         layout_line(frame, "help note", &l.help_note);
         CHECK(l.rows[ORACLES_DISPLAY_PROFILE].w == 0.0f && l.rows[ORACLES_DISPLAY_QUALITY].w == 0.0f && l.rows[ORACLES_DISPLAY_ADVANCED].w == 0.0f
-              && l.advanced_label.h == 0.0f);
+              && l.link == ORACLES_DISPLAY_ROWS);
         if (in_game) { layout_line(frame, "page note", &l.page_note.lines[0]); continue; }
         layout_line(frame, "section", &l.head.section);
         layout_line(frame, "Core", &l.labels[ORACLES_DISPLAY_CORE].lines[0]);
@@ -2092,7 +2106,7 @@ static void quality_16_9(const char *frame, const OraclesHomeNav *nav, const cha
     display_window_boxes(frame, l);
     layout_box(frame, "View row", &l->rows[ORACLES_DISPLAY_VIEW]);
     layout_box(frame, "hud row", &l->rows[ORACLES_DISPLAY_HUD]);
-    layout_box(frame, "Color row", &l->rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box(frame, "picture row", &l->rows[ORACLES_DISPLAY_PICTURE]);
     layout_box(frame, "panel", &l->panel);
     layout_text(frame, "Advanced", &l->advanced_label);
     layout_box(frame, "advanced", &l->rows[ORACLES_DISPLAY_ADVANCED]);
@@ -2171,7 +2185,7 @@ static void display_quality(void)
     nav.row = ORACLES_DISPLAY_QUALITY;
     quality_4_3("11d", &nav, "Far view, Fast core, workers on auto.", "Changing one by hand makes it Custom.", &high);
     layout_box("11d", "hud row", &high.rows[ORACLES_DISPLAY_HUD]);
-    layout_box("11d", "Color row", &high.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("11d", "picture row", &high.rows[ORACLES_DISPLAY_PICTURE]);
     nav.display.view = 0;
     nav.display.core = 0;
     quality_4_3("11e", &nav, "Set by hand: Near, Accurate, workers auto.", "Pick a quality to set all three again.", &custom);
@@ -2291,7 +2305,7 @@ static void display_scaling_4_3(const char *frame, const char *sharp, const char
     layout_box(frame, "diagram window", &l->diagram_window);
 }
 
-/* 13a, 13e, 13b, 13c, 13d: Advanced's Scaling. */
+/* 13a, 13e, 13b, 13c, 13d: Scaling, on Display › Picture since turn 34. */
 static void display_scaling(void)
 {
     OraclesHomeNav nav;
@@ -2301,18 +2315,16 @@ static void display_scaling(void)
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
     nav.display.window = 1;
     nav.display.cores = 8;
-    nav.advanced = 1;
+    nav.picture_page = 1;
     nav.row = ORACLES_DISPLAY_SCALING;
     OraclesUiDisplayTexts t;
     OraclesUiDisplayLayout l;
-    /* 13a: the far view on a 1080p screen, where Sharp's 4x and Fill both make 1920x1080; the other rows each keep two
-     * lines for their explanations, Vsync's one line at the top of them. */
+    /* 13a: the far view on a 1080p screen, where Sharp's 4x and Fill both make 1920x1080; the page's first row. */
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
-    display_advanced_rows("13a", &t, &l);
     display_scaling_16_9("13a", "1920\xc3\x97" "1080", "1920\xc3\x97" "1080", &t, &l);
-    layout_near("13a", "rows", "y", l.rows[ORACLES_DISPLAY_CORE].y);
-    layout_near("13a", "rows", "h", l.rows[ORACLES_DISPLAY_MARGIN].y + l.rows[ORACLES_DISPLAY_MARGIN].h - l.rows[ORACLES_DISPLAY_CORE].y);
+    layout_text("13a", "section", &l.head.section);
+    layout_box("13a", "panel", &l.panel);
     layout_box("13a", "diagram window", &l.diagram_window);
     layout_text("13a", "diagram label", &l.diagram_label);
     /* Fill chosen in a window: the diagram keeps the window, Fill applying in fullscreen only. */
@@ -2335,23 +2347,21 @@ static void display_scaling(void)
     display_4_3_nav(&nav, 640, 480);
     nav.display.window = 1;
     nav.display.scaling = 1;
-    nav.advanced = 1;
+    nav.picture_page = 1;
     nav.row = ORACLES_DISPLAY_SCALING;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
     display_scaling_4_3("13b", "480\xc3\x97" "360", "640\xc3\x97" "480", &t, &l);
-    layout_box("13b", "core row", &l.rows[ORACLES_DISPLAY_CORE]);
-    layout_box("13b", "vsync row", &l.rows[ORACLES_DISPLAY_VSYNC]);
-    layout_box("13b", "workers row", &l.rows[ORACLES_DISPLAY_WORKERS]);
     layout_line("13b", "section", &l.head.section);
-    for (unsigned r = ORACLES_DISPLAY_CORE; r < ORACLES_DISPLAY_LETTERS; r++) CHECK(l.rows[r].h == 100.0f);
+    layout_near("13b", "rows", "y", l.rows[ORACLES_DISPLAY_SCALING].y);
+    CHECK(l.rows[ORACLES_DISPLAY_SCALING].h == 100.0f && l.rows[ORACLES_DISPLAY_MARGIN].h == 100.0f && l.rows[ORACLES_DISPLAY_MENUS].h == 100.0f);
 
     /* 13c: Display there, Window's one size saying that Scaling can fill the screen, italic, in the windows' place. */
-    nav.advanced = 0;
+    nav.picture_page = 0;
     nav.row = ORACLES_DISPLAY_PROFILE;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
-    CHECK(t.window_one && !strcmp(oracles_display_one_size_note, "One size only here; Scaling in Advanced can fill the screen."));
+    CHECK(t.window_one && !strcmp(oracles_display_one_size_note, "One size only here; Scaling in Picture can fill the screen."));
     layout_line("13c", "Window", &l.labels[ORACLES_DISPLAY_WINDOW].lines[0]);
     layout_box("13c", "Window row", &l.rows[ORACLES_DISPLAY_WINDOW]);
     layout_line("13c", "one size", &l.window_one);
@@ -2363,17 +2373,17 @@ static void display_scaling(void)
     display_4_3_nav(&nav, 1440, 1080);
     nav.display.window = 1;
     nav.in_game = 1;
-    nav.advanced = 1;
+    nav.picture_page = 1;
     nav.row = ORACLES_DISPLAY_SCALING;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
     display_scaling_4_3("13d", "1440\xc3\x97" "1080", "1440\xc3\x97" "1080", &t, &l);
     layout_line("13d", "page note", &l.page_note.lines[0]);
-    layout_box("13d", "core row", &l.rows[ORACLES_DISPLAY_CORE]);
-    layout_box("13d", "vsync row", &l.rows[ORACLES_DISPLAY_VSYNC]);
-    layout_box("13d", "workers row", &l.rows[ORACLES_DISPLAY_WORKERS]);
+    layout_box("13d", "margin row", &l.rows[ORACLES_DISPLAY_MARGIN]);
+    layout_box("13d", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("13d", "menus row", &l.rows[ORACLES_DISPLAY_MENUS]);
     CHECK(oracles_display_row_fixed(&nav, ORACLES_DISPLAY_CORE) && oracles_display_row_fixed(&nav, ORACLES_DISPLAY_WORKERS)
-          && oracles_display_row_fixed(&nav, ORACLES_DISPLAY_VSYNC) && oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TRANSITIONS)
+          && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_VSYNC) && oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TRANSITIONS)
           && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_SCALING) && !oracles_display_row_fixed(&nav, ORACLES_DISPLAY_MARGIN));
 }
 
@@ -2482,7 +2492,7 @@ static void far_fitted_probes(const char *frame, const OraclesUiDisplayLayout *l
         if (sizes || v == 2) { snprintf(what, sizeof what, "view %d size", v); layout_line(frame, what, &l->views[v].size); }
     }
     layout_box(frame, "hud row", &l->rows[ORACLES_DISPLAY_HUD]);
-    layout_box(frame, "Color row", &l->rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box(frame, "picture row", &l->rows[ORACLES_DISPLAY_PICTURE]);
     layout_line(frame, "Advanced", &l->advanced_label);
     layout_box(frame, "advanced", &l->rows[ORACLES_DISPLAY_ADVANCED]);
     layout_line(frame, "help text", &l->help);
@@ -2593,10 +2603,9 @@ static void display_hud(void)
         oracles_ui_display_texts(&nav, &t);
         oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
         hud_probes(frame, &l);
-        layout_box(frame, "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+        layout_box(frame, "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     }
     layout_box("19a", "View row", &l.rows[ORACLES_DISPLAY_VIEW]);
-    layout_box("19a", "color Off", &l.colour[0].box);
     layout_box("19a", "panel", &l.panel);
     nav.in_game = 1;
     nav.playing = ORACLES_PROFILE_ENHANCED;
@@ -2606,7 +2615,7 @@ static void display_hud(void)
     hud_probes("19e", &l);
     layout_text("19e", "page note", &l.page_note.lines[0]);
     CHECK(!strcmp(oracles_ui_display_later, "Greyed rows change from the home screen; the rest applies at once."));
-    layout_box("19e", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("19e", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("19e", "panel", &l.panel);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 0) == ORACLES_HOME_STORE && nav.display.hud == 0);
     nav.in_game = 0;
@@ -2615,7 +2624,7 @@ static void display_hud(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     hud_probes("19g", &l);
-    layout_box("19g", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("19g", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("19g", "panel", &l.panel);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 1);
 
@@ -2662,7 +2671,7 @@ static void display_hud(void)
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     hud_probes("22a", &l);
     layout_box("22a", "View row", &l.rows[ORACLES_DISPLAY_VIEW]);
-    layout_box("22a", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("22a", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("22a", "panel", &l.panel);
     nav.in_game = 1;
     nav.playing = ORACLES_PROFILE_ENHANCED;
@@ -2670,7 +2679,7 @@ static void display_hud(void)
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     hud_probes("22d", &l);
     layout_text("22d", "page note", &l.page_note.lines[0]);
-    layout_box("22d", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("22d", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("22d", "panel", &l.panel);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 1) == ORACLES_HOME_STORE && nav.display.hud == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 2) == ORACLES_HOME_STORE && nav.display.hud == 2);
@@ -2679,7 +2688,7 @@ static void display_hud(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     hud_probes("22e", &l);
-    layout_box("22e", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("22e", "picture row", &l.rows[ORACLES_DISPLAY_PICTURE]);
     layout_box("22e", "panel", &l.panel);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 0) == ORACLES_HOME_STAY && nav.display.hud == 2);
 }
@@ -2701,11 +2710,11 @@ static void margin_probes(const char *frame, const OraclesUiDisplayLayout *l, in
     if (wide) { layout_line(frame, "margin Small text", &l->margin[2].name); layout_line(frame, "margin Large text", &l->margin[3].name); }
     else { layout_text(frame, "margin Small text", &l->margin[2].name); layout_text(frame, "margin Large text", &l->margin[3].name); }
     layout_box(frame, "scaling row", &l->rows[ORACLES_DISPLAY_SCALING]);
-    layout_near(frame, "rows", "y", l->rows[ORACLES_DISPLAY_CORE].y);
-    layout_near(frame, "rows", "h", l->rows[ORACLES_DISPLAY_MARGIN].y + l->rows[ORACLES_DISPLAY_MARGIN].h - l->rows[ORACLES_DISPLAY_CORE].y);
+    layout_near(frame, "rows", "y", l->rows[ORACLES_DISPLAY_SCALING].y);
+    layout_near(frame, "rows", "h", l->rows[ORACLES_DISPLAY_MENUS].y + l->rows[ORACLES_DISPLAY_MENUS].h - l->rows[ORACLES_DISPLAY_SCALING].y);
 }
 
-/* Screen margin (turn 20), the last Advanced row: in 16:9 its choices above its explanation, on two lines (margin), from
+/* Screen margin (turn 20), Display › Picture's second row since turn 34: in 16:9 its choices above its explanation, on two lines (margin), from
  * the pause menu (margin pause) and in Faithful, live in both (margin faithful); in 4:3 (margin 4:3, margin pause 4:3)
  * and at 640x480 (margin 640x480), its short help under the rows. */
 static void display_margin(void)
@@ -2717,12 +2726,13 @@ static void display_margin(void)
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
     nav.display.window = 1;
     nav.display.cores = 8;
-    nav.advanced = 1;
+    nav.picture_page = 1;
     nav.row = ORACLES_DISPLAY_MARGIN;
     nav.display.margin = 1;
     OraclesUiDisplayTexts t;
     OraclesUiDisplayLayout l;
     static const char *const frames[3] = { "margin", "margin pause", "margin faithful" };
+    nav.playing = ORACLES_PROFILE_ENHANCED;
     for (int f = 0; f < 3; f++) {
         nav.in_game = f == 1;
         nav.display.profile = f == 2 ? ORACLES_PROFILE_FAITHFUL : ORACLES_PROFILE_ENHANCED;
@@ -2743,7 +2753,7 @@ static void display_margin(void)
     for (int f = 0; f < 3; f++) {
         const char *frame = f == 0 ? "margin 4:3" : f == 1 ? "margin 640x480" : "margin pause 4:3";
         display_4_3_nav(&nav, f == 1 ? 640 : 1440, f == 1 ? 480 : 1080);
-        nav.advanced = 1;
+        nav.picture_page = 1;
         nav.row = ORACLES_DISPLAY_MARGIN;
         nav.in_game = f == 2;
         nav.display.margin = f == 2 ? 0 : f + 1;
@@ -2751,7 +2761,6 @@ static void display_margin(void)
         oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
         CHECK(!strcmp(t.help, "Keeps the picture clear of hidden screen edges.") && !t.help_note);
         margin_probes(frame, &l, 1);
-        layout_box(frame, "core row", &l.rows[ORACLES_DISPLAY_CORE]);
         layout_line(frame, "help text", &l.help);
         layout_near(frame, "help", "y", l.help.y);
         layout_near(frame, "help note", "y", l.help_note.y);
@@ -2773,13 +2782,12 @@ static void camera_probes(const char *frame, const OraclesUiDisplayLayout *l, in
     layout_box(frame, "cam Smooth box", &l->camera[1].box);
     if (wide) { layout_line(frame, "cam Pixel text", &l->camera[0].name); layout_line(frame, "cam Smooth text", &l->camera[1].name); }
     else { layout_text(frame, "cam Pixel text", &l->camera[0].name); layout_text(frame, "cam Smooth text", &l->camera[1].name); }
-    layout_box(frame, "scaling row", &l->rows[ORACLES_DISPLAY_SCALING]);
-    layout_box(frame, "margin row", &l->rows[ORACLES_DISPLAY_MARGIN]);
+    layout_box(frame, "workers row", &l->rows[ORACLES_DISPLAY_WORKERS]);
     layout_near(frame, "rows", "y", l->rows[ORACLES_DISPLAY_CORE].y);
-    layout_near(frame, "rows", "h", l->rows[ORACLES_DISPLAY_MARGIN].y + l->rows[ORACLES_DISPLAY_MARGIN].h - l->rows[ORACLES_DISPLAY_CORE].y);
+    layout_near(frame, "rows", "h", l->rows[ORACLES_DISPLAY_CAMERA].y + l->rows[ORACLES_DISPLAY_CAMERA].h - l->rows[ORACLES_DISPLAY_CORE].y);
 }
 
-/* Camera (turn 30), the sixth Advanced row, after Scaling: in 16:9 Smooth chosen and highlighted, its explanation on
+/* Camera (turn 30), the last Advanced row since turn 34: in 16:9 Smooth chosen and highlighted, its explanation on
  * three lines (30h), from the pause, live (30k), and in Faithful, dimmed and inert (30l); in 4:3 its short help (30i);
  * at 640x480 on Android, the far view at once, the note that it does nothing there (30j).  The value shown is the
  * player's, else the platform's default at the scale the game is shown at: Smooth at every scale on the desktops, on

@@ -136,6 +136,8 @@ void oracles_sdl_place_window(struct SDL_Window *window, int centre_x, int centr
  * not and Scaling on Fill or not: the largest whole scale sampled to the nearest pixel (Sharp, and Fill in a window), or,
  * Fill in fullscreen, the largest size in the image's proportions sampled for pixel art. */
 void oracles_sdl_presentation(int fullscreen, int fill, int *presentation, int *scale_mode);
+/* Vsync changed during the pause: the presentation in step with the display, or not, from the next frame. */
+void oracles_sdl_backend_set_vsync(const oracles_host_backend *backend, int vsync);
 /* Scaling changed during the pause: the frame's sampling at once, the presentation from the next frame. */
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill);
 /* The window changed during the pause: fullscreen, or a window of `scale` times the frame around its centre, kept on

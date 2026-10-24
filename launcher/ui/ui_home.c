@@ -378,6 +378,8 @@ int oracles_ui_home_draw(OraclesUiDraw *draw, OraclesUiHome *home, const Oracles
         oracles_ui_mods_draw(draw, nav, accent);
     } else if (nav->screen == ORACLES_SCREEN_CHEATS) {
         oracles_ui_cheats_draw(draw, nav, accent);
+    } else if (nav->screen == ORACLES_SCREEN_ABOUT) {
+        oracles_ui_about_draw(draw, nav, accent);
     } else {
         oracles_ui_display_draw(draw, nav, accent);
     }
@@ -388,7 +390,17 @@ int oracles_ui_home_draw(OraclesUiDraw *draw, OraclesUiHome *home, const Oracles
      * window. */
     const float hints_x = hints_left(nav, scene) + oracles_ui_draw_anchor_shift(draw, 0.0f, 0.5f);
     if (version.x + version.w + VERSION_GAP <= hints_x) {
-        draw_line(draw, oracles_ui_home_styles(scene)->version, &version, ORACLES_VERSION, 0.0f, oracles_ui_rgb(VERSION_TEXT));
+        /* Highlighted, the number takes a background and an outline inside its padding, in the accent. */
+        const int focused = oracles_home_version_focused(nav);
+        if (focused) {
+            OraclesUiBox b;
+            float outline;
+            oracles_ui_layout_version_link(scene, &version, &b, &outline);
+            const float radius = look_of(scene)->update_radius;
+            oracles_ui_fill_round_rect(draw, b.x, b.y, b.w, b.h, radius, oracles_ui_rgba(ITEM_HIGHLIGHT, UPDATE_HIGHLIGHT_OPACITY));
+            oracles_ui_stroke_round_rect(draw, b.x, b.y, b.w, b.h, radius, outline, accent);
+        }
+        draw_line(draw, oracles_ui_home_styles(scene)->version, &version, ORACLES_VERSION, 0.0f, oracles_ui_rgb(focused ? UPDATE_FOCUSED : VERSION_TEXT));
         moving |= draw_update(draw, home, nav, scene, &version, hints_x, accent, now_ms);
     }
     oracles_ui_draw_anchor(draw, 0.5f, 1.0f);
@@ -425,13 +437,19 @@ OraclesUiHomeHit oracles_ui_home_hit(const OraclesHomeNav *nav, float x, float y
     OraclesUiSlowLayout slow;
     const char *path;
     if (layout_slow(nav, &slow, &path) && inside(&slow.box, x, y)) { hit.kind = ORACLES_UI_HIT_SLOW; return hit; }
-    if (oracles_home_update_shown(nav)) {
+    if (nav->screen == ORACLES_SCREEN_HOME) {
+        /* The newer version's notice, the item after the menu's last, and the version number, the one after. */
         OraclesUiLine version;
         OraclesUiUpdateLayout update;
+        OraclesUiBox link;
+        float outline;
         OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+        const unsigned count = oracles_home_items(nav, items), shown = oracles_home_update_shown(nav);
         oracles_ui_layout_version(oracles_ui_home_scene(nav), ORACLES_VERSION, &version);
         oracles_ui_layout_update(oracles_ui_home_scene(nav), &version, nav->update, &update);
-        if (inside(&update.box, x, y)) { hit.kind = ORACLES_UI_HIT_ITEM; hit.index = oracles_home_items(nav, items); return hit; }
+        oracles_ui_layout_version_link(oracles_ui_home_scene(nav), &version, &link, &outline);
+        if (shown && inside(&update.box, x, y)) { hit.kind = ORACLES_UI_HIT_ITEM; hit.index = count; return hit; }
+        if (inside(&link, x, y)) { hit.kind = ORACLES_UI_HIT_ITEM; hit.index = count + shown; return hit; }
     }
     if (nav->screen == ORACLES_SCREEN_CONTROLS) {
         if (oracles_ui_controls_hit(nav, x, y, &hit.column, &hit.row, &hit.option)) hit.kind = ORACLES_UI_HIT_CELL;
@@ -440,7 +458,8 @@ OraclesUiHomeHit oracles_ui_home_hit(const OraclesHomeNav *nav, float x, float y
     if (nav->screen != ORACLES_SCREEN_HOME && nav->screen != ORACLES_SCREEN_PAUSE) {
         const int row = nav->screen == ORACLES_SCREEN_GAME ? oracles_ui_page_hit(nav, x, y, &hit.option)
                         : nav->screen == ORACLES_SCREEN_MODS ? oracles_ui_mods_hit(nav, x, y)
-                        : nav->screen == ORACLES_SCREEN_CHEATS ? oracles_ui_cheats_hit(nav, x, y, &hit.option) : oracles_ui_display_hit(nav, x, y, &hit.option);
+                        : nav->screen == ORACLES_SCREEN_CHEATS ? oracles_ui_cheats_hit(nav, x, y, &hit.option)
+                        : nav->screen == ORACLES_SCREEN_ABOUT ? oracles_ui_about_hit(nav, x, y, &hit.option) : oracles_ui_display_hit(nav, x, y, &hit.option);
         if (row >= 0) { hit.kind = ORACLES_UI_HIT_ROW; hit.index = (unsigned)row; }
         return hit;
     }

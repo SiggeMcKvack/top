@@ -143,6 +143,38 @@ static uint32_t paused_unpaced_frame(oracles_host_backend *backend, OraclesCore 
     return report.display_unpaced_frame;
 }
 
+/* Vsync changed from the pause: the display paces from then on (1) or the host does (0). */
+static int paces_after_pause;
+static int paces_now(void *opaque) { (void)opaque; return paces_after_pause; }
+
+/* A run of 600 frames whose present returns at once, started under vsync (`vsync`) or paced by the host, vsync turned
+ * on or off (`after`) by a pause before the frame pause_before: the frame the host took over from a display that did not
+ * pace, 0 for none. */
+static uint32_t vsync_changed_frame(oracles_host_backend *backend, OraclesCore *core, int vsync, int after, uint32_t pause_before)
+{
+    oracles_host_run_config config;
+    oracles_host_run_report report;
+    char error[128];
+    memset(&config, 0, sizeof config);
+    config.core = core;
+    config.quit_after_frames = 600;
+    config.pace_frames = !vsync;
+    config.display_paces = vsync;
+    config.on_pause = two_second_pause;
+    config.display_paces_now = paces_now;
+    config.pause_opaque = backend->opaque;
+    paces_after_pause = after;
+    display_period_ns = 0;
+    display_pause_before = pause_before;
+    display_presents = 0;
+    display_paused = 0;
+    unpaced_calls = 0;
+    CHECK(oracles_host_run(&config, backend, &report, error, sizeof error) == ORACLES_HOST_OK && report.frames_presented == 600);
+    CHECK(unpaced_calls == (report.display_unpaced_frame ? 1 : 0));
+    display_pause_before = 0;
+    return report.display_unpaced_frame;
+}
+
 static unsigned press_b_filter(void *opaque, uint32_t frame, unsigned mask) { (void)opaque; (void)frame; return mask | ORACLES_KEY_B; }
 
 /* The player holds Right, asks for the pause before the 16th frame, and nothing else. */
@@ -277,6 +309,13 @@ int main(void)
         CHECK(unpaced_frame(&display, core, 16666667u, &late) == 0);
         CHECK(paused_unpaced_frame(&display, core, 16666667u, 360, 390) == takeover);
         loop_overhead_ns = 0;
+        /* Vsync turned off from the pause: the host paces from the resume, and a present that does not wait is no
+         * longer judged; turned on, the host watches the display from the resume, its first window judged there; a
+         * pause that leaves it changes nothing. */
+        CHECK(vsync_changed_frame(&display, core, 1, 0, 90) == 0);
+        CHECK(vsync_changed_frame(&display, core, 0, 1, 300) == 360);
+        CHECK(vsync_changed_frame(&display, core, 0, -1, 300) == 0);
+        CHECK(vsync_changed_frame(&display, core, 1, -1, 90) == 120);
         display.present_unpaced = NULL;   /* optional */
         CHECK(unpaced_frame(&display, core, 0, &late) == 120);
     }

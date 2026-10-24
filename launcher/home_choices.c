@@ -30,6 +30,7 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->view = settings->view;
     display->aspect = settings->aspect;
     display->far_fixed = settings->far_fixed;
+    display->menus = settings->menus_large;
     display->core = oracles_settings_core(settings);
     display->window = settings->window_scale ? settings->window_scale - 2 : 3;
     display->window_w = display->window_h = display->window_chosen = 0;
@@ -137,6 +138,8 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     if (!display->text_size_fixed) prefs->text_size = display->text_size;
     prefs->text_instant = display->text_speed;   /* a running game takes it when it resumes (the pause's settings_changed) */
     prefs->view = display->view;
+    prefs->menus_large = display->menus;   /* a running game takes it at once (the pause's settings_changed) */
+    if (!in_game) prefs->far_fixed = display->far_fixed;   /* the view's size: the next Play's, never the pause's */
     /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
      * --core's, never stored. */
     if (!in_game && (prefs->core >= 0 || display->core != oracles_settings_core(prefs))) prefs->core = display->core;

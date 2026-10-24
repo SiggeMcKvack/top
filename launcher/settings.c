@@ -5,6 +5,7 @@
 #include "hotkey_lines.h"
 #include "guest_tables.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -307,73 +308,75 @@ void oracles_settings_defaults(oracles_settings *s)
 }
 
 /* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `text_box=`, `text_size=`, `text_speed=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
- * line was one of them.  A value the launcher does not know leaves the key's default. */
+ * line was one of them.  `value` is the line's after its =, without the spaces around it (the paths'), `word` the same in lower
+ * case (the other keys'): `update_check = OFF` reads as update_check=off.  A value the launcher does not know leaves the
+ * key's default. */
 static const char *const text_size_names[3] = { "normal", "large", "xlarge" };
 
-static int load_launcher(oracles_settings *s, const char *name, const char *value)
+static int load_launcher(oracles_settings *s, const char *name, const char *value, const char *word)
 {
     if (!strcmp(name, "profile")) {
-        for (unsigned p = 0; p < ORACLES_PROFILES; p++) if (!strcmp(value, profile_names[p])) s->profile = (OraclesProfile)p;
+        for (unsigned p = 0; p < ORACLES_PROFILES; p++) if (!strcmp(word, profile_names[p])) s->profile = (OraclesProfile)p;
         return 1;
     }
     if (!strcmp(name, "transitions")) {
-        if (!strcmp(value, "on") || !strcmp(value, "off")) s->transitions = !strcmp(value, "on");
+        if (!strcmp(word, "on") || !strcmp(word, "off")) s->transitions = !strcmp(word, "on");
         return 1;
     }
     if (!strcmp(name, "swim_hold")) {
-        if (!strcmp(value, "on") || !strcmp(value, "off")) s->swim_hold = !strcmp(value, "on");
+        if (!strcmp(word, "on") || !strcmp(word, "off")) s->swim_hold = !strcmp(word, "on");
         return 1;
     }
     if (!strcmp(name, "text")) {
-        if (!strcmp(value, "classic") || !strcmp(value, "compact")) s->compact_text = !strcmp(value, "compact");
+        if (!strcmp(word, "classic") || !strcmp(word, "compact")) s->compact_text = !strcmp(word, "compact");
         return 1;
     }
     if (!strcmp(name, "text_size")) {
-        for (int size = 0; size < 3; size++) if (!strcmp(value, text_size_names[size])) s->text_size = size;
+        for (int size = 0; size < 3; size++) if (!strcmp(word, text_size_names[size])) s->text_size = size;
         return 1;
     }
     if (!strcmp(name, "text_speed")) {
-        if (!strcmp(value, "classic") || !strcmp(value, "instant")) s->text_instant = !strcmp(value, "instant");
+        if (!strcmp(word, "classic") || !strcmp(word, "instant")) s->text_instant = !strcmp(word, "instant");
         return 1;
     }
     if (!strcmp(name, "text_box")) {
-        if (!strcmp(value, "standard") || !strcmp(value, "wide")) s->text_box_wide = !strcmp(value, "wide");
+        if (!strcmp(word, "standard") || !strcmp(word, "wide")) s->text_box_wide = !strcmp(word, "wide");
         return 1;
     }
     if (!strcmp(name, "view")) {
-        for (int v = 0; v < 3; v++) if (!strcmp(value, view_names[v])) s->view = v;
+        for (int v = 0; v < 3; v++) if (!strcmp(word, view_names[v])) s->view = v;
         return 1;
     }
     if (!strcmp(name, "core")) {
-        for (int c = 0; c < 2; c++) if (!strcmp(value, oracles_settings_core_names[c])) s->core = c;
+        for (int c = 0; c < 2; c++) if (!strcmp(word, oracles_settings_core_names[c])) s->core = c;
         return 1;
     }
     if (!strcmp(name, "menus")) {
-        if (!strcmp(value, "large") || !strcmp(value, "view")) s->menus_large = !strcmp(value, "large");
+        if (!strcmp(word, "large") || !strcmp(word, "view")) s->menus_large = !strcmp(word, "large");
         return 1;
     }
     if (!strcmp(name, "hud")) {
-        for (int i = 0; i < 3; i++) if (!strcmp(value, oracles_settings_hud_names[i])) s->hud = i;
+        for (int i = 0; i < 3; i++) if (!strcmp(word, oracles_settings_hud_names[i])) s->hud = i;
         return 1;
     }
     if (!strcmp(name, "menu_toast")) {
-        if (!strcmp(value, "due") || !strcmp(value, "shown")) s->menu_toast_shown = !strcmp(value, "shown");
+        if (!strcmp(word, "due") || !strcmp(word, "shown")) s->menu_toast_shown = !strcmp(word, "shown");
         return 1;
     }
     if (!strcmp(name, "update_check")) {
-        if (!strcmp(value, "on") || !strcmp(value, "off")) s->update_check = !strcmp(value, "on");
+        if (!strcmp(word, "on") || !strcmp(word, "off")) s->update_check = !strcmp(word, "on");
         return 1;
     }
     if (!strcmp(name, "ghosts")) {
-        if (!strcmp(value, "auto") || !strcmp(value, "1") || !strcmp(value, "2")) s->ghosts = !strcmp(value, "auto") ? 0 : value[0] - '0';
+        if (!strcmp(word, "auto") || !strcmp(word, "1") || !strcmp(word, "2")) s->ghosts = !strcmp(word, "auto") ? 0 : word[0] - '0';
         return 1;
     }
     if (!strcmp(name, "aspect")) {
-        for (int a = 0; a < 3; a++) if (!strcmp(value, oracles_settings_aspect_names[a])) s->aspect = a;
+        for (int a = 0; a < 3; a++) if (!strcmp(word, oracles_settings_aspect_names[a])) s->aspect = a;
         return 1;
     }
     if (!strcmp(name, "far")) {
-        if (!strcmp(value, "screen") || !strcmp(value, "fixed")) s->far_fixed = !strcmp(value, "fixed");
+        if (!strcmp(word, "screen") || !strcmp(word, "fixed")) s->far_fixed = !strcmp(word, "fixed");
         return 1;
     }
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
@@ -384,26 +387,26 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         if (!strcmp(name, expected)) { snprintf(s->eu_rom[g], sizeof s->eu_rom[g], "%s", value); return 1; }
         snprintf(expected, sizeof expected, "language_%s", game_names[g]);
         if (!strcmp(name, expected)) {
-            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(value, oracles_settings_language_names[l])) s->language[g] = l;
+            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(word, oracles_settings_language_names[l])) s->language[g] = l;
             return 1;
         }
         snprintf(expected, sizeof expected, "mods_%s", game_names[g]);
         if (!strcmp(name, expected)) {
             char names[ORACLES_SETTINGS_MODS_MAX][ORACLES_SETTINGS_MOD_NAME];
-            join_mods(s->mods[g], names, parse_mods(value, names));
+            join_mods(s->mods[g], names, parse_mods(word, names));
             return 1;
         }
         snprintf(expected, sizeof expected, "cheats_%s", game_names[g]);
         if (!strcmp(name, expected)) {
             /* A later version's list (a cheat this one does not know): the cheats it knows. */
             unsigned cheats = 0;
-            if (oracles_cheats_parse(value, NULL, &cheats) != 0) fprintf(stderr, "oracles: %s=%s names a cheat this version does not know; it is dropped\n", name, value);
+            if (oracles_cheats_parse(word, NULL, &cheats) != 0) fprintf(stderr, "oracles: %s=%s names a cheat this version does not know; it is dropped\n", name, value);
             s->cheats[g] = cheats;
             return 1;
         }
         snprintf(expected, sizeof expected, "item_hotkeys_%s", game_names[g]);
         if (!strcmp(name, expected)) {
-            if (!strcmp(value, "off") || !strcmp(value, "use") || !strcmp(value, "equip")) s->item_hotkeys[g] = oracles_settings_hotkeys_mode(value);
+            if (!strcmp(word, "off") || !strcmp(word, "use") || !strcmp(word, "equip")) s->item_hotkeys[g] = oracles_settings_hotkeys_mode(word);
             return 1;
         }
     }
@@ -413,31 +416,31 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
         if (!strcmp(name, expected)) { snprintf(s->patch[f], sizeof s->patch[f], "%s", value); return 1; }
         snprintf(expected, sizeof expected, "language_%s", oracles_home_fan_games[f].key);
         if (!strcmp(name, expected)) {
-            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(value, oracles_settings_language_names[l])) s->fan_language[f] = l;
+            for (int l = 0; l < ORACLES_SETTINGS_LANGUAGES; l++) if (!strcmp(word, oracles_settings_language_names[l])) s->fan_language[f] = l;
             return 1;
         }
     }
     if (!strcmp(name, "window_scale")) {
-        if (!strcmp(value, "full")) s->window_scale = 0;
-        else if (!strcmp(value, "2") || !strcmp(value, "3") || !strcmp(value, "4")) s->window_scale = atoi(value);
+        if (!strcmp(word, "full")) s->window_scale = 0;
+        else if (!strcmp(word, "2") || !strcmp(word, "3") || !strcmp(word, "4")) s->window_scale = atoi(word);
         return 1;
     }
     if (!strcmp(name, "scaling")) {
-        if (!strcmp(value, "sharp") || !strcmp(value, "fill")) s->scaling_fill = !strcmp(value, "fill");
+        if (!strcmp(word, "sharp") || !strcmp(word, "fill")) s->scaling_fill = !strcmp(word, "fill");
         return 1;
     }
     if (!strcmp(name, "screen_margin")) {
         s->screen_margin = ORACLES_SCREEN_MARGIN_OFF;   /* unknown: off, the whole screen */
-        for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) if (!strcmp(value, oracles_screen_margin_names[m])) s->screen_margin = m;
+        for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) if (!strcmp(word, oracles_screen_margin_names[m])) s->screen_margin = m;
         return 1;
     }
     if (!strcmp(name, "quality_hint")) {
-        for (int q = 0; q <= ORACLES_QUALITY_CUSTOM; q++) if (!strcmp(value, oracles_settings_quality_names[q])) s->quality_hint = q;
+        for (int q = 0; q <= ORACLES_QUALITY_CUSTOM; q++) if (!strcmp(word, oracles_settings_quality_names[q])) s->quality_hint = q;
         return 1;
     }
     if (strcmp(name, "launcher_window") != 0) return 0;
     int width = 0, height = 0;
-    if (sscanf(value, "%dx%d", &width, &height) == 2 && width > 0 && height > 0) { s->launcher_width = width; s->launcher_height = height; }
+    if (sscanf(word, "%dx%d", &width, &height) == 2 && width > 0 && height > 0) { s->launcher_width = width; s->launcher_height = height; }
     return 1;
 }
 
@@ -459,38 +462,115 @@ static int load_name(const char *name, const char *value, const char *prefix, co
     return 1;
 }
 
+/* `text` without the spaces and tabs at its ends, in place. */
+static char *trim(char *text)
+{
+    while (*text == ' ' || *text == '\t') text++;
+    size_t length = strlen(text);
+    while (length && (text[length - 1] == ' ' || text[length - 1] == '\t')) text[--length] = 0;
+    return text;
+}
+
+static void lower(char *text)
+{
+    for (; *text; text++) if (*text >= 'A' && *text <= 'Z') *text = (char)(*text - 'A' + 'a');
+}
+
+/* A line whose key this version does not know, kept as it was after the known key `after`. */
+static void keep_unknown(oracles_settings *s, const char *after, const char *line)
+{
+    size_t used = strlen(s->unknown), lines = 0;
+    for (const char *p = s->unknown; *p; p++) lines += *p == '\n';
+    const size_t length = strlen(after) + strlen(line) + 2;
+    if (lines >= ORACLES_SETTINGS_UNKNOWN_LINES || used + length >= sizeof s->unknown) {
+        fprintf(stderr, "oracles: settings.txt: too many keys this version does not know; %s is dropped\n", line);
+        return;
+    }
+    snprintf(s->unknown + used, sizeof s->unknown - used, "%s\t%s\n", after, line);
+}
+
 void oracles_settings_load(oracles_settings *s)
 {
     if (!s->path[0]) return;
     FILE *f = fopen(s->path, "r");
     if (!f) { s->first_run = 1; return; }
-    char line[LINE_LENGTH];
+    s->unknown[0] = 0;
+    char line[LINE_LENGTH], kept[LINE_LENGTH], trimmed[LINE_LENGTH], word[LINE_LENGTH], after[64] = "";
     while (fgets(line, sizeof line, f)) {
         line[strcspn(line, "\r\n")] = 0;
         char *equals = strchr(line, '=');
-        if (!equals || line[0] == '#') continue;
+        if (!equals || line[strspn(line, " \t")] == '#') continue;
+        snprintf(kept, sizeof kept, "%s", line);
         *equals = 0;
-        const char *name = line, *value = equals + 1;
-        if (!strcmp(name, "colour_correction")) { s->colour_correction = atoi(value) != 0; continue; }
-        if (!strcmp(name, "vsync")) { if (!strcmp(value, "on") || !strcmp(value, "off") || !strcmp(value, "auto")) snprintf(s->vsync, sizeof s->vsync, "%s", value); continue; }
-        if (!strcmp(name, "camera")) { s->camera = atoi(value) == 1 ? 1 : 2; continue; }
-        if (!strcmp(name, "link_phase")) { s->link_phase = atoi(value) != 0; continue; }
-        if (!strcmp(name, "subpixel_camera")) { s->subpixel_camera = atoi(value) != 0; continue; }   /* set either way */
-        if (load_launcher(s, name, value)) continue;
-        if (load_name(name, value, "key_hotkey_bind_", "b", s->hotkey_bind_b) || load_name(name, value, "key_hotkey_bind_", "a", s->hotkey_bind_a)) continue;
-        unsigned game = 0, n = 0;
-        OraclesHotkeySlot slot;
-        if (oracles_hotkey_line_parse(name, value, &game, &n, &slot)) { s->hotkeys[game][n] = slot; continue; }
-        for (unsigned i = 0; i < ORACLES_BINDINGS; i++) load_name(name, value, "key_", oracles_sdl_binding_names[i], s->key_names[i]);
-        for (unsigned i = 0; i < 4; i++) load_name(name, value, "pad_", pad_setting_names[i], s->pad_names[i]);
-        load_name(name, value, "menu_", "pad", s->menu_pad);
-        for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) {
-            const char digit[2] = { (char)('1' + i), 0 };
-            load_name(name, value, "key_hotkey", digit, s->hotkey_key_names[i]);
-            load_name(name, value, "pad_hotkey", digit, s->hotkey_pad_names[i]);
+        char *name = trim(line);
+        lower(name);
+        snprintf(trimmed, sizeof trimmed, "%s", equals + 1);
+        const char *value = trim(trimmed);
+        snprintf(word, sizeof word, "%s", value);
+        lower(word);
+        int known = 1;
+        if (!strcmp(name, "colour_correction")) s->colour_correction = atoi(word) != 0;
+        else if (!strcmp(name, "vsync")) { if (!strcmp(word, "on") || !strcmp(word, "off") || !strcmp(word, "auto")) snprintf(s->vsync, sizeof s->vsync, "%.4s", word); }
+        else if (!strcmp(name, "camera")) s->camera = atoi(word) == 1 ? 1 : 2;
+        else if (!strcmp(name, "link_phase")) s->link_phase = atoi(word) != 0;
+        else if (!strcmp(name, "subpixel_camera")) s->subpixel_camera = atoi(word) != 0;   /* set either way */
+        else if (load_launcher(s, name, value, word)) {}
+        else if (load_name(name, value, "key_hotkey_bind_", "b", s->hotkey_bind_b) || load_name(name, value, "key_hotkey_bind_", "a", s->hotkey_bind_a)) {}
+        else {
+            unsigned game = 0, n = 0;
+            OraclesHotkeySlot slot;
+            known = 0;
+            if (oracles_hotkey_line_parse(name, value, &game, &n, &slot)) { s->hotkeys[game][n] = slot; known = 1; }
+            for (unsigned i = 0; !known && i < ORACLES_BINDINGS; i++) known = load_name(name, value, "key_", oracles_sdl_binding_names[i], s->key_names[i]);
+            for (unsigned i = 0; !known && i < 4; i++) known = load_name(name, value, "pad_", pad_setting_names[i], s->pad_names[i]);
+            if (!known) known = load_name(name, value, "menu_", "pad", s->menu_pad);
+            for (unsigned i = 0; !known && i < ORACLES_HOTKEY_SLOTS; i++) {
+                const char digit[2] = { (char)('1' + i), 0 };
+                known = load_name(name, value, "key_hotkey", digit, s->hotkey_key_names[i]) || load_name(name, value, "pad_hotkey", digit, s->hotkey_pad_names[i]);
+            }
         }
+        if (known) snprintf(after, sizeof after, "%s", name);
+        else keep_unknown(s, after, kept);
     }
     fclose(f);
+}
+
+/* settings.txt as it is written: after each key's line, the unknown lines read after that key (oracles_settings.unknown). */
+typedef struct writer {
+    FILE *f;
+    const oracles_settings *s;
+    unsigned char placed[ORACLES_SETTINGS_UNKNOWN_LINES];
+} writer;
+
+/* The unknown lines kept after the key `name` (`length` characters; "" for the file's start), not yet written; NULL: all
+ * of them that are left, at the file's end. */
+static void place(writer *w, const char *name, size_t length)
+{
+    unsigned index = 0;
+    for (const char *entry = w->s->unknown; *entry && index < ORACLES_SETTINGS_UNKNOWN_LINES; index++) {
+        const size_t end = strcspn(entry, "\n"), tab = strcspn(entry, "\t");
+        if (tab < end && !w->placed[index] && (!name || (tab == length && !strncmp(entry, name, length)))) {
+            fprintf(w->f, "%.*s\n", (int)(end - tab - 1), entry + tab + 1);
+            w->placed[index] = 1;
+        }
+        entry += end + (entry[end] == '\n');
+    }
+}
+
+static void put(writer *w, const char *format, ...)
+{
+    char text[LINE_LENGTH * 2];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(text, sizeof text, format, args);
+    va_end(args);
+    for (const char *line = text; *line;) {
+        const size_t length = strcspn(line, "\n");
+        fprintf(w->f, "%.*s\n", (int)length, line);
+        const char *equals = memchr(line, '=', length);
+        if (line[0] != '#' && equals) place(w, line, (size_t)(equals - line));
+        line += length + (line[length] == '\n');
+    }
 }
 
 int oracles_settings_store(const oracles_settings *s)
@@ -502,113 +582,115 @@ int oracles_settings_store(const oracles_settings *s)
     snprintf(temporary, sizeof temporary, "%s.tmp", s->path);
     FILE *f = fopen(temporary, "w");
     if (!f) return 0;
-    fprintf(f, "# The Oracles Project settings. Key names are SDL key names (Right, X, Return, Space, F1...);\n"
+    writer w = { f, s, { 0 } };
+    put(&w, "# The Oracles Project settings. Key names are SDL key names (Right, X, Return, Space, F1...);\n"
                "# pad names are SDL game controller buttons (a, b, x, y, back, start, leftshoulder...); an empty name is none.\n");
-    fprintf(f, "colour_correction=%d\n", s->colour_correction ? 1 : 0);
-    fprintf(f, "vsync=%s\n", s->vsync);
-    fprintf(f, "camera=%d\n", s->camera);
-    if (s->link_phase) fprintf(f, "link_phase=1\n");
-    if (s->subpixel_camera >= 0) fprintf(f, "subpixel_camera=%d\n", s->subpixel_camera != 0);
-    fprintf(f, "# The home screen: each game's ROM (Cartridge's Choose ROM, or a file dropped on the window) and its item hotkeys\n"
+    place(&w, "", 0);
+    put(&w, "colour_correction=%d\n", s->colour_correction ? 1 : 0);
+    put(&w, "vsync=%s\n", s->vsync);
+    put(&w, "camera=%d\n", s->camera);
+    if (s->link_phase) put(&w, "link_phase=1\n");
+    if (s->subpixel_camera >= 0) put(&w, "subpixel_camera=%d\n", s->subpixel_camera != 0);
+    put(&w, "# The home screen: each game's ROM (Cartridge's Choose ROM, or a file dropped on the window) and its item hotkeys\n"
                "# (off|use, Controls' Off or On, for the games the home screen starts; equip as --item-hotkeys=equip), and the\n"
                "# launcher window's size.\n");
     static const char *const hotkey_names[3] = { "off", "use", "equip" };
-    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "rom_%s=%s\n", game_names[g], s->rom[g]);
-    fprintf(f, "# Each fan game's BPS patch (Cartridge's Choose patch), applied to its Oracle's ROM: Gifts of Kinomi's to\n"
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) put(&w, "rom_%s=%s\n", game_names[g], s->rom[g]);
+    put(&w, "# Each fan game's BPS patch (Cartridge's Choose patch), applied to its Oracle's ROM: Gifts of Kinomi's to\n"
                "# rom_ages, Moonrise Regalia's to rom_ages, Temple of Seasons' to rom_seasons.\n");
-    for (unsigned g = 0; g < ORACLES_HOME_FAN_GAMES; g++) fprintf(f, "patch_%s=%s\n", oracles_home_fan_games[g].key, s->patch[g]);
-    fprintf(f, "# Each Oracle's European ROM (Cartridge's European ROM), whose English and official translations it plays in, and\n"
+    for (unsigned g = 0; g < ORACLES_HOME_FAN_GAMES; g++) put(&w, "patch_%s=%s\n", oracles_home_fan_games[g].key, s->patch[g]);
+    put(&w, "# Each Oracle's European ROM (Cartridge's European ROM), whose English and official translations it plays in, and\n"
                "# its language: en (English (US), the US ROM's own), en-eu (English (EU), the European ROM's), fr, de, it or es,\n"
                "# which need that ROM.\n");
-    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "eu_rom_%s=%s\n", game_names[g], s->eu_rom[g]);
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) put(&w, "eu_rom_%s=%s\n", game_names[g], s->eu_rom[g]);
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++)
-        fprintf(f, "language_%s=%s\n", game_names[g],
+        put(&w, "language_%s=%s\n", game_names[g],
                 oracles_settings_language_names[s->language[g] > 0 && s->language[g] < ORACLES_SETTINGS_LANGUAGES ? s->language[g] : 0]);
-    fprintf(f, "# Each fan game's language: its texts that are its Oracle's in the translation of its Oracle's European ROM, its\n"
+    put(&w, "# Each fan game's language: its texts that are its Oracle's in the translation of its Oracle's European ROM, its\n"
                "# own in English; en, en-eu, fr, de, it or es.\n");
     for (unsigned g = 0; g < ORACLES_HOME_FAN_GAMES; g++)
-        fprintf(f, "language_%s=%s\n", oracles_home_fan_games[g].key,
+        put(&w, "language_%s=%s\n", oracles_home_fan_games[g].key,
                 oracles_settings_language_names[s->fan_language[g] > 0 && s->fan_language[g] < ORACLES_SETTINGS_LANGUAGES ? s->fan_language[g] : 0]);
-    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "item_hotkeys_%s=%s\n", game_names[g], hotkey_names[s->item_hotkeys[g]]);
-    fprintf(f, "# Each game's active mods (its Mods page), the names of their folders in the mods folder beside this file.\n");
-    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) fprintf(f, "mods_%s=%s\n", game_names[g], s->mods[g]);
-    fprintf(f, "# Each game's cheats, in both profiles: no-damage (Link loses no heart), ammo (seeds, bombs and Bombchus are not\n"
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) put(&w, "item_hotkeys_%s=%s\n", game_names[g], hotkey_names[s->item_hotkeys[g]]);
+    put(&w, "# Each game's active mods (its Mods page), the names of their folders in the mods folder beside this file.\n");
+    for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) put(&w, "mods_%s=%s\n", game_names[g], s->mods[g]);
+    put(&w, "# Each game's cheats, in both profiles: no-damage (Link loses no heart), ammo (seeds, bombs and Bombchus are not\n"
                "# used up) and rupees (buying costs nothing; a mod's prices still apply), separated by commas; empty for none.\n");
     for (unsigned g = 0; g < ORACLES_SETTINGS_GAMES; g++) {
         char names[64];
-        fprintf(f, "cheats_%s=%s\n", game_names[g], oracles_cheats_format(s->cheats[g], NULL, names, sizeof names));
+        put(&w, "cheats_%s=%s\n", game_names[g], oracles_cheats_format(s->cheats[g], NULL, names, sizeof names));
     }
-    fprintf(f, "# Display, for the games the home screen starts: the profile (faithful or enhanced), the view in enhanced (near,\n"
+    put(&w, "# Display, for the games the home screen starts: the profile (faithful or enhanced), the view in enhanced (near,\n"
                "# medium or far, how much of the world it shows, in the screen's shape), the continuous transitions (off|on, in\n"
                "# enhanced only), and the window, 2, 3 or 4 times its surface or full (the screen); enhanced, far, on and full at\n"
                "# the first opening.\n");
-    fprintf(f, "profile=%s\n", profile_names[s->profile]);
-    fprintf(f, "view=%s\n", view_names[s->view >= 0 && s->view < 3 ? s->view : 2]);
-    fprintf(f, "# The core the games run on: sameboy (Accurate, the reference) or mgba (Fast, lighter, for small devices);\n"
+    put(&w, "profile=%s\n", profile_names[s->profile]);
+    put(&w, "view=%s\n", view_names[s->view >= 0 && s->view < 3 ? s->view : 2]);
+    put(&w, "# The core the games run on: sameboy (Accurate, the reference) or mgba (Fast, lighter, for small devices);\n"
                "# a savestate loads only on the core it was taken on.  Without a core= line, the application's default (%s).\n",
             oracles_settings_core_names[oracles_settings_core(s)]);
-    if (s->core == ORACLES_CORE_SAMEBOY || s->core == ORACLES_CORE_MGBA) fprintf(f, "core=%s\n", oracles_settings_core_names[s->core]);
-    fprintf(f, "# The game's menus, its map and its cutscenes in Enhanced: large (at their own largest whole scale, as Faithful\n"
+    if (s->core == ORACLES_CORE_SAMEBOY || s->core == ORACLES_CORE_MGBA) put(&w, "core=%s\n", oracles_settings_core_names[s->core]);
+    put(&w, "# The game's menus, its map and its cutscenes in Enhanced: large (at their own largest whole scale, as Faithful\n"
                "# shows them) or view (framed at the view's scale).\n");
-    fprintf(f, "menus=%s\n", s->menus_large ? "large" : "view");
-    fprintf(f, "# The status bar in Enhanced: original (as the game draws it, dark beside it), full (across the whole view,\n"
+    put(&w, "menus=%s\n", s->menus_large ? "large" : "view");
+    put(&w, "# The status bar in Enhanced: original (as the game draws it, dark beside it), full (across the whole view,\n"
                "# beside it its own background, which follows the game's colours) or wide (on that background, the hearts\n"
                "# and the money at the left corner, the items at the right).\n");
-    fprintf(f, "hud=%s\n", oracles_settings_hud_names[s->hud >= 0 && s->hud < 3 ? s->hud : 1]);
-    fprintf(f, "# The view's shape: auto (the screen's, nearer 4:3 or 16:9), 16:9 or 4:3, whatever the screen.\n");
-    fprintf(f, "aspect=%s\n", oracles_settings_aspect_names[s->aspect >= 0 && s->aspect < 3 ? s->aspect : 0]);
-    fprintf(f, "# The far view: screen (fitted to a screen its size fills badly, 426x320 on 1280x960 and 412x360 on 1240x1080,\n"
+    put(&w, "hud=%s\n", oracles_settings_hud_names[s->hud >= 0 && s->hud < 3 ? s->hud : 1]);
+    put(&w, "# The view's shape: auto (the screen's, nearer 4:3 or 16:9), 16:9 or 4:3, whatever the screen.\n");
+    put(&w, "aspect=%s\n", oracles_settings_aspect_names[s->aspect >= 0 && s->aspect < 3 ? s->aspect : 0]);
+    put(&w, "# The far view: screen (fitted to a screen its size fills badly, 426x320 on 1280x960 and 412x360 on 1240x1080,\n"
                "# three times, with aspect=auto) or fixed (480x270 or 480x360, whatever the screen).\n");
-    fprintf(f, "far=%s\n", s->far_fixed ? "fixed" : "screen");
-    fprintf(f, "# The ghosts that prepare the rooms around in Enhanced, each on its own processor core: auto (two on a device of\n"
+    put(&w, "far=%s\n", s->far_fixed ? "fixed" : "screen");
+    put(&w, "# The ghosts that prepare the rooms around in Enhanced, each on its own processor core: auto (two on a device of\n"
                "# four processor threads or more), 1 or 2. Two fill the view faster after a warp or a load.\n");
-    if (s->ghosts == 1 || s->ghosts == 2) fprintf(f, "ghosts=%d\n", s->ghosts); else fprintf(f, "ghosts=auto\n");
+    if (s->ghosts == 1 || s->ghosts == 2) put(&w, "ghosts=%d\n", s->ghosts); else put(&w, "ghosts=auto\n");
     if (s->quality_hint >= 0 && s->quality_hint <= ORACLES_QUALITY_CUSTOM) {
-        fprintf(f, "# The quality a game that ran slowly was last suggested to leave: the suggestion is made once a quality, until\n"
+        put(&w, "# The quality a game that ran slowly was last suggested to leave: the suggestion is made once a quality, until\n"
                    "# the view, the core or the ghosts change.\n");
-        fprintf(f, "quality_hint=%s\n", oracles_settings_quality_names[s->quality_hint]);
+        put(&w, "quality_hint=%s\n", oracles_settings_quality_names[s->quality_hint]);
     }
-    fprintf(f, "transitions=%s\n", s->transitions ? "on" : "off");
-    fprintf(f, "# Swimming: off (a stroke for each tap, of A with the flippers, of a direction with Ages' mermaid suit, as the\n"
+    put(&w, "transitions=%s\n", s->transitions ? "on" : "off");
+    put(&w, "# Swimming: off (a stroke for each tap, of A with the flippers, of a direction with Ages' mermaid suit, as the\n"
                "# game plays) or on (a direction held swims as the best tapping does, A held too with the flippers), in both profiles.\n");
-    fprintf(f, "swim_hold=%s\n", s->swim_hold ? "on" : "off");
-    fprintf(f, "# The text box: classic (the game's fixed width) or compact (its lines in the font's own widths, at the game's\n"
+    put(&w, "swim_hold=%s\n", s->swim_hold ? "on" : "off");
+    put(&w, "# The text box: classic (the game's fixed width) or compact (its lines in the font's own widths, at the game's\n"
                "# pace), in enhanced on Ages, Seasons and the fan games; from the home screen only, the pause showing it greyed.\n");
-    fprintf(f, "text=%s\n", s->compact_text ? "compact" : "classic");
-    fprintf(f, "# The text box: standard (the game's) or wide (192 pixels of text, drawn by the port, the texts laid out again\n"
+    put(&w, "text=%s\n", s->compact_text ? "compact" : "classic");
+    put(&w, "# The text box: standard (the game's) or wide (192 pixels of text, drawn by the port, the texts laid out again\n"
                "# for it, classic or compact), in enhanced on Ages and Seasons; from the home screen only, the pause showing it\n"
                "# greyed.\n");
-    fprintf(f, "text_box=%s\n", s->text_box_wide ? "wide" : "standard");
-    fprintf(f, "# The text box's size: normal, large (three halves, in whole screen pixels) or xlarge (twice as large), where the\n"
+    put(&w, "text_box=%s\n", s->text_box_wide ? "wide" : "standard");
+    put(&w, "# The text box's size: normal, large (three halves, in whole screen pixels) or xlarge (twice as large), where the\n"
                "# view holds it, else the next size down, in enhanced; at once, from the pause too.\n");
-    fprintf(f, "text_size=%s\n", text_size_names[s->text_size >= 0 && s->text_size < 3 ? s->text_size : 0]);
-    fprintf(f, "# The text's speed: classic (letter by letter, at the speed chosen on the file screen) or instant (each line\n"
+    put(&w, "text_size=%s\n", text_size_names[s->text_size >= 0 && s->text_size < 3 ? s->text_size : 0]);
+    put(&w, "# The text's speed: classic (letter by letter, at the speed chosen on the file screen) or instant (each line\n"
                "# whole; A still turns the page), in both profiles; from the pause too, when the game resumes.\n");
-    fprintf(f, "text_speed=%s\n", s->text_instant ? "instant" : "classic");
-    if (s->window_scale) fprintf(f, "window_scale=%d\n", s->window_scale); else fprintf(f, "window_scale=full\n");
-    fprintf(f, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
+    put(&w, "text_speed=%s\n", s->text_instant ? "instant" : "classic");
+    if (s->window_scale) put(&w, "window_scale=%d\n", s->window_scale); else put(&w, "window_scale=full\n");
+    put(&w, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
                "# proportions, sampled for pixel art); a window keeps its whole scales.\n");
-    fprintf(f, "scaling=%s\n", s->scaling_fill ? "fill" : "sharp");
-    fprintf(f, "# The band of the screen the game and the launcher keep to: off (the whole screen), auto (clear of a notch or a\n"
+    put(&w, "scaling=%s\n", s->scaling_fill ? "fill" : "sharp");
+    put(&w, "# The band of the screen the game and the launcher keep to: off (the whole screen), auto (clear of a notch or a\n"
                "# curved edge Android reports above or below), small or large (24 or 48 dp clear at the top and at the bottom,\n"
                "# for a screen whose edges hide part of the picture, auto's too where it is larger).\n");
-    fprintf(f, "screen_margin=%s\n", oracles_screen_margin_names[s->screen_margin >= 0 && s->screen_margin < ORACLES_SCREEN_MARGINS ? s->screen_margin : 0]);
-    fprintf(f, "# The update check: on (when the home screen opens, one anonymous request to GitHub for the latest release, which\n"
+    put(&w, "screen_margin=%s\n", oracles_screen_margin_names[s->screen_margin >= 0 && s->screen_margin < ORACLES_SCREEN_MARGINS ? s->screen_margin : 0]);
+    put(&w, "# The update check: on (when the home screen opens, one anonymous request to GitHub for the latest release, which\n"
                "# the home screen names when it is newer; nothing is sent but the request) or off (no request).\n");
-    fprintf(f, "update_check=%s\n", s->update_check ? "on" : "off");
-    fprintf(f, "launcher_window=%dx%d\n", s->launcher_width, s->launcher_height);
-    for (unsigned i = 0; i < ORACLES_BINDINGS; i++) fprintf(f, "key_%s=%s\n", oracles_sdl_binding_names[i], s->key_names[i]);
-    for (unsigned i = 0; i < 4; i++) fprintf(f, "pad_%s=%s\n", pad_setting_names[i], s->pad_names[i]);
-    fprintf(f, "# The controller's Escape in a game, the pause menu, as Guide is too: a button, or lefttrigger or righttrigger;\n"
+    put(&w, "update_check=%s\n", s->update_check ? "on" : "off");
+    put(&w, "launcher_window=%dx%d\n", s->launcher_width, s->launcher_height);
+    for (unsigned i = 0; i < ORACLES_BINDINGS; i++) put(&w, "key_%s=%s\n", oracles_sdl_binding_names[i], s->key_names[i]);
+    for (unsigned i = 0; i < 4; i++) put(&w, "pad_%s=%s\n", pad_setting_names[i], s->pad_names[i]);
+    put(&w, "# The controller's Escape in a game, the pause menu, as Guide is too: a button, or lefttrigger or righttrigger;\n"
                "# one the game's buttons or the item hotkeys have stays theirs; empty: Guide alone.\n");
-    fprintf(f, "menu_pad=%s\n", s->menu_pad);
-    fprintf(f, "# The toast that names that button, over the first game started with a controller: due, or shown already.\n");
-    fprintf(f, "menu_toast=%s\n", s->menu_toast_shown ? "shown" : "due");
-    fprintf(f, "# Item hotkeys (--item-hotkeys=use|equip, for the run that asks): a key per slot; held with the bind keys it takes the item of B or of A,\n"
+    put(&w, "menu_pad=%s\n", s->menu_pad);
+    put(&w, "# The toast that names that button, over the first game started with a controller: due, or shown already.\n");
+    put(&w, "menu_toast=%s\n", s->menu_toast_shown ? "shown" : "due");
+    put(&w, "# Item hotkeys (--item-hotkeys=use|equip, for the run that asks): a key per slot; held with the bind keys it takes the item of B or of A,\n"
                "# and in the inventory it takes the item under the cursor. A slot is <b|a>:<item>:<variant or -->, in the ROM's own identifiers.\n");
-    for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) fprintf(f, "key_hotkey%u=%s\n", i + 1u, s->hotkey_key_names[i]);
-    fprintf(f, "key_hotkey_bind_b=%s\nkey_hotkey_bind_a=%s\n", s->hotkey_bind_b, s->hotkey_bind_a);
-    for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) fprintf(f, "pad_hotkey%u=%s\n", i + 1u, s->hotkey_pad_names[i]);
+    for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) put(&w, "key_hotkey%u=%s\n", i + 1u, s->hotkey_key_names[i]);
+    put(&w, "key_hotkey_bind_b=%s\nkey_hotkey_bind_a=%s\n", s->hotkey_bind_b, s->hotkey_bind_a);
+    for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) put(&w, "pad_hotkey%u=%s\n", i + 1u, s->hotkey_pad_names[i]);
     for (unsigned game = 0; game < 2u; game++)
         for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) {
             char line[64];
@@ -616,9 +698,10 @@ int oracles_settings_store(const oracles_settings *s)
             const OraclesHotkeySlot *slot = &s->hotkeys[game][i];
             const OraclesGuestTables *tables = game == 0 ? &oracles_guest_tables_ages : &oracles_guest_tables_seasons;
             if (slot->set && slot->item < ORACLES_GUEST_ITEM_LABELS && tables->item_names[slot->item] && tables->item_names[slot->item][0])
-                fprintf(f, "# %s\n", tables->item_names[slot->item]);
-            if (oracles_hotkey_line_format(line, sizeof line, game, i, slot)) fprintf(f, "%s\n", line);
+                put(&w, "# %s\n", tables->item_names[slot->item]);
+            if (oracles_hotkey_line_format(line, sizeof line, game, i, slot)) put(&w, "%s\n", line);
         }
+    place(&w, NULL, 0);
     const int written = !ferror(f) && fflush(f) == 0;
     if (fclose(f) != 0 || !written) { remove(temporary); return 0; }
     if (rename(temporary, s->path) == 0) return 1;

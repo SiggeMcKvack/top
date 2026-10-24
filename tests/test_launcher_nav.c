@@ -110,10 +110,13 @@ static void menu(void)
     nav.focus = 5;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_CHEATS && nav.row == 0);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 5);
-    /* Up from the first item wraps to Exit, which exits. */
+    /* Up from the first item reaches the version number, then Exit, which exits. */
     nav.focus = 0;
     oracles_home_act(&nav, ORACLES_HOME_UP);
+    CHECK(oracles_home_focus(&nav) == 7 && oracles_home_version_focused(&nav));
+    oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(oracles_home_focus(&nav) == 6 && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_EXIT);
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(oracles_home_focus(&nav) == 0);
     /* With a ROM, Start game starts the game of the entry. */
@@ -419,19 +422,22 @@ static void display_in_game(void)
     nav.row = ORACLES_DISPLAY_HUD;
     CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 2);
     CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
-    /* Advanced opens on its first row that changes: Scaling from a game, which keeps the core, the transitions, Vsync and
-     * the workers, in either profile chosen; Core on the home screen. */
+    /* Advanced opens on its first row that changes: Vsync from a game, which keeps the core, the transitions and the
+     * workers, in either profile chosen; Core on the home screen. */
     nav.row = ORACLES_DISPLAY_ADVANCED;
-    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_SCALING);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_display_act(&nav, ORACLES_HOME_BACK);
     nav.display.profile = ORACLES_PROFILE_FAITHFUL;
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_SCALING);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
     oracles_display_act(&nav, ORACLES_HOME_BACK);
     nav.in_game = 0;
     CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);
     /* The margin --screen-margin gives for the run is shown and does not change, on the home screen as from a game. */
     nav.display.margin = 2;
     nav.display.margin_fixed = 1;
+    oracles_display_act(&nav, ORACLES_HOME_BACK);
+    nav.row = ORACLES_DISPLAY_PICTURE;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.picture_page);
     CHECK(oracles_display_row_fixed(&nav, ORACLES_DISPLAY_MARGIN) && oracles_display_click(&nav, ORACLES_DISPLAY_MARGIN, 3) == ORACLES_HOME_STAY);
     nav.row = ORACLES_DISPLAY_MARGIN;
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.margin == 2);
@@ -506,41 +512,57 @@ static void windows_refused(void)
     }
 }
 
-/* The newer version's notice: without it, the menu wraps from Exit to Start game; with it, down from Exit reaches it,
- * down again Start game, up Exit again, and up from Start game the notice.  OK, a click or a tap opens its page and the
- * launcher stays; Select's hint says Open while it is highlighted.  On the home screen only: not in the pause, not on a
- * page. */
+/* The newer version's notice and the version number (turn 32): without the notice, down from Exit reaches the number,
+ * down again Start game, and up from Start game the number; with it, down from Exit reaches the notice, then the number,
+ * then Start game.  OK, a click or a tap opens the notice's page, the launcher staying, or About from the number, whose
+ * Back comes back to it; Select's hint says Open on both.  About's Update check off hides the notice.  On the home screen
+ * only: not in the pause, not on a page. */
 static void update_notice(void)
 {
     OraclesHomeNav nav;
     oracles_home_init(&nav);
     nav.games[0].usable = 1;
     OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
-    CHECK(!oracles_home_update_shown(&nav));
+    CHECK(!oracles_home_update_shown(&nav) && nav.update_check);
     nav.focus = 6;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 7 && oracles_home_version_focused(&nav)
+          && !oracles_home_update_focused(&nav));
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Open"));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_version_focused(&nav));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 6);
-    oracles_home_hover(&nav, 7);
-    CHECK(oracles_home_focus(&nav) == 6 && oracles_home_click(&nav, 7) == ORACLES_HOME_STAY);
+    oracles_home_hover(&nav, 8);
+    CHECK(oracles_home_focus(&nav) == 6 && oracles_home_click(&nav, 8) == ORACLES_HOME_STAY);
+    /* The number opens About, on its row; Back returns to the number. */
+    CHECK(oracles_home_click(&nav, 7) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_ABOUT && nav.row == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && oracles_home_version_focused(&nav));
 
     snprintf(nav.update, sizeof nav.update, "1.3.0");
+    nav.focus = 6;
     CHECK(oracles_home_update_shown(&nav) && !oracles_home_update_focused(&nav));
     CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Select"));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 7 && oracles_home_update_focused(&nav));
     CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Open") && !strcmp(hints[2].key, "Enter / A"));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_OPEN_UPDATE && nav.screen == ORACLES_SCREEN_HOME && oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 8 && oracles_home_version_focused(&nav));
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[2].label, "Open"));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_ABOUT);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 8);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0 && !oracles_home_update_focused(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_version_focused(&nav));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_update_focused(&nav));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 6);
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_EXIT);
-    /* The pointer: hovered, it takes the highlight; clicked or tapped, it opens.  Past it, nothing. */
+    /* The pointer: hovered, they take the highlight; clicked or tapped, they open.  Past them, nothing. */
     oracles_home_hover(&nav, 7);
     CHECK(oracles_home_update_focused(&nav));
-    oracles_home_hover(&nav, 8);
+    oracles_home_hover(&nav, 9);
     CHECK(oracles_home_focus(&nav) == 7);
+    oracles_home_hover(&nav, 8);
+    CHECK(oracles_home_version_focused(&nav));
     oracles_home_hover(&nav, 2);
     CHECK(oracles_home_click(&nav, 7) == ORACLES_HOME_OPEN_UPDATE && oracles_home_update_focused(&nav) && nav.screen == ORACLES_SCREEN_HOME);
-    CHECK(oracles_home_click(&nav, 8) == ORACLES_HOME_STAY);
+    CHECK(oracles_home_click(&nav, 9) == ORACLES_HOME_STAY);
     /* Another entry highlights its first item. */
     CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.entry == ORACLES_HOME_SEASONS && oracles_home_focus(&nav) == 0);
     /* The list of fan games: after its Exit. */
@@ -548,18 +570,37 @@ static void update_notice(void)
     nav.focus = 3;
     CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 4 && oracles_home_update_focused(&nav));
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_OPEN_UPDATE && oracles_home_hero(&nav) == ORACLES_HOME_HERO_FAN);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 5 && oracles_home_version_focused(&nav));
+
+    /* About's Update check: left, right and OK turn it off and on, kept at once; off, the notice goes, the number
+     * taking its place; a click on On or Off sets it. */
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_ABOUT);
+    char note[64];
+    oracles_about_note(&nav, "v1.2.0 (abc1234)", note, sizeof note);
+    CHECK(!strcmp(note, "v1.2.0 (abc1234) \xc2\xb7 1.3.0 available"));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == 0 && nav.update_check);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && !nav.update_check);
+    oracles_about_note(&nav, "v1.2.0 (abc1234)", note, sizeof note);
+    CHECK(!strcmp(note, "v1.2.0 (abc1234)"));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.update_check);
+    CHECK(oracles_about_click(&nav, 1) == ORACLES_HOME_STORE && !nav.update_check);
+    CHECK(oracles_about_click(&nav, 1) == ORACLES_HOME_STAY && oracles_about_click(&nav, -1) == ORACLES_HOME_STAY && !nav.update_check);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME && !oracles_home_update_shown(&nav)
+          && oracles_home_focus(&nav) == 4 && oracles_home_version_focused(&nav));
+    CHECK(oracles_about_click(&nav, 0) == ORACLES_HOME_STORE && nav.update_check && oracles_home_update_shown(&nav));
 
     /* Not on a page, where Select stays Select. */
     oracles_home_select(&nav, ORACLES_HOME_AGES);
     nav.focus = 3;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY && !oracles_home_update_shown(&nav));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_DISPLAY && !oracles_home_update_shown(&nav)
+          && !oracles_home_version_focused(&nav));
     oracles_home_act(&nav, ORACLES_HOME_BACK);
     CHECK(nav.screen == ORACLES_SCREEN_HOME && oracles_home_focus(&nav) == 3 && oracles_home_update_shown(&nav));
     /* Nor in the pause: its menu wraps from Quit to launcher to Resume. */
     oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
     CHECK(!oracles_home_update_shown(&nav));
     nav.focus = 6;
-    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && oracles_home_focus(&nav) == 0 && !oracles_home_version_focused(&nav));
     CHECK(oracles_home_click(&nav, 7) == ORACLES_HOME_STAY && oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[1].label, "Select"));
 }
 
