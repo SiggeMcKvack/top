@@ -152,7 +152,8 @@ int oracles_session_load_state(session *s, char *message, size_t capacity)
         refused = 1;
     }
     if (!refused && oracles_state_mods(data, size, saved_mods, sizeof saved_mods) == 0
-        && oracles_state_text_refusal(saved_mods, s->state_info.mods, s->enhanced, s->settings && s->settings->compact_text, message, capacity, detail,
+        && oracles_state_text_refusal(saved_mods, s->state_info.mods, s->enhanced, s->settings && s->settings->compact_text,
+                                      s->settings && s->settings->text_box_wide && oracles_compat_host_text_box(s->profile), message, capacity, detail,
                                       sizeof detail)) {
         fprintf(stderr, "oracles: %s\n", detail);
         refused = 1;

@@ -3,6 +3,7 @@
 #include "ui_page_layout.h"
 #include "ui_version.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -41,6 +42,7 @@
 #define PREVIEW 0x4a4f58u                /* Display › Text's preview: the band, its status bar, its box's arrow */
 #define PREVIEW_HUD 0x2a2d33u
 #define PREVIEW_ARROW 0xe0302au
+#define PREVIEW_LETTERBOX 0x050507u     /* around the band where it is smaller than its frame, as around the game */
 
 #define MODS_PATH 0xc9c6cfu
 #define MODS_EMPTY 0xd6d3dcu
@@ -324,32 +326,46 @@ int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y, int *option
 
 /* ---- Display --------------------------------------------------------------------- */
 
-/* Display › Text's preview: the band's frame, its status bar, the box and its text, the arrow, the label and the note. */
+/* The rectangle (x, y, w, h) of output pixels clipped to `clip`, in the scene's units from the output's corner
+ * (zero_x, zero_y), `unit` a pixel, into `out`: whether any of it is left. */
+static int clipped(const OraclesUiBox *clip, float x, float y, float w, float h, float zero_x, float zero_y, float unit, float *out)
+{
+    const float x0 = fmaxf(x, clip->x), y0 = fmaxf(y, clip->y), x1 = fminf(x + w, clip->x + clip->w), y1 = fminf(y + h, clip->y + clip->h);
+    if (x1 <= x0 || y1 <= y0) return 0;
+    out[0] = zero_x + x0 * unit; out[1] = zero_y + y0 * unit;
+    out[2] = (x1 - x0) * unit; out[3] = (y1 - y0) * unit;
+    return 1;
+}
+
+/* Display › Text's preview: the band's frame, the band, its status bar, on the output's whole pixels, the box, its text
+ * and its arrow, a picture at the game's pixels scaled to its place (oracles_ui_text_preview_pixels); the label and the
+ * note. */
 static void text_preview(OraclesUiDraw *draw, const OraclesUiPageStyles *st, const OraclesUiDisplayTexts *t, const OraclesUiDisplayLayout *l)
 {
-    const OraclesUiBox *f = &l->preview_frame, *hud = &l->preview_hud, *b = &l->preview_box, *a = &l->preview_arrow;
-    oracles_ui_fill_round_rect(draw, f->x, f->y, f->w, f->h, 4.0f, oracles_ui_rgb(PREVIEW));
-    oracles_ui_fill_rect(draw, hud->x, hud->y, hud->w, hud->h, oracles_ui_rgb(PREVIEW_HUD));
-    oracles_ui_stroke_round_rect(draw, f->x, f->y, f->w, f->h, 4.0f, 1.0f, oracles_ui_rgba(0xffffffu, DIAGRAM_BORDER_OPACITY));
-    oracles_ui_fill_rect(draw, b->x, b->y, b->w, b->h, oracles_ui_rgb(0x000000u));
-    /* The text's ink, a rectangle a run of a row, drawn together. */
+    const OraclesUiBox *f = &l->preview_frame;
     const OraclesDisplayTextPreview *p = &t->preview;
-    const unsigned text_w = (unsigned)p->text_w < ORACLES_DISPLAY_SAMPLE_W ? (unsigned)p->text_w : ORACLES_DISPLAY_SAMPLE_W;
-    static float runs[4u * ORACLES_DISPLAY_SAMPLE_H * (ORACLES_DISPLAY_SAMPLE_W / 2u + 1u)];
-    int count = 0;
-    for (unsigned row = 0; row < ORACLES_DISPLAY_SAMPLE_H; row++)
-        for (unsigned col = 0; col < text_w;) {
-            if (!p->sample[row][col]) { col++; continue; }
-            unsigned end = col;
-            while (end < text_w && p->sample[row][end]) end++;
-            float *r = runs + 4 * count++;
-            r[0] = l->text_x + (float)col * l->pixel; r[1] = l->text_y + (float)row * l->pixel;
-            r[2] = (float)(end - col) * l->pixel; r[3] = l->pixel;
-            col = end;
-        }
-    oracles_ui_fill_rects(draw, runs, count, oracles_ui_rgb(0xffffffu));
-    const float arrow[6] = { a->x, a->y, a->x + a->w, a->y, a->x + a->w * 0.5f, a->y + a->h };
-    oracles_ui_fill_polygon(draw, arrow, 3, oracles_ui_rgb(PREVIEW_ARROW));
+    /* The output's corner in the scene, and its pixel in the scene's units. */
+    float zero_x, zero_y, one_x, one_y;
+    oracles_ui_draw_to_scene(draw, 0.0f, 0.0f, &zero_x, &zero_y);
+    oracles_ui_draw_to_scene(draw, 1.0f, 1.0f, &one_x, &one_y);
+    const float unit = one_x - zero_x;
+    if (unit > 0.0f) {
+        OraclesUiTextPreviewPixels px;
+        const OraclesUiBox frame = { (f->x - zero_x) / unit, (f->y - zero_y) / unit, f->w / unit, f->h / unit };
+        oracles_ui_text_preview_pixels(p, frame, l->pixel / unit, &px);
+        oracles_ui_fill_round_rect(draw, f->x, f->y, f->w, f->h, 4.0f, oracles_ui_rgb(px.letterbox ? PREVIEW_LETTERBOX : PREVIEW));
+        float r[4];
+        if (px.letterbox && clipped(&px.clip, px.view.x, px.view.y, px.view.w, px.view.h, zero_x, zero_y, unit, r))
+            oracles_ui_fill_rects(draw, r, 1, oracles_ui_rgb(PREVIEW));
+        if (clipped(&px.clip, px.hud.x, px.hud.y, px.hud.w, px.hud.h, zero_x, zero_y, unit, r)) oracles_ui_fill_rects(draw, r, 1, oracles_ui_rgb(PREVIEW_HUD));
+        static uint32_t picture[ORACLES_UI_PREVIEW_PICTURE_W * ORACLES_UI_PREVIEW_PICTURE_H];
+        static const uint32_t colors[3] = { 0xff000000u, 0xffffffffu, 0xff000000u | PREVIEW_ARROW };
+        const int w = oracles_ui_text_preview_picture(p, colors, picture);
+        const float rect[4] = { zero_x + px.box.x * unit, zero_y + px.box.y * unit, px.box.w * unit, px.box.h * unit };
+        const float clip[4] = { zero_x + px.clip.x * unit, zero_y + px.clip.y * unit, px.clip.w * unit, px.clip.h * unit };
+        oracles_ui_draw_picture(draw, picture, w, (int)ORACLES_UI_PREVIEW_PICTURE_H, rect, clip);
+    }
+    oracles_ui_stroke_round_rect(draw, f->x, f->y, f->w, f->h, 4.0f, 1.0f, oracles_ui_rgba(0xffffffu, DIAGRAM_BORDER_OPACITY));
     text(draw, st->diagram_label, &l->preview_label, p->label, oracles_ui_rgb(DIAGRAM_LABEL));
     text(draw, st->page_note, &l->preview_note, p->note, oracles_ui_rgb(NOTE_ITALIC));
 }

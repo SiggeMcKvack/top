@@ -250,7 +250,8 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine text_notes[ORACLES_DISPLAY_TEXT_ROWS];
     /* Its preview: all of it (16:9: the frame, its label and its note under it; 4:3: the frame, its label and note at its
      * right, at its bottom), the band's frame, the status bar's band in it, the box and its arrow (a triangle pointing
-     * down in this box), the box's text from (text_x, text_y) at `pixel` scene pixels a game pixel. */
+     * down in this box), the box's text from (text_x, text_y) at `pixel` scene pixels a game pixel: the band fitted to
+     * the frame, which the drawing puts on the output's pixels (oracles_ui_text_preview_pixels). */
     OraclesUiBox preview, preview_frame, preview_hud, preview_box, preview_arrow;
     float text_x, text_y, pixel;
     OraclesUiLine preview_label, preview_note;
@@ -297,6 +298,23 @@ float oracles_ui_picture_link_4_3(const OraclesUiDisplayTexts *t, float y, Oracl
  * wide, their labels at `label_x`, returning the rows' bottom; 4:3 its preview from the rows' top, its rows under it. */
 float oracles_ui_text_page_16_9(const OraclesUiDisplayTexts *t, float preview_y, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
 void oracles_ui_text_page_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *out);
+/* The preview as drawn, on the output's whole pixels, in a frame of `frame` output pixels where the band fits it at
+ * `unit` output pixels a box's pixel.  At one output pixel or more, the band fills the frame and the box takes its place
+ * in it, `pixel` = `unit` output pixels a pixel; under one, the box's pixel is one output pixel, the band's
+ * scale_den / scale_num, and the frame shows the band's bottom around the box, the box centred, or from the frame's left
+ * where its text is wider than the frame, the band whole and centred where it is smaller (`letterbox`).  `clip`, the
+ * frame on whole pixels, what is drawn; the band, its status bar and the box unclipped, in output pixels. */
+typedef struct OraclesUiTextPreviewPixels {
+    OraclesUiBox clip, view, hud, box;
+    float pixel;
+    int letterbox;
+} OraclesUiTextPreviewPixels;
+void oracles_ui_text_preview_pixels(const OraclesDisplayTextPreview *p, OraclesUiBox frame, float unit, OraclesUiTextPreviewPixels *out);
+/* The box, its text and its arrow at one of the game's pixels a pixel, box_w x box_h pixels from `out`, a row box_w,
+ * `colors` its ground, its text's ink and its arrow (0xAARRGGBB): its width. */
+#define ORACLES_UI_PREVIEW_PICTURE_W (ORACLES_DISPLAY_SAMPLE_W + 16u)
+#define ORACLES_UI_PREVIEW_PICTURE_H 40u
+int oracles_ui_text_preview_picture(const OraclesDisplayTextPreview *p, const uint32_t colors[3], uint32_t *out);
 
 /* Mods: the folder's row, each mod's row (its switch and its knob, its name, its games, its line and that line's dot),
  * the count and the note under the list, Play.  The texts are the layout's, fitted to their room.  Six mods show at

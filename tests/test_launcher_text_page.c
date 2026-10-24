@@ -1,19 +1,21 @@
-/* Display's Text link and Display › Text (ui_page_text.h, ui_page_layout.h): their layouts against the layout reference,
- * tests/launcher_layout_reference.json (layout_reference.h), the test's argument, their rows' rules and the preview.
- * The reference's frames are turn 26's: the page with Compact and Wide chosen, Text box highlighted, in 16:9 (26a), in
- * 4:3 (26b) and at 640x480 on Android (26c); Display with the link highlighted (26e, text link 4:3); from the pause
- * (26g, 26g 4:3 on Text, turn 29's), Text and Text box dimmed with their reason, Text size live; in Faithful (26h); and
- * Moonrise Regalia's (26i), Text box and Text size dimmed with their reason, where the canvas leaves the page out; each
- * measured again from turn 31, which adds Text speed under Text size, in 4:3 under a smaller preview.  Turn 31's own:
- * Instant chosen and highlighted in 16:9 (31a), in 4:3 (31c), at 640x480 on Android (31d), in the pause (31g); in
- * Faithful, Display's link live (31e) and the page in 4:3, Text speed alone live (31e 4:3, 31e text 4:3 on Text); a fan
- * game's page (31f); the link's summary naming Instant (31h, 31h 4:3).  The canvas's Lines row is not there: the engine
- * draws two lines alone. */
+/* Display's Text link and Display › Text (ui_page_text.h, ui_page_layout.h): their layouts against the layout
+ * reference, tests/launcher_layout_reference.json (layout_reference.h), the test's argument, their rows' rules and the
+ * preview. The reference's frames are turn 26's: the page with Compact and Wide chosen, Text box highlighted, in 16:9
+ * (26a), in 4:3 (26b) and at 640x480 on Android (26c), Text box's savestate note under it (the help's note line in
+ * 4:3); Display with the link highlighted (26e, text link 4:3); from the pause (26g, 26g 4:3 on Text, turn 29's), Text
+ * and Text box dimmed with their reason, Text size live; in Faithful (26h); and Moonrise Regalia's (26i), Text box and
+ * Text size dimmed with their reason, where the canvas leaves the page out; each measured again from turn 31, which
+ * adds Text speed under Text size, in 4:3 under a smaller preview.  Turn 31's own: Instant chosen and highlighted in
+ * 16:9 (31a), in 4:3 (31c), at 640x480 on Android (31d), in the pause (31g); in Faithful, Display's link live (31e) and
+ * the page in 4:3, Text speed alone live (31e 4:3, 31e text 4:3 on Text); a fan game's page (31f); the link's summary
+ * naming Instant (31h, 31h 4:3), left out with Text speed dimmed for an unrecognised ROM.  The canvas's Lines row is not
+ * there: the engine draws two lines alone. */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_page_nav.h"
 #include "text_box_enlarge.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -117,8 +119,10 @@ static void layouts(void)
     CHECK(!strcmp(t.section, "Display \xe2\x80\xba Text") && t.text_page && !t.later);
     CHECK(!strcmp(t.preview.label, "Far view, 480\xc3\x97" "270 \xc2\xb7 box 208\xc3\x97" "40") && !t.preview.note[0]);
     page_probes("26a", &l, 0);
-    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) CHECK((l.text_notes[i].h == 0.0f) == (i > 0u) && oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) CHECK((l.text_notes[i].h == 0.0f) == (i > 1u) && oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
     CHECK(!strcmp(t.text_notes[0], "Savestates taken with Compact need Compact."));   /* as Continuous transitions says of its own */
+    CHECK(!strcmp(t.text_notes[1], "Savestates taken with Wide need Wide."));
+    layout_text("26a", "box note", &l.text_notes[1]);
 
     /* 31a: the view Medium, Instant chosen and highlighted. */
     nav.display.view = 1;
@@ -230,9 +234,11 @@ static void layouts(void)
         text_page(&nav, frames[f].speed ? ORACLES_DISPLAY_TEXT_SPEED : ORACLES_DISPLAY_TEXT_BOX);
         if (frames[f].speed) nav.display.text_speed = 1, nav.display.view = 1;
         lay_out(&nav, &t, &l);
-        CHECK(!strcmp(t.help, frames[f].speed ? "Instant: each line appears whole." : "Wide: longer lines, fewer boxes.") && !t.help_note);
+        CHECK(!strcmp(t.help, frames[f].speed ? "Instant: each line appears whole." : "Wide: longer lines, fewer boxes."));
+        CHECK(frames[f].speed ? !t.help_note : t.help_note && !strcmp(t.help_note, "Savestates taken with Wide need Wide."));
         page_probes(frames[f].frame, &l, 1);
         layout_line(frames[f].frame, "help text", &l.help);
+        if (!frames[f].speed) layout_line(frames[f].frame, "help note text", &l.help_note);
     }
     /* 31e 4:3: in Faithful, Text speed alone live, highlighted; on Text, "Enhanced only." on the help's note line. */
     ages(&nav, ORACLES_UI_LAYOUT_4_3, 1440, 1080);
@@ -331,6 +337,26 @@ static void link(void)
     nav.display.text_speed = 0;
     oracles_display_text_summary(&nav, t.text_summary, sizeof t.text_summary);
     CHECK(!strcmp(t.text_summary, "As the game"));
+
+    /* An unrecognised ROM (a randomizer seed), which plays without the instant text: on the home screen too, Text speed
+     * dimmed with the pause's reason, Instant left out of the summary, the link and the page inert. */
+    nav.display.text_speed = 1;
+    nav.games[0].rom = ORACLES_ROM_UNRECOGNISED;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.text_summary, "As the game") && !oracles_display_text_link_applies(&nav));
+    CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SPEED) && !strcmp(t.text_notes[3], "Needs an original ROM."));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SPEED, 0) == ORACLES_HOME_STAY && nav.display.text_speed == 1);
+    /* A fan game's page by its image: one its patch does not give is refused alike, the one it gives has Instant. */
+    nav.games[0].rom = ORACLES_ROM_ORIGINAL;
+    nav.games[ORACLES_HOME_GAME_MOONRISE] = nav.games[0];
+    nav.games[ORACLES_HOME_GAME_MOONRISE].fan = oracles_home_fan_game(ORACLES_HOME_GAME_MOONRISE);
+    nav.games[ORACLES_HOME_GAME_MOONRISE].image = ORACLES_ROM_UNRECOGNISED;
+    nav.entry = ORACLES_HOME_FAN;
+    nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SPEED));
+    nav.games[ORACLES_HOME_GAME_MOONRISE].image = ORACLES_ROM_ORIGINAL;
+    oracles_display_text_summary(&nav, t.text_summary, sizeof t.text_summary);
+    CHECK(oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SPEED) && !strcmp(t.text_summary, "As the game \xc2\xb7 Instant"));
 }
 
 /* The page's keys: up and down wrap round its four rows, left and right change the highlighted one, OK takes its next
@@ -448,6 +474,116 @@ static void preview_sizes(void)
     CHECK(p.size == 1);
 }
 
+/* The preview on the output's pixels: where the box's pixel comes to one output pixel or more, the band fills its
+ * frame and keeps its size whatever the text size, the box growing with it, at 1920x1080 (16:9, the scene at 1) Far at
+ * 13/12, 65/36 Large and 13/6 Very large, and at 1280x720 (the scene at 2/3) Far Large and Very large; under one, at
+ * 640x480 (4:3, the scene at 4/9) and at 1280x720 Far Normal, a pixel of the box a screen pixel, the band's bottom
+ * around the box, the standard box centred, the wide one from the frame's left at 640x480. */
+static int whole(float v) { return v == floorf(v); }
+
+static void preview_at(const OraclesHomeNav *nav, float scale, OraclesUiDisplayLayout *l, OraclesUiTextPreviewPixels *px)
+{
+    OraclesUiDisplayTexts t;
+    lay_out(nav, &t, l);
+    const OraclesUiBox *f = &l->preview_frame;
+    const OraclesUiBox frame = { f->x * scale, f->y * scale, f->w * scale, f->h * scale };
+    oracles_ui_text_preview_pixels(&t.preview, frame, l->pixel * scale, px);
+    const OraclesUiBox *const boxes[4] = { &px->clip, &px->view, &px->hud, &px->box };
+    for (int i = 0; i < 4; i++) CHECK(whole(boxes[i]->x) && whole(boxes[i]->y) && whole(boxes[i]->w) && whole(boxes[i]->h));
+    CHECK(px->pixel == fmaxf(1.0f, l->pixel * scale));
+    CHECK(fabsf(px->box.w - (float)t.preview.box_w * px->pixel) <= 1.0f && fabsf(px->box.h - 40.0f * px->pixel) <= 1.0f);
+    if (px->pixel > 1.0f)
+        CHECK(!px->letterbox && !memcmp(&px->view, &px->clip, sizeof px->view) && px->box.x >= px->clip.x && px->box.y >= px->clip.y
+              && px->box.x + px->box.w <= px->clip.x + px->clip.w && px->box.y + px->box.h <= px->clip.y + px->clip.h
+              && fabsf(px->box.x + px->box.w * 0.5f - (px->clip.x + px->clip.w * 0.5f)) <= 1.0f);
+}
+
+/* Normal, Large and Very large in turn at `scale`: the band the same, the box's pixel never smaller. */
+static void preview_sizes_at(OraclesHomeNav *nav, float scale, OraclesUiTextPreviewPixels out[3])
+{
+    OraclesUiDisplayLayout l;
+    for (int size = 0; size < 3; size++) {
+        nav->display.text_size = size;
+        preview_at(nav, scale, &l, &out[size]);
+        if (size) CHECK(out[size].pixel >= out[size - 1].pixel && (out[size - 1].pixel == 1.0f || !memcmp(&out[size].view, &out[size - 1].view, sizeof out[size].view)));
+    }
+    nav->display.text_size = 0;
+}
+
+static void preview_pixels(void)
+{
+    OraclesHomeNav nav;
+    OraclesUiDisplayLayout l;
+    OraclesUiTextPreviewPixels px, sizes[3];
+    ages(&nav, ORACLES_UI_LAYOUT_4_3, 640, 480);
+    nav.android = nav.display.fullscreen_only = 1;
+    nav.display.view = 1;
+    text_page(&nav, ORACLES_DISPLAY_LETTERS);
+    nav.display.text_box = 0;
+    preview_at(&nav, 4.0f / 9.0f, &l, &px);
+    CHECK(px.pixel == 1.0f && !px.letterbox && px.view.w == 320.0f && px.view.y + px.view.h == px.clip.y + px.clip.h);
+    CHECK(fabsf(px.box.x + px.box.w * 0.5f - (px.clip.x + px.clip.w * 0.5f)) <= 1.0f && px.box.x + 8.0f >= px.clip.x
+          && px.box.x + 8.0f + 128.0f <= px.clip.x + px.clip.w);
+    nav.display.text_box = 1;
+    preview_at(&nav, 4.0f / 9.0f, &l, &px);
+    CHECK(px.pixel == 1.0f && px.box.x == px.clip.x && px.box.w == 208.0f);
+    nav.display.window = 3;
+    nav.display.text_size = 1;   /* Large, three halves: the box's pixel a screen pixel still, the band's two thirds */
+    preview_at(&nav, 4.0f / 9.0f, &l, &px);
+    CHECK(px.pixel == 1.0f && px.box.h == 40.0f && px.view.w == 213.0f && px.view.h == 160.0f && px.view.y + px.view.h == px.clip.y + px.clip.h);
+    preview_sizes_at(&nav, 4.0f / 9.0f, sizes);
+    CHECK(sizes[0].pixel == 1.0f && sizes[1].pixel == 1.0f && sizes[2].pixel == 1.0f);
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    text_page(&nav, ORACLES_DISPLAY_LETTERS);
+    nav.display.text_box = 0;
+    preview_at(&nav, 1.0f, &l, &px);   /* Far, 480x270 filling 520x293 */
+    CHECK(px.view.w == 520.0f && px.view.h == 293.0f && px.box.w == 156.0f && px.box.h == 43.0f && px.box.y + px.box.h <= px.clip.y + px.clip.h - 8.0f);
+    preview_sizes_at(&nav, 1.0f, sizes);
+    CHECK(sizes[0].pixel < sizes[1].pixel && sizes[1].pixel < sizes[2].pixel && fabsf(sizes[2].pixel - 2.0f * sizes[0].pixel) < 1e-4f
+          && sizes[2].box.w == 312.0f);
+    nav.display.view = 0;
+    preview_at(&nav, 1.0f, &l, &px);
+    CHECK(px.pixel > 2.0f);
+    nav.display.view = 1;
+    nav.display.text_size = 1;
+    preview_at(&nav, 1.0f, &l, &px);   /* Medium Large, five thirds of 520/384 */
+    CHECK(fabsf(px.pixel - 520.0f / 384.0f * 5.0f / 3.0f) < 1e-3f);
+    nav.display.text_box = 1;
+    preview_at(&nav, 2.0f / 3.0f, &l, &px);   /* at 1280x720, the wide box whole in the band */
+    CHECK(px.pixel > 1.0f);
+    nav.display.view = 2;
+    nav.display.text_box = 0;
+    preview_sizes_at(&nav, 2.0f / 3.0f, sizes);   /* Far at 1280x720: Normal under a screen pixel, Large and Very large over */
+    CHECK(sizes[0].pixel == 1.0f && sizes[0].view.w > sizes[0].clip.w && sizes[0].view.y + sizes[0].view.h == sizes[0].clip.y + sizes[0].clip.h
+          && sizes[1].pixel > 1.0f && sizes[2].pixel > sizes[1].pixel && !memcmp(&sizes[1].view, &sizes[2].view, sizeof sizes[1].view));
+}
+
+/* The box's picture: its ground, its text's ink from (8, 4), the arrow 3 pixels from its right, 2 from its bottom. */
+static void preview_picture(void)
+{
+    OraclesHomeNav nav;
+    OraclesDisplayTextPreview p;
+    static uint32_t out[ORACLES_UI_PREVIEW_PICTURE_W * ORACLES_UI_PREVIEW_PICTURE_H];
+    const uint32_t colors[3] = { 1u, 2u, 3u };
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    for (int wide = 0; wide < 2; wide++) {
+        nav.display.text_box = wide;
+        oracles_display_text_preview(&nav, &p);
+        const int w = oracles_ui_text_preview_picture(&p, colors, out);
+        CHECK(w == p.box_w && w == (wide ? 208 : 144));
+        unsigned ink = 0, sample = 0;
+        for (int y = 0; y < 40; y++)
+            for (int x = 0; x < w; x++) {
+                const uint32_t c = out[y * w + x];
+                const int in_text = x >= 8 && x < 8 + p.text_w && y >= 4 && y < 36, arrow = y >= 35 && y < 38 && x >= w - 9 + (y - 35) && x < w - 3 - (y - 35);
+                CHECK(c == (arrow ? 3u : in_text && p.sample[y - 4][x - 8] ? 2u : 1u));
+                ink += c == 2u;
+                sample += in_text && p.sample[y - 4][x - 8] && !arrow;
+            }
+        CHECK(ink && ink == sample);
+    }
+}
+
 /* The sample: without a font, its words as bars; Compact fits more of them than Classic in the two lines; in a font, each
  * letter's ink at its place. */
 static void sample(void)
@@ -486,6 +622,8 @@ int main(int argc, char **argv)
     link();
     keys();
     preview_sizes();
+    preview_pixels();
+    preview_picture();
     sample();
     if (layout_failures()) {
         fprintf(stderr, "%d failures\n", layout_failures());

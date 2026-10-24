@@ -1,6 +1,6 @@
 /* Why a savestate does not load in this session, as the launcher and the command line say it: the continuous
  * transitions a state was taken with must be those of the session that loads it, and they come only with
- * Enhanced; so must its core and its text, classic or compact. */
+ * Enhanced; so must its core and its text, classic or compact, in the game's box or the wide one. */
 #ifndef ORACLES_STATE_REFUSAL_H
 #define ORACLES_STATE_REFUSAL_H
 
@@ -19,12 +19,14 @@ int oracles_state_transitions_refusal(int taken_with_transitions, int enhanced, 
 int oracles_state_core_refusal(const char *taken_on, const char *now, char *message, size_t message_capacity, char *detail, size_t detail_capacity);
 
 /* 1 when a state whose set of mods and gameplay options is `taken_mods` is refused by a session whose set is `mods`
- * because of the text: one has the compact text and the other the classic one (*message names the setting that would
- * load it, from the home screen, a running game keeping both: "Refused: taken with the Compact text: choose Compact in
- * Display's Text from the home screen", or the profile when the session is Faithful (`enhanced` 0), whose classic text
- * the compact one chosen (`compact_chosen`) does not change), or both have it laid out by another version of it.  0,
- * both empty, when their texts agree. */
-int oracles_state_text_refusal(const char *taken_mods, const char *mods, int enhanced, int compact_chosen, char *message, size_t message_capacity,
-                               char *detail, size_t detail_capacity);
+ * because of the text: its letters, compact or classic, or its box, the wide one or the game's, are not the session's
+ * (*message names the settings that would load it, from the home screen, a running game keeping both: "Refused: taken
+ * with the Compact text: choose Compact in Display's Text from the home screen", "Refused: taken with the Wide box:
+ * choose Wide in Display's Text box from the home screen", or both; or the profile when the session is Faithful
+ * (`enhanced` 0), which plays the classic text in the game's box whatever is chosen, and with it the text and the box
+ * where those chosen (`compact_chosen`, `wide_chosen`) are not the state's), or both have them laid out by another
+ * version.  0, both empty, when their texts agree. */
+int oracles_state_text_refusal(const char *taken_mods, const char *mods, int enhanced, int compact_chosen, int wide_chosen, char *message,
+                               size_t message_capacity, char *detail, size_t detail_capacity);
 
 #endif

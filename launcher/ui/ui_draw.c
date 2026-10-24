@@ -60,6 +60,9 @@ struct OraclesUiDraw {
     int band_top, band_height;           /* the output's band the scene keeps to (oracles_ui_draw_band); 0 high: the whole output */
     int overflow;                        /* the scene is larger than the output (a minimum scale): its parts are anchored */
     unsigned glyphs_rasterised;          /* since the drawing began, for the pause to say none came during a session */
+    SDL_Texture *picture;                /* oracles_ui_draw_picture's, and its pixels, to tell a new one */
+    uint32_t *picture_pixels;
+    int picture_w, picture_h;
 };
 
 OraclesUiColor oracles_ui_rgb(uint32_t rgb)
@@ -120,6 +123,8 @@ void oracles_ui_draw_destroy(OraclesUiDraw *draw)
     release_atlases(draw);
     for (int i = 0; i < ORACLES_UI_MOTIF_COUNT; i++)
         if (draw->motifs[i]) SDL_DestroyTexture(draw->motifs[i]);
+    if (draw->picture) SDL_DestroyTexture(draw->picture);
+    free(draw->picture_pixels);
     free(draw);
 }
 
@@ -551,6 +556,46 @@ void oracles_ui_fill_polygon(OraclesUiDraw *draw, const float *points, int count
     fan(vertices, &vertex_count, indices, &index_count, inner, count, color);
     band(vertices, &vertex_count, indices, &index_count, inner, color, outer, oracles_ui_fade(color, 0.0f), count);
     SDL_RenderGeometry(draw->renderer, NULL, vertices, vertex_count, indices, index_count);
+}
+
+/* ---- picture ----------------------------------------------------------------- */
+
+/* The picture's texture holding `pixels`: made again for a new size, uploaded again for new pixels. */
+static int picture_of(OraclesUiDraw *draw, const uint32_t *pixels, int w, int h)
+{
+    const size_t size = (size_t)w * (size_t)h * sizeof *pixels;
+    if (draw->picture && draw->picture_w == w && draw->picture_h == h && !memcmp(draw->picture_pixels, pixels, size)) return 1;
+    if (!draw->picture || draw->picture_w != w || draw->picture_h != h) {
+        if (draw->picture) SDL_DestroyTexture(draw->picture);
+        free(draw->picture_pixels);
+        draw->picture_w = draw->picture_h = 0;
+        draw->picture_pixels = malloc(size);
+        draw->picture = draw->picture_pixels ? SDL_CreateTexture(draw->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, w, h) : NULL;
+        if (!draw->picture) return 0;
+        SDL_SetTextureBlendMode(draw->picture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(draw->picture, SDL_SCALEMODE_PIXELART);
+    }
+    if (!SDL_UpdateTexture(draw->picture, NULL, pixels, w * 4)) { draw->picture_w = draw->picture_h = 0; return 0; }
+    memcpy(draw->picture_pixels, pixels, size);
+    draw->picture_w = w;
+    draw->picture_h = h;
+    return 1;
+}
+
+void oracles_ui_draw_picture(OraclesUiDraw *draw, const uint32_t *pixels, int w, int h, const float *rect, const float *clip)
+{
+    if (w <= 0 || h <= 0 || !picture_of(draw, pixels, w, h)) return;
+    const float s = draw->scale;
+    const float x0 = roundf(draw->origin_x + rect[0] * s), y0 = roundf(draw->origin_y + rect[1] * s);
+    const float x1 = roundf(draw->origin_x + (rect[0] + rect[2]) * s), y1 = roundf(draw->origin_y + (rect[1] + rect[3]) * s);
+    const float cx0 = fmaxf(x0, roundf(draw->origin_x + clip[0] * s)), cy0 = fmaxf(y0, roundf(draw->origin_y + clip[1] * s));
+    const float cx1 = fminf(x1, roundf(draw->origin_x + (clip[0] + clip[2]) * s)), cy1 = fminf(y1, roundf(draw->origin_y + (clip[1] + clip[3]) * s));
+    if (x1 <= x0 || y1 <= y0 || cx1 <= cx0 || cy1 <= cy0) return;
+    /* The part of the picture the clip leaves. */
+    const float kx = (float)w / (x1 - x0), ky = (float)h / (y1 - y0);
+    const SDL_FRect source = { (cx0 - x0) * kx, (cy0 - y0) * ky, (cx1 - cx0) * kx, (cy1 - cy0) * ky };
+    const SDL_FRect target = { cx0, cy0, cx1 - cx0, cy1 - cy0 };
+    SDL_RenderTexture(draw->renderer, draw->picture, &source, &target);
 }
 
 /* ---- text -------------------------------------------------------------------- */

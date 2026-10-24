@@ -355,7 +355,8 @@ typedef struct OraclesHomeNav {
     unsigned cheats_changed;
     /* In a game: its profile has no cheats (an unrecognised ROM, a fan game): the pause has no Cheats.  An Oracle's
      * whose profile has no swim's hold, no item hotkeys (an unrecognised ROM): Controls' Swimming, its Item hotkeys,
-     * dimmed and inert, saying why; a game's whose profile has no instant text, Display › Text's Text speed. */
+     * dimmed and inert, saying why; a game's whose profile has no instant text, Display › Text's Text speed (on the home
+     * screen, a page whose ROM is unrecognised). */
     int cheats_refused, swim_refused, hotkeys_refused, text_speed_refused;
     /* In a game (the pause menu, and Controls and Display opened from it): the running game's profile, the pause
      * menu reduced in a 16:9 window under 960 pixels wide (oracles_ui_layout_narrow), and Load state's note

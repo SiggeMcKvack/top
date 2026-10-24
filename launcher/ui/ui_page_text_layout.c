@@ -174,6 +174,52 @@ static void preview_frame(const OraclesDisplayTextPreview *p, float x, float y, 
                              out->preview_box.y + out->preview_box.h - round_d(ARROW_BOTTOM * unit) - arrow, 2.0f * arrow, arrow);
 }
 
+void oracles_ui_text_preview_pixels(const OraclesDisplayTextPreview *p, OraclesUiBox frame, float unit, OraclesUiTextPreviewPixels *out)
+{
+    const float x0 = roundf(frame.x), y0 = roundf(frame.y), x1 = roundf(frame.x + frame.w), y1 = roundf(frame.y + frame.h);
+    out->clip = box(x0, y0, x1 - x0, y1 - y0);
+    const float to_band = (float)(p->scale_den ? p->scale_den : 1u) / (float)(p->scale_num ? p->scale_num : 1u);
+    if (unit >= 1.0f) {
+        /* The band filling the frame, the box at its place and its proportion in it, its edges on whole pixels. */
+        const float band = unit * to_band, bw = (float)p->box_w * unit, bh = BOX_H * unit;
+        const float bx = x0 + (out->clip.w - bw) * 0.5f, by = y1 - BOX_BOTTOM * band - bh;
+        out->pixel = unit;
+        out->letterbox = 0;
+        out->view = out->clip;
+        out->hud = box(x0, y0, out->clip.w, roundf(HUD_H * band));
+        out->box = box(roundf(bx), roundf(by), roundf(bx + bw) - roundf(bx), roundf(by + bh) - roundf(by));
+        return;
+    }
+    out->pixel = 1.0f;
+    const float vw = roundf((float)p->view_w * to_band), vh = roundf((float)p->view_h * to_band);
+    const float bw = (float)p->box_w, bx = roundf((vw - bw) * 0.5f), by = vh - roundf(BOX_BOTTOM * to_band) - BOX_H;
+    /* Across, the band centred, its box with it, unless the text is wider than the frame: then the box from its left. */
+    const float vx = (float)p->text_w > out->clip.w ? x0 - bx : x0 + floorf((out->clip.w - vw) * 0.5f);
+    const float vy = vh <= out->clip.h ? y0 + floorf((out->clip.h - vh) * 0.5f) : y1 - vh;
+    out->letterbox = vx > x0 || vy > y0 || vx + vw < x1 || vy + vh < y1;
+    out->view = box(vx, vy, vw, vh);
+    out->hud = box(vx, vy, vw, roundf(HUD_H * to_band));
+    out->box = box(vx + bx, vy + by, bw, BOX_H);
+}
+
+int oracles_ui_text_preview_picture(const OraclesDisplayTextPreview *p, const uint32_t colors[3], uint32_t *out)
+{
+    const unsigned w = p->box_w > 0 && (unsigned)p->box_w < ORACLES_UI_PREVIEW_PICTURE_W ? (unsigned)p->box_w : ORACLES_UI_PREVIEW_PICTURE_W;
+    const unsigned h = ORACLES_UI_PREVIEW_PICTURE_H, left = (unsigned)TEXT_LEFT, top = (unsigned)TEXT_TOP;
+    unsigned text_w = p->text_w > 0 ? (unsigned)p->text_w : 0u;
+    if (text_w > ORACLES_DISPLAY_SAMPLE_W) text_w = ORACLES_DISPLAY_SAMPLE_W;
+    if (left + text_w > w) text_w = w - left;
+    for (unsigned i = 0; i < w * h; i++) out[i] = colors[0];
+    for (unsigned row = 0; row < ORACLES_DISPLAY_SAMPLE_H && top + row < h; row++)
+        for (unsigned col = 0; col < text_w; col++)
+            if (p->sample[row][col]) out[(top + row) * w + left + col] = colors[1];
+    /* The arrow, a triangle pointing down, each row a pixel shorter at either end. */
+    const unsigned arrow = (unsigned)ARROW, ax = w - (unsigned)ARROW_RIGHT - 2u * arrow, ay = h - (unsigned)ARROW_BOTTOM - arrow;
+    for (unsigned row = 0; row < arrow; row++)
+        for (unsigned col = row; col < 2u * arrow - row; col++) out[(ay + row) * w + ax + col] = colors[2];
+    return (int)w;
+}
+
 /* The rows Text, Text box, Text size and Text speed. */
 static const char *const *row_choices(unsigned i, unsigned *count) { return oracles_display_text_row_choices(ORACLES_DISPLAY_LETTERS + i, count); }
 

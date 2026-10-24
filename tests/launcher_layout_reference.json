@@ -28631,7 +28631,7 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 472
+    "h": 500
    },
    "text grid": {
     "x": 689,
@@ -28643,17 +28643,17 @@
     "x": 689,
     "y": 238,
     "w": 1142,
-    "h": 86
+    "h": 114
    },
    "tsize grid": {
     "x": 689,
-    "y": 338,
+    "y": 366,
     "w": 1142,
     "h": 115
    },
    "tspeed grid": {
     "x": 689,
-    "y": 467,
+    "y": 495,
     "w": 1142,
     "h": 86
    },
@@ -28667,17 +28667,17 @@
     "x": 909,
     "y": 238,
     "w": 922,
-    "h": 86
+    "h": 114
    },
    "tsize row": {
     "x": 909,
-    "y": 338,
+    "y": 366,
     "w": 922,
     "h": 115
    },
    "tspeed row": {
     "x": 909,
-    "y": 467,
+    "y": 495,
     "w": 922,
     "h": 86
    },
@@ -28706,22 +28706,22 @@
    "tsize label": {
     "x": 689,
     "w": 135.422,
-    "glyph_top": 356,
+    "glyph_top": 384,
     "glyph_h": 27,
-    "top": 356,
+    "top": 384,
     "h": 27,
-    "baseline": 377,
+    "baseline": 405,
     "width": 135.422,
     "lines": 1
    },
    "tspeed label": {
     "x": 689,
     "w": 157.188,
-    "glyph_top": 485,
+    "glyph_top": 513,
     "glyph_h": 27,
-    "top": 485,
+    "top": 513,
     "h": 27,
-    "baseline": 506,
+    "baseline": 534,
     "width": 157.188,
     "lines": 1
    },
@@ -28739,43 +28739,43 @@
    },
    "box standard": {
     "x": 1574.172,
-    "y": 260.5,
+    "y": 274.5,
     "w": 135.031,
     "h": 41
    },
    "box wide": {
     "x": 1717.203,
-    "y": 260.5,
+    "y": 274.5,
     "w": 93.797,
     "h": 41
    },
    "tsize normal": {
     "x": 1430.266,
-    "y": 375,
+    "y": 403,
     "w": 118.359,
     "h": 41
    },
    "tsize large": {
     "x": 1556.625,
-    "y": 375,
+    "y": 403,
     "w": 96.391,
     "h": 41
    },
    "tsize xlarge": {
     "x": 1661.016,
-    "y": 375,
+    "y": 403,
     "w": 149.984,
     "h": 41
    },
    "tspeed classic": {
     "x": 1586.766,
-    "y": 489.5,
+    "y": 517.5,
     "w": 106.234,
     "h": 41
    },
    "tspeed instant": {
     "x": 1701,
-    "y": 489.5,
+    "y": 517.5,
     "w": 110,
     "h": 41
    },
@@ -28804,77 +28804,77 @@
    "box standard text": {
     "x": 1591.172,
     "w": 101.031,
-    "glyph_top": 265.5,
+    "glyph_top": 279.5,
     "glyph_h": 31,
-    "top": 265.5,
+    "top": 279.5,
     "h": 31,
-    "baseline": 289.5,
+    "baseline": 303.5,
     "width": 101.031,
     "lines": 1
    },
    "box wide text": {
     "x": 1734.203,
     "w": 59.797,
-    "glyph_top": 265.5,
+    "glyph_top": 279.5,
     "glyph_h": 31,
-    "top": 265.5,
+    "top": 279.5,
     "h": 31,
-    "baseline": 289.5,
+    "baseline": 303.5,
     "width": 59.797,
     "lines": 1
    },
    "tsize normal text": {
     "x": 1447.266,
     "w": 84.359,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 84.359,
     "lines": 1
    },
    "tsize large text": {
     "x": 1573.625,
     "w": 62.391,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 62.391,
     "lines": 1
    },
    "tsize xlarge text": {
     "x": 1678.016,
     "w": 115.984,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 115.984,
     "lines": 1
    },
    "tspeed classic text": {
     "x": 1603.766,
     "w": 72.234,
-    "glyph_top": 494.5,
+    "glyph_top": 522.5,
     "glyph_h": 31,
-    "top": 494.5,
+    "top": 522.5,
     "h": 31,
-    "baseline": 518.5,
+    "baseline": 546.5,
     "width": 72.234,
     "lines": 1
    },
    "tspeed instant text": {
     "x": 1718,
     "w": 76,
-    "glyph_top": 494.5,
+    "glyph_top": 522.5,
     "glyph_h": 31,
-    "top": 494.5,
+    "top": 522.5,
     "h": 31,
-    "baseline": 518.5,
+    "baseline": 546.5,
     "width": 76,
     "lines": 1
    },
@@ -28929,7 +28929,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 522
+    "h": 550
    },
    "text explanation": {
     "x": 929,
@@ -28956,22 +28956,22 @@
    "tsize explanation": {
     "x": 929,
     "w": 416.891,
-    "glyph_top": 354,
+    "glyph_top": 382,
     "glyph_h": 24,
-    "top": 352,
+    "top": 380,
     "h": 29,
-    "baseline": 373,
+    "baseline": 401,
     "width": 454.703,
     "lines": 3
    },
    "tspeed explanation": {
     "x": 929,
     "w": 561.172,
-    "glyph_top": 483,
+    "glyph_top": 511,
     "glyph_h": 24,
-    "top": 481,
+    "top": 509,
     "h": 29,
-    "baseline": 502,
+    "baseline": 530,
     "width": 561.172,
     "lines": 2
    },
@@ -28984,6 +28984,17 @@
     "h": 26,
     "baseline": 688,
     "width": 262.375,
+    "lines": 1
+   },
+   "box note": {
+    "x": 929,
+    "w": 304.406,
+    "glyph_top": 314,
+    "glyph_h": 22,
+    "top": 312,
+    "h": 26,
+    "baseline": 332,
+    "width": 304.406,
     "lines": 1
    }
   },
@@ -29336,6 +29347,17 @@
     "baseline": 103,
     "width": 439.531,
     "lines": 1
+   },
+   "help note text": {
+    "x": 64,
+    "w": 415.094,
+    "glyph_top": 125,
+    "glyph_h": 30,
+    "top": 120,
+    "h": 40,
+    "baseline": 149,
+    "width": 415.094,
+    "lines": 1
    }
   },
   "26c": {
@@ -29686,6 +29708,17 @@
     "h": 47,
     "baseline": 103,
     "width": 439.531,
+    "lines": 1
+   },
+   "help note text": {
+    "x": 64,
+    "w": 415.094,
+    "glyph_top": 125,
+    "glyph_h": 30,
+    "top": 120,
+    "h": 40,
+    "baseline": 149,
+    "width": 415.094,
     "lines": 1
    },
    "hint 0": {
@@ -31732,7 +31765,7 @@
     "x": 689,
     "y": 81,
     "w": 1142,
-    "h": 472
+    "h": 500
    },
    "text grid": {
     "x": 689,
@@ -31744,17 +31777,17 @@
     "x": 689,
     "y": 238,
     "w": 1142,
-    "h": 86
+    "h": 114
    },
    "tsize grid": {
     "x": 689,
-    "y": 338,
+    "y": 366,
     "w": 1142,
     "h": 115
    },
    "tspeed grid": {
     "x": 689,
-    "y": 467,
+    "y": 495,
     "w": 1142,
     "h": 86
    },
@@ -31768,17 +31801,17 @@
     "x": 909,
     "y": 238,
     "w": 922,
-    "h": 86
+    "h": 114
    },
    "tsize row": {
     "x": 909,
-    "y": 338,
+    "y": 366,
     "w": 922,
     "h": 115
    },
    "tspeed row": {
     "x": 909,
-    "y": 467,
+    "y": 495,
     "w": 922,
     "h": 86
    },
@@ -31807,22 +31840,22 @@
    "tsize label": {
     "x": 689,
     "w": 135.422,
-    "glyph_top": 356,
+    "glyph_top": 384,
     "glyph_h": 27,
-    "top": 356,
+    "top": 384,
     "h": 27,
-    "baseline": 377,
+    "baseline": 405,
     "width": 135.422,
     "lines": 1
    },
    "tspeed label": {
     "x": 689,
     "w": 157.188,
-    "glyph_top": 485,
+    "glyph_top": 513,
     "glyph_h": 27,
-    "top": 485,
+    "top": 513,
     "h": 27,
-    "baseline": 506,
+    "baseline": 534,
     "width": 157.188,
     "lines": 1
    },
@@ -31840,43 +31873,43 @@
    },
    "box standard": {
     "x": 1574.172,
-    "y": 260.5,
+    "y": 274.5,
     "w": 135.031,
     "h": 41
    },
    "box wide": {
     "x": 1717.203,
-    "y": 260.5,
+    "y": 274.5,
     "w": 93.797,
     "h": 41
    },
    "tsize normal": {
     "x": 1430.266,
-    "y": 375,
+    "y": 403,
     "w": 118.359,
     "h": 41
    },
    "tsize large": {
     "x": 1556.625,
-    "y": 375,
+    "y": 403,
     "w": 96.391,
     "h": 41
    },
    "tsize xlarge": {
     "x": 1661.016,
-    "y": 375,
+    "y": 403,
     "w": 149.984,
     "h": 41
    },
    "tspeed classic": {
     "x": 1586.766,
-    "y": 489.5,
+    "y": 517.5,
     "w": 106.234,
     "h": 41
    },
    "tspeed instant": {
     "x": 1701,
-    "y": 489.5,
+    "y": 517.5,
     "w": 110,
     "h": 41
    },
@@ -31905,77 +31938,77 @@
    "box standard text": {
     "x": 1591.172,
     "w": 101.031,
-    "glyph_top": 265.5,
+    "glyph_top": 279.5,
     "glyph_h": 31,
-    "top": 265.5,
+    "top": 279.5,
     "h": 31,
-    "baseline": 289.5,
+    "baseline": 303.5,
     "width": 101.031,
     "lines": 1
    },
    "box wide text": {
     "x": 1734.203,
     "w": 59.797,
-    "glyph_top": 265.5,
+    "glyph_top": 279.5,
     "glyph_h": 31,
-    "top": 265.5,
+    "top": 279.5,
     "h": 31,
-    "baseline": 289.5,
+    "baseline": 303.5,
     "width": 59.797,
     "lines": 1
    },
    "tsize normal text": {
     "x": 1447.266,
     "w": 84.359,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 84.359,
     "lines": 1
    },
    "tsize large text": {
     "x": 1573.625,
     "w": 62.391,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 62.391,
     "lines": 1
    },
    "tsize xlarge text": {
     "x": 1678.016,
     "w": 115.984,
-    "glyph_top": 380,
+    "glyph_top": 408,
     "glyph_h": 31,
-    "top": 380,
+    "top": 408,
     "h": 31,
-    "baseline": 404,
+    "baseline": 432,
     "width": 115.984,
     "lines": 1
    },
    "tspeed classic text": {
     "x": 1603.766,
     "w": 72.234,
-    "glyph_top": 494.5,
+    "glyph_top": 522.5,
     "glyph_h": 31,
-    "top": 494.5,
+    "top": 522.5,
     "h": 31,
-    "baseline": 518.5,
+    "baseline": 546.5,
     "width": 72.234,
     "lines": 1
    },
    "tspeed instant text": {
     "x": 1718,
     "w": 76,
-    "glyph_top": 494.5,
+    "glyph_top": 522.5,
     "glyph_h": 31,
-    "top": 494.5,
+    "top": 522.5,
     "h": 31,
-    "baseline": 518.5,
+    "baseline": 546.5,
     "width": 76,
     "lines": 1
    },
@@ -32030,7 +32063,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 522
+    "h": 550
    },
    "text explanation": {
     "x": 929,
@@ -32057,22 +32090,22 @@
    "tsize explanation": {
     "x": 929,
     "w": 416.891,
-    "glyph_top": 354,
+    "glyph_top": 382,
     "glyph_h": 24,
-    "top": 352,
+    "top": 380,
     "h": 29,
-    "baseline": 373,
+    "baseline": 401,
     "width": 454.703,
     "lines": 3
    },
    "tspeed explanation": {
     "x": 929,
     "w": 561.172,
-    "glyph_top": 483,
+    "glyph_top": 511,
     "glyph_h": 24,
-    "top": 481,
+    "top": 509,
     "h": 29,
-    "baseline": 502,
+    "baseline": 530,
     "width": 561.172,
     "lines": 2
    },
