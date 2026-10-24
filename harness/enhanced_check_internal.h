@@ -113,6 +113,8 @@ struct OraclesEnhancedCheck {
     unsigned fallback_runs;           /* runs of consecutive framed frames */
     unsigned enlarged_frames, enlarged_runs;   /* framed frames the large menus show at their own scale (the view's crop), and their runs */
     int last_enlarged;
+    unsigned enlarged_framed_drops;   /* framed frames at the view's scale right after one enlarged: the picture shrinking in place */
+    uint32_t enlarged_framed_drop_at[8];
     unsigned normal_band_frames;      /* world frames of the drawn-back view showing the normal band, centred in its own (an interior) */
     /* A room's load drawn under the world's HUD band: the last frame's kind (0 another, 1 a world frame, 2 a load so
      * drawn), its band's sixteen lines hashed, its game area's place; the steps between the two kinds, those where the

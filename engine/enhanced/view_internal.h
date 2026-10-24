@@ -479,6 +479,7 @@ struct OraclesEnhancedView {
     int scene_tint;
     int transition_mix;                /* the palette thread mixes the palettes of a scroll's two rooms, or left their mix on screen */
     unsigned transition_mix_room;      /* the room (group << 8 | room) it mixes in */
+    uint32_t tint_fade_at;             /* the last frame with a fade, a scroll or that mix */
     OraclesTintMemory tint_memories[ORACLES_TINT_MEMORIES];   /* by room, its own palettes a tint was taken from, kept while the scene lasts */
     uint32_t tint_epoch;               /* the observation's epoch they were kept in */
     uint8_t tint_slots, tint_changed;
@@ -524,6 +525,7 @@ struct OraclesEnhancedView {
     uint8_t ref_maku_group, ref_maku_room;
     int have_view;
     int framed_load;                 /* the last composition framed a room's load: not enlarged with the large menus */
+    int enlarged_before;             /* the composition before it was framed and not a load's: enlarged with the large menus */
     /* A room's load under the world's HUD band (view_mode.c): whether the last composition drew one, the place of the
      * game area in the surface (the last world frame's, or the load's), whether a place is held, and the frames counted. */
     int load_band, load_area_held;

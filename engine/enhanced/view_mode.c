@@ -137,8 +137,9 @@ static int framed_frame_menus(OraclesEnhancedView *v)
      * cleared), and in Seasons Din taken to Onox's castle (the tower rising
      * under a dark sky, then inside), the temple sinking and Onox's taunt
      * (a scene's graphics header and tile map, introCutscenes.s).  A scene
-     * played in the room itself (Din's dance, Nayru's song) moves objects
-     * over the room's own map and stays in the band. */
+     * played in the room itself (Din's dance, Nayru's song after its picture,
+     * which is drawn off the camera) moves objects over the room's own map
+     * and stays in the band. */
     const uint8_t cutscene = oracles_guest_read8(v->guest, t->cutscene_index);
     if (v->observation.playing && cutscene != 0xffu
         && (cutscene == t->cutscene_pregame_intro || cutscene == t->cutscene_din_imprisoned
@@ -179,6 +180,7 @@ static int framed_area(OraclesEnhancedView *v)
 OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
+    v->enlarged_before = !v->have_view && !v->framed_load;
     const uint8_t *io = oracles_guest_io(v->guest);
     const int lcd_on = io && (io[IO_LCDC] & 0x80u);
     const int room_load = ob->in_transition && !ob->in_scroll;
@@ -204,8 +206,9 @@ OraclesEnhancedMode ev_choose_mode(OraclesEnhancedView *v, int tracking)
  * image still shows the room left; after the load's blank, the camera's for a large room, which it frames from the
  * room itself, else centred, where the camera frames an interior of one room (its observation of Link held outside
  * the room until the walk in ends, the camera says nothing of the room entered before).  The blank itself (the LCD
- * off, a full fade: one colour over the whole image) stays framed whole, as the game shows it.  Any other framed
- * frame lets the room left go. */
+ * off, a full fade: one colour over the whole image) stays framed whole, as the game shows it; after a frame the large
+ * menus enlarge (a picture's fade to white, a scene's room, the map) it is that screen's blank, and keeps their scale
+ * until the room shows, or it would shrink in place.  Any other framed frame lets the room left go. */
 int ev_load_band(OraclesEnhancedView *v, OraclesEnhancedCompose *in, int tracking, int32_t camera_x, int32_t camera_y)
 {
     const OraclesEnhancedObservation *ob = &v->observation;
@@ -224,7 +227,12 @@ int ev_load_band(OraclesEnhancedView *v, OraclesEnhancedCompose *in, int trackin
     const uint32_t *image = ev_scroll_window(v);
     size_t i = 1;
     while (i < (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT && image[i] == image[0]) i++;
-    if (i == (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT) { v->load_area_held = 0; v->load_blank_frames++; return 0; }
+    if (i == (size_t)ORACLES_ENHANCED_CORE_WIDTH * ORACLES_PPU_HEIGHT) {
+        v->load_area_held = 0;
+        v->load_blank_frames++;
+        if (v->enlarged_before) v->framed_load = 0;
+        return 0;
+    }
     in->mode = ORACLES_ENHANCED_WORLD;
     in->world_left = 0;
     in->world_top = 0;

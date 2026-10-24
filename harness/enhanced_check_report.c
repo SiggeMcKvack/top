@@ -34,7 +34,7 @@ static void summary_of_the_band(OraclesEnhancedCheck *c, FILE *out)
     oracles_enhanced_view_ghost_counts(c->view, &requested, &completed, &failed);
     oracles_enhanced_view_ghost_failures(c->view, reasons);
     fprintf(out, "enhanced.run_hash=%016" PRIx64 "\nenhanced.frames=%u\nenhanced.world_frames=%u\nenhanced.framed_frames=%u\n", c->run_hash, c->frames, c->world_frames, c->framed_frames);
-    fprintf(out, "enhanced.enlarged_frames=%u\nenhanced.enlarged_runs=%u\n", c->enlarged_frames, c->enlarged_runs);
+    fprintf(out, "enhanced.enlarged_frames=%u\nenhanced.enlarged_runs=%u\nenhanced.enlarged_framed_drops=%u\n", c->enlarged_frames, c->enlarged_runs, c->enlarged_framed_drops);
     fprintf(out, "enhanced.normal_band_frames=%u\n", c->normal_band_frames);
     fprintf(out, "enhanced.compose_us_mean=%.0f\nenhanced.compose_us_max=%.0f\n", c->frames ? c->compose_us_total / c->frames : 0.0, c->compose_us_max);
     {
@@ -205,6 +205,9 @@ static void report_the_band(OraclesEnhancedCheck *c, FILE *out)
     fprintf(out, "enhanced: %u frames composed, run hash %016" PRIx64 "\n", c->frames, c->run_hash);
     fprintf(out, "  world %u frames in %u runs, framed fallback %u frames in %u runs, of which the large menus enlarge %u frames in %u runs\n",
             c->world_frames, c->world_runs, c->framed_frames, c->fallback_runs, c->enlarged_frames, c->enlarged_runs);
+    fprintf(out, "  framed frames at the view's scale right after an enlarged one: %u", c->enlarged_framed_drops);
+    for (unsigned i = 0; i < c->enlarged_framed_drops && i < 8u; i++) fprintf(out, "%s%" PRIu32, i ? ", " : " (at ", c->enlarged_framed_drop_at[i]);
+    fprintf(out, "%s\n", c->enlarged_framed_drops ? ")" : "");
     fprintf(out, "  world frames showing the normal band centred in a wider one (an interior in the drawn-back view): %u\n", c->normal_band_frames);
     fprintf(out, "  camera jumps over %d px between consecutive world frames: %u (largest %" PRId32 " px); vertical: %u (largest %" PRId32 " px)\n",
             MAX_CAMERA_STEP, c->camera_jumps, c->largest_jump, c->camera_jumps_y, c->largest_jump_y);

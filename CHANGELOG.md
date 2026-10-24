@@ -23,6 +23,7 @@ What changed in each version of The Oracles Project, the newest first. The relea
 ### Fixed
 
 - In the drawn-back view (Medium and Far), the farthest rooms no longer stay black for a moment each time Link walks into ground he has not been to yet, nor a room beside one that starts a scene after a savestate is loaded next to it.
+- With large menus (the default on Android), a cutscene that ends on a blank screen before the next room now keeps its size through the blank, instead of shrinking for a moment.
 
 ## 1.2.0 (2026-10-18)
 

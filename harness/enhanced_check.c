@@ -214,6 +214,10 @@ void oracles_enhanced_check_frame_end(OraclesEnhancedCheck *c, uint32_t frame)
         uint32_t crop[4];
         const int enlarged = oracles_enhanced_view_framed_crop(c->view, crop);
         if (enlarged) { c->enlarged_frames++; if (!c->last_enlarged) c->enlarged_runs++; }
+        else if (c->last_enlarged && mode != ORACLES_ENHANCED_WORLD) {   /* the framed image shrinking in place */
+            if (c->enlarged_framed_drops < 8u) c->enlarged_framed_drop_at[c->enlarged_framed_drops] = frame;
+            c->enlarged_framed_drops++;
+        }
         c->last_enlarged = enlarged;
     }
     {   /* a room's load under the world's HUD band: from a world frame to a load and back, the band and the game area stay */

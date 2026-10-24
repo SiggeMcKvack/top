@@ -425,6 +425,12 @@ unsigned oracles_enhanced_view_plain_shown_frames(const OraclesEnhancedView *vie
 int oracles_enhanced_scene_tint(const uint8_t reference[64], const uint8_t scene[64], uint8_t *slots, uint8_t *changed, int32_t coefficients[12]);
 void oracles_enhanced_scene_tinted(const uint8_t own[64], const uint8_t reference[64], const uint8_t scene[64], uint8_t changed,
                                    const int32_t coefficients[12], uint8_t out[64]);
+/* Whether a tint found in the few frames after a fade, a scroll or a palette
+ * transition is a scene's: at least four of the palettes it explains
+ * (`slots`) changed by more than 2 on a channel, the palettes a fade ends on
+ * (the night a fade from white opens on), not the last step of the fade or
+ * of the transition still on screen beside a palette the room shows apart. */
+int oracles_enhanced_scene_tint_after_fade(const uint8_t reference[64], const uint8_t scene[64], uint8_t slots);
 /* The room's own palettes a scene's tint is taken from, kept by room while
  * the scene lasts: its entry may be taken for another room, or run again
  * from the live game, which carries the scene's palettes (the ghost's load

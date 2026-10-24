@@ -5,6 +5,7 @@
 #define TINT_MIN_PALETTES 4u              /* the room's palettes a scene's tint changes at least: the screen, not an object's palette */
 #define PALETTE_THREAD_MIX 0x08u          /* wPaletteThread_mode of the fade between two palettes (paletteFadeHandler08) */
 #define TINT_FIT_ERROR 4                 /* the farthest a channel of the scene's palettes stands from its transform's */
+#define TINT_SETTLE_FRAMES 4u             /* after a fade, a scroll or a palette transition: the palettes on screen a frame or two behind the thread */
 
 static unsigned palette_colour(const uint8_t *palettes, unsigned i) { return (unsigned)(palettes[i * 2u] | (palettes[i * 2u + 1u] << 8)) & 0x7fffu; }
 
@@ -126,6 +127,24 @@ int oracles_enhanced_scene_tint(const uint8_t reference[64], const uint8_t scene
     return 0;
 }
 
+int oracles_enhanced_scene_tint_after_fade(const uint8_t reference[64], const uint8_t scene[64], uint8_t slots)
+{
+    unsigned beyond = 0;
+    for (unsigned p = 0; p < 8u; p++) {
+        if (!(slots & (1u << p))) continue;
+        int apart = 0;
+        for (unsigned c = p * 4u; c < p * 4u + 4u; c++) {
+            const unsigned a = palette_colour(scene, c), b = palette_colour(reference, c);
+            for (unsigned shift = 0; shift < 15u; shift += 5u) {
+                const int d = (int)((a >> shift) & 31u) - (int)((b >> shift) & 31u);
+                if (d > 2 || d < -2) apart = 1;
+            }
+        }
+        beyond += (unsigned)apart;
+    }
+    return beyond >= TINT_MIN_PALETTES;
+}
+
 void oracles_enhanced_scene_tinted(const uint8_t own[64], const uint8_t reference[64], const uint8_t scene[64], uint8_t changed,
                                    const int32_t coefficients[12], uint8_t out[64])
 {
@@ -196,7 +215,13 @@ void oracles_enhanced_tint_kept(OraclesTintMemory memories[ORACLES_TINT_MEMORIES
  * more than the tint a palette transition leaves (2): a palette or two of an
  * object, or palettes of another kind, are not the scene's tint.  Not during
  * a scroll, nor while the palette transition of a scroll mixes the palettes
- * of the room left and the room entered. */
+ * of the room left and the room entered; and in the few frames after one, or
+ * after a fade, only a change of most palettes beyond that mix: the last step
+ * of a scroll's fade into Lynna's 0:6b stays on screen two frames after the
+ * palette thread is done, within 2 of the room's palettes but for the one it
+ * shows white, and passed for a tint of four palettes, while a scene that
+ * opens as a fade ends (the night of Nayru's possession, at its return from
+ * white) changes them all. */
 void ev_track_scene_tint(OraclesEnhancedView *v)
 {
     const OraclesGuestTables *t = oracles_guest_tables(v->guest);
@@ -218,7 +243,8 @@ void ev_track_scene_tint(OraclesEnhancedView *v)
         v->transition_mix = 1;
         v->transition_mix_room = place;
     } else if (v->transition_mix && thread_mode != PALETTE_THREAD_MIX && (place != v->transition_mix_room || (scene && base && within_two(scene, base)))) v->transition_mix = 0;
-    if (!scene || v->fade_effective != 0 || v->observation.in_scroll || v->transition_mix) return;
+    if (v->fade_effective != 0 || v->observation.in_scroll || v->transition_mix) { v->tint_fade_at = v->frame; return; }
+    if (!scene) return;
     const uint8_t header = oracles_guest_read8(v->guest, t->tileset_palette);
     /* The palettes of the room's last delivery, its entry dropped since or
      * not: a key byte the scene changes (Din's dance in Seasons) drops it
@@ -229,6 +255,7 @@ void ev_track_scene_tint(OraclesEnhancedView *v)
     if (!reference) return;
     uint8_t slots = 0, changed = 0;
     if (!oracles_enhanced_scene_tint(reference, scene, &slots, &changed, v->tint_coefficients)) return;
+    if (v->frame - v->tint_fade_at <= TINT_SETTLE_FRAMES && !oracles_enhanced_scene_tint_after_fade(reference, scene, slots)) return;
     oracles_enhanced_tint_kept(v->tint_memories, group, room, header, v->frame, reference);
     v->scene_tint = 1;
     v->tint_slots = slots;
