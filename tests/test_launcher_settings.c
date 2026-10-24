@@ -80,7 +80,7 @@ static void menu_pad_resolved(void)
 }
 
 /* Display's choices written back: from the pause, the running game's core and workers are not; a margin
- * --screen-margin gave for the run never is, whatever the row holds. */
+ * --screen-margin gave for the run never is, nor a text --text gave, whatever the row holds. */
 static void display_stored(void)
 {
     oracles_settings s;
@@ -99,6 +99,18 @@ static void display_stored(void)
     CHECK(s.screen_margin == ORACLES_SCREEN_MARGIN_LARGE && s.ghosts != 2);
     oracles_home_store_display(&display, 0, &s);
     CHECK(s.ghosts == 2);
+    /* The text is stored from the pause too, for the next Play, but never --text's. */
+    CHECK(display.text == 0 && !display.text_fixed);
+    display.text = 1;
+    display.text_fixed = 1;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.compact_text == 0);
+    display.text_fixed = 0;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.compact_text == 1);
+    s.compact_text = 0;
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.text == 0);
 }
 
 /* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the

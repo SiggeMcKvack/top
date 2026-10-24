@@ -2,22 +2,14 @@
  * reference, tests/launcher_layout_reference.json (layout_reference.h), the
  * test's argument, in its frames 22h (No damage on, highlighted) at
  * 1920x1080, 22i (Rupees never run out highlighted) in the 4:3 layout at
- * 1440x1080, and 22j (at 640x480 on Android with a controller); a text is
- * compared by its left, its width, its line box and its baseline, an element
- * by its box.  The prototype draws a fourth row, Faster walking, which the
- * launcher drops until the cheat comes: the three rows keep their places, and
- * what lies under them (16:9's panel's bottom, 4:3's explanation and note)
- * sits one row higher, by the reference's own pitch from Rupees never run out
- * to Faster walking (a row's height and the gap).  22j highlights Faster
- * walking, which the launcher has not: the page is compared on Rupees never
- * run out, the explanation by its left, top and baseline (its width is Faster
- * walking's).  And the page's keys and pointer, from the home screen and from
- * the pause. */
+ * 1440x1080, and 22j (Rupees never run out highlighted too, at 640x480 on
+ * Android with a controller); a text is compared by its left, its width, its
+ * line box and its baseline, an element by its box.  And the page's keys and
+ * pointer, from the home screen and from the pause. */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_page_nav.h"
 
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -37,26 +29,6 @@ static void page(OraclesHomeNav *nav, unsigned row)
     nav->focus = 5;
     CHECK(oracles_home_act(nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav->screen == ORACLES_SCREEN_CHEATS && nav->row == 0);
     nav->row = row;
-}
-
-/* The reference's dropped row, Faster walking's: its distance from the row above, the height of the page's rows and
- * their gap. */
-static float dropped_row(const char *frame, const char *row_probe)
-{
-    char name[32];
-    snprintf(name, sizeof name, "walk%s", row_probe);
-    const float walk = layout_reference(frame, name, "y");
-    snprintf(name, sizeof name, "rupees%s", row_probe);
-    return walk - layout_reference(frame, name, "y");
-}
-
-/* `line` as the reference places it, `dy` lower. */
-static OraclesUiLine lowered(const OraclesUiLine *line, float dy)
-{
-    OraclesUiLine l = *line;
-    l.y += dy;
-    l.baseline += dy;
-    return l;
 }
 
 /* Each row's label, Off and On, the probes both layouts have. */
@@ -87,12 +59,7 @@ static void frame_22h(void)
     layout_near("22h", "note", "width", l.note.w);
     layout_near("22h", "note box", "y", l.note.lines[0].y);
     layout_near("22h", "note box", "h", l.note.h);
-    /* The panel ends a row higher than the reference's, the launcher's rows as far apart as the reference's. */
-    const float dropped = dropped_row("22h", " row");
-    CHECK(fabsf(l.rows[2].y - l.rows[1].y - dropped) <= LAYOUT_TOLERANCE);
-    OraclesUiBox panel = l.panel;
-    panel.h += dropped;
-    layout_box("22h", "panel", &panel);
+    layout_box("22h", "panel", &l.panel);
     rows("22h", &l);
     for (int r = 0; r < ORACLES_CHEATS_ROWS; r++) {
         char name[32];
@@ -110,9 +77,8 @@ static void frame_22h(void)
     CHECK(l.help.h == 0.0f && l.help_note.h == 0.0f);
 }
 
-/* 4:3: one column of rows, the highlighted row's explanation and its note under them, a row higher than the
- * reference's; the head and the note on one line each; no panel, the rows and the help the mockup's panel.  `help` is
- * the reference's explanation, NULL when it is the dropped row's. */
+/* 4:3: one column of rows, the highlighted row's explanation and its note under them; the head and the note on one
+ * line each; no panel, the rows and the help the mockup's panel.  `help` is the reference's explanation. */
 static void frame_4_3(const char *frame, unsigned row, const char *help)
 {
     OraclesHomeNav nav;
@@ -126,31 +92,21 @@ static void frame_4_3(const char *frame, unsigned row, const char *help)
     layout_line(frame, "note", &l.note.lines[0]);
     layout_near(frame, "head", "y", l.head.section.y);
     layout_near(frame, "head", "h", l.note.lines[0].y + l.note.lines[0].h - l.head.section.y);
-    const float dropped = dropped_row(frame, "");
-    CHECK(fabsf(l.rows[2].y - l.rows[1].y - dropped) <= LAYOUT_TOLERANCE);
     CHECK(l.panel.w == 0.0f);
     layout_near(frame, "panel", "y", l.rows[0].y);
-    layout_near(frame, "panel", "h", l.help_note.y + l.help_note.h + dropped - l.rows[0].y);
+    layout_near(frame, "panel", "h", l.help_note.y + l.help_note.h - l.rows[0].y);
     rows(frame, &l);
     for (int r = 0; r < ORACLES_CHEATS_ROWS; r++) {
         char name[32];
         snprintf(name, sizeof name, "%s", ids[r]); layout_box(frame, name, &l.rows[r]);
     }
-    const OraclesUiLine help_line = lowered(&l.help, dropped), note_line = lowered(&l.help_note, dropped);
-    layout_near(frame, "help", "y", help_line.y);
-    layout_near(frame, "help", "h", help_line.h);
-    if (help) {
-        layout_line(frame, "help text", &help_line);
-        CHECK(!strcmp(oracles_cheats_texts[row], help));
-    } else {
-        layout_near(frame, "help text", "x", help_line.x);
-        layout_near(frame, "help text", "top", help_line.y);
-        layout_near(frame, "help text", "h", help_line.h);
-        layout_near(frame, "help text", "baseline", help_line.baseline);
-    }
-    layout_near(frame, "help note", "y", note_line.y);
-    layout_near(frame, "help note", "h", note_line.h);
-    if (help && row == 2) layout_line(frame, "help note text", &note_line);
+    layout_near(frame, "help", "y", l.help.y);
+    layout_near(frame, "help", "h", l.help.h);
+    layout_line(frame, "help text", &l.help);
+    CHECK(!strcmp(oracles_cheats_texts[row], help));
+    layout_near(frame, "help note", "y", l.help_note.y);
+    layout_near(frame, "help note", "h", l.help_note.h);
+    if (row == 2) layout_line(frame, "help note text", &l.help_note);
 }
 
 /* 22j: the help bar with a controller, the page's four hints. */
@@ -252,7 +208,7 @@ int main(int argc, char **argv)
     if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
     frame_22h();
     frame_4_3("22i", 2, "Buying costs nothing.");
-    frame_4_3("22j", 2, NULL);
+    frame_4_3("22j", 2, "Buying costs nothing.");
     hints_22j();
     keys();
     refused();

@@ -22,7 +22,11 @@
  * Faithful (margin faithful), in 4:3 (margin 4:3, margin pause 4:3) and at 640x480 (margin 640x480).  Far fitted to the
  * screen, Display as 1.2.0 ships it on Android with a controller, View highlighted: at 1280x960 (23a), 1240x1080
  * (23b), 1280x960 with Near chosen (23c), 640x480 (23d) and from the pause menu (23e); and 2a's state measured from that
- * prototype (23f); View's sizes on desktop screens, with far=fixed and a shape named.  A text is
+ * prototype (23f); View's sizes on desktop screens, with far=fixed and a shape named.  Text after HUD, on Compact and
+ * highlighted, in 16:9 (22m), in Faithful (22p), in 4:3 (22n), at 640x480 on Android (22o) and from the pause (text
+ * pause, text pause 4:3): turn 22's Display, which
+ * moves Window's notes under the diagram in 16:9 and the help into the header in 4:3, every Display frame measured so,
+ * with the HUD the launcher has (two choices; the canvas draws a third, Wide layout, not built).  A text is
  * compared by its left, its width and its baseline (in 4:3 its line box too). */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
@@ -929,6 +933,15 @@ static void display_2m(void)
     layout_near("2m", "title box", "h", l.head.title.h);
     layout_box("2m", "diagram", &l.diagram);
     layout_text("2m", "diagram label", &l.diagram_label);
+    /* A fan game has the compact text too: its page has the Text row where an Oracle's has it (22m, 22n in 4:3). */
+    CHECK(t.text_row && oracles_display_text_shown(&nav) && oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT));
+    layout_box("22m", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    layout_box("22n", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    nav.row = ORACLES_DISPLAY_HUD;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_HUD);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, 1) == ORACLES_HOME_STORE && nav.display.text == 1 && nav.row == ORACLES_DISPLAY_TEXT);
 }
 
 static void layout_fan_page(const fan_frames *f)
@@ -1026,6 +1039,22 @@ static void display_quality_row(const char *frame, const OraclesUiDisplayTexts *
     layout_box(frame, wide ? "quality grid" : "quality row", &l->rows[ORACLES_DISPLAY_QUALITY]);
 }
 
+/* Window's note and the line on its size under the diagram (16:9, turn 22), against a frame's: the note on two lines in
+ * the title's column, the line (`line`, the probe of its text) in a block of two lines kept, 58 tall. */
+static void window_notes(const char *frame, const char *line, const OraclesUiDisplayLayout *l)
+{
+    CHECK(l->window_note.count == 2 && l->window_reduced.count >= 1);
+    layout_text(frame, "window note", &l->window_note.lines[0]);
+    layout_near(frame, "window note", "top", l->window_note.lines[0].y);
+    layout_near(frame, "window note", "h", l->window_note.lines[0].h);
+    layout_near(frame, "window note", "width", l->window_note.w);
+    layout_text(frame, line, &l->window_reduced.lines[0]);
+    layout_near(frame, line, "top", l->window_reduced.lines[0].y);
+    layout_near(frame, line, "h", l->window_reduced.lines[0].h);
+    layout_near(frame, "fit", "y", l->window_reduced.lines[0].y);
+    layout_near(frame, "fit", "h", l->window_reduced.h > 58.0f ? l->window_reduced.h : 58.0f);
+}
+
 /* HUD's row in 16:9 against a frame's: its label, its explanation on two lines, Original and Full width. */
 static void hud_probes(const char *frame, const OraclesUiDisplayLayout *l)
 {
@@ -1102,13 +1131,11 @@ static void display_2a_2b(void)
             snprintf(what, sizeof what, "window %d size", i); layout_text(frame, what, &l.windows[i].size);
             CHECK(!strcmp(t.window_sizes[i], sizes[i]));
         }
-        layout_text(frame, "window note", &l.window_note);
-        /* 4x makes 1920x1080: with its title bar the window is reduced to 3x on a 1080p screen, and a line says so. */
+        /* 4x makes 1920x1080: with its title bar the window is reduced to 3x on a 1080p screen, and a line says so, under
+         * the diagram with Window's note; the row holds the windows alone. */
         CHECK(!strcmp(t.window_reduced, "Reduced to 3\xc3\x97 to fit this screen.") && oracles_display_fit(&nav) == 3);
         CHECK(t.window_fit == t.window_reduced);
-        layout_text(frame, "reduced", &l.window_reduced);
-        layout_near(frame, "fit", "y", l.window_reduced.y);
-        layout_near(frame, "fit", "h", l.window_reduced.h);
+        window_notes(frame, "reduced", &l);
         layout_box(frame, "Window row", &l.rows[ORACLES_DISPLAY_WINDOW]);
         /* View under it: each level framed with its size, far chosen; its explanation on two lines beside them. */
         CHECK(nav.display.view == 2 && l.view_explanation.count == 2);
@@ -1164,8 +1191,9 @@ static void display_2a_2b(void)
     /* Advanced under the diagram, which the note moved down. */
     layout_text("2g", "Advanced", &l.advanced_label);
     layout_box("2g", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
-    /* The panel ends above the pause's key hints, which start at 1025 in 1080p. */
-    CHECK(l.panel.y + l.panel.h <= 1025.0f);
+    /* Its rows end above the pause's key hints, which start at 1025 in 1080p; with the Text row's note from a game, the
+     * panel's bottom padding reaches 7 px under them, as turn 22 draws it. */
+    CHECK(l.rows[ORACLES_DISPLAY_COLOUR].y + l.rows[ORACLES_DISPLAY_COLOUR].h <= 1025.0f && l.text_note.h > 0.0f);
     nav.in_game = 0;
 
     /* 2b: Faithful; the window fullscreen, seven times on a 1080p screen, never reduced. */
@@ -1372,6 +1400,27 @@ static void display_navigation(void)
     CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.display.hud == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 0) == ORACLES_HOME_STAY && nav.display.hud == 1);
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    /* The text, Classic first, toggles in Enhanced, from a game too, for the next Play (it is stored and the running
+     * game keeps its texts), and not in Faithful nor while --text holds it. */
+    oracles_home_act(&nav, ORACLES_HOME_DOWN);
+    CHECK(nav.row == ORACLES_DISPLAY_TEXT && nav.display.text == 0 && oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT));
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.text == 1);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.text == 0);
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.text == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, 0) == ORACLES_HOME_STORE && nav.display.text == 0 && nav.row == ORACLES_DISPLAY_TEXT);
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TEXT));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, 1) == ORACLES_HOME_STORE && nav.display.text == 1);
+    nav.in_game = 0;
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    CHECK(!oracles_display_text_applies(&nav) && oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.display.text == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, 0) == ORACLES_HOME_STAY && nav.display.text == 1);
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    nav.display.text_fixed = 1;
+    CHECK(oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TEXT) && oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text == 1);
+    nav.display.text_fixed = 0;
+    nav.display.text = 0;
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_DISPLAY_COLOUR && oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.colour == 1);
     /* Advanced after Color correction, last: left does nothing there, right and OK open its rows on Core.  Down from it
@@ -1705,10 +1754,10 @@ static void display_4_3(void)
     OraclesUiDisplayLayout l;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
-    /* 10f: the rows in one column, the explanation of the highlighted one, Profile, once under them. */
+    /* 10f: the rows in one column, the explanation of the highlighted one, Profile, in the header with its section and title on one line. */
     layout_line("10f", "section", &l.head.section);
-    CHECK(!strcmp(l.head.title.text[0], "Oracle of Ages") && l.head.state.h == 0.0f && l.page_note.h == 0.0f);
-    layout_line("10f", "title", &l.head.title.lines[0]);
+    CHECK(!strcmp(l.title_text, "Oracle of Ages") && l.head.title.count == 0 && l.head.state.h == 0.0f && l.page_note.h == 0.0f);
+    layout_line("10f", "title", &l.title);
     /* The diagram's box in the screen's shape, 162 wide; Advanced beside it, framed. */
     layout_box("10f", "diagram", &l.diagram);
     layout_box("10f", "diagram window", &l.diagram_window);
@@ -1972,11 +2021,8 @@ static void quality_16_9(const char *frame, const OraclesHomeNav *nav, const cha
     layout_box(frame, "Profile row", &l->rows[ORACLES_DISPLAY_PROFILE]);
     layout_text(frame, "profile note", &l->profile_note);
     layout_box(frame, "Window row", &l->rows[ORACLES_DISPLAY_WINDOW]);
-    layout_text(frame, "window note", &l->window_note);
-    layout_near(frame, "fit", "y", l->window_reduced.y);
-    layout_near(frame, "fit", "h", l->window_reduced.h);
     CHECK(!strcmp(t.window_fit, oracles_ui_window_fit_note));
-    layout_text(frame, "fit text", &l->window_reduced);
+    window_notes(frame, "fit text", l);
     display_window_boxes(frame, l);
     layout_box(frame, "View row", &l->rows[ORACLES_DISPLAY_VIEW]);
     layout_box(frame, "hud row", &l->rows[ORACLES_DISPLAY_HUD]);
@@ -2354,7 +2400,7 @@ static void far_fitted_probes(const char *frame, const OraclesUiDisplayLayout *l
 {
     static const char *const view_probes[3] = { "Near", "Medium", "Far" };
     layout_line(frame, "section", &l->head.section);
-    layout_line(frame, "title", &l->head.title.lines[0]);
+    layout_line(frame, "title", &l->title);
     layout_box(frame, "Profile row", &l->rows[ORACLES_DISPLAY_PROFILE]);
     layout_box(frame, "profile Enhanced", &l->profiles[ORACLES_PROFILE_ENHANCED].box);
     layout_line(frame, "profile 1 size", &l->profiles[ORACLES_PROFILE_ENHANCED].size);
@@ -2521,6 +2567,135 @@ static void display_hud(void)
     hud_probes_4_3("19d", &l);
 }
 
+/* Text (turn 22): its row after HUD, Compact chosen and highlighted, in 16:9 (22m), in Faithful, dimmed and inert
+ * (22p); in 4:3 (22n) and at 640x480 on Android with a controller (22o), its help in the header.  The canvas draws the
+ * HUD's third choice, Wide layout, which the launcher has not: the frames are measured with the HUD it has. */
+static void text_probes(const char *frame, const OraclesUiDisplayLayout *l, int four_three)
+{
+    for (int c = 0; c < 2; c++) {
+        static const char *const names[2] = { "Classic", "Compact" };
+        char what[32];
+        snprintf(what, sizeof what, "text %s", names[c]); layout_box(frame, what, &l->text[c].box);
+        snprintf(what, sizeof what, "text %s text", names[c]);
+        if (four_three) layout_line(frame, what, &l->text[c].name); else layout_text(frame, what, &l->text[c].name);
+    }
+    if (four_three) layout_line(frame, "Text", &l->labels[ORACLES_DISPLAY_TEXT].lines[0]);
+    else layout_text(frame, "Text", &l->labels[ORACLES_DISPLAY_TEXT].lines[0]);
+    layout_box(frame, "text row", &l->rows[ORACLES_DISPLAY_TEXT]);
+    layout_near(frame, "text grid", "y", l->rows[ORACLES_DISPLAY_TEXT].y);
+    layout_box(frame, "hud row", &l->rows[ORACLES_DISPLAY_HUD]);
+    layout_box(frame, "View row", &l->rows[ORACLES_DISPLAY_VIEW]);
+    layout_box(frame, "Window row", &l->rows[ORACLES_DISPLAY_WINDOW]);
+    layout_box(frame, "Color row", &l->rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box(frame, "color Off", &l->colour[0].box);
+    layout_box(frame, "color On", &l->colour[1].box);
+}
+
+static void display_text(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    game_1h(&nav.games[0]);
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.display.window = 1;
+    nav.display.text = 1;
+    nav.row = ORACLES_DISPLAY_TEXT;
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    OraclesUiDisplayTexts t;
+    OraclesUiDisplayLayout l;
+    for (int faithful = 0; faithful < 2; faithful++) {
+        const char *frame = faithful ? "22p" : "22m";
+        nav.display.profile = faithful ? ORACLES_PROFILE_FAITHFUL : ORACLES_PROFILE_ENHANCED;
+        oracles_ui_display_texts(&nav, &t);
+        oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
+        CHECK(t.text_row && oracles_display_text_applies(&nav) == !faithful);
+        CHECK(!strcmp(t.explanations[8], "Compact: letters take their own width, so more words fit in each box. Classic: the game's fixed-width letters."));
+        text_probes(frame, &l, 0);
+        /* Its explanation on two lines beside Classic and Compact, as HUD's. */
+        CHECK(l.explanations[8].count == 2);
+        layout_near(frame, "text explanation", "top", l.explanations[8].lines[0].y);
+        layout_near(frame, "text explanation", "width", l.explanations[8].w);
+        hud_probes(frame, &l);
+        layout_near(frame, "Color correction", "top", l.labels[ORACLES_DISPLAY_COLOUR].lines[0].y);
+        layout_near(frame, "color explanation", "top", l.explanations[0].lines[0].y);
+        /* Window's notes under the diagram, then Advanced; the panel ends with Color correction. */
+        layout_text(frame, "diagram label", &l.diagram_label);
+        layout_box(frame, "diagram", &l.diagram);
+        window_notes(frame, "fit text", &l);
+        layout_near(frame, "window note box", "y", l.window_note.lines[0].y);
+        layout_near(frame, "window note box", "h", l.window_note.h);
+        layout_text(frame, "Advanced", &l.advanced_label);
+        layout_box(frame, "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
+        layout_box(frame, "panel", &l.panel);
+    }
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text == 1);
+
+    /* 4:3: the section's name and the title on one line, the row's help and its empty note under them; from a game
+     * the note says the text waits for the next Play, the note on the page under it. */
+    static const struct { const char *frame; int w, h, android; } frames[] = { { "22n", 1440, 1080, 0 }, { "22o", 640, 480, 1 } };
+    for (size_t f = 0; f < sizeof frames / sizeof frames[0]; f++) {
+        const char *frame = frames[f].frame;
+        display_4_3_nav(&nav, frames[f].w, frames[f].h);
+        nav.display.text = 1;
+        nav.row = ORACLES_DISPLAY_TEXT;
+        if (frames[f].android) {
+            nav.android = 1;
+            nav.display.fullscreen_only = 1;
+            nav.display.window = 1;
+            oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+        } else oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+        oracles_ui_display_texts(&nav, &t);
+        oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
+        CHECK(!strcmp(t.help, "Classic: the game's letters. Compact: more words per line.") && !t.help_note && t.window_one == frames[f].android);
+        text_probes(frame, &l, 1);
+        layout_near(frame, "head", "y", l.head.section.y);
+        layout_near(frame, "head", "h", l.title.y + l.title.h - l.head.section.y);
+        layout_line(frame, "section", &l.head.section);
+        layout_line(frame, "title", &l.title);
+        layout_line(frame, "help text", &l.help);
+        layout_near(frame, "help", "x", l.help.x);
+        layout_near(frame, "help", "y", l.help.y);
+        layout_near(frame, "help", "h", l.help.h);
+        layout_near(frame, "help note", "y", l.help_note.y);
+        layout_near(frame, "help note", "h", l.help_note.h);
+        layout_box(frame, "Profile row", &l.rows[ORACLES_DISPLAY_PROFILE]);
+        layout_box(frame, "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
+        layout_box(frame, "diagram", &l.diagram);
+        if (frames[f].android) layout_near(frame, "one size box", "x", l.window_one.x);
+    }
+
+    /* From the pause (text pause, text pause 4:3, states of the prototype the canvas does not draw): the row stays live
+     * for the next Play, "From the next Play." under its explanation in 16:9, which makes the row 28 px taller, and on
+     * the help's note line in 4:3.  The note under the title is 1.2.0's: turn 26 adds Text size to it, which the launcher
+     * has not (the script measures the prototype with 1.2.0's note, LAUNCHER_HUD). */
+    display_4_3_nav(&nav, 1440, 1080);
+    nav.display.text = 1;
+    nav.row = ORACLES_DISPLAY_TEXT;
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
+    oracles_ui_display_texts(&nav, &t);
+    oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
+    CHECK(t.help_note && !strcmp(t.help_note, "From the next Play."));
+    text_probes("text pause 4:3", &l, 1);
+    layout_near("text pause 4:3", "help note", "y", l.help_note.y);
+    layout_line("text pause 4:3", "help note text", &l.help_note);
+    layout_line("text pause 4:3", "page note", &l.page_note);
+    CHECK(!strcmp(oracles_ui_display_later, "Color, HUD, scaling and margin apply at once; the rest at the next Play."));
+    nav.display.screen_w = nav.display.room_w = 1920;
+    nav.display.window = 1;
+    oracles_ui_display_texts(&nav, &t);
+    oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
+    text_probes("text pause", &l, 0);
+    layout_text("text pause", "text note", &l.text_note);
+    layout_near("text pause", "text note", "top", l.text_note.y);
+    layout_near("text pause", "text explanation", "top", l.explanations[8].lines[0].y);
+    layout_text("text pause", "page note", &l.page_note);
+    layout_box("text pause", "panel", &l.panel);
+    layout_text("text pause", "Advanced", &l.advanced_label);
+    CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TEXT) && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.text == 0);
+}
+
 /* Screen margin's probes: its label, its row and its grid, each choice's box, Small's and Large's names, and the rows
  * from Core's to its own. */
 static void margin_probes(const char *frame, const OraclesUiDisplayLayout *l, int wide)
@@ -2627,6 +2802,7 @@ int main(int argc, char **argv)
     display_quality_navigation();
     display_scaling();
     display_hud();
+    display_text();
     display_margin();
     far_fitted_sizes();
     display_far_fitted();

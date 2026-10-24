@@ -19,6 +19,8 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->profile = settings->profile;
     display->transitions = settings->transitions;
     display->hud = settings->hud_full;
+    display->text = settings->compact_text;
+    display->text_fixed = 0;
     display->view = settings->view;
     display->aspect = settings->aspect;
     display->far_fixed = settings->far_fixed;
@@ -111,6 +113,8 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     prefs->profile = display->profile;
     prefs->transitions = display->transitions;
     prefs->hud_full = display->hud;   /* a running game takes it at once (the pause's settings_changed) */
+    /* The text a game lays its texts out for at its start: the next Play's, from the pause too; never --text's. */
+    if (!display->text_fixed) prefs->compact_text = display->text;
     prefs->view = display->view;
     /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
      * --core's, never stored. */

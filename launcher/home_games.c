@@ -290,6 +290,10 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
     oracles_home_inspect_display(games->settings, &nav->display, window);
     nav->display.margin = oracles_session_screen_margin(games->options ? games->options->screen_margin : 0, games->settings);   /* --screen-margin's, for the run */
     nav->display.margin_fixed = games->options && games->options->screen_margin;
+    if (games->options && games->options->compact_text) {   /* --text's, for every game the home screen starts */
+        nav->display.text = games->options->compact_text == 2;
+        nav->display.text_fixed = 1;
+    }
     nav->cheats_fixed = games->options && games->options->cheats_given;   /* --cheats', for every game it starts */
     nav->cheats_changed = 0;
     oracles_home_inspect_controls(games->settings, &nav->controls);

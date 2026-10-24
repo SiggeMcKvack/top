@@ -25,7 +25,9 @@
  * workers set at once; Custom when they make none, which is shown and never
  * chosen; dimmed and inert in Faithful and from a game), the window (the profile's surface at 2x, 3x, 4x, or fullscreen
  * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, or its colour
- * across the whole view; dimmed and inert in Faithful), color correction, then Advanced
+ * across the whole view; dimmed and inert in Faithful), the text (an Oracle's alone, a fan game's page has no such row:
+ * Classic, the game's fixed-width letters, or Compact, each letter its own width; dimmed and inert in Faithful), color
+ * correction, then Advanced
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
  * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
  * (Sharp, the whole scales; Fill, the whole screen in the image's
@@ -40,7 +42,8 @@
  * next Play; Back returns from the Advanced rows to Advanced, from Display
  * to Display in the menu.  From a game the core and the workers are the
  * game's, dimmed and inert, and so is the quality; color correction, the HUD, the
- * scaling and the screen margin apply at once there. */
+ * scaling and the screen margin apply at once there; the text, which a game lays
+ * its texts out for at its start, at the next Play. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
 
@@ -139,6 +142,7 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_WINDOW,
     ORACLES_DISPLAY_VIEW,
     ORACLES_DISPLAY_HUD,
+    ORACLES_DISPLAY_TEXT,
     ORACLES_DISPLAY_COLOUR,
     ORACLES_DISPLAY_ADVANCED,
     ORACLES_DISPLAY_CORE,
@@ -150,8 +154,10 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_ROWS
 } OraclesDisplayRow;
 
-/* The row shows: one of Display's own, or of the Advanced rows while they are open. */
+/* The row shows: one of Display's own, or of the Advanced rows while they are open; Text on an Oracle's page alone, the
+ * fan games not having the compact text. */
 int oracles_display_row_shown(const OraclesHomeNav *nav, unsigned row);
+int oracles_display_text_shown(const OraclesHomeNav *nav);
 /* The workers Auto takes: two on a device of four processor cores or more, one otherwise, as the session counts them. */
 int oracles_display_auto_workers(const OraclesHomeNav *nav);
 
@@ -159,6 +165,9 @@ int oracles_display_auto_workers(const OraclesHomeNav *nav);
 int oracles_display_transitions_apply(const OraclesHomeNav *nav);
 /* The HUD applies in Enhanced: the profile chosen, or from the pause the running game's, which takes it at once. */
 int oracles_display_hud_applies(const OraclesHomeNav *nav);
+/* The text applies in Enhanced chosen, at the next Play from the pause too (a running game keeps the one it laid its
+ * texts out for); --text holds it for the run (oracles_display_row_fixed). */
+int oracles_display_text_applies(const OraclesHomeNav *nav);
 /* The screen is nearer 4:3 than 16:9: the Enhanced view takes the 4:3 sizes (docs/PLAYING.md). */
 int oracles_display_screen_4_3(const OraclesHomeNav *nav);
 /* View's choices and the size of each, the view's level in the screen's shape, far fitted to the screen as a game
@@ -225,6 +234,7 @@ const char *oracles_display_profile_note(const OraclesHomeNav *nav);
 extern const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS];
 extern const char *const oracles_display_colour_choices[2];
 extern const char *const oracles_display_hud_choices[2];    /* "Original", "Full width": settings.txt's hud= original, full */
+extern const char *const oracles_display_text_choices[2];   /* "Classic", "Compact": settings.txt's text= classic, compact */
 /* "Off", "Auto", "Small", "Large": settings.txt's screen_margin=, an OraclesScreenMargin. */
 #define ORACLES_DISPLAY_MARGINS 4
 extern const char *const oracles_display_margin_choices[ORACLES_DISPLAY_MARGINS];
@@ -236,9 +246,9 @@ void oracles_display_workers_choice(const OraclesHomeNav *nav, int choice, char 
 /* Display's section name: "Display", or "Display › Advanced" while the Advanced rows show. */
 const char *oracles_display_section(const OraclesHomeNav *nav);
 /* The core and the workers are fixed for a running game, and so the quality, which sets them: from it their rows are
- * dimmed and inert; so is the screen margin --screen-margin gives for the run. */
+ * dimmed and inert; so are the screen margin --screen-margin gives for the run and the text --text gives. */
 int oracles_display_row_fixed(const OraclesHomeNav *nav, unsigned row);
-/* A row's explanation beside its choices (16:9; 4:3 says shorter ones under the rows); Advanced's says what it opens. */
+/* A row's explanation beside its choices (16:9; 4:3 says shorter ones in its header); Advanced's says what it opens. */
 const char *oracles_display_explanation(unsigned row);
 /* Color correction's, 16:9's or 4:3's shorter one, which names F2 only where a keyboard is at hand
  * (oracles_home_keys_shown). */

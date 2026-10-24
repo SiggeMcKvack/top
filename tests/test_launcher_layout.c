@@ -613,10 +613,8 @@ static void cheats_entry(void)
  * newer version, the version alone (24e).  The menu and the help bar keep their places.  Turn 24's prototype puts the
  * version in a padded box, `lift` pixels lower than turn 23 drew it (16:9: 2, and 3 without the notice, whose frame makes
  * the line 2 px taller; 4:3: 5): the launcher keeps the version where 1a and 10a measure it, and lays the notice out from
- * it as the prototype does, its box and its text `lift` higher than the frame's.  In 16:9 the launcher sets the notice
- * `shift` (10) pixels further right than the prototype, whose highlighted frame touched the version. */
-static void update_frame(const char *frame, OraclesUiLayout layout, OraclesInputDevice device, int android, int focused, const char *release, float lift,
-                         float shift)
+ * it as the prototype does, its box and its text `lift` higher than the frame's. */
+static void update_frame(const char *frame, OraclesUiLayout layout, OraclesInputDevice device, int android, int focused, const char *release, float lift)
 {
     OraclesHomeNav nav;
     oracles_home_init(&nav);
@@ -652,10 +650,8 @@ static void update_frame(const char *frame, OraclesUiLayout layout, OraclesInput
     oracles_ui_layout_update(layout, &version, release, &update);
     OraclesUiBox box = update.box;
     box.y += lift;
-    box.x -= shift;
     layout_box(frame, "update", &box);
     OraclesUiLine text = update.text;
-    text.x -= shift;
     text.y += lift;
     text.baseline += lift;
     layout_line(frame, "update text", &text);
@@ -663,11 +659,11 @@ static void update_frame(const char *frame, OraclesUiLayout layout, OraclesInput
 
 static void update_notice(void)
 {
-    update_frame("24a", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 2.0f, 10.0f);
-    update_frame("24b", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_GAMEPAD, 0, 1, "1.3.0", 2.0f, 10.0f);
-    update_frame("24c", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 5.0f, 0.0f);
-    update_frame("24d", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_GAMEPAD, 1, 1, "1.3.0", 5.0f, 0.0f);
-    update_frame("24e", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, NULL, 3.0f, 0.0f);
+    update_frame("24a", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 2.0f);
+    update_frame("24b", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_GAMEPAD, 0, 1, "1.3.0", 2.0f);
+    update_frame("24c", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_KEYBOARD, 0, 0, "1.3.0", 5.0f);
+    update_frame("24d", ORACLES_UI_LAYOUT_4_3, ORACLES_INPUT_GAMEPAD, 1, 1, "1.3.0", 5.0f);
+    update_frame("24e", ORACLES_UI_LAYOUT_16_9, ORACLES_INPUT_KEYBOARD, 0, 0, NULL, 3.0f);
     /* The version stays where it was: 24e's is 1a's, but for its text. */
     OraclesUiLine before, after;
     oracles_ui_layout_version(ORACLES_UI_LAYOUT_16_9, "v1.0.0", &before);
