@@ -127,6 +127,11 @@ void oracles_session_finish(session *s, const OraclesSessionOptions *o)
         fprintf(stderr, "oracles: cheats: %u hits cost no heart, %u seeds, bombs or Bombchus kept, %u payments cost nothing (%u rupees kept), %u payments of a mod charged\n",
                 c.hits, c.ammo_kept, c.payments, c.rupees_kept, c.calls_charged);
     }
+    if (s->ran && oracles_guest_text_instant_armed(s->guest)) {
+        OraclesGuestTextInstantCounts c;
+        oracles_guest_text_instant_counts(s->guest, &c);
+        fprintf(stderr, "oracles: instant text: %u presses of A for the text's lines, %u voices kept\n", c.presses, c.voices_kept);
+    }
     if (s->ran && (s->compact_text || s->text_box_wide)) {
         OraclesGuestCompactCounts c;
         oracles_guest_compact_counts(s->guest, &c);

@@ -428,6 +428,7 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     /* Cheats shows the running game's, not the settings', and changes them. */
     p.nav.cheats_fixed = 0;
     p.nav.cheats_refused = !session->has_cheats;
+    p.nav.text_speed_refused = !session->has_text_instant;
     if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) {
         p.nav.swim_refused = !session->has_swim;
         p.nav.hotkeys_refused = !session->has_hotkeys;

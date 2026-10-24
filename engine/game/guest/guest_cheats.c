@@ -59,12 +59,18 @@ const char *oracles_cheats_format(unsigned cheats, const char *prefix, char *out
 
 uint16_t oracles_guest_find_in_routine(const uint8_t *rom, size_t size, OraclesGuestSym routine, const uint8_t *sequence, size_t length)
 {
+    return oracles_guest_find_in_routine_within(rom, size, routine, sequence, length, 0x40u);
+}
+
+uint16_t oracles_guest_find_in_routine_within(const uint8_t *rom, size_t size, OraclesGuestSym routine, const uint8_t *sequence, size_t length,
+                                              size_t window)
+{
     if (!rom || routine.bank == ORACLES_GUEST_ABSENT || routine.addr >= 0x8000u) return 0;
     const size_t base = routine.addr < 0x4000u ? routine.addr : (size_t)routine.bank * 0x4000u + (routine.addr - 0x4000u);
     const size_t bank_end = routine.addr < 0x4000u ? 0x4000u : base + (0x8000u - routine.addr);
     uint16_t found = 0;
     unsigned count = 0;
-    for (size_t i = 0; i < 0x40u && base + i + length <= size && base + i + length <= bank_end; i++) {
+    for (size_t i = 0; i < window && base + i + length <= size && base + i + length <= bank_end; i++) {
         if (memcmp(rom + base + i, sequence, length) != 0) continue;
         found = (uint16_t)(routine.addr + i);
         count++;

@@ -25,6 +25,7 @@
 #include "route.h"
 #include "sha1.h"
 #include "text_box.h"
+#include "text_speed_check.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -78,6 +79,8 @@ typedef struct run {
     unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
     unsigned cheats_changed;  /* the cheats the route's `cheat` lines change, their points armed from the start */
     int swim_changed;         /* the route's `set swim-hold` lines change the swim's hold, its tests armed from the start */
+    int text_speed_changed;   /* the route's `set text-speed` lines change the instant text, its points armed from the start */
+    OraclesTextSpeedCheck text_speed;   /* with the instant text armed: its lines and pages */
 } run;
 
 /* harness_report.c: each check's figures, to the standard error and the summary (--summary): the renderer's verdict (1

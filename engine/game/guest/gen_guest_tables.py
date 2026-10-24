@@ -90,6 +90,9 @@ FUNCTIONS = [
     # The host's text box: the routine that queues a line's copy to the VRAM, and the vblank's function that runs a queued
     # DMA (textbox.s, bank0.s).
     ("dma_text_gfx_buffer", "dmaTextGfxBuffer"), ("vblank_dma_function", "vblankDmaFunction"),
+    # The instant text: the routine that counts down to the line's next character and reads A and B to skip to the
+    # line's end (textbox.s; displayNextTextCharacter is above).
+    ("update_character_display_timer", "updateCharacterDisplayTimer"),
 ]
 VARIABLES = [
     ("active_group", "wActiveGroup"), ("active_room", "wActiveRoom"), ("loading_room", "wLoadingRoom"),
@@ -269,6 +272,8 @@ VARIABLES = [
     ("textbox_vram_pos", "w7TextboxVramPos"),   # the host's text box: where the box's rows stand in the VRAM's map
     ("character_display_timer", "w7CharacterDisplayTimer"),   # and the frames left before the line's next column shows
     ("text_address", "w7TextAddress"),   # and where the text thread reads the text (its bank in w7ActiveBank)
+    # The instant text: the text's flags, whose bit 0 skips the line to its end, and the frames \slow keeps A and B unread.
+    ("text_flags", "w7d0c1"), ("text_slowdown_timer", "w7TextSlowdownTimer"),
     ("general_purpose_hram", "hFF8A"), ("general_purpose_hram_end", "hRng1"), ("tmp_cec0", "wTmpcec0"), ("tmp_cec0_end", "wRoomLayout"),
 ]
 # Defines of wram.s expressed as symbol + offset.

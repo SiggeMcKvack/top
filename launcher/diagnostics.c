@@ -89,6 +89,9 @@ static void on_event(void *opaque, const OraclesGuestEvent *e)
         case ORACLES_EVENT_TEXT_GFX_DMA:
         case ORACLES_EVENT_VBLANK_DMA:
             break;   /* the host's text box's points */
+        case ORACLES_EVENT_TEXT_SKIP_TEST:
+        case ORACLES_EVENT_TEXT_SKIP_LOOP:
+            break;   /* the instant text's points */
         case ORACLES_EVENT_VBLANK:
             if (e->value < 4) d->vblanks[e->value]++;
             break;

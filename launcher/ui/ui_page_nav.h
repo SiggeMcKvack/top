@@ -26,7 +26,7 @@
  * chosen; dimmed and inert in Faithful and from a game), the window (the profile's surface at 2x, 3x, 4x, or fullscreen
  * at the largest whole scale of the display), the view, the HUD (the status bar as the game draws it, its colour
  * across the whole view, or laid out on it, hearts left and items right; dimmed and inert in Faithful), Text (the link to Display › Text, ui_page_text.h, its
- * settings summed up beside it, "Compact · Wide · Normal"; dimmed in Faithful, and it opens all the same), color
+ * settings summed up beside it, "Compact · Wide · Normal"), color
  * correction, then Advanced
  * under the diagram (4:3: beside it, in the header), which opens Display's Advanced rows in place of those:
  * the core, continuous transitions (on by default, dimmed in Faithful), vsync, the neighbour workers, the scaling
@@ -46,7 +46,7 @@
  * transitions, Vsync, the workers, the text and the text box, which the game
  * keeps, are dimmed and inert, "Change it from the home screen."; the window,
  * color correction, the HUD, the scaling, the camera, the screen margin and
- * the text size apply at once there. */
+ * the text size apply at once there, the text speed when the game resumes. */
 #ifndef ORACLES_UI_PAGE_NAV_H
 #define ORACLES_UI_PAGE_NAV_H
 
@@ -160,6 +160,7 @@ typedef enum OraclesDisplayRow {
     ORACLES_DISPLAY_LETTERS,       /* Display › Text's Text: Classic or Compact */
     ORACLES_DISPLAY_TEXT_BOX,
     ORACLES_DISPLAY_TEXT_SIZE,
+    ORACLES_DISPLAY_TEXT_SPEED,    /* Display › Text's Text speed: Classic or Instant */
     ORACLES_DISPLAY_ROWS
 } OraclesDisplayRow;
 

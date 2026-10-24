@@ -1,7 +1,7 @@
 /* Display's Text link and the Display › Text page (ui_page_layout.h), without SDL: the link's summary and arrow at the
  * right of its row; the page's rows as Advanced lays its own out, and its preview, the band at its proportions in a frame
- * of at most 520x293 in 16:9's left column, under the title, its label and note under it, or of at most 400x300 at the
- * top of 4:3's rows, its label and note at its right, at its bottom. */
+ * of at most 520x293 in 16:9's left column, under the title, its label and note under it, or of at most 314x236 at the
+ * top of 4:3's rows, its label and note at its right, at its bottom, so that the four rows fit under it. */
 #include "ui_page_layout.h"
 
 #include <math.h>
@@ -36,8 +36,8 @@
  * column's gap and padding under it), the note's line kept, and the rows' margin under it (4:3). */
 #define PREVIEW_W 520.0f
 #define PREVIEW_H 293.0f
-#define PREVIEW_W_4_3 400.0f
-#define PREVIEW_H_4_3 300.0f
+#define PREVIEW_W_4_3 314.0f
+#define PREVIEW_H_4_3 236.0f
 #define PREVIEW_BORDER 1.0f
 #define PREVIEW_GAP 12.0f
 #define PREVIEW_NOTE_H 29.0f
@@ -88,7 +88,7 @@ static void move_wrapped(OraclesUiWrapped *w, float y)
 }
 
 /* JavaScript's Math.round, as the mockup rounds the preview. */
-static float round_half_up(float v) { return floorf(v + 0.5f); }
+static float round_d(double v) { return (float)floor(v + 0.5); }
 
 /* The link's summary and arrow from (x, y) in a box `h` tall, the arrow `arrow_w` x `arrow_h` `gap` after the summary,
  * both centred on it: the box. */
@@ -128,33 +128,30 @@ float oracles_ui_text_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesU
  * size it takes, its text's place and its arrow. */
 static void preview_frame(const OraclesDisplayTextPreview *p, float x, float y, float room_w, float room_h, OraclesUiDisplayLayout *out)
 {
-    const float vw = (float)p->view_w, vh = (float)p->view_h;
-    const float scale = vw > 0.0f && vh > 0.0f ? fminf(room_w / vw, room_h / vh) : 1.0f;
-    const float unit = scale * (float)p->scale_num / (float)(p->scale_den ? p->scale_den : 1u);
-    out->preview_frame = box(x, y, round_half_up(vw * scale), round_half_up(vh * scale));
+    /* In double precision, as the mockup's script computes it: 314 / 480 * 360 is 235.5 there, 235.49998 in single. */
+    const double vw = (double)p->view_w, vh = (double)p->view_h;
+    const double scale = vw > 0.0 && vh > 0.0 ? fmin((double)room_w / vw, (double)room_h / vh) : 1.0;
+    const double unit = scale * (double)p->scale_num / (double)(p->scale_den ? p->scale_den : 1u);
+    out->preview_frame = box(x, y, round_d(vw * scale), round_d(vh * scale));
     const float in_x = x + PREVIEW_BORDER, in_y = y + PREVIEW_BORDER;
-    out->preview_hud = box(in_x, in_y, out->preview_frame.w - 2.0f * PREVIEW_BORDER, round_half_up(HUD_H * scale));
-    const float bw = (float)p->box_w * unit;
-    out->preview_box = box(in_x + round_half_up((vw * scale - bw) * 0.5f), in_y + round_half_up(vh * scale - BOX_BOTTOM * scale - BOX_H * unit),
-                           round_half_up(bw), round_half_up(BOX_H * unit));
-    out->pixel = unit;
-    out->text_x = out->preview_box.x + round_half_up(TEXT_LEFT * unit);
-    out->text_y = out->preview_box.y + round_half_up(TEXT_TOP * unit);
-    const float arrow = fmaxf(ARROW, round_half_up(ARROW * unit));
-    out->preview_arrow = box(out->preview_box.x + out->preview_box.w - round_half_up(ARROW_RIGHT * unit) - 2.0f * arrow,
-                             out->preview_box.y + out->preview_box.h - round_half_up(ARROW_BOTTOM * unit) - arrow, 2.0f * arrow, arrow);
+    out->preview_hud = box(in_x, in_y, out->preview_frame.w - 2.0f * PREVIEW_BORDER, round_d(HUD_H * scale));
+    const double bw = (double)p->box_w * unit;
+    out->preview_box = box(in_x + round_d((vw * scale - bw) * 0.5), in_y + round_d(vh * scale - BOX_BOTTOM * scale - BOX_H * unit),
+                           round_d(bw), round_d(BOX_H * unit));
+    out->pixel = (float)unit;
+    out->text_x = out->preview_box.x + round_d(TEXT_LEFT * unit);
+    out->text_y = out->preview_box.y + round_d(TEXT_TOP * unit);
+    const float arrow = fmaxf(ARROW, round_d(ARROW * unit));
+    out->preview_arrow = box(out->preview_box.x + out->preview_box.w - round_d(ARROW_RIGHT * unit) - 2.0f * arrow,
+                             out->preview_box.y + out->preview_box.h - round_d(ARROW_BOTTOM * unit) - arrow, 2.0f * arrow, arrow);
 }
 
-/* The rows Text, Text box and Text size. */
-static const char *const *row_choices(unsigned i, unsigned *count)
-{
-    *count = i == 2u ? ORACLES_DISPLAY_TEXT_SIZES : 2u;
-    return i == 0u ? oracles_display_text_choices : i == 1u ? oracles_display_text_box_choices : oracles_display_text_size_choices;
-}
+/* The rows Text, Text box, Text size and Text speed. */
+static const char *const *row_choices(unsigned i, unsigned *count) { return oracles_display_text_row_choices(ORACLES_DISPLAY_LETTERS + i, count); }
 
 static OraclesUiOptionLayout *row_options(OraclesUiDisplayLayout *out, unsigned i)
 {
-    return i == 0u ? out->text : i == 1u ? out->text_box : out->text_size;
+    return i == 0u ? out->text : i == 1u ? out->text_box : i == 2u ? out->text_size : out->text_speed;
 }
 
 float oracles_ui_text_page_16_9(const OraclesUiDisplayTexts *t, float preview_y, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out)
@@ -164,7 +161,7 @@ float oracles_ui_text_page_16_9(const OraclesUiDisplayTexts *t, float preview_y,
     out->preview_label = line_at(&oracles_ui_diagram_label, t->preview.label, HEAD_X, label_y, 0.0f);
     out->preview_note = line_at(&oracles_ui_row_note, t->preview.note, HEAD_X, label_y + out->preview_label.h + PREVIEW_GAP, 0.0f);
     out->preview = box(HEAD_X, preview_y, HEAD_W, out->preview_note.y + PREVIEW_NOTE_H - preview_y);
-    for (unsigned i = 0; i < 3u; i++) {
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) {
         const unsigned row = ORACLES_DISPLAY_LETTERS + i;
         unsigned count;
         const char *const *names = row_choices(i, &count);
@@ -194,7 +191,7 @@ void oracles_ui_text_page_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLa
     move_line(&out->preview_label, text_x, out->preview_note.y - PREVIEW_LINE_GAP_4_3 - out->preview_label.h);
     out->preview = box(ROWS_X_4_3, ROWS_Y_4_3, ROWS_W_4_3, h);
     float y = bottom + PREVIEW_MARGIN_4_3 + DISPLAY_ROW_GAP_4_3;
-    for (unsigned i = 0; i < 3u; i++) {
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) {
         unsigned count;
         const char *const *names = row_choices(i, &count);
         y = oracles_ui_display_options_row_4_3(y, ORACLES_DISPLAY_LETTERS + i, names, NULL, NULL, count, row_options(out, i), out) + DISPLAY_ROW_GAP_4_3;

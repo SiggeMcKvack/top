@@ -42,6 +42,7 @@ typedef struct harness_options {
     int enhanced_frozen;                   /* --neighbour-animation off: a neighbour's objects frozen, as the Low quality has them */
     int objects_capture, enhanced_objects, enhanced_threaded, enhanced_paced, enhanced_zoom_out, continuous_transitions, continuous_swim, continuous_diagonal;
     int swim_hold;                         /* --swim-hold: the swim's strokes from a held button */
+    int text_instant;                      /* --text-speed instant: each line of the text box whole */
     unsigned cheats;                       /* --cheats: a mask of OraclesGuestCheat */
     int compact_text;                      /* --text compact: the text box's lines in the font's own widths */
     int text_box_check;                    /* --text-box-check: the text box drawn by the host, against the core's image */

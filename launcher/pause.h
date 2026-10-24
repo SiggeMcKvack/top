@@ -49,6 +49,7 @@ typedef struct OraclesPauseSession {
      * Display's Window value) whose pause would keep only its own entries, which Display refuses. */
     int window, window_w, window_h;
     unsigned windows_refused;
+    int has_text_instant;   /* its profile has the instant text: else Display › Text dims Text speed */
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {

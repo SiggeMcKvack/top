@@ -48,10 +48,12 @@ static void on_frame_begin(void *opaque, uint32_t frame)
         oracles_cheats_parse(r->route.cheats[i].name, NULL, &bit);
         oracles_guest_set_cheats(r->guest, r->route.cheats[i].on ? cheats | bit : cheats & ~bit);   /* armed from the start: it cannot fail */
     }
-    /* The route's settings changed at this frame: the swim's hold; the item hotkeys' mode and the window are notes, the
+    /* The route's settings changed at this frame: the swim's hold, the instant text; the item hotkeys' mode and the window are notes, the
      * exchanges being the `equip` lines and the window presentation alone. */
-    for (size_t n = oracles_route_settings_at(&r->route, frame, &first), i = first; i < first + n; i++)
+    for (size_t n = oracles_route_settings_at(&r->route, frame, &first), i = first; i < first + n; i++) {
         if (r->route.settings[i].name == ORACLES_ROUTE_SET_SWIM_HOLD) oracles_guest_set_swim_hold(r->guest, r->route.settings[i].value);   /* armed from the start */
+        if (r->route.settings[i].name == ORACLES_ROUTE_SET_TEXT_SPEED) oracles_guest_set_text_instant(r->guest, r->route.settings[i].value);   /* the same */
+    }
     if (r->check) oracles_frame_check_frame_begin(r->check, frame);
 }
 
@@ -74,6 +76,7 @@ static void on_frame_end(void *opaque, uint32_t frame)
         if (byte) *byte ^= 0x01;
     }
     if (r->out) oracles_guest_write_fingerprint(bus, r->core, frame, r->out);
+    if (r->guest && oracles_guest_text_instant_armed(r->guest)) oracles_text_speed_check_frame_end(&r->text_speed, r->guest);
     if (r->transition) {
         /* Link swimming into a transition swims through it: the game freezes him, and reads the tile it takes as his own
          * (y+5) again at the first frame it runs after the one the transition ends on.  Out of the water there, where
@@ -466,6 +469,16 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         fprintf(stderr, "harness: the route changes the swim's hold, which %s does not support\n", r->profile ? oracles_compat_name(r->profile) : "this image");
         return 1;
     }
+    const int route_text_instant = oracles_route_has_option(&r->route.header, ORACLES_ROUTE_OPTION_TEXT_INSTANT);
+    r->text_speed_changed = oracles_route_sets(&r->route, ORACLES_ROUTE_SET_TEXT_SPEED);
+    if ((o->text_instant || route_text_instant || r->text_speed_changed) && !oracles_compat_text_instant(r->profile)) {
+        fprintf(stderr, "harness: %s does not support the instant text; refusing the request and route option\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
+    if (route_text_instant && !o->text_instant) {
+        o->text_instant = 1;
+        fprintf(stderr, "harness: the route was recorded with --text-speed instant: the option is on\n");
+    }
     unsigned route_cheats = 0;
     char cheat_names[64];
     if (oracles_cheats_parse(r->route.header.options, ORACLES_ROUTE_OPTION_CHEAT, &route_cheats) != 0) {
@@ -532,6 +545,11 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
     if ((o->swim_hold || r->swim_changed)
         && (!r->guest || oracles_guest_set_swim_hold(r->guest, 1) != 0 || oracles_guest_set_swim_hold(r->guest, o->swim_hold) != 0)) {
         fprintf(stderr, "harness: --swim-hold and a route's set swim-hold lines need the hooks on, and the swim's strokes found in the ROM\n");
+        return 1;
+    }
+    if ((o->text_instant || r->text_speed_changed)
+        && (!r->guest || oracles_guest_set_text_instant(r->guest, 1) != 0 || oracles_guest_set_text_instant(r->guest, o->text_instant) != 0)) {
+        fprintf(stderr, "harness: --text-speed instant and a route's set text-speed lines need the hooks on, and the text's points found in the ROM\n");
         return 1;
     }
     /* The points of the cheats the route changes later are armed now, with those on from the start: a point once armed

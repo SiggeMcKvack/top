@@ -114,6 +114,7 @@ static void emit(OraclesGuest *guest, OraclesGuestEventType type, uint16_t pc, u
     if (type == ORACLES_EVENT_FLIPPERS_STROKE) oracles_guest_flippers_stroke(guest);
     if (type == ORACLES_EVENT_CHEAT_DAMAGE || type == ORACLES_EVENT_CHEAT_AMMO || type == ORACLES_EVENT_CHEAT_RUPEES) oracles_guest_cheat_point(guest, type);
     if (type >= ORACLES_EVENT_TEXT_LINE && type <= ORACLES_EVENT_TEXT_COLUMN_SHOWN) oracles_guest_compact_text_point(guest, type);
+    if (type == ORACLES_EVENT_TEXT_SKIP_TEST || type == ORACLES_EVENT_TEXT_SKIP_LOOP) oracles_guest_text_skip_point(guest, type);
     if (guest->text_box_armed && (type == ORACLES_EVENT_TEXT_LINE || type == ORACLES_EVENT_TEXT_LINE_DRAWN || type == ORACLES_EVENT_TEXT_GFX_DMA
                                   || type == ORACLES_EVENT_VBLANK_DMA))
         oracles_guest_text_box_point(guest, type);

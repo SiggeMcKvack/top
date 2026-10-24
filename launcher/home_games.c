@@ -688,6 +688,8 @@ static int start(void *opaque, OraclesHomeCommand game, OraclesHomeNav *nav, str
     o.continuous_transitions = profile != ORACLES_PROFILE_FAITHFUL && (o.continuous_transitions || games->settings->transitions);
     /* The swim's hold, in either profile: the command line's, else settings.txt's swim_hold=. */
     o.swim_hold = o.swim_hold || games->settings->swim_hold;
+    /* The text speed, in either profile, a fan game's too: the command line's, else settings.txt's text_speed=. */
+    if (!o.text_instant) o.text_instant = games->settings->text_instant ? 2 : 1;
     /* The cheats of the game's Oracle: the command line's, else settings.txt's cheats_<game>=; none for a fan game. */
     if (fan) o.cheats = 0;
     else if (!o.cheats_given) o.cheats = games->settings->cheats[g];

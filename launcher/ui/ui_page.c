@@ -302,13 +302,13 @@ static void text_preview(OraclesUiDraw *draw, const OraclesUiPageStyles *st, con
 static void text_page(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiPageStyles *st, const look *lk, const OraclesUiDisplayTexts *t,
                       const OraclesUiDisplayLayout *l, OraclesUiColor accent)
 {
-    const int values[3] = { nav->display.text, nav->display.text_box, nav->display.text_size };
-    for (unsigned i = 0; i < 3u; i++) {
+    const int values[ORACLES_DISPLAY_TEXT_ROWS] = { nav->display.text, nav->display.text_box, nav->display.text_size, nav->display.text_speed };
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) {
         const unsigned r = ORACLES_DISPLAY_LETTERS + i;
         const float opacity = oracles_display_text_row_live(nav, r) ? 1.0f : ROW_NOT_APPLIED;
-        const unsigned count = i == 2u ? ORACLES_DISPLAY_TEXT_SIZES : 2u;
-        const char *const *names = i == 0u ? oracles_display_text_choices : i == 1u ? oracles_display_text_box_choices : oracles_display_text_size_choices;
-        const OraclesUiOptionLayout *options = i == 0u ? l->text : i == 1u ? l->text_box : l->text_size;
+        unsigned count;
+        const char *const *names = oracles_display_text_row_choices(r, &count);
+        const OraclesUiOptionLayout *options = i == 0u ? l->text : i == 1u ? l->text_box : i == 2u ? l->text_size : l->text_speed;
         highlight_dimmed(draw, lk, &l->rows[r], r == nav->row, opacity);
         wrapped(draw, st->row_label, &l->labels[r], oracles_ui_rgba(LABEL, opacity));
         wrapped(draw, st->row_text, &l->text_explanations[i], oracles_ui_rgba(NOTE, opacity));
@@ -421,13 +421,13 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
                    CHOICE_OFF, margin_applied);
         return;
     }
-    /* View, the HUD and the Text link carry the Enhanced view: in Faithful their rows are dimmed, label and all, the HUD's
-     * from the pause by the running game's profile, which takes it at once (the link opens all the same); Window at one
+    /* View and the HUD carry the Enhanced view: in Faithful their rows are dimmed, label and all, the HUD's from the pause
+     * by the running game's profile, which takes it at once; the Text link where none of its rows applies; Window at one
      * size, Quality in Faithful, and Profile, Quality and View from a game, which keeps them. */
     const float applied = oracles_display_transitions_apply(nav) && !oracles_display_row_fixed(nav, ORACLES_DISPLAY_VIEW) ? 1.0f : ROW_NOT_APPLIED;
     const float profile = oracles_display_row_fixed(nav, ORACLES_DISPLAY_PROFILE) ? ROW_NOT_APPLIED : 1.0f;
     const float hud = oracles_display_hud_applies(nav) ? 1.0f : ROW_NOT_APPLIED;
-    const float text_applied = oracles_display_text_applies(nav) ? 1.0f : ROW_NOT_APPLIED;
+    const float text_applied = oracles_display_text_link_applies(nav) ? 1.0f : ROW_NOT_APPLIED;
     const float window = t.window_one ? ROW_NOT_APPLIED : 1.0f;
     const float quality = oracles_display_quality_applies(nav) ? 1.0f : ROW_NOT_APPLIED;
     for (unsigned r = 0; r < ORACLES_DISPLAY_ADVANCED; r++) {
@@ -496,6 +496,7 @@ int oracles_ui_display_hit(const OraclesHomeNav *nav, float x, float y, int *opt
         for (int c = 0; c < 2; c++) if (inside(&l.text[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_LETTERS; }
         for (int c = 0; c < 2; c++) if (inside(&l.text_box[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_TEXT_BOX; }
         for (int c = 0; c < ORACLES_DISPLAY_TEXT_SIZES; c++) if (inside(&l.text_size[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_TEXT_SIZE; }
+        for (int c = 0; c < 2; c++) if (inside(&l.text_speed[c].box, x, y)) { *option = c; return ORACLES_DISPLAY_TEXT_SPEED; }
         for (int r = ORACLES_DISPLAY_LETTERS; r < ORACLES_DISPLAY_ROWS; r++) if (inside(&l.rows[r], x, y)) return r;
         return -1;
     }

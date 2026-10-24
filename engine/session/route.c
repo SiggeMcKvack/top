@@ -133,10 +133,11 @@ static int push_cheat(OraclesRoute *route, uint32_t frame, const char *name, int
     return 0;
 }
 
-static const char *const setting_names[ORACLES_ROUTE_SETTINGS] = { "swim-hold", "item-hotkeys", "window" };
+static const char *const setting_names[ORACLES_ROUTE_SETTINGS] = { "swim-hold", "item-hotkeys", "window", "text-speed" };
 static const char *const on_off[2] = { "off", "on" };
 static const char *const hotkey_modes[3] = { "off", "use", "equip" };
 static const char *const windows[5] = { "full", NULL, "2", "3", "4" };
+static const char *const text_speeds[2] = { "classic", "instant" };
 
 const char *oracles_route_setting_name(OraclesRouteSettingName name)
 {
@@ -148,6 +149,7 @@ const char *oracles_route_setting_value(OraclesRouteSettingName name, int value)
     if (name == ORACLES_ROUTE_SET_SWIM_HOLD) return value >= 0 && value < 2 ? on_off[value] : NULL;
     if (name == ORACLES_ROUTE_SET_ITEM_HOTKEYS) return value >= 0 && value < 3 ? hotkey_modes[value] : NULL;
     if (name == ORACLES_ROUTE_SET_WINDOW) return value >= 0 && value < 5 ? windows[value] : NULL;
+    if (name == ORACLES_ROUTE_SET_TEXT_SPEED) return value >= 0 && value < 2 ? text_speeds[value] : NULL;
     return NULL;
 }
 
@@ -161,6 +163,7 @@ static int parse_set(const OraclesRoute *route, uint32_t frame, char *rest, Orac
     setting->name = ORACLES_ROUTE_SETTINGS;
     for (unsigned n = 0; n < ORACLES_ROUTE_SETTINGS; n++) if (!strcmp(name, setting_names[n])) setting->name = (OraclesRouteSettingName)n;
     if (setting->name == ORACLES_ROUTE_SETTINGS) return 0;
+    if (setting->name == ORACLES_ROUTE_SET_TEXT_SPEED && route->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT) return 0;   /* a name its format's readers do not know */
     setting->value = -1;
     for (int v = 0; v < 5; v++) {
         const char *text = oracles_route_setting_value(setting->name, v);
@@ -246,6 +249,11 @@ int oracles_route_read(const char *path, OraclesRoute *route, char *error, size_
                 /* Nor the wide text box. */
                 if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) && route->format < ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE) {
                     set_error(error, error_capacity, "the text-box-wide option needs format 11", number);
+                    goto fail;
+                }
+                /* Nor the instant text. */
+                if (oracles_route_has_option(&route->header, ORACLES_ROUTE_OPTION_TEXT_INSTANT) && route->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT) {
+                    set_error(error, error_capacity, "the text-instant option needs format 12", number);
                     goto fail;
                 }
             }
@@ -485,7 +493,8 @@ int oracles_route_writer_open_format(OraclesRouteWriter *writer, const char *pat
     writer->file = fopen(path, "wb"); /* LF on every platform */
     if (!writer->file) return -1;
     char language[16];
-    const int lowest = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) ? ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE
+    const int lowest = oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_INSTANT) ? ORACLES_ROUTE_FORMAT_TEXT_INSTANT
+                     : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE) ? ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_TEXT_COMPACT) ? ORACLES_ROUTE_FORMAT_TEXT_COMPACT
                      : oracles_route_has_cheat(header) ? ORACLES_ROUTE_FORMAT_CHEATS
                      : oracles_route_has_option(header, ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL) ? ORACLES_ROUTE_FORMAT_DIAGONAL
@@ -547,7 +556,7 @@ int oracles_route_writer_set(OraclesRouteWriter *writer, uint32_t frame, Oracles
 {
     if (!writer->file) return 0;
     const char *text = oracles_route_setting_value(name, value);
-    if (!text || writer->format < ORACLES_ROUTE_FORMAT_SET) return -1;
+    if (!text || writer->format < ORACLES_ROUTE_FORMAT_SET || (name == ORACLES_ROUTE_SET_TEXT_SPEED && writer->format < ORACLES_ROUTE_FORMAT_TEXT_INSTANT)) return -1;
     fprintf(writer->file, "%u set %s %s\n", frame, setting_names[name], text);
     return 0;
 }

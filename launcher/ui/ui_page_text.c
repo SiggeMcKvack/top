@@ -27,6 +27,9 @@
 const char *const oracles_display_text_choices[2] = { "Classic", "Compact" };
 const char *const oracles_display_text_box_choices[2] = { "Standard", "Wide" };
 const char *const oracles_display_text_size_choices[ORACLES_DISPLAY_TEXT_SIZES] = { "Normal", "Large", "Very large" };
+const char *const oracles_display_text_speed_choices[2] = { "Classic", "Instant" };
+static const char enhanced_reason[] = "Enhanced only.";
+static const char original_reason[] = "Needs an original ROM.";
 /* The port's own words, never the game's. */
 static const char sample[] = "Link, the Maku Tree has been waiting for you. Nayru was taken, and time itself is coming undone.";
 
@@ -34,11 +37,26 @@ static int fan_page(const OraclesHomeNav *nav) { return oracles_home_fan_game(or
 
 static int clamp(int value, int count) { return value < 0 ? 0 : value >= count ? count - 1 : value; }
 
+const char *const *oracles_display_text_row_choices(unsigned row, unsigned *count)
+{
+    *count = row == ORACLES_DISPLAY_TEXT_SIZE ? ORACLES_DISPLAY_TEXT_SIZES : 2u;
+    return row == ORACLES_DISPLAY_LETTERS ? oracles_display_text_choices : row == ORACLES_DISPLAY_TEXT_BOX ? oracles_display_text_box_choices
+           : row == ORACLES_DISPLAY_TEXT_SIZE ? oracles_display_text_size_choices : oracles_display_text_speed_choices;
+}
+
 int oracles_display_text_applies(const OraclesHomeNav *nav) { return nav->display.profile == ORACLES_PROFILE_ENHANCED; }
+
+int oracles_display_text_link_applies(const OraclesHomeNav *nav)
+{
+    for (unsigned r = ORACLES_DISPLAY_LETTERS; r < ORACLES_DISPLAY_ROWS; r++)
+        if (oracles_display_text_row_live(nav, r)) return 1;
+    return oracles_display_text_applies(nav) || !(nav->in_game && nav->text_speed_refused);
+}
 
 int oracles_display_text_row_live(const OraclesHomeNav *nav, unsigned row)
 {
     switch (row) {
+        case ORACLES_DISPLAY_TEXT_SPEED: return !(nav->in_game && nav->text_speed_refused);
         case ORACLES_DISPLAY_LETTERS: return oracles_display_text_applies(nav) && !oracles_display_row_fixed(nav, row);
         case ORACLES_DISPLAY_TEXT_BOX: return oracles_display_text_applies(nav) && !fan_page(nav) && !oracles_display_row_fixed(nav, row);
         case ORACLES_DISPLAY_TEXT_SIZE: return oracles_display_hud_applies(nav) && !fan_page(nav) && !nav->display.text_size_fixed;
@@ -48,23 +66,27 @@ int oracles_display_text_row_live(const OraclesHomeNav *nav, unsigned row)
 
 void oracles_display_text_summary(const OraclesHomeNav *nav, char *out, size_t capacity)
 {
-    /* What the game shown takes: a fan game keeps the game's box at its size. */
-    const int fan = fan_page(nav);
-    snprintf(out, capacity, "%s \xc2\xb7 %s \xc2\xb7 %s", oracles_display_text_choices[clamp(nav->display.text, 2)],
-             oracles_display_text_box_choices[fan ? 0 : clamp(nav->display.text_box, 2)],
-             oracles_display_text_size_choices[fan ? 0 : clamp(nav->display.text_size, ORACLES_DISPLAY_TEXT_SIZES)]);
+    /* What applies to the game shown: in Faithful the game's own text, a fan game's text in the game's box at its size. */
+    const char *const instant = nav->display.text_speed ? " \xc2\xb7 Instant" : "";
+    if (!oracles_display_text_applies(nav)) snprintf(out, capacity, "As the game%s", instant);
+    else if (fan_page(nav)) snprintf(out, capacity, "%s%s", oracles_display_text_choices[clamp(nav->display.text, 2)], instant);
+    else snprintf(out, capacity, "%s \xc2\xb7 %s \xc2\xb7 %s%s", oracles_display_text_choices[clamp(nav->display.text, 2)],
+                  oracles_display_text_box_choices[clamp(nav->display.text_box, 2)],
+                  oracles_display_text_size_choices[clamp(nav->display.text_size, ORACLES_DISPLAY_TEXT_SIZES)], instant);
 }
 
 const char *oracles_display_text_explanation(unsigned row, int four_three)
 {
-    static const char *const texts[4][2] = {
-        { "Letters, box and size, with a preview.", "Letters, box and size, with a preview." },
+    static const char *const texts[5][2] = {
+        { "Letters, box, size and speed, with a preview.", "Letters, box, size and speed, with a preview." },
         { "Classic: the game's fixed-width letters. With the Standard box, the text is exactly the game's. Compact: letters take their own "
           "width, so more words fit on a line.",
           "Classic: the game's letters. Compact: more words per line." },
         { "Wide: a longer box with longer lines, about a third fewer boxes with Compact. Standard: the game's box.", "Wide: longer lines, fewer boxes." },
         { "Large and Very large draw the text box bigger where the view has room for it, for reading from a distance or on small screens.",
           "Large: a bigger box. Very large: twice as big." },
+        { "Classic: letter by letter, at the speed chosen on the file screen. Instant: each line appears whole; A still turns the page.",
+          "Instant: each line appears whole." },
     };
     const int i = row == ORACLES_DISPLAY_TEXT ? 0 : row >= ORACLES_DISPLAY_LETTERS && row < ORACLES_DISPLAY_ROWS ? (int)(row - ORACLES_DISPLAY_LETTERS) + 1 : -1;
     return i < 0 ? "" : texts[i][four_three != 0];
@@ -126,6 +148,8 @@ static preview_box preview_of(const OraclesHomeNav *nav)
 
 const char *oracles_display_text_note(const OraclesHomeNav *nav, unsigned row)
 {
+    if (row == ORACLES_DISPLAY_TEXT_SPEED) return oracles_display_text_row_live(nav, row) ? "" : original_reason;
+    if (row == ORACLES_DISPLAY_TEXT_SIZE ? !oracles_display_hud_applies(nav) : !oracles_display_text_applies(nav)) return enhanced_reason;
     if ((row == ORACLES_DISPLAY_TEXT_BOX || row == ORACLES_DISPLAY_TEXT_SIZE) && fan_page(nav)) return oracles_display_fan_reason;
     if (oracles_display_pause_locked(nav, row)) return oracles_display_pause_reason;
     if (row == ORACLES_DISPLAY_LETTERS) return "Savestates taken with Compact need Compact.";   /* as Continuous transitions says of its own */

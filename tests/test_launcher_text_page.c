@@ -3,8 +3,12 @@
  * The reference's frames are turn 26's: the page with Compact and Wide chosen, Text box highlighted, in 16:9 (26a), in
  * 4:3 (26b) and at 640x480 on Android (26c); Display with the link highlighted (26e, text link 4:3); from the pause
  * (26g, 26g 4:3 on Text, turn 29's), Text and Text box dimmed with their reason, Text size live; in Faithful (26h); and
- * Moonrise Regalia's (26i), Text box and Text size dimmed with their reason, where the canvas leaves the page out.  The
- * canvas's Lines row is not there: the engine draws two lines alone. */
+ * Moonrise Regalia's (26i), Text box and Text size dimmed with their reason, where the canvas leaves the page out; each
+ * measured again from turn 31, which adds Text speed under Text size, in 4:3 under a smaller preview.  Turn 31's own:
+ * Instant chosen and highlighted in 16:9 (31a), in 4:3 (31c), at 640x480 on Android (31d), in the pause (31g); in
+ * Faithful, Display's link live (31e) and the page in 4:3, Text speed alone live (31e 4:3, 31e text 4:3 on Text); a fan
+ * game's page (31f); the link's summary naming Instant (31h, 31h 4:3).  The canvas's Lines row is not there: the engine
+ * draws two lines alone. */
 #include "layout_reference.h"
 #include "ui_page_layout.h"
 #include "ui_page_nav.h"
@@ -15,8 +19,9 @@
 
 #define CHECK(condition) do { if (!(condition)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition); layout_fail(); } } while (0)
 
-static const char *const ids[3] = { "text", "box", "tsize" };
-static const char *const choice_ids[3][3] = { { "classic", "compact", NULL }, { "standard", "wide", NULL }, { "normal", "large", "xlarge" } };
+static const char *const ids[ORACLES_DISPLAY_TEXT_ROWS] = { "text", "box", "tsize", "tspeed" };
+static const char *const choice_ids[ORACLES_DISPLAY_TEXT_ROWS][3] = { { "classic", "compact", NULL }, { "standard", "wide", NULL }, { "normal", "large", "xlarge" },
+                                                                      { "classic", "instant", NULL } };
 
 /* Oracle of Ages with its original ROM; Display at a 1920x1080 (or `width` x `height`) screen's sizes. */
 static void ages(OraclesHomeNav *nav, OraclesUiLayout layout, int width, int height)
@@ -42,7 +47,8 @@ static void text_page(OraclesHomeNav *nav, unsigned row)
     nav->display.text = nav->display.text_box = 1;
     nav->row = ORACLES_DISPLAY_TEXT;
     CHECK(oracles_display_act(nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav->text_page
-          && nav->row == (nav->in_game ? ORACLES_DISPLAY_TEXT_SIZE : ORACLES_DISPLAY_LETTERS));
+          && nav->row == (nav->in_game ? ORACLES_DISPLAY_TEXT_SIZE : nav->display.profile == ORACLES_PROFILE_FAITHFUL ? ORACLES_DISPLAY_TEXT_SPEED
+                                         : ORACLES_DISPLAY_LETTERS));
     nav->row = row;
 }
 
@@ -55,9 +61,9 @@ static void lay_out(const OraclesHomeNav *nav, OraclesUiDisplayTexts *t, Oracles
 /* The rows, their labels and choices, and the preview; 4:3's texts by their line boxes too. */
 static void page_probes(const char *frame, const OraclesUiDisplayLayout *l, int four_three)
 {
-    const OraclesUiOptionLayout *options[3] = { l->text, l->text_box, l->text_size };
+    const OraclesUiOptionLayout *options[ORACLES_DISPLAY_TEXT_ROWS] = { l->text, l->text_box, l->text_size, l->text_speed };
     char what[48];
-    for (unsigned i = 0; i < 3u; i++) {
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) {
         const unsigned row = ORACLES_DISPLAY_LETTERS + i;
         snprintf(what, sizeof what, "%s row", ids[i]); layout_box(frame, what, &l->rows[row]);
         snprintf(what, sizeof what, "%s grid", ids[i]); layout_near(frame, what, "y", l->rows[row].y);
@@ -111,15 +117,29 @@ static void layouts(void)
     CHECK(!strcmp(t.section, "Display \xe2\x80\xba Text") && t.text_page && !t.later);
     CHECK(!strcmp(t.preview.label, "Far view, 480\xc3\x97" "270 \xc2\xb7 box 208\xc3\x97" "40") && !t.preview.note[0]);
     page_probes("26a", &l, 0);
-    for (unsigned i = 0; i < 3u; i++) CHECK((l.text_notes[i].h == 0.0f) == (i > 0u) && oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) CHECK((l.text_notes[i].h == 0.0f) == (i > 0u) && oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
     CHECK(!strcmp(t.text_notes[0], "Savestates taken with Compact need Compact."));   /* as Continuous transitions says of its own */
 
-    /* 26h: in Faithful, the rows dimmed and inert, the game's band and box. */
+    /* 31a: the view Medium, Instant chosen and highlighted. */
+    nav.display.view = 1;
+    nav.display.text_speed = 1;
+    nav.row = ORACLES_DISPLAY_TEXT_SPEED;
+    lay_out(&nav, &t, &l);
+    page_probes("31a", &l, 0);
+    layout_text("31a", "preview label text", &l.preview_label);
+    CHECK(!t.text_notes[3][0] && !strcmp(t.text_explanations[3], "Classic: letter by letter, at the speed chosen on the file screen. Instant: each line "
+                                                                  "appears whole; A still turns the page."));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SPEED, 0) == ORACLES_HOME_STORE && nav.display.text_speed == 0);
+    nav.display.view = 2;
+
+    /* 26h: in Faithful, the rows dimmed and inert but Text speed, "Enhanced only." under them, the game's band and box. */
     nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    nav.row = ORACLES_DISPLAY_TEXT_BOX;
     lay_out(&nav, &t, &l);
     CHECK(!strcmp(t.preview.label, "Faithful: the game's box, 144\xc3\x97" "40"));
     page_probes("26h", &l, 0);
-    for (unsigned i = 0; i < 3u; i++) CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
+    for (unsigned i = 0; i < 3u; i++) CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i) && !strcmp(t.text_notes[i], "Enhanced only."));
+    CHECK(oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SPEED) && !t.text_notes[3][0] && oracles_display_text_link_applies(&nav));
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text_box == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STAY && nav.display.text == 1);
 
@@ -138,6 +158,23 @@ static void layouts(void)
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text_box == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STAY && nav.display.text == 1);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 2) == ORACLES_HOME_STORE && nav.display.text_size == 2);
+    /* Text speed takes the game when it resumes: live, without a note (31g, Medium, Instant highlighted). */
+    nav.display.text_size = 0;
+    nav.display.view = 1;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SPEED, 1) == ORACLES_HOME_STORE && nav.display.text_speed == 1);
+    lay_out(&nav, &t, &l);
+    page_probes("31g", &l, 0);
+    layout_text("31g", "text note", &l.text_notes[0]);
+    layout_text("31g", "box note", &l.text_notes[1]);
+    CHECK(!t.text_notes[3][0]);
+    /* A game whose profile has no instant text (an unrecognised ROM): dimmed, saying why. */
+    nav.text_speed_refused = 1;
+    lay_out(&nav, &t, &l);
+    CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SPEED) && !strcmp(t.text_notes[3], "Needs an original ROM."));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SPEED, 0) == ORACLES_HOME_STAY && nav.display.text_speed == 1);
+    nav.text_speed_refused = 0;
+    nav.display.text_size = 2;
+    nav.display.view = 2;
     /* By the running game's profile: one in Faithful takes no size. */
     nav.playing = ORACLES_PROFILE_FAITHFUL;
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 0) == ORACLES_HOME_STAY && nav.display.text_size == 2);
@@ -161,16 +198,28 @@ static void layouts(void)
           && !oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SIZE));
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 1) == ORACLES_HOME_STAY && nav.display.text_size == 0);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STORE && nav.display.text == 0);
-    /* Its link sums up what it takes: the game's box at its size, whatever Text box and Text size say. */
+    /* Its link sums up what applies: its text, whatever Text box and Text size say, and Instant once chosen. */
     nav.display.text_box = 1;
     nav.display.text_size = 2;
     char fan_summary[64];
     oracles_display_text_summary(&nav, fan_summary, sizeof fan_summary);
-    CHECK(!strcmp(fan_summary, "Classic \xc2\xb7 Standard \xc2\xb7 Normal"));
+    CHECK(!strcmp(fan_summary, "Classic"));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SPEED, 1) == ORACLES_HOME_STORE && nav.display.text_speed == 1);
+    oracles_display_text_summary(&nav, fan_summary, sizeof fan_summary);
+    CHECK(!strcmp(fan_summary, "Classic \xc2\xb7 Instant"));
+    /* 31f: Text speed highlighted, Compact chosen. */
+    nav.display.text = 1;
+    nav.display.text_box = nav.display.text_size = 0;
+    nav.row = ORACLES_DISPLAY_TEXT_SPEED;
+    lay_out(&nav, &t, &l);
+    page_probes("31f", &l, 0);
+    layout_text("31f", "box note", &l.text_notes[1]);
+    layout_text("31f", "tsize note", &l.text_notes[2]);
 
     /* 26b, 26c: in 4:3, the preview at the top of the rows, its label and note at its right; the highlighted row's
      * explanation in the header. */
-    static const struct { const char *frame; int w, h, android; } frames[] = { { "26b", 1440, 1080, 0 }, { "26c", 640, 480, 1 } };
+    static const struct { const char *frame; int w, h, android, speed; } frames[] = { { "26b", 1440, 1080, 0, 0 }, { "26c", 640, 480, 1, 0 },
+                                                                                      { "31c", 1440, 1080, 0, 1 }, { "31d", 640, 480, 1, 1 } };
     for (size_t f = 0; f < sizeof frames / sizeof frames[0]; f++) {
         ages(&nav, ORACLES_UI_LAYOUT_4_3, frames[f].w, frames[f].h);
         if (frames[f].android) {
@@ -178,12 +227,27 @@ static void layouts(void)
             nav.display.window = 1;
             oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
         }
-        text_page(&nav, ORACLES_DISPLAY_TEXT_BOX);
+        text_page(&nav, frames[f].speed ? ORACLES_DISPLAY_TEXT_SPEED : ORACLES_DISPLAY_TEXT_BOX);
+        if (frames[f].speed) nav.display.text_speed = 1, nav.display.view = 1;
         lay_out(&nav, &t, &l);
-        CHECK(!strcmp(t.help, "Wide: longer lines, fewer boxes.") && !t.help_note);
+        CHECK(!strcmp(t.help, frames[f].speed ? "Instant: each line appears whole." : "Wide: longer lines, fewer boxes.") && !t.help_note);
         page_probes(frames[f].frame, &l, 1);
         layout_line(frames[f].frame, "help text", &l.help);
     }
+    /* 31e 4:3: in Faithful, Text speed alone live, highlighted; on Text, "Enhanced only." on the help's note line. */
+    ages(&nav, ORACLES_UI_LAYOUT_4_3, 1440, 1080);
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    nav.display.text_speed = 1;
+    text_page(&nav, ORACLES_DISPLAY_TEXT_SPEED);
+    lay_out(&nav, &t, &l);
+    page_probes("31e 4:3", &l, 1);
+    layout_line("31e 4:3", "help text", &l.help);
+    nav.row = ORACLES_DISPLAY_LETTERS;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.help_note, "Enhanced only."));
+    page_probes("31e text 4:3", &l, 1);
+    layout_line("31e text 4:3", "help text", &l.help);
+    layout_line("31e text 4:3", "help note text", &l.help_note);
     /* 26g 4:3: from the pause on Text, its reason on the help's note line. */
     ages(&nav, ORACLES_UI_LAYOUT_4_3, 1440, 1080);
     nav.in_game = 1;
@@ -228,7 +292,7 @@ static void link(void)
     nav.display.text = nav.display.text_box = 1;
     nav.row = ORACLES_DISPLAY_TEXT;
     lay_out(&nav, &t, &l);
-    CHECK(!strcmp(t.help, "Letters, box and size, with a preview.") && !strcmp(t.help_note, "Compact \xc2\xb7 Wide \xc2\xb7 Normal."));
+    CHECK(!strcmp(t.help, "Letters, box, size and speed, with a preview.") && !strcmp(t.help_note, "Compact \xc2\xb7 Wide \xc2\xb7 Normal."));
     layout_line("text link 4:3", "Text", &l.labels[ORACLES_DISPLAY_TEXT].lines[0]);
     layout_box("text link 4:3", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
     layout_box("text link 4:3", "link", &l.text_link);
@@ -239,9 +303,37 @@ static void link(void)
     layout_box("text link 4:3", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
     layout_line("text link 4:3", "help text", &l.help);
     layout_line("text link 4:3", "help note text", &l.help_note);
+    /* 31h 4:3: Instant chosen, named last. */
+    nav.display.text_speed = 1;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.help_note, "Compact \xc2\xb7 Wide \xc2\xb7 Normal \xc2\xb7 Instant."));
+    layout_box("31h 4:3", "link", &l.text_link);
+    layout_line("31h 4:3", "summary text", &l.text_summary);
+    layout_line("31h 4:3", "help note text", &l.help_note);
+    layout_line("31h 4:3", "help text", &l.help);
+    /* 31h and 31e: in 16:9, the same; in Faithful the link live, "As the game · Instant". */
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.display.text = nav.display.text_box = 1;
+    nav.display.text_speed = 1;
+    nav.row = ORACLES_DISPLAY_TEXT;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.text_summary, "Compact \xc2\xb7 Wide \xc2\xb7 Normal \xc2\xb7 Instant"));
+    layout_box("31h", "link", &l.text_link);
+    layout_text("31h", "summary text", &l.text_summary);
+    layout_box("31h", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    layout_box("31h", "panel", &l.panel);
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.text_summary, "As the game \xc2\xb7 Instant") && oracles_display_text_link_applies(&nav));
+    layout_box("31e", "link", &l.text_link);
+    layout_text("31e", "summary text", &l.text_summary);
+    layout_box("31e", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    nav.display.text_speed = 0;
+    oracles_display_text_summary(&nav, t.text_summary, sizeof t.text_summary);
+    CHECK(!strcmp(t.text_summary, "As the game"));
 }
 
-/* The page's keys: up and down wrap round its three rows, left and right change the highlighted one, OK takes its next
+/* The page's keys: up and down wrap round its four rows, left and right change the highlighted one, OK takes its next
  * choice; Back returns to Display on the link, and Advanced's Back on Advanced.  The link opens in Faithful too, and from
  * the pause; --text-box holds its row for the run. */
 static void keys(void)
@@ -253,7 +345,11 @@ static void keys(void)
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.text_page && nav.row == ORACLES_DISPLAY_LETTERS);
     CHECK(oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT_SIZE) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT)
           && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_CORE));
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_SPEED);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.text_speed == 1);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.text_speed == 0);
     CHECK(oracles_display_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_SPEED);
     CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_LETTERS);
     CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.text == 1);
     CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_BOX);
@@ -277,11 +373,11 @@ static void keys(void)
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, -1) == ORACLES_HOME_STAY && nav.text_page);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 2) == ORACLES_HOME_STORE && nav.display.text_size == 2 && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CORE, 1) == ORACLES_HOME_STAY && nav.display.core == 0);
-    /* In Faithful the link opens all the same, its rows inert. */
+    /* In Faithful the link opens on Text speed, the one row that changes there. */
     oracles_display_act(&nav, ORACLES_HOME_BACK);
     nav.display.profile = ORACLES_PROFILE_FAITHFUL;
     CHECK(!oracles_display_text_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.text_page
-          && nav.row == ORACLES_DISPLAY_LETTERS);
+          && nav.row == ORACLES_DISPLAY_TEXT_SPEED);
     nav.display.profile = ORACLES_PROFILE_ENHANCED;
     /* From the pause the page opens on Text size, the one row that changes there. */
     oracles_display_act(&nav, ORACLES_HOME_BACK);

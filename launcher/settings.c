@@ -279,6 +279,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->compact_text = 0;   /* the game's own fixed width */
     s->text_box_wide = 0;  /* the game's own box */
     s->text_size = 0;   /* the game's own size */
+    s->text_instant = 0;   /* the game's own pace */
     s->view = 2;   /* far: the view drawn back, as Enhanced was before the levels */
     s->aspect = ORACLES_ASPECT_AUTO;
     s->far_fixed = 0;   /* fitted to the screen */
@@ -305,7 +306,7 @@ void oracles_settings_defaults(oracles_settings *s)
     s->first_run = 0;
 }
 
-/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `text_box=`, `text_size=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
+/* `rom_<game>=`, `patch_<fan game>=`, `eu_rom_<game>=`, `language_<game>=`, `language_<fan game>=`, `profile=`, `transitions=`, `swim_hold=`, `text=`, `text_box=`, `text_size=`, `text_speed=`, `view=`, `aspect=`, `far=`, `ghosts=`, `menus=`, `hud=`, `core=`, `item_hotkeys_<game>=`, `mods_<game>=`, `cheats_<game>=`, `window_scale=`, `scaling=`, `screen_margin=`, `quality_hint=`, `menu_toast=`, `update_check=` and `launcher_window=`: 1 when the
  * line was one of them.  A value the launcher does not know leaves the key's default. */
 static const char *const text_size_names[3] = { "normal", "large", "xlarge" };
 
@@ -329,6 +330,10 @@ static int load_launcher(oracles_settings *s, const char *name, const char *valu
     }
     if (!strcmp(name, "text_size")) {
         for (int size = 0; size < 3; size++) if (!strcmp(value, text_size_names[size])) s->text_size = size;
+        return 1;
+    }
+    if (!strcmp(name, "text_speed")) {
+        if (!strcmp(value, "classic") || !strcmp(value, "instant")) s->text_instant = !strcmp(value, "instant");
         return 1;
     }
     if (!strcmp(name, "text_box")) {
@@ -577,6 +582,9 @@ int oracles_settings_store(const oracles_settings *s)
     fprintf(f, "# The text box's size: normal, large (three halves, in whole screen pixels) or xlarge (twice as large), where the\n"
                "# view holds it, else the next size down, in enhanced; at once, from the pause too.\n");
     fprintf(f, "text_size=%s\n", text_size_names[s->text_size >= 0 && s->text_size < 3 ? s->text_size : 0]);
+    fprintf(f, "# The text's speed: classic (letter by letter, at the speed chosen on the file screen) or instant (each line\n"
+               "# whole; A still turns the page), in both profiles; from the pause too, when the game resumes.\n");
+    fprintf(f, "text_speed=%s\n", s->text_instant ? "instant" : "classic");
     if (s->window_scale) fprintf(f, "window_scale=%d\n", s->window_scale); else fprintf(f, "window_scale=full\n");
     fprintf(f, "# The game in fullscreen: sharp (its largest whole scale, every pixel exact) or fill (the whole screen in its\n"
                "# proportions, sampled for pixel art); a window keeps its whole scales.\n");

@@ -147,7 +147,7 @@ typedef struct OraclesUiDisplayTexts {
                                            * the screen margin, the Text link */
     char text_summary[64];                /* beside the Text link: "Compact · Wide · Normal" */
     /* Display › Text: each row's explanation and note (empty: none), Text, Text box, Text size; the preview. */
-    const char *text_explanations[3], *text_notes[3];
+    const char *text_explanations[ORACLES_DISPLAY_TEXT_ROWS], *text_notes[ORACLES_DISPLAY_TEXT_ROWS];
     OraclesDisplayTextPreview preview;
     const char *view_explanation;
     /* Under View's explanation, Core's, the transitions', Vsync's and the workers': their notes, from a game why they are
@@ -177,7 +177,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine diagram_label;
     OraclesUiBox panel;
     /* Profile, Quality, Window, View, HUD, Text, Color correction, or Core, Continuous transitions, Vsync, Neighbour workers,
-     * Scaling, Camera, Screen margin, or Text, Text box, Text size; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
+     * Scaling, Camera, Screen margin, or Text, Text box, Text size, Text speed; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
      * framed button beside it in 4:3. */
     OraclesUiWrapped labels[ORACLES_DISPLAY_ROWS];
     OraclesUiBox rows[ORACLES_DISPLAY_ROWS];         /* each row's highlight, the pointer's target */
@@ -204,11 +204,11 @@ typedef struct OraclesUiDisplayLayout {
     /* The Text link: its summary and its arrow at the right of its row, both in `text_link`, the summary's box. */
     OraclesUiLine text_summary;
     OraclesUiBox text_arrow, text_link;
-    /* Display › Text: Text's, Text box's and Text size's choices, their explanations (16:9, two lines kept) and notes
-     * (16:9, under them; 4:3 says them on the help's note line). */
-    OraclesUiOptionLayout text[2], text_box[2], text_size[ORACLES_DISPLAY_TEXT_SIZES];
-    OraclesUiWrapped text_explanations[3];
-    OraclesUiLine text_notes[3];
+    /* Display › Text: Text's, Text box's, Text size's and Text speed's choices, their explanations (16:9, two lines kept)
+     * and notes (16:9, under them; 4:3 says them on the help's note line). */
+    OraclesUiOptionLayout text[2], text_box[2], text_size[ORACLES_DISPLAY_TEXT_SIZES], text_speed[2];
+    OraclesUiWrapped text_explanations[ORACLES_DISPLAY_TEXT_ROWS];
+    OraclesUiLine text_notes[ORACLES_DISPLAY_TEXT_ROWS];
     /* Its preview: all of it (16:9: the frame, its label and its note under it; 4:3: the frame, its label and note at its
      * right, at its bottom), the band's frame, the status bar's band in it, the box and its arrow (a triangle pointing
      * down in this box), the box's text from (text_x, text_y) at `pixel` scene pixels a game pixel. */

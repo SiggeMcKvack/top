@@ -33,7 +33,8 @@ int harness_usage(void)
                     "                       [--swim-hold]   (the swim's strokes from a held button: the mermaid suit's direction, the flippers' A; on by itself for a route recorded with it)\n"
                     "                       [--cheats no-damage,ammo,rupees]   (the cheats, Ages and Seasons: Link loses no heart, seeds and bombs are not used up, buying costs nothing\n"
                     "                                                (a mod's game.pay still charges); with those a route was recorded with, which are on by themselves)\n"
-                    "                       [--text classic|compact]   (the text box's lines in the font's own widths, Oracles, fan games, with --enhanced-check alone; on by itself for a route recorded with it)\n");
+                    "                       [--text classic|compact]   (the text box's lines in the font's own widths, Oracles, fan games, with --enhanced-check alone; on by itself for a route recorded with it)\n"
+                    "                       [--text-speed classic|instant]   (each line of the text box whole, as a press of A at its start shows it, Oracles, fan games, Faithful and Enhanced; on by itself for a route recorded with it)\n");
     fprintf(stderr,
                     "                       [--text-box-check]   (with --enhanced-check, Ages and Seasons: the text box drawn by the host each frame, at the game's width, against the core's image; nothing shown changes;\n"
                     "                                             with --text-box wide, the wide box against its layout)\n"
@@ -161,6 +162,11 @@ int harness_parse_options(int argc, char **argv, harness_options *o)
             const char *v = argv[++i];
             if (strcmp(v, "classic") != 0 && strcmp(v, "compact") != 0) { fprintf(stderr, "harness: --text is classic or compact, not %s\n", v); return -1; }
             o->compact_text = !strcmp(v, "compact");
+        }
+        else if (!strcmp(argv[i], "--text-speed") && i + 1 < argc) {
+            const char *v = argv[++i];
+            if (strcmp(v, "classic") != 0 && strcmp(v, "instant") != 0) { fprintf(stderr, "harness: --text-speed is classic or instant, not %s\n", v); return -1; }
+            o->text_instant = !strcmp(v, "instant");
         }
         else if (!strcmp(argv[i], "--text-box-check")) o->text_box_check = 1;
         else if (!strcmp(argv[i], "--text-size") && i + 1 < argc) {

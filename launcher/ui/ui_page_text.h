@@ -1,15 +1,18 @@
 /* Display › Text, without SDL: the page Display's Text link opens in place of Display's own rows, as Advanced does, with
  * a preview of the text box beside them (16:9, under the title) or above them (4:3).
  *
- * Three rows: Text, Classic (the game's fixed-width letters) or Compact (each letter its own width), settings.txt's
+ * Four rows: Text, Classic (the game's fixed-width letters) or Compact (each letter its own width), settings.txt's
  * text=; Text box, Standard (the game's) or Wide (the port's, 192 pixels of text), text_box=; Text size, Normal, Large
- * (about half as big again, in whole screen pixels) or Very large (twice), text_size=normal|large|xlarge.  They belong
- * to Enhanced: in Faithful the rows are dimmed and inert, and Display's Text link dimmed, opening all the same.  A fan
- * game has its compact text in the game's box: its Text is live, its Text box and Text size dimmed and inert, "Ages and
- * Seasons only for now.".  From the pause, a row acts at once or not at all: Text and Text box, which a game lays its
- * texts out for at its start, are dimmed and inert there, "Change it from the home screen."; Text size applies at once,
- * by the running game's profile.  A row the command line gave for the
- * run (--text, --text-box, --text-size) is dimmed and inert.  Up and down move through the rows and wrap, left and right
+ * (about half as big again, in whole screen pixels) or Very large (twice), text_size=normal|large|xlarge; Text speed,
+ * Classic (letter by letter, at the file screen's speed) or Instant (each line whole), text_speed=classic|instant.  The
+ * first three belong to Enhanced: in Faithful they are dimmed and inert, "Enhanced only."; Text speed changes the game's
+ * pace, not its picture, and is live in either profile, for every game, so that Display's Text link is dimmed only
+ * where none of the rows is.  A fan game has its compact text in the game's box: its Text is live, its Text box and
+ * Text size dimmed and inert, "Ages and Seasons only for now.".  From the pause, a row acts at once or not at all: Text
+ * and Text box, which a game lays its texts out for at its start, are dimmed and inert there, "Change it from the home
+ * screen."; Text size applies at once, by the running game's profile, Text speed when the game resumes, dimmed for a
+ * game whose profile has no instant text.  A row the command line gave for the run (--text, --text-box, --text-size)
+ * is dimmed and inert.  Up and down move through the rows and wrap, left and right
  * change the highlighted one, OK takes its next choice; Back returns to Display, on Text.
  *
  * The preview: the band of the view the game will play in (View's size in the screen's shape; Faithful's 160x144), at
@@ -32,21 +35,30 @@ extern const char *const oracles_display_text_choices[2];       /* "Classic", "C
 extern const char *const oracles_display_text_box_choices[2];   /* "Standard", "Wide": text_box= standard, wide */
 #define ORACLES_DISPLAY_TEXT_SIZES 3
 extern const char *const oracles_display_text_size_choices[ORACLES_DISPLAY_TEXT_SIZES];   /* "Normal", "Large", "Very large" */
+extern const char *const oracles_display_text_speed_choices[2];   /* "Classic", "Instant": text_speed= classic, instant */
+#define ORACLES_DISPLAY_TEXT_ROWS 4u   /* Text, Text box, Text size, Text speed */
+/* A Text row's choices and their count. */
+const char *const *oracles_display_text_row_choices(unsigned row, unsigned *count);
 
-/* The Text link applies in Enhanced chosen: dimmed in Faithful. */
+/* Text, Text box and Text size apply in Enhanced chosen. */
 int oracles_display_text_applies(const OraclesHomeNav *nav);
-/* A Text row changes (ORACLES_DISPLAY_LETTERS, _TEXT_BOX, _TEXT_SIZE): in Enhanced (Text size, from the pause, the
- * running game's), an Oracle's page for the box and the size, Text and Text box not from the pause, and none the command
- * line gave. */
+/* The Text link applies where one of its rows does: Text speed's everywhere but in the pause of a game whose profile
+ * has no instant text. */
+int oracles_display_text_link_applies(const OraclesHomeNav *nav);
+/* A Text row changes (ORACLES_DISPLAY_LETTERS, _TEXT_BOX, _TEXT_SIZE, _TEXT_SPEED): in Enhanced (Text size, from the
+ * pause, the running game's), an Oracle's page for the box and the size, Text and Text box not from the pause, and none
+ * the command line gave; Text speed in either profile, but in the pause of a game that has no instant text. */
 int oracles_display_text_row_live(const OraclesHomeNav *nav, unsigned row);
-/* Beside the link: "Compact · Wide · Normal". */
+/* Beside the link, what applies: "Compact · Wide · Normal", "Compact" for a fan game, "As the game" in Faithful, and
+ * " · Instant" after it when Instant is chosen. */
 void oracles_display_text_summary(const OraclesHomeNav *nav, char *out, size_t capacity);
 /* A Text row's explanation, 16:9's beside its choices or 4:3's shorter one in the header; the link's
- * ("Letters, box and size, with a preview."). */
+ * ("Letters, box, size and speed, with a preview."). */
 const char *oracles_display_text_explanation(unsigned row, int four_three);
-/* A Text row's note, under its explanation (16:9) or on the help's note line (4:3), empty for none: a fan game's reason,
- * "Change it from the home screen." from the pause, Text's savestates ("Savestates taken with Compact need Compact."),
- * Text size's fallback in the view chosen ("Normal in this view: no room for a larger box."). */
+/* A Text row's note, under its explanation (16:9) or on the help's note line (4:3), empty for none: "Enhanced only." in
+ * Faithful, a fan game's reason, "Change it from the home screen." from the pause, Text's savestates ("Savestates taken
+ * with Compact need Compact."), Text size's fallback in the view chosen ("Normal in this view: no room for a larger
+ * box."), Text speed's in a pause that refuses it ("Needs an original ROM."). */
 const char *oracles_display_text_note(const OraclesHomeNav *nav, unsigned row);
 
 /* The preview, in the game's pixels. */

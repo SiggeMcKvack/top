@@ -52,6 +52,8 @@ typedef struct OraclesSessionOptions {
                                       * 0 for a game the home screen starts: settings.txt's text= */
     int text_size;                   /* --text-size: 1 normal, 2 large, 3 xlarge (the text box three halves or twice as large where the view holds
                                       * it); 0: settings.txt's text_size= */
+    int text_instant;                /* --text-speed: 1 classic, 2 instant (each line of the text box whole, in either profile); 0 for a game
+                                      * the home screen starts: settings.txt's text_speed= */
     int text_box_wide;               /* --text-box: 1 standard, 2 wide (the host's box, 192 pixels of text, in Enhanced alone); 0 for a game
                                       * the home screen starts: settings.txt's text_box= */
     int neighbour_objects;           /* Enhanced shows a neighbour's objects */
@@ -100,12 +102,13 @@ int oracles_session_screen_margin(int option, const oracles_settings *settings);
  * had it when the game last took it, Scaling's Fill, the HUD (OraclesEnhancedHud, -1 without the Enhanced view, which alone
  * draws it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
  * took them, the swim's hold (-1 where the game's profile has none), the item hotkeys' mode (an OraclesHotkeysMode) of
- * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none).  The window is not among
+ * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none), the instant text.  The window is not among
  * them: the pause applies it when its row is chosen (OraclesPauseSession's window_chosen). */
 typedef struct OraclesSessionApplied {
     int colour, fill, hud, margin;
     int text_size;   /* Text size, 0 normal, 1 large, 2 xlarge (-1 without the Enhanced view, or for a fan game, which keeps the game's box) */
     int swim_hold, hotkeys_game, hotkeys;
+    int text_instant;   /* the instant text (-1 where the game's profile has none), as the settings had it when the game last took it */
 } OraclesSessionApplied;
 #define ORACLES_SESSION_CHANGED_COLOUR 1u
 #define ORACLES_SESSION_CHANGED_FILL 2u
@@ -114,6 +117,7 @@ typedef struct OraclesSessionApplied {
 #define ORACLES_SESSION_CHANGED_SWIM 16u
 #define ORACLES_SESSION_CHANGED_HOTKEYS 32u
 #define ORACLES_SESSION_CHANGED_TEXT_SIZE 64u
+#define ORACLES_SESSION_CHANGED_TEXT_SPEED 128u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
  * gives one (oracles_session_screen_margin), and the text size --text-size's when `text_size_option` gives one (the

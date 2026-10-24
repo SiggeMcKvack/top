@@ -141,7 +141,7 @@ static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0 };
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, -1, -1, 0, -1 };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.hud = !s.hud;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
@@ -202,7 +202,7 @@ static void pause_live_changes(void)
     oracles_settings s;
     oracles_settings_defaults(&s);
     OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
-                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS] };
+                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS], s.text_instant };
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.swim_hold = !s.swim_hold;
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
@@ -214,6 +214,13 @@ static void pause_live_changes(void)
     s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_OFF;
     s.window_scale = 3;
     CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_OFF);
+    /* The text speed, for every game whose profile has the instant text, from the frame the game resumes on. */
+    s.text_instant = 1;
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SPEED && applied.text_instant == 1);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
+    s.text_instant = 0;
+    applied.text_instant = -1;   /* a game without it (an unrecognised ROM): nothing */
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.text_instant == -1);
     /* A game whose profile has neither the hold nor the item hotkeys (a fan game), without a window to change: nothing. */
     applied.swim_hold = applied.hotkeys_game = -1;
     s.swim_hold = !s.swim_hold;
@@ -286,6 +293,7 @@ int main(int argc, char **argv)
     CHECK(!written.compact_text);   /* the game's fixed width */
     CHECK(!written.text_box_wide);   /* the game's box */
     CHECK(written.text_size == 0);   /* the game's size */
+    CHECK(!written.text_instant);   /* the game's pace */
     CHECK(!written.cheats[ORACLES_SETTINGS_AGES] && !written.cheats[ORACLES_SETTINGS_SEASONS]);   /* the games as they play */
     CHECK(!strcmp(written.vsync, "auto"));
     CHECK(!strcmp(written.menu_pad, "leftstick"));   /* the left stick's click opens the pause menu */
@@ -331,6 +339,7 @@ int main(int argc, char **argv)
     written.compact_text = 1;
     written.text_box_wide = 1;
     written.text_size = 2;
+    written.text_instant = 1;
     written.cheats[ORACLES_SETTINGS_SEASONS] = ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES;
     written.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_EQUIP;
     written.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
@@ -365,6 +374,7 @@ int main(int argc, char **argv)
     CHECK(!strcmp(read_back.menu_pad, "righttrigger") && read_back.menu_toast_shown);
     CHECK(!strcmp(read_back.hotkey_bind_b, "Right Shift") && !strcmp(read_back.hotkey_bind_a, "Left Ctrl"));
     CHECK(read_back.transitions == 0 && read_back.swim_hold == 1 && read_back.update_check == 0 && read_back.compact_text == 1 && read_back.text_box_wide == 1 && read_back.text_size == 2);
+    CHECK(read_back.text_instant == 1);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == 0 && read_back.cheats[ORACLES_SETTINGS_SEASONS] == (ORACLES_CHEAT_NO_DAMAGE | ORACLES_CHEAT_RUPEES));
     CHECK(read_back.item_hotkeys[ORACLES_SETTINGS_AGES] == ORACLES_HOTKEYS_EQUIP && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_USE);
     CHECK(read_back.window_scale == 0);
@@ -413,9 +423,11 @@ int main(int argc, char **argv)
         if (!strcmp(line, "cheats_seasons=no-damage,rupees\n")) seen |= 2097152;
         if (!strcmp(line, "update_check=off\n")) seen |= 4194304;
         if (!strcmp(line, "text=compact\n")) seen |= 8388608;
+        if (!strcmp(line, "text_speed=instant\n")) seen |= 16777216;
     }
     if (f) fclose(f);
-    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072 | 262144 | 524288 | 1048576 | 2097152 | 4194304 | 8388608));   /* and not 128: no per-game profile or transitions */
+    CHECK(seen == (127 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 | 32768 | 65536 | 131072 | 262144 | 524288 | 1048576 | 2097152 | 4194304 | 8388608
+                   | 16777216));   /* and not 128: no per-game profile or transitions */
 
     /* A file of an earlier version, without the keys: the defaults; the keys it has hold, colour correction off. */
     write_text(path, "colour_correction=0\nvsync=off\n");
@@ -425,7 +437,7 @@ int main(int argc, char **argv)
           && read_back.patch[ORACLES_HOME_FAN_TEMPLE][0] == 0 && read_back.patch[ORACLES_HOME_FAN_KINOMI][0] == 0 && read_back.profile == ORACLES_PROFILE_ENHANCED);
     CHECK(read_back.eu_rom[ORACLES_SETTINGS_AGES][0] == 0 && read_back.language[ORACLES_SETTINGS_AGES] == 0 && read_back.language[ORACLES_SETTINGS_SEASONS] == 0);
     CHECK(read_back.fan_language[ORACLES_HOME_FAN_MOONRISE] == 0 && read_back.fan_language[ORACLES_HOME_FAN_TEMPLE] == 0);
-    CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0 && read_back.compact_text == 0);
+    CHECK(read_back.transitions == 1 && read_back.window_scale == 0 && read_back.swim_hold == 0 && read_back.compact_text == 0 && read_back.text_instant == 0);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == 0 && read_back.cheats[ORACLES_SETTINGS_SEASONS] == 0);
     CHECK(read_back.launcher_width == 1280 && read_back.launcher_height == 720);
     CHECK(!strcmp(read_back.menu_pad, "leftstick") && !read_back.menu_toast_shown && read_back.update_check == 1);
@@ -513,7 +525,7 @@ int main(int argc, char **argv)
     /* Values it does not know leave the default; an empty ROM clears it. */
     write_text(path, "profile=widescreen\nlauncher_window=big\nrom_seasons=\ntransitions=yes\nswim_hold=1\nupdate_check=0\ntext=narrow\nitem_hotkeys_seasons=always\nwindow_scale=5\n"
                      "eu_rom_ages=\nlanguage_ages=ja\nlanguage_seasons=de\nlanguage_temple=xx\nlanguage_kinomi=it\nlanguage_moonrise=en-us\n"
-                     "cheats_ages=ammo,speed-150\ncheats_seasons=rupees,ammo\n");
+                     "cheats_ages=ammo,speed-150\ncheats_seasons=rupees,ammo\ntext_speed=fast\n");
     oracles_settings_defaults(&read_back);
     snprintf(read_back.rom[1], sizeof read_back.rom[1], "old.gbc");
     snprintf(read_back.eu_rom[0], sizeof read_back.eu_rom[0], "old.gbc");
@@ -526,6 +538,7 @@ int main(int argc, char **argv)
     CHECK(read_back.transitions == 1 && read_back.swim_hold == 0 && read_back.update_check == 1 && read_back.compact_text == 0 && read_back.item_hotkeys[ORACLES_SETTINGS_SEASONS] == ORACLES_HOTKEYS_OFF);
     CHECK(read_back.cheats[ORACLES_SETTINGS_AGES] == ORACLES_CHEAT_AMMO && read_back.cheats[ORACLES_SETTINGS_SEASONS] == (ORACLES_CHEAT_AMMO | ORACLES_CHEAT_RUPEES));   /* a cheat unknown: dropped */
     CHECK(read_back.window_scale == 0);
+    CHECK(read_back.text_instant == 0);   /* a later version's speed: the default */
     /* Display's View: far at the first opening, a level written and read by its name, an unknown name the default. */
     oracles_settings_defaults(&read_back);
     CHECK(read_back.view == 2);

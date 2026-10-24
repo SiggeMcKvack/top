@@ -223,6 +223,8 @@ typedef struct OraclesHomeDisplay {
                                  * and Seasons; not from a game */
     int text_size;              /* Text size: 0 Normal (the default), 1 Large, 2 Very large, the settings' text_size=; in Enhanced
                                  * only, Ages and Seasons; from a game too, where it applies at once */
+    int text_speed;             /* Text speed: 0 Classic (the default), 1 Instant, the settings' text_speed=; in either profile, every
+                                 * game; from a game too, where it applies when the game resumes */
     int text_fixed;             /* --text gave it for the run: the row shows it, dimmed and inert, and it is never stored */
     int text_box_fixed;         /* --text-box gave it, the same */
     int text_size_fixed;        /* --text-size gave it, the same */
@@ -325,8 +327,8 @@ typedef struct OraclesHomeNav {
     unsigned cheats_changed;
     /* In a game: its profile has no cheats (an unrecognised ROM, a fan game): the pause has no Cheats.  An Oracle's
      * whose profile has no swim's hold, no item hotkeys (an unrecognised ROM): Controls' Swimming, its Item hotkeys,
-     * dimmed and inert, saying why. */
-    int cheats_refused, swim_refused, hotkeys_refused;
+     * dimmed and inert, saying why; a game's whose profile has no instant text, Display › Text's Text speed. */
+    int cheats_refused, swim_refused, hotkeys_refused, text_speed_refused;
     /* In a game (the pause menu, and Controls and Display opened from it): the running game's profile, the pause
      * menu reduced in a 16:9 window under 960 pixels wide (oracles_ui_layout_narrow), and Load state's note
      * ("from 22:14"), empty while there is no savestate: Load state is then greyed, "No savestate yet". */

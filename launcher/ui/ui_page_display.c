@@ -21,7 +21,7 @@ static const char *const profile_notes[ORACLES_PROFILES] = {
 
 const char *const oracles_display_labels[ORACLES_DISPLAY_ROWS] = { "Profile", "Quality", "Window", "View", "HUD", "Text", "Color correction", "Advanced", "Core",
                                                                    "Continuous transitions", "Vsync", "Neighbor workers", "Scaling", "Camera", "Screen margin",
-                                                                   "Text", "Text box", "Text size" };
+                                                                   "Text", "Text box", "Text size", "Text speed" };
 const char *const oracles_display_view_names[3] = { "Near", "Medium", "Far" };
 const char *const oracles_display_colour_choices[2] = { "Off", "On" };
 const char *const oracles_display_hud_choices[3] = { "Original", "Full width", "Wide layout" };
@@ -434,7 +434,8 @@ const char *oracles_display_explanation(unsigned row)
         case ORACLES_DISPLAY_TEXT:
         case ORACLES_DISPLAY_LETTERS:
         case ORACLES_DISPLAY_TEXT_BOX:
-        case ORACLES_DISPLAY_TEXT_SIZE: return oracles_display_text_explanation(row, 0);
+        case ORACLES_DISPLAY_TEXT_SIZE:
+        case ORACLES_DISPLAY_TEXT_SPEED: return oracles_display_text_explanation(row, 0);
         case ORACLES_DISPLAY_TRANSITIONS: return "Rooms scroll into one another instead of stopping at each edge, Link swimming too.";
 #ifdef __ANDROID__
         case ORACLES_DISPLAY_VSYNC: return "Auto: off on Android, which composes the frames itself.";
@@ -464,12 +465,12 @@ const char *oracles_display_explanation(unsigned row)
 static OraclesHomeCommand display_set(OraclesHomeNav *nav, unsigned row, int value)
 {
     static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 3, 0, 2, 0, 2, 2, 3, 3, 2, 2, ORACLES_DISPLAY_MARGINS,
-                                                      2, 2, ORACLES_DISPLAY_TEXT_SIZES };
+                                                      2, 2, ORACLES_DISPLAY_TEXT_SIZES, 2 };
     int profile = (int)nav->display.profile;
     int *fields[ORACLES_DISPLAY_ROWS] = { &profile, NULL, &nav->display.window, &nav->display.view, &nav->display.hud, NULL,
                                           &nav->display.colour, NULL, &nav->display.core, &nav->display.transitions, &nav->display.vsync,
                                           &nav->display.workers, &nav->display.scaling, NULL, &nav->display.margin,
-                                          &nav->display.text, &nav->display.text_box, &nav->display.text_size };
+                                          &nav->display.text, &nav->display.text_box, &nav->display.text_size, &nav->display.text_speed };
     const int enhanced_only = row == ORACLES_DISPLAY_TRANSITIONS || row == ORACLES_DISPLAY_VIEW;
     if (row == ORACLES_DISPLAY_CAMERA) {   /* the shown value the platform's default until one is chosen, then written */
         value = (value % 2 + 2) % 2;
@@ -495,7 +496,7 @@ static int display_value(const OraclesHomeNav *nav, unsigned row)
     const int values[ORACLES_DISPLAY_ROWS] = { (int)nav->display.profile, 0, nav->display.window, nav->display.view, nav->display.hud, 0,
                                                nav->display.colour, 0, nav->display.core, nav->display.transitions, nav->display.vsync, nav->display.workers,
                                                nav->display.scaling, oracles_display_camera(nav), nav->display.margin, nav->display.text, nav->display.text_box,
-                                               nav->display.text_size };
+                                               nav->display.text_size, nav->display.text_speed };
     return row < ORACLES_DISPLAY_ROWS ? values[row] : 0;
 }
 
@@ -521,8 +522,8 @@ static void display_advanced(OraclesHomeNav *nav, int open)
     }
 }
 
-/* Display › Text opens on the first of its rows that changes: Text on the home screen, Text size from a game; on Text
- * when none does (Faithful).  Closed, Display shows Text highlighted. */
+/* Display › Text opens on the first of its rows that changes: Text on the home screen, Text size from a game, Text
+ * speed in Faithful; on Text when none does.  Closed, Display shows Text highlighted. */
 static void display_text_page(OraclesHomeNav *nav, int open)
 {
     nav->text_page = open;

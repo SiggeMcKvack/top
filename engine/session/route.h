@@ -19,7 +19,8 @@
 #define ORACLES_ROUTE_FORMAT_TEXT_COMPACT 9   /* written with the compact text among the options: a reader before it would replay without */
 #define ORACLES_ROUTE_FORMAT_SET 10        /* written by a session that may change a setting while it runs (a `set` line): a verb a reader before it does not know */
 #define ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE 11  /* written with the wide text box among the options: a reader before it would replay with the game's box */
-#define ORACLES_ROUTE_FORMAT_LATEST ORACLES_ROUTE_FORMAT_TEXT_BOX_WIDE
+#define ORACLES_ROUTE_FORMAT_TEXT_INSTANT 12  /* written with the instant text among the options, or a `set text-speed` line: a reader before it would replay the game's pace */
+#define ORACLES_ROUTE_FORMAT_LATEST ORACLES_ROUTE_FORMAT_TEXT_INSTANT
 #define ORACLES_ROUTE_MAX_EVENTS 200000u
 
 typedef struct OraclesRouteHeader {
@@ -39,6 +40,7 @@ typedef struct OraclesRouteHeader {
 #define ORACLES_ROUTE_OPTION_CONTINUOUS_DIAGONAL "continuous-diagonal"   /* with the transitions: a diagonal held carries Link across their axis too */
 #define ORACLES_ROUTE_OPTION_TEXT_COMPACT "text-compact"   /* the text box's lines drawn in the font's own widths (--text compact) */
 #define ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE "text-box-wide"   /* the host's wide text box, its texts laid out again for it, classic or compact (--text-box wide) */
+#define ORACLES_ROUTE_OPTION_TEXT_INSTANT "text-instant"   /* each line of the text box whole, as a press of A at its start shows it (--text-speed instant) */
 #define ORACLES_ROUTE_OPTION_CHEAT "cheat-"   /* and a cheat's name ("cheat-no-damage"): a cheat on from the start; a `cheat` line changes one later */
 /* Whether the header names a gameplay option. */
 int oracles_route_has_option(const OraclesRouteHeader *header, const char *name);
@@ -89,12 +91,14 @@ typedef struct OraclesRouteCheat {
  * their values, which the reader checks, an unknown one stopping it as an unknown verb does:
  *   swim-hold off|on          the swim's hold (the options' swim-hold, from the start); it changes the game
  *   item-hotkeys off|use|equip  the item hotkeys' mode: a note, their exchanges being the `equip` lines
- *   window 2|3|4|full         the window's scale, or fullscreen (settings.txt's window_scale=): presentation alone */
-typedef enum OraclesRouteSettingName { ORACLES_ROUTE_SET_SWIM_HOLD = 0, ORACLES_ROUTE_SET_ITEM_HOTKEYS, ORACLES_ROUTE_SET_WINDOW, ORACLES_ROUTE_SETTINGS } OraclesRouteSettingName;
+ *   window 2|3|4|full         the window's scale, or fullscreen (settings.txt's window_scale=): presentation alone
+ *   text-speed classic|instant  the instant text (the options' text-instant, from the start); it changes the game; format 12 */
+typedef enum OraclesRouteSettingName { ORACLES_ROUTE_SET_SWIM_HOLD = 0, ORACLES_ROUTE_SET_ITEM_HOTKEYS, ORACLES_ROUTE_SET_WINDOW, ORACLES_ROUTE_SET_TEXT_SPEED,
+                                       ORACLES_ROUTE_SETTINGS } OraclesRouteSettingName;
 typedef struct OraclesRouteSetting {
     uint32_t frame;
     OraclesRouteSettingName name;
-    int value;   /* swim-hold 0 or 1; item-hotkeys an OraclesHotkeysMode (0 off, 1 use, 2 equip); window 2 to 4, 0 fullscreen */
+    int value;   /* swim-hold 0 or 1; item-hotkeys an OraclesHotkeysMode (0 off, 1 use, 2 equip); window 2 to 4, 0 fullscreen; text-speed 0 classic, 1 instant */
 } OraclesRouteSetting;
 /* The name a `set` line writes ("swim-hold"), NULL past the last; `value`'s text for that name ("on"), NULL for a value
  * it does not have. */
@@ -151,7 +155,7 @@ void oracles_route_writer_record(OraclesRouteWriter *writer, uint32_t frame, uns
 int oracles_route_writer_action(OraclesRouteWriter *writer, const OraclesRouteAction *action);
 /* A `cheat` line; 0, or -1 for a name the line cannot carry or a route opened in a format before 8. */
 int oracles_route_writer_cheat(OraclesRouteWriter *writer, uint32_t frame, const char *name, int on);
-/* A `set` line; 0, or -1 for a value the name does not have or a route opened in a format before 10. */
+/* A `set` line; 0, or -1 for a value the name does not have or a route opened in a format before 10 (12 for text-speed). */
 int oracles_route_writer_set(OraclesRouteWriter *writer, uint32_t frame, OraclesRouteSettingName name, int value);
 int oracles_route_writer_close(OraclesRouteWriter *writer);
 

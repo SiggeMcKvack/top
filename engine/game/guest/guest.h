@@ -89,7 +89,9 @@ typedef enum OraclesGuestEventType {
     ORACLES_EVENT_TEXT_CURSOR_PLACE,       /* at textControlCodeC_2's `ld (hl),b`, which keeps a choice's cursor place, */
     ORACLES_EVENT_TEXT_COLUMN_SHOWN,       /* and at displayNextTextCharacter's `ld d,>w7NextTextColumnToDisplay`, a column written */
     ORACLES_EVENT_TEXT_GFX_DMA,            /* entry of dmaTextGfxBuffer, with the host's text box armed: a = 0 the top line, 2 the bottom */
-    ORACLES_EVENT_VBLANK_DMA               /* entry of vblankDmaFunction, the same: the queued DMA it runs, its entry under SP */
+    ORACLES_EVENT_VBLANK_DMA,              /* entry of vblankDmaFunction, the same: the queued DMA it runs, its entry under SP */
+    ORACLES_EVENT_TEXT_SKIP_TEST,          /* the `and` after updateCharacterDisplayTimer's read of wKeysJustPressed, with the instant text armed: its transaction runs here, */
+    ORACLES_EVENT_TEXT_SKIP_LOOP           /* and at displayNextTextCharacter's `bit 0,a` of w7d0c1, the test of its loop to the line's end */
 } OraclesGuestEventType;
 
 typedef struct OraclesGuestEvent {
@@ -401,6 +403,7 @@ typedef struct OraclesGuestStrokeState {
 } OraclesGuestStrokeState;
 #define ORACLES_GAME_DIRECTIONS 0xf0u   /* BTN_RIGHT | BTN_LEFT | BTN_UP | BTN_DOWN, the game's own bits */
 #define ORACLES_GAME_BUTTON_A 0x01u     /* BTN_A */
+#define ORACLES_GAME_BUTTON_B 0x02u     /* BTN_B */
 
 /* Pure: the direction bits to add to a at the suit's test, 0 for none. */
 uint8_t oracles_guest_mermaid_press(const OraclesGuestStrokeState *state);
@@ -453,6 +456,9 @@ const char *oracles_cheats_format(unsigned cheats, const char *prefix, char *out
 /* Pure: the address of the one occurrence of `sequence` starting within the first $40 bytes of `routine` in `rom` (the
  * flat image, bank n from n * $4000), inside its bank; 0 when there is none or several. */
 uint16_t oracles_guest_find_in_routine(const uint8_t *rom, size_t size, OraclesGuestSym routine, const uint8_t *sequence, size_t length);
+/* The same within the routine's first `window` bytes. */
+uint16_t oracles_guest_find_in_routine_within(const uint8_t *rom, size_t size, OraclesGuestSym routine, const uint8_t *sequence, size_t length,
+                                              size_t window);
 /* Pure: the instruction `cheat` answers at in `rom`: `ld h,d / ld l,<w1Link.damageToApply / ld a,(hl) / ld (hl),$00 /
  * or a` in linkApplyDamage, its `or a`; `ld a,(hl) / sub $01 / daa / ld (hl),a / or h / ret` in decNumBombs, its
  * `ld (hl),a`; `ld hl,wNumRupees / call getRupeeValue` in removeRupeeValue, its call; 0 when not found once. */
@@ -581,6 +587,44 @@ size_t oracles_guest_compact_save_state(const OraclesGuest *guest, uint8_t *out,
  * its characters, and the call's return, where it is composed.  0, or -1 for bytes that are not such a state, or a
  * guest without the compact text. */
 int oracles_guest_compact_load_state(OraclesGuest *guest, const uint8_t *data, size_t size);
+
+/* ---- the instant text --------------------------------------------------------------------
+ *
+ * The text box reveals a line a character at a time, at the speed of the file screen (wTextSpeed, kept in the save); a
+ * press of A or B during the reveal shows the rest of the line in the same frame, and the next line, after its first
+ * delay, whole too; a second press turns the page.  With the instant text on, at updateCharacterDisplayTimer's test of
+ * A and B (textbox.s), the one instruction that reads them for the reveal, the transaction adds A where neither is
+ * pressed: each line shows whole, as a player pressing A at its start gets it, through the game's own path, its scroll,
+ * its arrow, its wait for A, its choices and their cursor's delay.  \slow (the essences) keeps the game's lock, the test
+ * not reached while it runs.  At the test of displayNextTextCharacter's loop to the line's end (its `bit 0,a` of
+ * w7d0c1), the transaction stops the loop on a character with a sound effect (w7LineSoundEffectsBuffer: a Goron's, a
+ * Tokay's, Ricky's voice) by taking the loop's bit away from a: the game plays it, and the line's rest comes the next
+ * frame.  Nothing is written in memory, wTextSpeed and the save are left as they are, and the transaction has no state:
+ * a savestate loads with it on or off.  It changes from one frame to the next: its points stay armed once armed, and
+ * answer only while it is on. */
+
+/* Pure: the bit to add to a (wKeysJustPressed) at the skip's test, A where neither A nor B is pressed; 0 for none. */
+uint8_t oracles_guest_text_skip_press(uint8_t keys_just_pressed);
+/* Pure: a (w7d0c1) at the loop's test, its bit 0 taken away when the character just written has a sound effect. */
+uint8_t oracles_guest_text_skip_flags(uint8_t flags, uint8_t sound_effect);
+/* Pure: updateCharacterDisplayTimer's `and BTN_A|BTN_B` after `ld a,(wKeysJustPressed)`, within its first $40 bytes, and
+ * displayNextTextCharacter's `bit 0,a` after `ld e,<w7d0c1 / ld a,(de)`, within its first $60, in `rom` (the flat image);
+ * 0 when not found once. */
+uint16_t oracles_guest_find_text_skip_test(const OraclesGuestTables *tables, const uint8_t *rom, size_t size);
+uint16_t oracles_guest_find_text_skip_loop(const OraclesGuestTables *tables, const uint8_t *rom, size_t size);
+/* Turns the instant text on or off from the next test it meets, arming the points the first time it is on; -1, the
+ * text unchanged, when the profile does not qualify it, a point is not found once, or the hook table is full. */
+int oracles_guest_set_text_instant(OraclesGuest *guest, int on);
+int oracles_guest_text_instant(const OraclesGuest *guest);
+/* Whether its points are armed: on now, or once. */
+int oracles_guest_text_instant_armed(const OraclesGuest *guest);
+/* What it did since the attach. */
+typedef struct OraclesGuestTextInstantCounts {
+    unsigned presses;        /* tests it answered with A */
+    unsigned voices_kept;    /* loops it stopped on a character with a sound effect */
+    unsigned voices_lost;    /* characters with a sound effect the loop went past while it was on: none */
+} OraclesGuestTextInstantCounts;
+void oracles_guest_text_instant_counts(const OraclesGuest *guest, OraclesGuestTextInstantCounts *counts);
 
 typedef struct OraclesGuestRegWrite {
     uint8_t ly;

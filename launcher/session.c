@@ -113,6 +113,13 @@ static void frame_begin(void *opaque, uint32_t frame)
             oracles_session_change_swim_hold(s, frame, s->swim_next);
         }
     }
+    if (s->text_speed_pending) {
+        s->text_speed_pending = 0;
+        if (s->text_speed_next != s->text_instant) {
+            replay_stopped(s, frame, "the text speed changed");
+            oracles_session_change_text_speed(s, frame, s->text_speed_next);
+        }
+    }
     if (s->hotkeys_pending) {
         s->hotkeys_pending = 0;
         if (s->hotkeys_next != (s->hotkeys ? oracles_hotkeys_session_next_mode(s->hotkeys) : s->hotkeys_mode)) {
@@ -131,13 +138,14 @@ static void frame_begin(void *opaque, uint32_t frame)
         oracles_cheats_parse(s->play.cheats[i].name, NULL, &bit);   /* each known: the replay refused the route otherwise */
         oracles_session_change_cheats(s, frame, s->play.cheats[i].on ? s->cheats | bit : s->cheats & ~bit);
     }
-    /* A replayed route's `set` lines: the swim's hold changes the game; the item hotkeys' exchanges are the route's
+    /* A replayed route's `set` lines: the swim's hold and the text speed change the game; the item hotkeys' exchanges are the route's
      * `equip` lines, their mode the one the player gets after the replay; the window is presentation alone.  An
      * extension writes each again. */
     const size_t sets = s->playing ? oracles_route_settings_at(&s->play, frame, &first) : 0;
     for (size_t i = first; i < first + sets; i++) {
         const OraclesRouteSetting *set = &s->play.settings[i];
         if (set->name == ORACLES_ROUTE_SET_SWIM_HOLD) { oracles_session_change_swim_hold(s, frame, set->value); continue; }
+        if (set->name == ORACLES_ROUTE_SET_TEXT_SPEED) { oracles_session_change_text_speed(s, frame, set->value); continue; }
         if (set->name == ORACLES_ROUTE_SET_ITEM_HOTKEYS) {
             oracles_hotkeys_session_set_mode(s->hotkeys, (OraclesHotkeysMode)set->value);
             s->hotkeys_mode = (OraclesHotkeysMode)set->value;
@@ -406,6 +414,12 @@ static int check_profile(session *s, const OraclesSessionOptions *o, OraclesSess
         fprintf(stderr, "oracles: the swim's hold is not qualified for %s; this game plays without it\n", s->profile ? oracles_compat_name(s->profile) : "this image");
         s->swim_hold = 0;
     }
+    /* The instant text, a setting of every game: the same. */
+    if (s->text_instant && !oracles_compat_text_instant(s->profile)) {
+        if (!from_home) return failed(result, "%s does not support --text-speed instant", s->profile ? oracles_compat_name(s->profile) : "this image");
+        fprintf(stderr, "oracles: the instant text is not qualified for %s; this game plays with the classic text\n", s->profile ? oracles_compat_name(s->profile) : "this image");
+        s->text_instant = 0;
+    }
     /* The cheats, a setting of each Oracle: the same, a fan game playing without them. */
     if (s->cheats && !oracles_compat_cheats(s->profile)) {
         if (!from_home) return failed(result, "%s does not support --cheats", s->profile ? oracles_compat_name(s->profile) : "this image");
@@ -461,10 +475,11 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold || s->swim_route || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide) {
+        || s->swim_hold || s->swim_route || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide || s->text_instant || s->text_speed_route) {
         s->guest = oracles_guest_attach(s->core, s->profile);
         const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
-                                   && !s->swim_route && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide;
+                                   && !s->swim_route && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide && !s->text_instant
+                                   && !s->text_speed_route;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -487,6 +502,11 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
         if (oracles_guest_set_swim_hold(s->guest, 1) != 0 || oracles_guest_set_swim_hold(s->guest, s->swim_hold) != 0)
             return failed(result, "the swim's hold cannot find its strokes in this ROM");
         if (s->swim_hold) fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    }
+    if (s->text_instant || s->text_speed_route) {   /* the points armed for a replayed route that turns it on later too, as the swim's hold */
+        if (oracles_guest_set_text_instant(s->guest, 1) != 0 || oracles_guest_set_text_instant(s->guest, s->text_instant) != 0)
+            return failed(result, "the instant text cannot find its points in this ROM");
+        if (s->text_instant) fprintf(stderr, "oracles: text speed instant: each line of the text box whole\n");
     }
     if (s->cheats || s->cheats_route) {   /* the points of those a replayed route turns on later armed too, answering once on */
         char names[64];
@@ -664,6 +684,8 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->continuous_swim = o->continuous_swim;
     s->continuous_diagonal = o->continuous_diagonal;
     s->swim_hold = o->swim_hold;
+    s->text_instant = o->text_instant == 2;
+    s->text_speed_setting = -1;
     s->cheats = o->cheats;
     s->cheats_game = -1;
     s->swim_setting = s->hotkeys_game = s->window_setting = s->window_line = -1;
@@ -684,6 +706,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     const int settings_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
     if (ok && s->pause && oracles_compat_cheats(s->profile)) s->cheats_game = settings_game;
     if (ok && s->pause && oracles_compat_swim_hold(s->profile)) s->swim_setting = settings->swim_hold;
+    if (ok && s->pause && oracles_compat_text_instant(s->profile)) s->text_speed_setting = settings->text_instant;
     if (ok && s->pause && oracles_compat_item_hotkeys(s->profile) && s->info.game != ORACLES_GAME_UNKNOWN) {
         s->hotkeys_game = settings_game;
         s->hotkeys_setting = (int)settings->item_hotkeys[settings_game];

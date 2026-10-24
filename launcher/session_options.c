@@ -49,6 +49,10 @@ unsigned oracles_session_settings_changed(const oracles_settings *settings, int 
     const int margin = oracles_session_screen_margin(margin_option, settings);
     if (margin != applied->margin) { applied->margin = margin; changed |= ORACLES_SESSION_CHANGED_MARGIN; }
     if (applied->swim_hold >= 0 && settings->swim_hold != applied->swim_hold) { applied->swim_hold = settings->swim_hold; changed |= ORACLES_SESSION_CHANGED_SWIM; }
+    if (applied->text_instant >= 0 && settings->text_instant != applied->text_instant) {
+        applied->text_instant = settings->text_instant;
+        changed |= ORACLES_SESSION_CHANGED_TEXT_SPEED;
+    }
     if (applied->hotkeys_game >= 0 && applied->hotkeys_game < ORACLES_SETTINGS_GAMES && (int)settings->item_hotkeys[applied->hotkeys_game] != applied->hotkeys) {
         applied->hotkeys = (int)settings->item_hotkeys[applied->hotkeys_game];
         changed |= ORACLES_SESSION_CHANGED_HOTKEYS;

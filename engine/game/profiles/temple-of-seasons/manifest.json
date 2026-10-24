@@ -992,7 +992,19 @@
     "vblank_dma_function": null,
     "textbox_vram_pos": null,
     "character_display_timer": null,
-    "text_address": null
+    "text_address": null,
+    "update_character_display_timer": {
+      "bank": 63,
+      "address": "0x5200"
+    },
+    "text_flags": {
+      "bank": 7,
+      "address": "0xd0c1"
+    },
+    "text_slowdown_timer": {
+      "bank": 7,
+      "address": "0xd0d7"
+    }
   },
   "guest_table_absent": {
     "check_reload_status_bar_graphics": "item hotkeys not qualified for this revision",

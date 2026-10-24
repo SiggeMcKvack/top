@@ -113,6 +113,8 @@ struct OraclesGuest {
     OraclesGuestTextBoxLine text_box[ORACLES_GUEST_TEXT_BOX_LINES];   /* as they stand */
     OraclesGuestTextBoxLine text_box_shown[ORACLES_GUEST_TEXT_BOX_LINES];   /* as the frame just scanned showed them */
     OraclesGuestTextBoxCounts text_box_counts;
+    int text_instant, text_instant_armed;            /* the instant text (guest_text_speed.c): on; its points hooked */
+    OraclesGuestTextInstantCounts text_instant_counts;
     uint8_t oam_scanned[160];                        /* the OAM the frame just scanned used (see oracles_guest_oam) */
     int oam_scanned_valid;
     uint16_t link_shown_x, link_shown_y;             /* Link (8.8) where the OAM the frame just scanned drew him (oracles_guest_link_shown) */
@@ -137,6 +139,8 @@ void oracles_guest_flippers_stroke(OraclesGuest *guest);
 void oracles_guest_cheat_point(OraclesGuest *guest, OraclesGuestEventType type);
 /* guest_compact_text.c: at the compact text's points. */
 void oracles_guest_compact_text_point(OraclesGuest *guest, OraclesGuestEventType type);
+/* guest_text_speed.c: at the skip's test and at its loop's. */
+void oracles_guest_text_skip_point(OraclesGuest *guest, OraclesGuestEventType type);
 /* guest_text_box.c: at drawLineOfText's return, at dmaTextGfxBuffer's and vblankDmaFunction's entries; the line composed
  * from its characters laid out at the host's width and its tiles (`gfx`, the host's width's, the compact text's
  * transaction's); the compact text's reveal written in the VRAM's line `which` at the vblank, its first `whole` tile

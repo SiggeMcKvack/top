@@ -64,6 +64,14 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
     s->swim_route = oracles_route_sets(&s->play, ORACLES_ROUTE_SET_SWIM_HOLD);
     if (s->swim_route && !oracles_compat_swim_hold(s->profile))
         return refuse(error, capacity, "the route changes the swim's hold, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
+    /* The instant text, a setting of every game: the route's, whatever it is, and as its `set text-speed` lines change it. */
+    const int route_instant = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_TEXT_INSTANT);
+    s->text_speed_route = oracles_route_sets(&s->play, ORACLES_ROUTE_SET_TEXT_SPEED);
+    if ((route_instant || s->text_speed_route) && !oracles_compat_text_instant(s->profile))
+        return refuse(error, capacity, "the route was recorded with the instant text, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
+    if (route_instant != s->text_instant)
+        fprintf(stderr, "oracles: the route was recorded with the %s text speed: the replay plays with it\n", route_instant ? "instant" : "classic");
+    s->text_instant = route_instant;
     /* The compact text, a setting of every game: the route's, whatever it is (check_profile refuses it in Faithful). */
     const int route_compact = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
     if (route_compact != s->compact_text)
@@ -151,6 +159,10 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
     if (s->text_box_wide) {   /* the same: its texts laid out again pace the dialogues */
         const size_t used = strlen(header.options);
         snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_TEXT_BOX_WIDE, used ? "," : "");
+    }
+    if (s->text_instant) {   /* its pages pace the dialogues: a replay plays with it */
+        const size_t used = strlen(header.options);
+        snprintf(header.options + used, sizeof header.options - used, "%s" ORACLES_ROUTE_OPTION_TEXT_INSTANT, used ? "," : "");
     }
     if (s->cheats) {   /* a cheat's answers are not in the keys: a replay gives them too */
         const size_t used = strlen(header.options);

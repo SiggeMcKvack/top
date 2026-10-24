@@ -94,6 +94,10 @@ void harness_report_checks(run *r, const harness_options *o, FILE *summary, uint
         fprintf(stderr, "swim's hold: strokes started by a held button: %u with the mermaid suit, %u with the flippers\n", mermaid, flippers);
         if (summary) fprintf(summary, "swim.mermaid_strokes=%u\nswim.flippers_strokes=%u\n", mermaid, flippers);
     }
+    if (o->text_instant || r->text_speed_changed) {
+        oracles_text_speed_check_report(&r->text_speed, r->guest, stderr);
+        if (summary) oracles_text_speed_check_summary(&r->text_speed, r->guest, summary);
+    }
     if (o->cheats || r->cheats_changed) {
         OraclesGuestCheatCounts c;
         oracles_guest_cheat_counts(r->guest, &c);

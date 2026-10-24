@@ -41,6 +41,7 @@ typedef struct session {
     int swim_hold;                            /* the swim's hold: the option's, as a replayed route or the profile may change it */
     int compact_text;                         /* the compact text: the option's, as a replayed route or the profile may change it */
     int text_box_wide;                        /* the host's wide text box: the same */
+    int text_instant;                         /* the instant text: the option's, as a replayed route or the pause may change it */
     unsigned cheats;                          /* the cheats on (OraclesGuestCheat): the option's, as a replayed route or the profile may change them */
     /* The pause's Cheats: the settings' game whose cheats the game plays with (an OraclesSettingsGame), -1 when its
      * profile has none or no pause can change them; the cheats the next frame begins with, once the pause changed them;
@@ -58,6 +59,8 @@ typedef struct session {
     OraclesHotkeysMode hotkeys_next;
     int window_setting, window_line;
     int swim_route;                           /* a replayed route's `set swim-hold` lines: the hold's tests armed from the start */
+    int text_speed_setting, text_speed_next, text_speed_pending;   /* the pause's Text speed, as the swim's hold's (-1: none) */
+    int text_speed_route;                     /* a replayed route's `set text-speed` lines: the instant text's points armed from the start */
     int view_level;                              /* the Enhanced view's level (OraclesEnhancedLevel), its size the options' (oracles_session_view_size) */   /* the options, as a replayed route or the profile may change them */
     int ghosts;                                  /* the neighbour ghosts chosen, --ghosts' else the settings': 0 auto, 1, 2 */
     OraclesHotkeysMode hotkeys_mode;
@@ -104,12 +107,13 @@ void oracles_session_stop_recording(session *s, const char *why);
 int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
 int oracles_session_record_route(session *s, const OraclesSessionOptions *o, char *error, size_t capacity);
 /* session_live.c: the settings a running game takes from `frame` on, before it runs: the guest attached at the first
- * that needs it (1 when there is one); the cheats, the swim's hold, the item hotkeys' mode asked and the one the policy
+ * that needs it (1 when there is one); the cheats, the swim's hold, the instant text, the item hotkeys' mode asked and the one the policy
  * settled on; the surface a window is a whole multiple of, and the window Display chose (window_scale=: 2 to 4, 0
  * fullscreen) opened as Play opens it. */
 int oracles_session_ensure_guest(session *s, uint32_t frame);
 void oracles_session_change_cheats(session *s, uint32_t frame, unsigned cheats);
 void oracles_session_change_swim_hold(session *s, uint32_t frame, int on);
+void oracles_session_change_text_speed(session *s, uint32_t frame, int instant);
 void oracles_session_hotkeys_settled(session *s, uint32_t frame, int settled);
 void oracles_session_change_hotkeys(session *s, uint32_t frame, OraclesHotkeysMode mode);
 OraclesEnhancedSize oracles_session_window_surface(const session *s);

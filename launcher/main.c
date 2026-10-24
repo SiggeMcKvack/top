@@ -6,7 +6,7 @@
  *                       [--mute] [--frames N] [--no-window]
  *                       [--screenshot PATH.ppm] [--record ROUTE] [--play ROUTE] [--continuous-transitions] [--continuous-swim] [--item-hotkeys=off|use|equip]
  *                       [--continuous-diagonal]
- *                       [--swim-hold] [--cheats LIST] [--text classic|compact]
+ *                       [--swim-hold] [--cheats LIST] [--text classic|compact] [--text-speed classic|instant]
  *                       [--zoom-out]
  *   the-oracles-project --launcher-screenshot PATH.ppm [--launcher-size WxH] [--launcher-input up,down,...]
  *
@@ -115,7 +115,8 @@ static int usage(void)
                     "                           a mod's prices still apply; an empty list for none)\n"
                     "                           [--text classic|compact]   (Enhanced, the Oracles and their fan games: the text box's lines in the font's own widths, at the game's pace)\n"
                     "                           [--text-box standard|wide]   (Enhanced, Ages and Seasons: the game's box, or a wider one drawn by the port, 192 pixels of text)\n"
-                    "                           [--text-size normal|large|xlarge]   (Enhanced: the text box three halves as large, in whole screen pixels, or twice)\n");
+                    "                           [--text-size normal|large|xlarge]   (Enhanced: the text box three halves as large, in whole screen pixels, or twice)\n"
+                    "                           [--text-speed classic|instant]   (the text letter by letter at the file screen's speed, or each line whole; A still turns the page)\n");
     fprintf(stderr, "                           [--zoom-out]   (Enhanced drawn back, 480x270 or 480x360 in 4:3, three rooms across outdoors; --fullscreen --scale 4 fills 1920x1080; --view far)\n"
                     "                           [--view near|medium|far]   (Enhanced: how much of the world it shows, in the screen's shape)\n"
                     "                           [--core sameboy|mgba]   (the core: Accurate, the reference, or Fast, lighter)\n"
@@ -196,6 +197,11 @@ static int parse(int argc, char **argv, OraclesSessionOptions *o, launcher_optio
             const char *text = argv[++i];
             o->compact_text = !strcmp(text, "classic") ? 1 : !strcmp(text, "compact") ? 2 : 0;
             if (!o->compact_text) return 1;
+        }
+        else if (!strcmp(argv[i], "--text-speed") && more) {
+            const char *speed = argv[++i];
+            o->text_instant = !strcmp(speed, "classic") ? 1 : !strcmp(speed, "instant") ? 2 : 0;
+            if (!o->text_instant) return 1;
         }
         else if (!strcmp(argv[i], "--text-size") && more) {
             const char *size = argv[++i];

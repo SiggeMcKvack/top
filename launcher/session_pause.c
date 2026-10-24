@@ -37,16 +37,16 @@ void oracles_session_hotkey_keys(session *s, int on)
 }
 
 /* Controls or Display changed the settings: the keys, the colour correction, the scaling, the status bar's width and
- * the screen margin apply at once, the swim's hold and the item hotkeys from the frame the game resumes on (the item
+ * the screen margin apply at once, the swim's hold, the text speed and the item hotkeys from the frame the game resumes on (the item
  * hotkeys turned off once their policy is at rest), the rest at the next Play (the window: pause_window_chosen).  The
  * colour correction, the swim's hold and the item hotkeys apply when the pause changed them: --colour-correction,
- * --swim-hold and --item-hotkeys hold until then; --screen-margin holds for the run. */
+ * --swim-hold, --text-speed and --item-hotkeys hold until then; --screen-margin holds for the run. */
 static int pause_settings_changed(void *opaque)
 {
     session *s = opaque;
     OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin,
                                       s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1,
-                                      s->swim_setting, s->hotkeys_game, s->hotkeys_setting };
+                                      s->swim_setting, s->hotkeys_game, s->hotkeys_setting, s->text_speed_setting };
     const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, s->text_size_option, &applied);
     if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
         s->colour_applied = s->colour_setting = applied.colour;
@@ -74,6 +74,10 @@ static int pause_settings_changed(void *opaque)
     if (changed & ORACLES_SESSION_CHANGED_SWIM) {
         s->swim_setting = s->swim_next = applied.swim_hold;
         s->swim_pending = 1;
+    }
+    if (changed & ORACLES_SESSION_CHANGED_TEXT_SPEED) {
+        s->text_speed_setting = s->text_speed_next = applied.text_instant;
+        s->text_speed_pending = 1;
     }
     if (changed & ORACLES_SESSION_CHANGED_HOTKEYS) {
         s->hotkeys_setting = applied.hotkeys;
@@ -166,7 +170,7 @@ oracles_host_pause_result oracles_session_pause(void *opaque)
     const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, pause_cheats_changed,
                                            pause_window_chosen, (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s),
                                            s->cheats_game >= 0, pause_game_image, s->swim_setting >= 0, s->hotkeys_game >= 0, window_shown, window_w,
-                                           window_h, windows_refused(s, window) };
+                                           window_h, windows_refused(s, window), s->text_speed_setting >= 0 };
     const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
     if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
     if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);

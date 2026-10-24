@@ -394,7 +394,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
     t->camera_explanation = oracles_display_explanation(ORACLES_DISPLAY_CAMERA);
     t->camera_note = oracles_display_camera_note(nav)[0] ? oracles_display_camera_note(nav) : NULL;
     oracles_display_text_summary(nav, t->text_summary, sizeof t->text_summary);
-    for (unsigned i = 0; i < 3; i++) {
+    for (unsigned i = 0; i < ORACLES_DISPLAY_TEXT_ROWS; i++) {
         t->text_explanations[i] = oracles_display_text_explanation(ORACLES_DISPLAY_LETTERS + i, 0);
         t->text_notes[i] = oracles_display_text_note(nav, ORACLES_DISPLAY_LETTERS + i);
     }
@@ -421,7 +421,7 @@ void oracles_ui_display_texts(const OraclesHomeNav *nav, OraclesUiDisplayTexts *
         "Wide layout: hearts left, items right.", NULL, NULL, "Core, transitions, Vsync, workers, scaling, margin.",
         "Accurate: the reference. Fast: lighter.", "Rooms scroll into one another, swimming too.", VSYNC_SHORT, "Two fill the view faster, on one more core.",
         "Sharp: exact pixels. Fill: the whole screen.", "Smooth: diagonal walks glide.", "Keeps the picture clear of hidden screen edges.", NULL, NULL,
-        NULL,
+        NULL, NULL,
     };
     const unsigned row = nav->row < ORACLES_DISPLAY_ROWS ? nav->row : ORACLES_DISPLAY_PROFILE;
     t->help = row == ORACLES_DISPLAY_COLOUR ? oracles_display_colour_explanation(nav, 1) : help_4_3[row];

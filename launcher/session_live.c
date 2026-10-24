@@ -1,4 +1,4 @@
-/* The settings a running game takes (session_internal.h): the cheats, the swim's hold, the item hotkeys and the
+/* The settings a running game takes (session_internal.h): the cheats, the swim's hold, the instant text, the item hotkeys and the
  * window, from the pause or a replayed route's lines, each written while recording. */
 #include "session_internal.h"
 
@@ -47,6 +47,19 @@ void oracles_session_change_swim_hold(session *s, uint32_t frame, int on)
     if (s->recording && on != s->swim_hold) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_SWIM_HOLD, on);
     fprintf(stderr, "oracles: swim's hold %s from frame %u\n", on ? "on" : "off", frame);
     s->swim_hold = on;
+}
+
+/* The instant text from `frame` on, before it runs, as the swim's hold. */
+void oracles_session_change_text_speed(session *s, uint32_t frame, int instant)
+{
+    if (instant && !oracles_session_ensure_guest(s, frame)) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the text stays classic\n"); return; }
+    if (!s->guest || oracles_guest_set_text_instant(s->guest, instant) != 0) {
+        if (instant) fprintf(stderr, "oracles: the instant text cannot find its points in this ROM: the text stays classic\n");
+        return;
+    }
+    if (s->recording && instant != s->text_instant) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_TEXT_SPEED, instant);
+    fprintf(stderr, "oracles: text speed %s from frame %u\n", instant ? "instant" : "classic", frame);
+    s->text_instant = instant;
 }
 
 /* The item hotkeys' mode taken at `frame` (oracles_hotkeys_session_settle's result): said, and written while

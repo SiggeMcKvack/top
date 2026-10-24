@@ -48,6 +48,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-swim-hold)
     add_test(NAME oracles-swim-hold COMMAND oracles-test-swim-hold)
 
+    add_executable(oracles-test-text-instant test_text_instant.c)
+    target_link_libraries(oracles-test-text-instant PRIVATE oracles_guest)
+    oracles_set_warnings(oracles-test-text-instant)
+    add_test(NAME oracles-text-instant COMMAND oracles-test-text-instant)
+
     add_executable(oracles-test-cheats test_cheats.c)
     target_link_libraries(oracles-test-cheats PRIVATE oracles_guest)
     oracles_set_warnings(oracles-test-cheats)
