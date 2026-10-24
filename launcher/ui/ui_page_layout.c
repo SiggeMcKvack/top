@@ -78,7 +78,7 @@ const char oracles_ui_transitions_note[] = "A savestate taken with this on is re
 const char oracles_ui_core_note[] = "Save states keep their core.";
 const char oracles_ui_scaling_note[] = "Fill applies in fullscreen.";
 const char oracles_ui_window_fit_note[] = "Window sizes follow the view: a farther view makes a larger window.";
-const char oracles_ui_display_later[] = "Color, HUD, scaling and margin apply at once; the rest at the next Play.";
+const char oracles_ui_display_later[] = "Profile, view, text, transitions and vsync apply at the next Play; the rest at once.";
 const char oracles_ui_later[] = "Applies at the next Play.";
 const char oracles_ui_text_later[] = "From the next Play.";
 const char *const oracles_ui_transition_choices[2] = { "Off", "On" };
@@ -143,6 +143,7 @@ const char *const oracles_ui_transition_choices[2] = { "Off", "On" };
 #define WINDOW_FIT_H 58.0f           /* two lines kept for the latter */
 #define DIAGRAM_MARGIN 56.0f
 #define DISPLAY_PAGE_NOTE_GAP 20.0f   /* the note under Display's title, opened from a game */
+#define DISPLAY_PAGE_NOTE_LINE 29.0f  /* its lines, in the left column */
 #define DIAGRAM_LABEL_GAP 12.0f
 #define DIAGRAM_BORDER 1.0f
 #define ADVANCED_MARGIN 40.0f        /* Advanced under the diagram's line */
@@ -657,8 +658,9 @@ static void display_16_9(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout 
     float head_bottom = out->head.title.lines[0].y + out->head.title.h;
     /* Opened from a game, under the title: what only the next session takes, said once for the page. */
     if (t->later) {
-        out->page_note = line_at(&oracles_ui_row_note, oracles_ui_display_later, HEAD_X, head_bottom + DISPLAY_PAGE_NOTE_GAP, 0.0f);
-        head_bottom = out->page_note.y + out->page_note.h;
+        wrap_pretty_lines(&oracles_ui_row_note, oracles_ui_display_later, HEAD_W, HEAD_X, head_bottom + DISPLAY_PAGE_NOTE_GAP, DISPLAY_PAGE_NOTE_LINE,
+                          &out->page_note);
+        head_bottom += DISPLAY_PAGE_NOTE_GAP + out->page_note.h;
     }
     out->diagram = box(HEAD_X, head_bottom + DIAGRAM_MARGIN, diagram_w, ORACLES_UI_DIAGRAM_H);
     /* A window as wide as the screen (Fill) stays inside the box's border across, over it top and bottom. */
@@ -1227,9 +1229,14 @@ static void display_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *
     out->help = line_at(&oracles_ui_help_4_3, t->help, HEAD_X_4_3, head_bottom + HEAD_GAP_4_3, HELP_LINE_4_3);
     out->help_note = line_at(&oracles_ui_row_note_4_3, t->help_note, HEAD_X_4_3, out->help.y + out->help.h + HELP_NOTE_GAP_4_3, HELP_NOTE_LINE_4_3);
     /* Opened from a game, under them: what only the next session takes, said once for the page. */
-    if (t->later)
-        out->page_note = line_at(&oracles_ui_page_note_4_3, oracles_ui_display_later, HEAD_X_4_3, out->help_note.y + out->help_note.h + HEAD_GAP_4_3,
-                                 DISPLAY_PAGE_NOTE_LINE_4_3);
+    if (t->later) {
+        out->page_note.count = 1;
+        snprintf(out->page_note.text[0], sizeof out->page_note.text[0], "%s", oracles_ui_display_later);
+        out->page_note.lines[0] = line_at(&oracles_ui_page_note_4_3, oracles_ui_display_later, HEAD_X_4_3, out->help_note.y + out->help_note.h + HEAD_GAP_4_3,
+                                          DISPLAY_PAGE_NOTE_LINE_4_3);
+        out->page_note.w = out->page_note.lines[0].w;
+        out->page_note.h = out->page_note.lines[0].h;
+    }
     /* The diagram at the top right, half 16:9's, without its line: Window's help says the size. */
     const float box_w = round_half_up((t->diagram_box_w > 0.0f ? t->diagram_box_w : ORACLES_UI_DIAGRAM_W) * 0.5f);
     const float w = fminf(round_half_up(t->diagram_w * 0.5f), box_w - 2.0f * DIAGRAM_BORDER), h = round_half_up(t->diagram_h * 0.5f);

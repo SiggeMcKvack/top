@@ -138,6 +138,9 @@ void oracles_sdl_place_window(struct SDL_Window *window, int centre_x, int centr
 void oracles_sdl_presentation(int fullscreen, int fill, int *presentation, int *scale_mode);
 /* Scaling changed during the pause: the frame's sampling at once, the presentation from the next frame. */
 void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill);
+/* The window changed during the pause: fullscreen, or a window of `scale` times the frame around its centre, kept on
+ * its display; nothing where the window is always the whole screen. */
+void oracles_sdl_backend_set_window(const oracles_host_backend *backend, int fullscreen, unsigned scale);
 /* The screen margin changed during the pause: its band read again, the image and the touch controls in it from the
  * next frame. */
 void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin);

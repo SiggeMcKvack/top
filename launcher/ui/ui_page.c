@@ -277,7 +277,7 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
 
     head(draw, st, &l.head, t.section, t.over, NULL, accent);
     text(draw, &oracles_ui_display_title_4_3, &l.title, l.title_text, oracles_ui_rgb(OVER));   /* 4:3 */
-    if (t.later) text(draw, st->page_note, &l.page_note, oracles_ui_display_later, oracles_ui_rgb(NOTE_ITALIC));
+    if (t.later) wrapped(draw, st->page_note, &l.page_note, oracles_ui_rgb(NOTE_ITALIC));
     /* The window on the screen. */
     oracles_ui_fill_round_rect(draw, l.diagram.x, l.diagram.y, l.diagram.w, l.diagram.h, 4.0f, oracles_ui_rgba(DIAGRAM, DIAGRAM_OPACITY));
     oracles_ui_stroke_round_rect(draw, l.diagram.x, l.diagram.y, l.diagram.w, l.diagram.h, 4.0f, 1.0f, oracles_ui_rgba(0xffffffu, DIAGRAM_BORDER_OPACITY));
@@ -385,9 +385,10 @@ void oracles_ui_display_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Ora
     }
     text(draw, st->row_text, &l.quality_text, t.quality_text, oracles_ui_rgba(NOTE, quality));
     text(draw, st->row_note, &l.quality_note, t.quality_note, oracles_ui_rgba(NOTE_ITALIC, quality));
+    /* The windows the pause refuses, dimmed. */
     for (int i = 0; i < 4; i++)
         option(draw, st, lk, &l.windows[i], 1, t.window_names[i], t.window_sizes[i], i == nav->display.window,
-               row == ORACLES_DISPLAY_WINDOW, accent, OPTION_OFF, window);
+               row == ORACLES_DISPLAY_WINDOW, accent, OPTION_OFF, nav->display.windows_refused >> i & 1u ? ROW_NOT_APPLIED : window);
     text(draw, st->row_note, &l.window_one, oracles_display_one_size_note, oracles_ui_rgba(NOTE_ITALIC, window));
     wrapped(draw, st->row_text, &l.view_explanation, oracles_ui_rgba(NOTE, applied));
     for (int v = 0; v < 3; v++)

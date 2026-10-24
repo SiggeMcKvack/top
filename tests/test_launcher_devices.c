@@ -125,12 +125,11 @@ static void layout_16_9(void)
     c->column = 1; c->row = 7;
     oracles_home_act(&nav, ORACLES_HOME_RIGHT);
     CHECK(c->column == 2 && c->row == ORACLES_CONTROLS_ROW_MENU);
-    /* From the pause: Swimming's line that it waits for the next Play. */
+    /* From the pause: Swimming applies to the game, with no line under it. */
     nav.in_game = 1;
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
     in_game_row("21m", &l);
     layout_box("21m", "swim", &l.swim);
-    layout_line("21m", "swim later", &l.swim_later);
     hints_at("21m", &nav, ORACLES_UI_LAYOUT_16_9, 3);
     /* Menu's cell waiting: the hint names its button, which gives up. */
     oracles_controls_click(&nav, 2, ORACLES_CONTROLS_ROW_MENU, -1);
@@ -189,12 +188,10 @@ static void layout_4_3(void)
     nav.in_game = 1;
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
     in_game_4_3("21s", &l);
-    layout_line("21s", "swim later", &l.swim_later);
     oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
     in_game_4_3("21t", &l);
     keys_probes("21t", &l, 0);
-    layout_line("21t", "swim later", &l.swim_later);
 
     nav.in_game = 0;
     nav.android = 1;

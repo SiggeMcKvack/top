@@ -26,11 +26,14 @@ typedef struct OraclesPauseSession {
     int (*load_state)(void *opaque, char *message, size_t capacity);
     /* The time of the savestate, "22:14", or empty when there is none. */
     void (*state_time)(void *opaque, char *out, size_t capacity);
-    /* The settings changed: the keys, the colour correction, the HUD, the scaling, the screen margin and the cheats apply
-     * at once.  Returns the screen margin in effect (an OraclesScreenMargin), which the menu's band follows. */
+    /* The settings changed: the keys, the colour correction, the HUD, the scaling and the screen margin apply at once,
+     * the swim's hold and the item hotkeys from the frame the game resumes on.  Returns the screen margin in effect (an
+     * OraclesScreenMargin), which the menu's band follows, as it follows the window's size. */
     int (*settings_changed)(void *opaque);
     /* Cheats changed the running game's cheats (a mask): they apply from the frame the game resumes on. */
     void (*cheats_changed)(void *opaque, unsigned cheats);
+    /* Display's Window was chosen (window_scale=: 2 to 4, 0 fullscreen): it applies at once. */
+    void (*window_chosen)(void *opaque, int window);
     int core;   /* the running game's core, an OraclesCoreKind: Display shows it, dimmed */
     int ghosts; /* the running game's neighbour workers, 0 auto, 1 or 2: Display shows them, dimmed */
     int device; /* the device that opened the pause (an OraclesInputDevice), which its key hints follow; -1 when not known */
@@ -39,6 +42,12 @@ typedef struct OraclesPauseSession {
     /* Draws the game's last image into `image`, in the window's pixels, as its last frame showed it (the sub-pixel
      * camera's band at its fraction of a pixel, Link at his place); NULL: the frame drawn there as it is. */
     int (*game_image)(void *opaque, SDL_Renderer *renderer, const SDL_FRect *image);
+    int has_swim, has_hotkeys;   /* its profile has the swim's hold, the item hotkeys: else an Oracle's Controls dims them */
+    /* Its window as window_scale= counts it (2 to 4, 0 fullscreen), F11's toggle included, which Display shows, -2 for
+     * a window no choice is (its size window_w x window_h); -1 when Display cannot change it.  The windows (1 <<
+     * Display's Window value) whose pause would keep only its own entries, which Display refuses. */
+    int window, window_w, window_h;
+    unsigned windows_refused;
 } OraclesPauseSession;
 
 typedef enum OraclesPauseResult {

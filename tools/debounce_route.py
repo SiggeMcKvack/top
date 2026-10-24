@@ -128,7 +128,7 @@ def rewrite(original: str, keys_read: Path, continuous: bool) -> tuple[str, int,
     others = placed
     # At a same frame the lines apply in the file's order: the keys first, as the launcher records them.
     merged = sorted(keys + others, key=lambda item: (item[0], 0 if " keys " in item[1] else 1))
-    head = [("oracles-route 2" if line.startswith("oracles-route 1") else line) for line in header]
+    head = [("oracles-route 2" if line.split() == ["oracles-route", "1"] else line) for line in header]
     if continuous and not any(line.startswith("options ") for line in head):
         head.append("options continuous-transitions")
     head += [f"core {BOUNCING_OFF}", NOTE]

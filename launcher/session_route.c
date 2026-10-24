@@ -60,6 +60,10 @@ int oracles_session_replay_route(session *s, const OraclesSessionOptions *o, cha
     if (route_swim_hold != s->swim_hold)
         fprintf(stderr, "oracles: the route was recorded %s --swim-hold: the replay plays %s it\n", route_swim_hold ? "with" : "without", route_swim_hold ? "with" : "without");
     s->swim_hold = route_swim_hold;
+    /* And as its `set swim-hold` lines change it, at their frames. */
+    s->swim_route = oracles_route_sets(&s->play, ORACLES_ROUTE_SET_SWIM_HOLD);
+    if (s->swim_route && !oracles_compat_swim_hold(s->profile))
+        return refuse(error, capacity, "the route changes the swim's hold, which %s does not support", s->profile ? oracles_compat_name(s->profile) : "this image");
     /* The compact text, a setting of every game: the route's, whatever it is (check_profile refuses it in Faithful). */
     const int route_compact = oracles_route_has_option(&s->play.header, ORACLES_ROUTE_OPTION_TEXT_COMPACT);
     if (route_compact != s->compact_text)
@@ -168,7 +172,11 @@ int oracles_session_record_route(session *s, const OraclesSessionOptions *o, cha
         snprintf(header.core, sizeof header.core, "%s,%s", ORACLES_ROUTE_CORE_JOYPAD_BOUNCING_OFF, ORACLES_ROUTE_CORE_MGBA);
     else
         snprintf(header.core, sizeof header.core, "%s", o->play_path && oracles_route_joypad_bouncing(&s->play.header) ? "" : ORACLES_ROUTE_CORE_JOYPAD_BOUNCING_OFF);
-    if (oracles_route_writer_open(&s->record, o->record_path, &header) != 0) return refuse(error, capacity, "cannot write %s", o->record_path);
+    /* A session whose pause may change a setting, or that extends a route that changes some, may write `cheat` and `set`
+     * lines: its header says the format they need from the start. */
+    const int changes = s->pause || (o->play_path && (s->play.cheat_count || s->play.setting_count));
+    if (oracles_route_writer_open_format(&s->record, o->record_path, &header, changes ? ORACLES_ROUTE_FORMAT_LATEST : 0) != 0)
+        return refuse(error, capacity, "cannot write %s", o->record_path);
     if (s->mod) {
         char path[PATH_MAX_LENGTH + 16];
         snprintf(path, sizeof path, "%s.mod.tsv", o->record_path);

@@ -119,7 +119,7 @@ static void pause_changes(void)
 {
     oracles_settings s;
     oracles_settings_defaults(&s);
-    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size };
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, -1, -1, 0 };
     CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
     s.hud_full = !s.hud_full;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
@@ -160,6 +160,82 @@ static void text_layout(void)
     CHECK(oracles_session_text_layout(1, 1, 1, 1, 0, &width, &fixed) == 1 && width == 128u && fixed == 0);
     CHECK(oracles_session_text_layout(1, 1, 0, 1, 1, &width, &fixed) == 0);
     CHECK(oracles_session_text_layout(0, 0, 1, 1, 1, &width, &fixed) == 0);
+}
+
+/* The swim's hold and the item hotkeys from the pause's Controls: each where the game has it (-1 where it has none), the
+ * item hotkeys of the settings' game it plays, the others' changing nothing; the window never: the pause applies it
+ * when Window is chosen, the settings' window_scale stored only then. */
+static void pause_live_changes(void)
+{
+    oracles_settings s;
+    oracles_settings_defaults(&s);
+    OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
+                                      (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS] };
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    s.swim_hold = !s.swim_hold;
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    s.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_USE;   /* the other Oracle's: nothing */
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_USE);
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_OFF;
+    s.window_scale = 3;
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_OFF);
+    /* A game whose profile has neither the hold nor the item hotkeys (a fan game), without a window to change: nothing. */
+    applied.swim_hold = applied.hotkeys_game = -1;
+    s.swim_hold = !s.swim_hold;
+    s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
+    s.window_scale = 2;
+    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0 && applied.swim_hold == -1 && applied.hotkeys_game == -1);
+    /* The window the game takes for Display's choice, as Play opens it: a scale, fullscreen for 0; without a display to
+     * measure, the scale asked for. */
+    int fullscreen = -1;
+    unsigned scale = 0;
+    oracles_home_game_window(&s, 3, NULL, (OraclesEnhancedSize){ 256u, 144u }, &fullscreen, &scale);
+    CHECK(!fullscreen && scale == 3);
+    oracles_home_game_window(&s, 0, NULL, (OraclesEnhancedSize){ 256u, 144u }, &fullscreen, &scale);
+    CHECK(fullscreen && scale == 4);
+    /* The window the pause's Window shows, F11's toggle included: fullscreen whatever the setting; a window, the
+     * setting when the window is the scale it opens at, else the scale the window is exactly, else none (-2): F11 out
+     * of a fullscreen start keeps the home screen's 1280x720, no whole scale of Near; -1 where it cannot change. */
+    CHECK(oracles_session_window_now(3, 3, 1, 1920, 1080, 256, 144) == 0);
+    CHECK(oracles_session_window_now(3, 3, 0, 768, 432, 256, 144) == 3);
+    CHECK(oracles_session_window_now(4, 3, 0, 768, 432, 256, 144) == 4);   /* 4x lowered to 3x: the setting */
+    CHECK(oracles_session_window_now(0, 0, 0, 1024, 576, 256, 144) == 4 && oracles_session_window_now(0, 0, 0, 640, 576, 160, 144) == 4);
+    CHECK(oracles_session_window_now(0, 0, 0, 768, 432, 256, 144) == 3 && oracles_session_window_now(3, 3, 0, 512, 288, 256, 144) == 2);
+    CHECK(oracles_session_window_now(0, 0, 0, 1280, 720, 256, 144) == -2 && oracles_session_window_now(0, 0, 0, 2560, 1440, 256, 144) == -2);
+    CHECK(oracles_session_window_now(3, 3, 0, 800, 450, 256, 144) == -2);   /* resized by hand */
+    CHECK(oracles_session_window_now(0, 0, 0, 1920, 1080, 160, 144) == -2);
+    CHECK(oracles_session_window_now(-1, 0, 1, 1920, 1080, 256, 144) == -1);
+    /* From the pause, Display stores the window only once Window is chosen: F11's fullscreen shown in the row stays out
+     * of the settings through any other change. */
+    OraclesHomeDisplay display;
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.window == 0);
+    display.window = 3;
+    display.hud = !display.hud;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.window_scale == 2 && s.hud_full == display.hud);
+    display.window_chosen = 1;
+    oracles_home_store_display(&display, 1, &s);
+    CHECK(s.window_scale == 0);
+    display.window = -1;   /* none shown: never stored */
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.window_scale == 0);
+    display.window = 1;
+    display.window_chosen = 0;
+    oracles_home_store_display(&display, 0, &s);   /* the home screen stores it always */
+    CHECK(s.window_scale == 3);
+    /* The windows whose pause would lose Display: Near's and Faithful's 2x and 3x, Medium's 2x, none of Far's; a 4x
+     * lowered to 3x by a small display too. */
+    static const unsigned scales[3] = { 2u, 3u, 4u }, lowered[3] = { 2u, 3u, 3u };
+    CHECK(oracles_session_windows_refused(scales, 256, 144, ORACLES_ASPECT_AUTO) == 3u);
+    CHECK(oracles_session_windows_refused(scales, 160, 144, ORACLES_ASPECT_AUTO) == 3u);
+    CHECK(oracles_session_windows_refused(scales, 384, 216, ORACLES_ASPECT_AUTO) == 1u);
+    CHECK(oracles_session_windows_refused(scales, 480, 270, ORACLES_ASPECT_AUTO) == 0u);
+    CHECK(oracles_session_windows_refused(lowered, 256, 144, ORACLES_ASPECT_AUTO) == 7u);
+    CHECK(oracles_session_windows_refused(scales, 160, 144, ORACLES_ASPECT_16_9) == 7u);   /* 640 wide in 16:9 */
 }
 
 int main(int argc, char **argv)
@@ -827,6 +903,7 @@ int main(int argc, char **argv)
     display_stored();
     pause_changes();
     text_layout();
+    pause_live_changes();
 
     remove(path);
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }

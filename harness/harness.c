@@ -88,6 +88,7 @@ typedef struct run {
     unsigned landing_direction;
     unsigned swim_dropped;    /* transitions he swam into and came out of on land where the straight path stays in water */
     unsigned cheats_changed;  /* the cheats the route's `cheat` lines change, their points armed from the start */
+    int swim_changed;         /* the route's `set swim-hold` lines change the swim's hold, its tests armed from the start */
 } run;
 
 static int input_source(void *opaque, uint32_t frame, unsigned *mask)
@@ -123,6 +124,10 @@ static void on_frame_begin(void *opaque, uint32_t frame)
         oracles_cheats_parse(r->route.cheats[i].name, NULL, &bit);
         oracles_guest_set_cheats(r->guest, r->route.cheats[i].on ? cheats | bit : cheats & ~bit);   /* armed from the start: it cannot fail */
     }
+    /* The route's settings changed at this frame: the swim's hold; the item hotkeys' mode and the window are notes, the
+     * exchanges being the `equip` lines and the window presentation alone. */
+    for (size_t n = oracles_route_settings_at(&r->route, frame, &first), i = first; i < first + n; i++)
+        if (r->route.settings[i].name == ORACLES_ROUTE_SET_SWIM_HOLD) oracles_guest_set_swim_hold(r->guest, r->route.settings[i].value);   /* armed from the start */
     if (r->check) oracles_frame_check_frame_begin(r->check, frame);
 }
 
@@ -471,7 +476,7 @@ static void report_transitions(run *r, FILE *summary, uint8_t *rom)
 static void report_checks(run *r, const harness_options *o, FILE *summary, uint8_t *rom)
 {
     report_transitions(r, summary, rom);
-    if (o->swim_hold) {
+    if (o->swim_hold || r->swim_changed) {
         unsigned mermaid = 0, flippers = 0;
         oracles_guest_swim_strokes(r->guest, &mermaid, &flippers);
         fprintf(stderr, "swim's hold: strokes started by a held button: %u with the mermaid suit, %u with the flippers\n", mermaid, flippers);
@@ -716,6 +721,11 @@ static int open_the_run(run *r, harness_options *o, uint8_t **rom_out, size_t *r
         o->swim_hold = 1;
         fprintf(stderr, "harness: the route was recorded with --swim-hold: the option is on\n");
     }
+    r->swim_changed = oracles_route_sets(&r->route, ORACLES_ROUTE_SET_SWIM_HOLD);
+    if (r->swim_changed && !oracles_compat_swim_hold(r->profile)) {
+        fprintf(stderr, "harness: the route changes the swim's hold, which %s does not support\n", r->profile ? oracles_compat_name(r->profile) : "this image");
+        return 1;
+    }
     unsigned route_cheats = 0;
     char cheat_names[64];
     if (oracles_cheats_parse(r->route.header.options, ORACLES_ROUTE_OPTION_CHEAT, &route_cheats) != 0) {
@@ -779,8 +789,9 @@ static int arm_the_run(run *r, harness_options *o, uint8_t **rom_ref, size_t rom
         if (r->enhanced) oracles_enhanced_check_set_transition(r->enhanced, r->transition);
         oracles_room_transition_set_diagonal(r->transition, o->continuous_diagonal);
     }
-    if (o->swim_hold && (!r->guest || oracles_guest_arm_swim_hold(r->guest) != 0)) {
-        fprintf(stderr, "harness: --swim-hold needs the hooks on, and the swim's strokes found in the ROM\n");
+    if ((o->swim_hold || r->swim_changed)
+        && (!r->guest || oracles_guest_set_swim_hold(r->guest, 1) != 0 || oracles_guest_set_swim_hold(r->guest, o->swim_hold) != 0)) {
+        fprintf(stderr, "harness: --swim-hold and a route's set swim-hold lines need the hooks on, and the swim's strokes found in the ROM\n");
         return 1;
     }
     /* The points of the cheats the route changes later are armed now, with those on from the start: a point once armed

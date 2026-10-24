@@ -115,9 +115,9 @@ const OraclesUiPageStyles *oracles_ui_page_styles(OraclesUiLayout layout);
 /* The transitions', the core's and the scaling's notes on Display; under 16:9's windows, when no line says their size is
  * reduced. */
 extern const char oracles_ui_transitions_note[], oracles_ui_core_note[], oracles_ui_scaling_note[], oracles_ui_window_fit_note[];
-/* Under Display's title, opened from a game: what applies at once and what waits for the next session. */
+/* Under Display's title, opened from a game: what waits for the next session, and that the rest applies at once. */
 extern const char oracles_ui_display_later[];
-/* Under a row of Display opened from a game, what only the next session takes. */
+/* Under Swimming and the Item hotkeys opened from a fan game, which has neither: they wait for the next session. */
 extern const char oracles_ui_later[];
 /* Under Text's explanation opened from a game (16:9), on the help's note line (4:3): a game keeps its texts' layout. */
 extern const char oracles_ui_text_later[];
@@ -189,7 +189,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine window_one;                        /* 4:3: in the windows' place, that they come to one size; else zero */
     OraclesUiLine transitions_note, core_note, scaling_note;
     OraclesUiLine text_note;                         /* 16:9, from a game: under Text's explanation, else zero */
-    OraclesUiLine page_note;                         /* under the title, zero unless `later` */
+    OraclesUiWrapped page_note;                      /* under the title, none unless `later`: two lines in 16:9's column, one in 4:3 */
     OraclesUiOptionLayout views[3];
     OraclesUiWrapped view_explanation;
     OraclesUiOptionLayout transitions[2];

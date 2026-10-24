@@ -3,6 +3,7 @@
 #include "backends.h"
 #include "guest_tables.h"
 #include "ui_controls_nav.h"
+#include "ui_page_nav.h"
 
 #include <SDL3/SDL.h>
 
@@ -26,6 +27,8 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->far_fixed = settings->far_fixed;
     display->core = oracles_settings_core(settings);
     display->window = settings->window_scale ? settings->window_scale - 2 : 3;
+    display->window_w = display->window_h = display->window_chosen = 0;
+    display->windows_refused = 0;
     display->colour = settings->colour_correction;
     display->vsync = !strcmp(settings->vsync, "on") ? 1 : !strcmp(settings->vsync, "off") ? 2 : 0;
     display->workers = settings->ghosts;
@@ -123,7 +126,8 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     if (!in_game) prefs->ghosts = display->workers;
     oracles_settings_quality_changed(prefs, view, core, ghosts);
     static const char *const vsync_names[3] = { "auto", "on", "off" };
-    prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
+    /* From the pause, only once Window is chosen: the row shows the window F11 or --fullscreen left, which hold till then. */
+    if ((!in_game || display->window_chosen) && display->window >= 0) prefs->window_scale = display->window < 3 ? display->window + 2 : 0;
     prefs->colour_correction = display->colour;
     prefs->scaling_fill = display->scaling;
     if (!display->margin_fixed) prefs->screen_margin = display->margin;   /* never --screen-margin's */
@@ -142,4 +146,16 @@ unsigned oracles_home_fitting_scale(struct SDL_Window *window, unsigned wanted, 
     const int room_w = (int)((float)usable.w * ratio + 0.5f), room_h = (int)(((float)usable.h - frame) * ratio + 0.5f);
     while (scale > 1u && ((int)(scale * surface.width) > room_w || (int)(scale * surface.height) > room_h)) scale--;
     return scale;
+}
+
+void oracles_home_game_window(const oracles_settings *settings, int window_scale, struct SDL_Window *window, OraclesEnhancedSize surface,
+                              int *fullscreen, unsigned *scale)
+{
+    *fullscreen = window_scale == 0 || oracles_sdl_fullscreen_only();
+    *scale = oracles_home_fitting_scale(window, window_scale > 0 ? (unsigned)window_scale : 4u, surface);
+    if (!*fullscreen && settings->scaling_fill) {
+        OraclesHomeDisplay display;
+        oracles_home_inspect_display(settings, &display, window);
+        *fullscreen = oracles_display_one_size_for(&display, (int)surface.width, (int)surface.height);
+    }
 }

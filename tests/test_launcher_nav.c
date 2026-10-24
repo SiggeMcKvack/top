@@ -1,7 +1,9 @@
 /* The home screen's navigation (ui_home_nav.h): entries, the list of fan
  * games, disabled items and their reasons, going back, the pointer; Display's rows from the pause; the newer version's
  * notice. */
+#include "ui_font.h"
 #include "ui_home_nav.h"
+#include "ui_page_layout.h"
 #include "ui_page_nav.h"
 
 #include <stdio.h>
@@ -437,6 +439,73 @@ static void display_in_game(void)
     CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.margin == 3);
 }
 
+/* Display from the pause steps over the windows whose pause would lose Display (nav->display.windows_refused), which
+ * a click leaves alone too, and says that they change from the home screen; on the home screen every window changes. */
+static void windows_refused(void)
+{
+    OraclesHomeNav nav;
+    oracles_home_init(&nav);
+    oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, ORACLES_PROFILE_ENHANCED, 0);
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_WINDOW;
+    nav.display.window = 3;
+    nav.display.windows_refused = 1u << 0 | 1u << 1;   /* 2x and 3x */
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.window == 2);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.window == 3);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.window == 2);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 0) == ORACLES_HOME_STAY && nav.display.window == 2);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 1) == ORACLES_HOME_STAY && nav.display.window == 2);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 3) == ORACLES_HOME_STORE && nav.display.window == 3);
+    char note[ORACLES_HOME_TEXT_LENGTH];
+    oracles_display_reduced(&nav, note, sizeof note);
+    CHECK(!strcmp(note, oracles_display_windows_refused_note) && !strcmp(note, "Smaller windows change from the home screen."));
+    nav.display.windows_refused = 0;
+    oracles_display_reduced(&nav, note, sizeof note);
+    CHECK(!note[0]);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 0) == ORACLES_HOME_STORE && nav.display.window == 0);
+    /* A window no choice is (F11 out of fullscreen at the home screen's size): none highlighted, and any choice, the
+     * first to the right included, is one that the pause applies and stores. */
+    nav.display.window = -1;
+    nav.display.window_w = 1280;
+    nav.display.window_h = 720;
+    nav.display.window_chosen = 0;
+    float dw, dh;
+    char label[64];
+    oracles_display_diagram(&nav, 432.0f, 243.0f, &dw, &dh, label, sizeof label);
+    CHECK(!strcmp(label, "1280\xc3\x97" "720 on a 1920\xc3\x97" "1080 screen"));
+    oracles_display_reduced(&nav, note, sizeof note);
+    CHECK(!note[0]);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.window == 0 && nav.display.window_chosen);
+    nav.display.window = -1;
+    nav.display.window_chosen = 0;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_WINDOW, 2) == ORACLES_HOME_STORE && nav.display.window == 2 && nav.display.window_chosen);
+    nav.row = ORACLES_DISPLAY_HUD;
+    nav.display.window_chosen = 0;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && !nav.display.window_chosen);
+    /* Medium at a stored 4x on a 1366x768 laptop, opened at 3x, 2x refused: both notes on one line, which fits the 16:9
+     * column's two lines and the 4:3 help's note line. */
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    nav.display.view = 1;
+    nav.display.screen_w = 1366;
+    nav.display.screen_h = 768;
+    nav.display.room_w = 1366;
+    nav.display.room_h = 728 - 64;
+    nav.display.window = 2;
+    nav.display.windows_refused = 1u;
+    oracles_display_reduced(&nav, note, sizeof note);
+    CHECK(!strcmp(note, "Reduced to 3\xc3\x97 to fit this screen; smaller ones from the home screen."));
+    nav.row = ORACLES_DISPLAY_WINDOW;
+    for (int layout = 0; layout < 2; layout++) {
+        nav.layout = layout ? ORACLES_UI_LAYOUT_4_3 : ORACLES_UI_LAYOUT_16_9;
+        OraclesUiDisplayTexts t;
+        oracles_ui_display_texts(&nav, &t);
+        OraclesUiDisplayLayout l;
+        oracles_ui_layout_display(nav.layout, &t, &l);
+        if (layout) CHECK(t.help_note == t.window_reduced && l.help_note.x + l.help_note.w <= 1440.0f - 64.0f);
+        else CHECK(t.window_fit == t.window_reduced && l.window_reduced.count >= 1 && l.window_reduced.count <= 2);
+    }
+}
+
 /* The newer version's notice: without it, the menu wraps from Exit to Start game; with it, down from Exit reaches it,
  * down again Start game, up Exit again, and up from Start game the notice.  OK, a click or a tap opens its page and the
  * launcher stays; Select's hint says Open while it is highlighted.  On the home screen only: not in the pause, not on a
@@ -496,6 +565,7 @@ static void update_notice(void)
 
 int main(void)
 {
+    if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
     entries();
     states();
     menu();
@@ -504,6 +574,7 @@ int main(void)
     pointer();
     slow_toast();
     display_in_game();
+    windows_refused();
     update_notice();
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("launcher navigation: entries, fan games, disabled items and going back behave as expected\n");

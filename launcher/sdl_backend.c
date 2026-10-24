@@ -960,6 +960,26 @@ void oracles_sdl_backend_set_fill(const oracles_host_backend *backend, int fill)
     if (state->texture) SDL_SetTextureScaleMode(state->texture, (SDL_ScaleMode)scale_mode);   /* the pause's image of the game too */
 }
 
+void oracles_sdl_backend_set_window(const oracles_host_backend *backend, int fullscreen, unsigned scale)
+{
+    sdl_backend *state = backend->opaque;
+    if (!state || !state->window || oracles_sdl_fullscreen_only() || !scale) return;
+    state->fullscreen = fullscreen != 0;
+    state->scale = scale;
+    SDL_SetWindowFullscreen(state->window, state->fullscreen != 0);
+    SDL_SyncWindow(state->window);   /* the window's state read below is the one asked for */
+    if (!(SDL_GetWindowFlags(state->window) & SDL_WINDOW_FULLSCREEN)) {
+        int x, y, w, h;
+        SDL_GetWindowPosition(state->window, &x, &y);
+        SDL_GetWindowSize(state->window, &w, &h);
+        oracles_sdl_size_window(state->window, (int)((unsigned)state->frame_width * scale), (int)((unsigned)state->frame_height * scale));
+        oracles_sdl_place_window(state->window, x + w / 2, y + h / 2);
+    }
+    int presentation, scale_mode;
+    oracles_sdl_presentation(window_fullscreen(state), state->fill, &presentation, &scale_mode);
+    if (state->texture) SDL_SetTextureScaleMode(state->texture, (SDL_ScaleMode)scale_mode);   /* the pause's image of the game too */
+}
+
 void oracles_sdl_backend_set_screen_margin(const oracles_host_backend *backend, int margin)
 {
     sdl_backend *state = backend->opaque;

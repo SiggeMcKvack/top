@@ -96,22 +96,36 @@ struct OraclesEnhancedSize oracles_session_view_size(const OraclesSessionOptions
  * OraclesSessionOptions holds it, 0 for none), else the settings' screen_margin=. */
 int oracles_session_screen_margin(int option, const oracles_settings *settings);
 
-/* What a running game shows of the settings the pause applies at once: the colour correction as the settings had it
- * when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws it),
- * the screen margin (an OraclesScreenMargin), the text box's size. */
+/* What a running game shows of the settings the pause applies while it runs: the colour correction as the settings
+ * had it when the game last took it, Scaling's Fill, the HUD full width (-1 without the Enhanced view, which alone draws
+ * it), the screen margin (an OraclesScreenMargin), the text box's size; and as the settings had them when the game last
+ * took them, the swim's hold (-1 where the game's profile has none), the item hotkeys' mode (an OraclesHotkeysMode) of
+ * the settings' game it plays (an OraclesSettingsGame, -1 for a game whose profile has none).  The window is not among
+ * them: the pause applies it when its row is chosen (OraclesPauseSession's window_chosen). */
 typedef struct OraclesSessionApplied {
     int colour, fill, hud, margin;
     int text_size;   /* Text size, 0 normal, 1 large, 2 xlarge (-1 without the Enhanced view, or for a fan game, which keeps the game's box) */
+    int swim_hold, hotkeys_game, hotkeys;
 } OraclesSessionApplied;
 #define ORACLES_SESSION_CHANGED_COLOUR 1u
 #define ORACLES_SESSION_CHANGED_FILL 2u
 #define ORACLES_SESSION_CHANGED_HUD 4u
 #define ORACLES_SESSION_CHANGED_MARGIN 8u
-#define ORACLES_SESSION_CHANGED_TEXT_SIZE 16u
+#define ORACLES_SESSION_CHANGED_SWIM 16u
+#define ORACLES_SESSION_CHANGED_HOTKEYS 32u
+#define ORACLES_SESSION_CHANGED_TEXT_SIZE 64u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
  * gives one (oracles_session_screen_margin), whatever the settings say. */
 unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied);
+/* The window a game has, as window_scale= counts it, F11's toggle included: -1 where `setting` (the window Display chose
+ * for it) is; 0 fullscreen; else the setting when the window is the `setting_scale` it opens at (lowered to what the
+ * display holds), else the scale of 2 to 4 the window's `width` x `height` pixels are exactly, else -2: none. */
+int oracles_session_window_now(int setting, unsigned setting_scale, int fullscreen, int width, int height, int surface_w, int surface_h);
+/* The windows (1 << Display's Window value) whose pause would keep only its own entries (oracles_ui_layout_narrow),
+ * Display gone with them: `scales`, those 2x, 3x and 4x open at (lowered to what the display holds), of a surface of
+ * surface_w x surface_h, under `aspect` (the settings' aspect=). */
+unsigned oracles_session_windows_refused(const unsigned scales[3], int surface_w, int surface_h, int aspect);
 
 /* The layout of the texts a session plays (language.h, OraclesLanguageLayout): the compact text where the profile has
  * it (`profile_compact`), the wide box where the profile has the host's text box (`profile_host_box`; elsewhere the

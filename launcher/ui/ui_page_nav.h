@@ -213,8 +213,13 @@ int oracles_display_one_size_for(const OraclesHomeDisplay *display, int w, int h
  * so). */
 int oracles_display_fullscreen(const OraclesHomeNav *nav);
 extern const char oracles_display_one_size_note[];   /* "One size only here; Scaling in Advanced can fill the screen." */
+/* From the pause, under windows it refuses (nav->display.windows_refused): "Smaller windows change from the home screen." */
+extern const char oracles_display_windows_refused_note[];
+/* After "Reduced to 3x to fit this screen" while the pause refuses some: "; smaller ones from the home screen." */
+extern const char oracles_display_windows_refused_tail[];
 /* The line under the windows: oracles_display_one_size_note at one size, else that a windowed scale chosen above the
- * fit is reduced to it, "Reduced to 3x to fit this screen."; empty when it fits. */
+ * fit is reduced to it, "Reduced to 3x to fit this screen.", else oracles_display_windows_refused_note while the pause
+ * refuses some, the two on one line when both hold; empty when it fits. */
 void oracles_display_reduced(const OraclesHomeNav *nav, char *out, size_t capacity);
 /* The page's texts: a window's name and size, the note under the windows, the diagram's line, the profile's note. */
 void oracles_display_window_texts(const OraclesHomeNav *nav, int window, char *name, char *size, size_t capacity);

@@ -53,9 +53,9 @@ OraclesHomeCommand oracles_cheats_act(OraclesHomeNav *nav, OraclesHomeAction act
         case ORACLES_HOME_RIGHT:
         case ORACLES_HOME_OK: return set_cheat(nav, row, !oracles_cheats_on(nav, row));
         case ORACLES_HOME_BACK:
-            /* Cheats is the sixth entry of the game's menu and of the pause's. */
+            /* Back to the menu Cheats was opened from, on Cheats. */
             nav->screen = nav->in_game ? ORACLES_SCREEN_PAUSE : ORACLES_SCREEN_HOME;
-            nav->focus = 5;
+            oracles_home_focus_item(nav, ORACLES_HOME_ITEM_CHEATS);
             return ORACLES_HOME_STAY;
     }
     return ORACLES_HOME_STAY;

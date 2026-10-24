@@ -574,13 +574,16 @@ int oracles_display_fullscreen(const OraclesHomeNav *nav)
 }
 
 const char oracles_display_one_size_note[] = "One size only here; Scaling in Advanced can fill the screen.";
+const char oracles_display_windows_refused_note[] = "Smaller windows change from the home screen.";
+const char oracles_display_windows_refused_tail[] = "; smaller ones from the home screen.";
 
 void oracles_display_reduced(const OraclesHomeNav *nav, char *out, size_t capacity)
 {
     const int fit = oracles_display_fit(nav);
     if (oracles_display_one_size(nav)) snprintf(out, capacity, "%s", oracles_display_one_size_note);
-    else if (nav->display.window < 3 && oracles_display_scale(nav, nav->display.window) > fit)
-        snprintf(out, capacity, "Reduced to %d\xc3\x97 to fit this screen.", fit);
+    else if (nav->display.window >= 0 && nav->display.window < 3 && oracles_display_scale(nav, nav->display.window) > fit)
+        snprintf(out, capacity, "Reduced to %d\xc3\x97 to fit this screen%s", fit, nav->display.windows_refused ? oracles_display_windows_refused_tail : ".");
+    else if (nav->display.windows_refused) snprintf(out, capacity, "%s", oracles_display_windows_refused_note);
     else if (capacity) out[0] = 0;
 }
 
@@ -656,7 +659,8 @@ void oracles_display_diagram(const OraclesHomeNav *nav, float box_w, float box_h
     /* Fill takes the screen in fullscreen only. */
     const int fill = nav->display.scaling && oracles_display_fullscreen(nav);
     const float f = fill_scale(nav, sw, sh);
-    const float image_w = fill ? f * (float)sw : (float)(k * sw), image_h = fill ? f * (float)sh : (float)(k * sh);
+    float image_w = fill ? f * (float)sw : (float)(k * sw), image_h = fill ? f * (float)sh : (float)(k * sh);
+    if (nav->display.window < 0) { image_w = (float)nav->display.window_w; image_h = (float)nav->display.window_h; }   /* a window no choice is */
     /* The window on the screen drawn to the box's scale, rounded to the pixel, and kept inside. */
     *w = floorf(image_w / (float)nav->display.screen_w * box_w + 0.5f);
     *h = floorf(image_h / (float)nav->display.screen_h * box_h + 0.5f);
@@ -708,8 +712,8 @@ const char *oracles_display_explanation(unsigned row)
 
 /* The value of a row, set to `value` (wrapped to the row's choices); the view and the transitions do not change in
  * Faithful, nor the HUD in Faithful or, from the pause, in a game running in Faithful, nor the text in Faithful or a
- * game, nor the core and the workers in a game, nor the window at one size.  Advanced has no value, nor Quality, which the
- * view, the core and the workers make (quality_set). */
+ * game, nor the core and the workers in a game, nor the window at one size, nor to a window the pause refuses.  Advanced
+ * has no value, nor Quality, which the view, the core and the workers make (quality_set). */
 static OraclesHomeCommand display_set(OraclesHomeNav *nav, unsigned row, int value)
 {
     static const int counts[ORACLES_DISPLAY_ROWS] = { ORACLES_PROFILES, 0, 4, 3, 2, 2, 2, 0, 2, 2, 3, 3, 2, ORACLES_DISPLAY_MARGINS };
@@ -724,8 +728,9 @@ static OraclesHomeCommand display_set(OraclesHomeNav *nav, unsigned row, int val
         || oracles_display_row_fixed(nav, row) || (row == ORACLES_DISPLAY_WINDOW && oracles_display_one_size(nav)))
         return ORACLES_HOME_STAY;
     value = (value % counts[row] + counts[row]) % counts[row];
-    if (*fields[row] == value) return ORACLES_HOME_STAY;
+    if (*fields[row] == value || (row == ORACLES_DISPLAY_WINDOW && (nav->display.windows_refused >> value & 1u))) return ORACLES_HOME_STAY;
     *fields[row] = value;
+    if (row == ORACLES_DISPLAY_WINDOW) nav->display.window_chosen = 1;
     nav->display.profile = (OraclesProfile)profile;
     return ORACLES_HOME_STORE;
 }
@@ -736,6 +741,14 @@ static int display_value(const OraclesHomeNav *nav, unsigned row)
                                                nav->display.colour, 0, nav->display.core, nav->display.transitions, nav->display.vsync, nav->display.workers,
                                                nav->display.scaling, nav->display.margin };
     return row < ORACLES_DISPLAY_ROWS ? values[row] : 0;
+}
+
+/* The value `step` from a row's: Window's steps over the windows the pause refuses. */
+static int display_step(const OraclesHomeNav *nav, unsigned row, int step)
+{
+    int value = display_value(nav, row) + step;
+    for (int i = 0; row == ORACLES_DISPLAY_WINDOW && i < 3 && (nav->display.windows_refused >> ((value % 4 + 4) % 4) & 1u); i++) value += step;
+    return value;
 }
 
 /* Advanced opens on the first of its rows that changes: Core on the home screen; from a game, whose core is fixed,
@@ -768,17 +781,17 @@ OraclesHomeCommand oracles_display_act(OraclesHomeNav *nav, OraclesHomeAction ac
         }
         case ORACLES_HOME_LEFT:
             if (row == ORACLES_DISPLAY_QUALITY) return quality_step(nav, -1);
-            return row == ORACLES_DISPLAY_ADVANCED ? ORACLES_HOME_STAY : display_set(nav, row, display_value(nav, row) - 1);
+            return row == ORACLES_DISPLAY_ADVANCED ? ORACLES_HOME_STAY : display_set(nav, row, display_step(nav, row, -1));
         case ORACLES_HOME_RIGHT:
         case ORACLES_HOME_OK:
             if (row == ORACLES_DISPLAY_ADVANCED) { display_advanced(nav, 1); return ORACLES_HOME_STAY; }
             if (row == ORACLES_DISPLAY_QUALITY) return quality_step(nav, 1);
-            return display_set(nav, row, display_value(nav, row) + 1);
+            return display_set(nav, row, display_step(nav, row, 1));
         case ORACLES_HOME_BACK:
             if (nav->advanced) { display_advanced(nav, 0); return ORACLES_HOME_STAY; }
             /* Back to the menu Display was opened from, on Display. */
             nav->screen = nav->in_game ? ORACLES_SCREEN_PAUSE : ORACLES_SCREEN_HOME;
-            nav->focus = nav->in_game ? 4 : 3;
+            oracles_home_focus_item(nav, ORACLES_HOME_ITEM_DISPLAY);
             return ORACLES_HOME_STAY;
     }
     return ORACLES_HOME_STAY;

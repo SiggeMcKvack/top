@@ -4,6 +4,7 @@
 
 #include "compositor.h"
 #include "text_box.h"
+#include "ui_layout.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -46,6 +47,11 @@ unsigned oracles_session_settings_changed(const oracles_settings *settings, int 
     if (applied->text_size >= 0 && settings->text_size != applied->text_size) { applied->text_size = settings->text_size; changed |= ORACLES_SESSION_CHANGED_TEXT_SIZE; }
     const int margin = oracles_session_screen_margin(margin_option, settings);
     if (margin != applied->margin) { applied->margin = margin; changed |= ORACLES_SESSION_CHANGED_MARGIN; }
+    if (applied->swim_hold >= 0 && settings->swim_hold != applied->swim_hold) { applied->swim_hold = settings->swim_hold; changed |= ORACLES_SESSION_CHANGED_SWIM; }
+    if (applied->hotkeys_game >= 0 && applied->hotkeys_game < ORACLES_SETTINGS_GAMES && (int)settings->item_hotkeys[applied->hotkeys_game] != applied->hotkeys) {
+        applied->hotkeys = (int)settings->item_hotkeys[applied->hotkeys_game];
+        changed |= ORACLES_SESSION_CHANGED_HOTKEYS;
+    }
     return changed;
 }
 
@@ -58,6 +64,25 @@ int oracles_session_text_layout(int profile_compact, int profile_host_box, int e
     *width = wide ? ORACLES_TEXT_BOX_WIDE_PIXELS : 128u;
     *fixed = !compact;
     return 1;
+}
+
+int oracles_session_window_now(int setting, unsigned setting_scale, int fullscreen, int width, int height, int surface_w, int surface_h)
+{
+    if (setting < 0) return setting;
+    if (fullscreen) return 0;
+    if (setting > 0 && width == (int)setting_scale * surface_w && height == (int)setting_scale * surface_h) return setting;
+    for (int k = 2; k <= 4; k++) if (width == k * surface_w && height == k * surface_h) return k;
+    return -2;
+}
+
+unsigned oracles_session_windows_refused(const unsigned scales[3], int surface_w, int surface_h, int aspect)
+{
+    unsigned refused = 0;
+    for (unsigned v = 0; v < 3; v++) {
+        const int w = (int)scales[v] * surface_w, h = (int)scales[v] * surface_h;
+        if (oracles_ui_layout_narrow(oracles_ui_layout_pause(w, h, aspect), w)) refused |= 1u << v;
+    }
+    return refused;
 }
 
 void oracles_session_default_save_path(const char *rom_path, char *out, size_t capacity)

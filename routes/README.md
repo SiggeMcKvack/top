@@ -28,10 +28,12 @@ The routes recorded before SameBoy's joypad bouncing was cut (`ages/advanced`, `
 | `ages/underwater.route` | under water | faithful, faithful-cc, enhanced, enhanced-threaded, enhanced-zoom, enhanced-zoom-threaded |
 | `ages/intro.route` | Ages' introduction and cutscenes in the drawn-back view | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `ages/hotkeys-use.route` | item hotkeys in `use` mode, a session equal to its replay | faithful, enhanced, enhanced-threaded, enhanced-zoom |
+| `ages/hotkeys-use-set.route` | `ages/hotkeys-use.route` with the item hotkeys turned off and on again by `set item-hotkeys` lines, written by hand: notes, the game and the Enhanced run unchanged | faithful, enhanced, enhanced-threaded |
 | `ages/zoom-out.route` | the drawn-back view on Ages: dialogues, time travel, interiors | faithful, enhanced-zoom, enhanced-zoom-threaded |
 | `ages/mods-claw-game.route` | Lua mods: a house, its characters, a minigame, `mod.storage`, the save | faithful, enhanced |
 | `ages/swim.route` | the continuous transitions through a swim: the sea with the mermaid suit, a dive and the sea floor, an underwater building | enhanced-zoom, enhanced-zoom-threaded |
 | `ages/mermaid-hold.route` | the swim's hold with the mermaid suit: `ages/underwater.route`'s start, then directions held on the sea floor, written by hand; with `--continuous-swim --continuous-diagonal`, the diagonal on foot, the route staying on land | faithful, enhanced |
+| `ages/mermaid-hold-set.route`, `ages/mermaid-hold-window.route` | `ages/mermaid-hold.route` with `set` lines, as the pause menu writes them, written by hand: the swim's hold off at 3060 and on again at 3140, no stroke started between; the window at 3x, fullscreen and 2x, the game and the Enhanced run unchanged | faithful, enhanced, enhanced-threaded |
 | `ages/seafloor-diagonal.route` | the transitions' diagonal on the sea floor with the mermaid suit, tapped and held with the swim's hold, across the edges of 2:b7, 2:b6, 2:a6 and 2:a7, written by hand | faithful, enhanced |
 | `ages/diagonal-crossings.route` | the transitions' diagonal on foot: the edges of 0:6c, 0:6b and 0:5c crossed diagonally, walls across included, written by hand | faithful, enhanced, enhanced-threaded, enhanced-zoom |
 | `ages/swim-diagonal.route` | the transitions' diagonal swimming with the mermaid suit across the edge between 0:c4 and 0:b4, written by hand | faithful, enhanced, enhanced-threaded, enhanced-zoom |

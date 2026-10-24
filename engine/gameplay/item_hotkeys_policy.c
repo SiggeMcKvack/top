@@ -351,6 +351,11 @@ int oracles_item_hotkeys_idle(const OraclesItemHotkeys *h)
     return !h->request.active && !h->press.active && !h->returns[0].waiting && !h->returns[1].waiting && !h->previous[0].valid && !h->previous[1].valid;
 }
 
+int oracles_item_hotkeys_at_rest(const OraclesItemHotkeys *h)
+{
+    return !h->request.active && !h->press.active && !h->returns[0].waiting && !h->returns[1].waiting && h->asked == ASKED_NOTHING;
+}
+
 /* ---- on a guest ----------------------------------------------------------------------------- */
 
 static void guest_policy(void *opaque, const OraclesGuestInventoryState *state, OraclesGuestInventoryOp *op) { oracles_item_hotkeys_on_write_point(opaque, state, op); }

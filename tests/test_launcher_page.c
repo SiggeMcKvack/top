@@ -1174,12 +1174,16 @@ static void display_2a_2b(void)
         CHECK(!strcmp(t.section, "Display"));
     }
 
-    /* 2g: opened from the game, a note under the title says what the next Play takes, once for the page; color
-     * correction applies at once; the core is the game's, its row dimmed and inert. */
+    /* 2g: opened from the game, a note under the title says what the next Play takes, once for the page, on two lines
+     * in the left column, which moves down under it (turn 27); color correction applies at once; the core is the game's,
+     * its row dimmed and inert. */
     nav.in_game = 1;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
-    layout_text("2g", "page note", &l.page_note);
+    layout_line("2g", "page note", &l.page_note.lines[0]);
+    layout_near("2g", "page note", "lines", (float)l.page_note.count);
+    layout_near("2g", "page note", "width", l.page_note.w);
+    CHECK(l.page_note.lines[1].x + l.page_note.lines[1].w <= 96.0f + 520.0f && l.page_note.lines[0].x + l.page_note.lines[0].w <= 96.0f + 520.0f);
     layout_near("2g", "Window row", "y", l.rows[ORACLES_DISPLAY_WINDOW].y);
     layout_near("2g", "View row", "y", l.rows[ORACLES_DISPLAY_VIEW].y);
     layout_near("2g", "View row", "h", l.rows[ORACLES_DISPLAY_VIEW].h);
@@ -1354,7 +1358,7 @@ static void display_9a_9b_9c(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     display_advanced_rows("9c", &t, &l);
-    layout_text("9c", "page note", &l.page_note);
+    layout_text("9c", "page note", &l.page_note.lines[0]);
     layout_box("9c", "diagram", &l.diagram);
     /* Auto names the one worker of a device under four cores. */
     nav.display.cores = 2;
@@ -1756,7 +1760,7 @@ static void display_4_3(void)
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
     /* 10f: the rows in one column, the explanation of the highlighted one, Profile, in the header with its section and title on one line. */
     layout_line("10f", "section", &l.head.section);
-    CHECK(!strcmp(l.title_text, "Oracle of Ages") && l.head.title.count == 0 && l.head.state.h == 0.0f && l.page_note.h == 0.0f);
+    CHECK(!strcmp(l.title_text, "Oracle of Ages") && l.head.title.count == 0 && l.head.state.h == 0.0f && l.page_note.count == 0);
     layout_line("10f", "title", &l.title);
     /* The diagram's box in the screen's shape, 162 wide; Advanced beside it, framed. */
     layout_box("10f", "diagram", &l.diagram);
@@ -1856,7 +1860,7 @@ static void display_4_3(void)
     nav.in_game = 1;
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
-    layout_line("10o", "page note", &l.page_note);
+    layout_line("10o", "page note", &l.page_note.lines[0]);
     layout_box("10o", "Window row", &l.rows[ORACLES_DISPLAY_WINDOW]);
     layout_near("10o", "help", "y", l.help.y);
     layout_box("10o", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
@@ -1875,7 +1879,7 @@ static void display_4_3(void)
         layout_line(frame, "help note", &l.help_note);
         CHECK(l.rows[ORACLES_DISPLAY_PROFILE].w == 0.0f && l.rows[ORACLES_DISPLAY_QUALITY].w == 0.0f && l.rows[ORACLES_DISPLAY_ADVANCED].w == 0.0f
               && l.advanced_label.h == 0.0f);
-        if (in_game) { layout_line(frame, "page note", &l.page_note); continue; }
+        if (in_game) { layout_line(frame, "page note", &l.page_note.lines[0]); continue; }
         layout_line(frame, "section", &l.head.section);
         layout_line(frame, "Core", &l.labels[ORACLES_DISPLAY_CORE].lines[0]);
         layout_line(frame, "core 0", &l.core[0].name);
@@ -2302,7 +2306,7 @@ static void display_scaling(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
     display_scaling_4_3("13d", "1440\xc3\x97" "1080", "1440\xc3\x97" "1080", &t, &l);
-    layout_line("13d", "page note", &l.page_note);
+    layout_line("13d", "page note", &l.page_note.lines[0]);
     layout_box("13d", "core row", &l.rows[ORACLES_DISPLAY_CORE]);
     layout_box("13d", "vsync row", &l.rows[ORACLES_DISPLAY_VSYNC]);
     layout_box("13d", "workers row", &l.rows[ORACLES_DISPLAY_WORKERS]);
@@ -2455,7 +2459,7 @@ static void display_far_fitted(void)
         far_fitted_probes(frame, &l, frames[f].note[0] != 0);
         if (frames[f].note[0]) layout_line(frame, "help note", &l.help_note);
         else CHECK(l.help_note.w == 0.0f);
-        if (frames[f].in_game) layout_line(frame, "page note", &l.page_note);
+        if (frames[f].in_game) layout_line(frame, "page note", &l.page_note.lines[0]);
         else if (frames[f].w != 640) {
             layout_box(frame, "diagram", &l.diagram);
             layout_box(frame, "diagram window", &l.diagram_window);
@@ -2531,8 +2535,8 @@ static void display_hud(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_16_9, &t, &l);
     hud_probes("19e", &l);
-    layout_text("19e", "page note", &l.page_note);
-    CHECK(!strcmp(oracles_ui_display_later, "Color, HUD, scaling and margin apply at once; the rest at the next Play."));
+    layout_text("19e", "page note", &l.page_note.lines[0]);
+    CHECK(!strcmp(oracles_ui_display_later, "Profile, view, text, transitions and vsync apply at the next Play; the rest at once."));
     layout_box("19e", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
     layout_box("19e", "panel", &l.panel);
     CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_HUD, 0) == ORACLES_HOME_STORE && nav.display.hud == 0);
@@ -2557,7 +2561,7 @@ static void display_hud(void)
     oracles_ui_display_texts(&nav, &t);
     oracles_ui_layout_display(ORACLES_UI_LAYOUT_4_3, &t, &l);
     hud_probes_4_3("19f", &l);
-    layout_line("19f", "page note", &l.page_note);
+    layout_line("19f", "page note", &l.page_note.lines[0]);
     nav.in_game = 0;
     display_4_3_nav(&nav, 640, 480);
     nav.row = ORACLES_DISPLAY_HUD;
@@ -2680,8 +2684,8 @@ static void display_text(void)
     text_probes("text pause 4:3", &l, 1);
     layout_near("text pause 4:3", "help note", "y", l.help_note.y);
     layout_line("text pause 4:3", "help note text", &l.help_note);
-    layout_line("text pause 4:3", "page note", &l.page_note);
-    CHECK(!strcmp(oracles_ui_display_later, "Color, HUD, scaling and margin apply at once; the rest at the next Play."));
+    layout_line("text pause 4:3", "page note", &l.page_note.lines[0]);
+    CHECK(!strcmp(oracles_ui_display_later, "Profile, view, text, transitions and vsync apply at the next Play; the rest at once."));
     nav.display.screen_w = nav.display.room_w = 1920;
     nav.display.window = 1;
     oracles_ui_display_texts(&nav, &t);
@@ -2690,7 +2694,7 @@ static void display_text(void)
     layout_text("text pause", "text note", &l.text_note);
     layout_near("text pause", "text note", "top", l.text_note.y);
     layout_near("text pause", "text explanation", "top", l.explanations[8].lines[0].y);
-    layout_text("text pause", "page note", &l.page_note);
+    layout_text("text pause", "page note", &l.page_note.lines[0]);
     layout_box("text pause", "panel", &l.panel);
     layout_text("text pause", "Advanced", &l.advanced_label);
     CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TEXT) && oracles_home_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.text == 0);
@@ -2747,7 +2751,7 @@ static void display_margin(void)
         layout_text(frames[f], "margin explanation", &l.explanations[7].lines[0]);
         layout_near(frames[f], "margin explanation", "width", l.explanations[7].w);
         layout_box(frames[f], "panel", &l.panel);
-        if (nav.in_game) layout_text(frames[f], "page note", &l.page_note);
+        if (nav.in_game) layout_text(frames[f], "page note", &l.page_note.lines[0]);
         CHECK(!oracles_display_row_fixed(&nav, ORACLES_DISPLAY_MARGIN));
         CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_MARGIN, 0) == ORACLES_HOME_STORE && nav.display.margin == 0);
     }
@@ -2767,7 +2771,7 @@ static void display_margin(void)
         layout_line(frame, "help text", &l.help);
         layout_near(frame, "help", "y", l.help.y);
         layout_near(frame, "help note", "y", l.help_note.y);
-        if (nav.in_game) layout_line(frame, "page note", &l.page_note);
+        if (nav.in_game) layout_line(frame, "page note", &l.page_note.lines[0]);
     }
 }
 

@@ -31,6 +31,7 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiLine reset_text, reset_dot;
     OraclesUiBox mode;                          /* the Item hotkeys line's box */
     OraclesUiLine mode_title, mode_text, mode_note, mode_later;
+    const char *mode_later_text;                /* mode_later's, as swim_later_text */
     OraclesUiChipLayout mode_choices[2];
     OraclesUiLine heading_hotkeys, heading_hotkeys_keyboard, heading_hotkeys_gamepad, heading_items;
     OraclesUiLine hotkey_names[ORACLES_HOME_HOTKEY_ROWS];
@@ -58,10 +59,12 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiLine mode_fan;
     char mode_fan_text[ORACLES_HOME_TEXT_LENGTH];
     /* Swimming: its box (its highlight, the pointer's target), its title and Tap and Hold on one line, its explanation
-     * broken into lines under them, in 4:3 a fan game's line that it does not apply there, and in a game the line that
-     * it waits for the next Play (zero when not shown).  Zero in 4:3's Buttons and Hotkeys. */
+     * broken into lines under them, in 4:3 a fan game's line that it does not apply there, and from a fan game's pause
+     * the line that it waits for the next Play, from an unrecognised ROM's why it is dimmed (zero when not shown, its
+     * text NULL).  Zero in 4:3's Buttons and Hotkeys. */
     OraclesUiBox swim;
     OraclesUiLine swim_title, swim_fan, swim_later;
+    const char *swim_later_text;
     OraclesUiChipLayout swim_choices[2];
     OraclesUiWrapped swim_text;
 } OraclesUiControlsLayout;
@@ -80,6 +83,7 @@ extern const OraclesUiTextStyle oracles_ui_controls_menu_cell_4_3, oracles_ui_co
 extern const char oracles_ui_controls_mode_text[], oracles_ui_controls_mode_note[], oracles_ui_controls_slots[];
 extern const char *const oracles_ui_controls_mode_choices[2];
 extern const char oracles_ui_controls_swim_text[], oracles_ui_controls_swim_fan[];
+extern const char oracles_ui_controls_original_only[];   /* "Needs an original ROM.": Swimming's, the Item hotkeys' reason */
 extern const char *const oracles_ui_controls_swim_choices[2];   /* "Tap", "Hold" */
 
 /* The styles a layout draws Controls in; 4:3 has no slots' note (NULL), 16:9 no tabs (NULL). */
@@ -90,8 +94,8 @@ typedef struct OraclesUiControlsStyles {
 } OraclesUiControlsStyles;
 const OraclesUiControlsStyles *oracles_ui_controls_styles(OraclesUiLayout layout);
 
-/* The screen for `nav` in `layout` (its cells' texts, the prompt, the game shown's items; in a game, the lines that
- * say the Item hotkeys and Swimming wait for the next Play; in 4:3, nav's tab). */
+/* The screen for `nav` in `layout` (its cells' texts, the prompt, the game shown's items; from a fan game's pause, the
+ * lines that say the Item hotkeys and Swimming wait for the next Play; in 4:3, nav's tab). */
 void oracles_ui_layout_controls(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out);
 /* The text of an item's cell: the item's name, or "Empty". */
 const char *oracles_ui_controls_item_text(const OraclesHomeNav *nav, int slot);

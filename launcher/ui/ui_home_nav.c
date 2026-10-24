@@ -183,6 +183,14 @@ unsigned oracles_home_focus(const OraclesHomeNav *nav)
     return nav->focus < count ? nav->focus : count - 1u;
 }
 
+void oracles_home_focus_item(OraclesHomeNav *nav, OraclesHomeItemId id)
+{
+    OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];
+    const unsigned count = oracles_home_items(nav, items);
+    nav->focus = 0;
+    for (unsigned i = 0; i < count; i++) if (items[i].id == id) nav->focus = i;
+}
+
 int oracles_home_update_focused(const OraclesHomeNav *nav)
 {
     OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS];

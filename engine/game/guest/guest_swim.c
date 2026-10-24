@@ -54,7 +54,7 @@ static int arm_test(OraclesGuest *guest, const uint8_t *rom, size_t size, Oracle
     return oracles_guest_add_hook(guest, at, event, 0) != 0 ? -1 : 0;
 }
 
-int oracles_guest_arm_swim_hold(OraclesGuest *guest)
+static int arm_tests(OraclesGuest *guest)
 {
     const OraclesGuestTables *t = guest->tables;
     if (!oracles_compat_swim_hold(guest->profile)) return -1;
@@ -65,6 +65,21 @@ int oracles_guest_arm_swim_hold(OraclesGuest *guest)
     if (t->link_update_flippers_state0.bank == ORACLES_GUEST_ABSENT) return -1;
     return arm_test(guest, rom, size, t->link_update_flippers_state0, ORACLES_GAME_BUTTON_A, ORACLES_EVENT_FLIPPERS_STROKE);
 }
+
+int oracles_guest_set_swim_hold(OraclesGuest *guest, int on)
+{
+    if (!guest) return -1;
+    if (on && !guest->swim_hold_armed) {
+        if (arm_tests(guest) != 0) return -1;
+        guest->swim_hold_armed = 1;
+    }
+    guest->swim_hold = on != 0;
+    return 0;
+}
+
+int oracles_guest_arm_swim_hold(OraclesGuest *guest) { return oracles_guest_set_swim_hold(guest, 1); }
+
+int oracles_guest_swim_hold(const OraclesGuest *guest) { return guest && guest->swim_hold; }
 
 void oracles_guest_swim_strokes(const OraclesGuest *guest, unsigned *mermaid, unsigned *flippers)
 {
@@ -89,6 +104,7 @@ void oracles_guest_mermaid_stroke(OraclesGuest *guest)
 {
     const OraclesGuestTables *t = guest->tables;
     OraclesCoreRegisters r;
+    if (!guest->swim_hold) return;
     const uint8_t *link = oracles_guest_object(guest, 0, 0);
     if (!link || !at_link(guest, &r)) return;
     OraclesGuestStrokeState s;
@@ -110,7 +126,7 @@ void oracles_guest_mermaid_stroke(OraclesGuest *guest)
 void oracles_guest_flippers_stroke(OraclesGuest *guest)
 {
     OraclesCoreRegisters r;
-    if (!at_link(guest, &r)) return;
+    if (!guest->swim_hold || !at_link(guest, &r)) return;
     const OraclesGuestTables *t = guest->tables;
     const uint8_t add = oracles_guest_flippers_press((uint8_t)(r.af >> 8), oracles_guest_read8(guest, t->game_keys_pressed),
                                                      oracles_guest_read8(guest, t->link_angle));

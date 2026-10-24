@@ -90,6 +90,7 @@ struct OraclesGuest {
     char language[ORACLES_LANGUAGE_INDEX_CODE_BYTES];
     unsigned language_served, language_english, language_missing, language_laid_out;
     unsigned mermaid_strokes, flippers_strokes;      /* the swim's hold (guest_swim.c): strokes it started */
+    int swim_hold, swim_hold_armed;                  /* the hold on; its tests hooked */
     unsigned cheats, cheats_armed;                   /* the cheats (guest_cheats.c): those on, those whose point is armed */
     OraclesGuestSym ammo_scripted_return;            /* where the bomb-upgrade fairy's call of decNumBombs returns; bank ABSENT: none */
     OraclesGuestCheatCounts cheat_counts;

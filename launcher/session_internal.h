@@ -48,6 +48,16 @@ typedef struct session {
     int cheats_game;
     unsigned cheats_next, cheats_route, cheats_used;
     int cheats_pending;
+    /* The other settings the pause changes while the game runs (pause_settings_changed), each as the settings had it
+     * when the game last took it, -1 when the pause cannot change the game's (OraclesSessionApplied): the swim's hold,
+     * which the next frame begins with; the item hotkeys' mode of the settings' game the game plays (hotkeys_game, -1
+     * for none), asked for at the next frame and taken once their policy is at rest; and the window, changed at once,
+     * whose `set` line the next frame writes in a route recorded (window_line, -1 for none). */
+    int swim_setting, swim_next, swim_pending;
+    int hotkeys_game, hotkeys_setting, hotkeys_pending;
+    OraclesHotkeysMode hotkeys_next;
+    int window_setting, window_line;
+    int swim_route;                           /* a replayed route's `set swim-hold` lines: the hold's tests armed from the start */
     int view_level;                              /* the Enhanced view's level (OraclesEnhancedLevel), its size the options' (oracles_session_view_size) */   /* the options, as a replayed route or the profile may change them */
     int ghosts;                                  /* the neighbour ghosts chosen, --ghosts' else the settings': 0 auto, 1, 2 */
     OraclesHotkeysMode hotkeys_mode;

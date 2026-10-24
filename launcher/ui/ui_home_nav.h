@@ -207,7 +207,10 @@ typedef struct OraclesHomeDisplay {
                                  * from a game, for the next Play: a game keeps the texts it laid out at its start */
     int text_fixed;             /* --text gave it for the run: the row shows it, dimmed and inert, and it is never stored */
     int view;                   /* the Enhanced view: 0 near, 1 medium, 2 far (the default), in Enhanced only */
-    int window;                 /* 0, 1, 2: the surface at 2x, 3x, 4x; 3: fullscreen */
+    int window;                 /* 0, 1, 2: the surface at 2x, 3x, 4x; 3: fullscreen; from the pause, -1 for a window none of
+                                 * them is (F11 out of fullscreen at another size, a window resized by hand) */
+    int window_w, window_h;     /* that window's size, which the diagram shows */
+    int window_chosen;          /* from the pause: Window was changed since the last store, which alone then stores it */
     int colour;                 /* colour correction */
     int vsync;                  /* 0 auto, 1 on, 2 off */
     int core;                   /* 0 Accurate (SameBoy), 1 Fast (mGBA); in a game, the running game's, which does not change */
@@ -222,6 +225,8 @@ typedef struct OraclesHomeDisplay {
     int far_fixed;              /* the settings' far=fixed: far keeps its size, else fitted to the screen where it fills it badly */
     int room_w, room_h;         /* the room a window has there: the usable area, less the title bar */
     int fullscreen_only;        /* the platform plays every game fullscreen (Android): one size whatever Window says */
+    unsigned windows_refused;   /* from the pause, the windows (1 << Window's value) whose pause would keep only its own
+                                 * entries (oracles_ui_layout_narrow), Display among those it leaves: dimmed and inert */
 } OraclesHomeDisplay;
 
 /* Controls (ui_controls_nav.h): the names settings.txt writes, SDL's key names and
@@ -292,8 +297,10 @@ typedef struct OraclesHomeNav {
      * which alone the host writes. */
     int cheats_fixed;
     unsigned cheats_changed;
-    /* In a game: its profile has no cheats (an unrecognised ROM, a fan game): the pause has no Cheats. */
-    int cheats_refused;
+    /* In a game: its profile has no cheats (an unrecognised ROM, a fan game): the pause has no Cheats.  An Oracle's
+     * whose profile has no swim's hold, no item hotkeys (an unrecognised ROM): Controls' Swimming, its Item hotkeys,
+     * dimmed and inert, saying why. */
+    int cheats_refused, swim_refused, hotkeys_refused;
     /* In a game (the pause menu, and Controls and Display opened from it): the running game's profile, the pause
      * menu reduced in a 16:9 window under 960 pixels wide (oracles_ui_layout_narrow), and Load state's note
      * ("from 22:14"), empty while there is no savestate: Load state is then greyed, "No savestate yet". */
@@ -339,6 +346,9 @@ OraclesHomeHero oracles_home_hero(const OraclesHomeNav *nav);
 unsigned oracles_home_items(const OraclesHomeNav *nav, OraclesHomeItem items[ORACLES_HOME_MAX_ITEMS]);
 /* The highlighted item, within the menu; the menu's count while the newer version's notice has the highlight. */
 unsigned oracles_home_focus(const OraclesHomeNav *nav);
+/* A page closed: the highlight on its item in the menu shown now, or on the first (Resume) when that menu has lost it
+ * (the pause's, made narrow while the page was open). */
+void oracles_home_focus_item(OraclesHomeNav *nav, OraclesHomeItemId id);
 /* The newer version's notice is shown (on the home screen, nav->update set), and highlighted: down from the menu's last
  * item, up from its first, the menu no longer wrapping from one to the other; OK opens its page. */
 int oracles_home_update_shown(const OraclesHomeNav *nav);

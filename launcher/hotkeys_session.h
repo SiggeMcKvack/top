@@ -27,5 +27,15 @@ void oracles_hotkeys_session_frame(OraclesHotkeysSession *session, struct Oracle
 unsigned oracles_hotkeys_session_filter(void *session, uint32_t frame, unsigned mask);
 /* The replayed route is over, or a savestate was loaded during it: the player has the keys. */
 void oracles_hotkeys_session_route_over(OraclesHotkeysSession *session);
+/* The mode changed while the game runs (the pause's Item hotkeys): asked for here, the slots' keys let go when the
+ * live policy is to stop; taken by oracles_hotkeys_session_settle.  During a replay, the mode the player gets after it. */
+void oracles_hotkeys_session_set_mode(OraclesHotkeysSession *session, OraclesHotkeysMode mode);
+/* At the start of a frame, before it runs: the mode asked for taken once the live policy is at rest
+ * (oracles_item_hotkeys_at_rest), so that no button keeps a hotkey's item; at once when there is none.  1 when the mode
+ * changed now, 0 otherwise, -1 when the policy could not start again (the hotkeys then stay off). */
+int oracles_hotkeys_session_settle(OraclesHotkeysSession *session, FILE *report);
+/* The mode the game plays with, and the one asked for. */
+OraclesHotkeysMode oracles_hotkeys_session_mode(const OraclesHotkeysSession *session);
+OraclesHotkeysMode oracles_hotkeys_session_next_mode(const OraclesHotkeysSession *session);
 
 #endif

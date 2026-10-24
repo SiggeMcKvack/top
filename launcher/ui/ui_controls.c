@@ -27,6 +27,7 @@
 #define ITEM 0xd6d3dcu
 #define ITEM_EMPTY 0x8f8c98u
 #define GRID_OFF_OPACITY 0.4f          /* the grid while the item hotkeys are off */
+#define ROW_NOT_APPLIED 0.4f           /* a line that does not change here */
 #define KEY_TEXT 0xd6d3dcu
 #define KEY_BORDER 0x4a4752u
 #define SHORTCUT 0xc9c6cfu
@@ -114,38 +115,43 @@ static void buttons(OraclesUiDraw *draw, const OraclesHomeNav *nav, const Oracle
 /* A line of two choices (the Item hotkeys', Swimming's): its highlight while focused, its title, the choices framed,
  * the one chosen brighter, in the accent while focused. */
 static void choice_line(OraclesUiDraw *draw, const OraclesUiBox *b, const OraclesUiLine *title, const char *title_text, const OraclesUiChipLayout *choices,
-                        const char *const *names, int chosen, int focused, const OraclesUiControlsStyles *st, const look *lk, OraclesUiColor accent)
+                        const char *const *names, int chosen, int focused, const OraclesUiControlsStyles *st, const look *lk, OraclesUiColor accent,
+                        float opacity)
 {
-    if (focused) oracles_ui_fill_round_rect(draw, b->x, b->y, b->w, b->h, lk->row_radius, oracles_ui_rgba(0xffffffu, ROW_HIGHLIGHT_OPACITY));
-    text(draw, st->mode_title, title, title_text, oracles_ui_rgb(NAME));
+    if (focused) oracles_ui_fill_round_rect(draw, b->x, b->y, b->w, b->h, lk->row_radius, oracles_ui_rgba(0xffffffu, ROW_HIGHLIGHT_OPACITY * opacity));
+    text(draw, st->mode_title, title, title_text, oracles_ui_rgba(NAME, opacity));
     for (int i = 0; i < 2; i++) {
         const OraclesUiChipLayout *c = &choices[i];
         const OraclesUiColor frame = i == chosen ? (focused ? accent : oracles_ui_rgba(0xffffffu, 0.4f)) : oracles_ui_rgba(0xffffffu, 0.1f);
-        oracles_ui_stroke_round_rect(draw, c->box.x, c->box.y, c->box.w, c->box.h, lk->chip_radius, lk->chip_border, frame);
-        text(draw, st->chip, &c->name, names[i], i == chosen ? (focused ? accent : oracles_ui_rgb(NAME)) : oracles_ui_rgb(CHOICE_OFF));
+        oracles_ui_stroke_round_rect(draw, c->box.x, c->box.y, c->box.w, c->box.h, lk->chip_radius, lk->chip_border, oracles_ui_fade(frame, opacity));
+        const OraclesUiColor name = i == chosen ? (focused ? accent : oracles_ui_rgb(NAME)) : oracles_ui_rgb(CHOICE_OFF);
+        text(draw, st->chip, &c->name, names[i], oracles_ui_fade(name, opacity));
     }
 }
 
+/* From the pause of an Oracle whose ROM has no item hotkeys, no swim's hold, their lines are dimmed, saying why. */
 static void mode_line(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
                       OraclesUiColor accent)
 {
+    const float opacity = nav->hotkeys_refused ? ROW_NOT_APPLIED : 1.0f;
     choice_line(draw, &l->mode, &l->mode_title, "Item hotkeys", l->mode_choices, oracles_ui_controls_mode_choices, oracles_controls_hotkeys_on(nav),
-                nav->controls.row == ORACLES_CONTROLS_ROW_MODE, st, lk, accent);
-    text(draw, st->mode_text, &l->mode_text, oracles_ui_controls_mode_text, oracles_ui_rgb(TEXT));
-    text(draw, st->note, &l->mode_note, oracles_ui_controls_mode_note, oracles_ui_rgb(NOTE));
+                nav->controls.row == ORACLES_CONTROLS_ROW_MODE, st, lk, accent, opacity);
+    text(draw, st->mode_text, &l->mode_text, oracles_ui_controls_mode_text, oracles_ui_rgba(TEXT, opacity));
+    text(draw, st->note, &l->mode_note, oracles_ui_controls_mode_note, oracles_ui_rgba(NOTE, opacity));
     if (l->mode_fan.h > 0.0f) text(draw, st->mode_text, &l->mode_fan, l->mode_fan_text, oracles_ui_rgb(WARN));
-    if (l->mode_later.h > 0.0f) text(draw, st->note, &l->mode_later, oracles_ui_later, oracles_ui_rgb(NOTE));
+    if (l->mode_later.h > 0.0f) text(draw, st->note, &l->mode_later, l->mode_later_text, oracles_ui_rgb(NOTE));
 }
 
-/* Swimming: its line, its explanation, a fan game's line and the next Play's. */
+/* Swimming: its line, its explanation, a fan game's line and the next Play's, or why it is dimmed. */
 static void swim(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
                  OraclesUiColor accent)
 {
+    const float opacity = nav->swim_refused ? ROW_NOT_APPLIED : 1.0f;
     choice_line(draw, &l->swim, &l->swim_title, "Swimming", l->swim_choices, oracles_ui_controls_swim_choices, nav->controls.swim_hold != 0,
-                nav->controls.row == ORACLES_CONTROLS_ROW_SWIM, st, lk, accent);
-    for (unsigned i = 0; i < l->swim_text.count; i++) text(draw, st->mode_text, &l->swim_text.lines[i], l->swim_text.text[i], oracles_ui_rgb(TEXT));
+                nav->controls.row == ORACLES_CONTROLS_ROW_SWIM, st, lk, accent, opacity);
+    for (unsigned i = 0; i < l->swim_text.count; i++) text(draw, st->mode_text, &l->swim_text.lines[i], l->swim_text.text[i], oracles_ui_rgba(TEXT, opacity));
     if (l->swim_fan.h > 0.0f) text(draw, st->mode_text, &l->swim_fan, oracles_ui_controls_swim_fan, oracles_ui_rgb(WARN));
-    if (l->swim_later.h > 0.0f) text(draw, st->note, &l->swim_later, oracles_ui_later, oracles_ui_rgb(NOTE));
+    if (l->swim_later.h > 0.0f) text(draw, st->note, &l->swim_later, l->swim_later_text, oracles_ui_rgb(NOTE));
 }
 
 /* The item hotkeys: their line, then the grid, dimmed while they are off. */

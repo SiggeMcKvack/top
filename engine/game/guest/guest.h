@@ -397,6 +397,11 @@ uint16_t oracles_guest_find_stroke_test(const uint8_t *rom, size_t size, Oracles
 /* Arms the transaction at each routine the game has; -1 when the profile does not qualify it, a routine's test is not
  * found once, or the hook table is full. */
 int oracles_guest_arm_swim_hold(OraclesGuest *guest);
+/* Turns the hold on or off from the next test it meets, arming the tests the first time it is on (the same -1 as
+ * above, the hold unchanged); once armed they stay so, and answer only while it is on.  A stroke under way when it
+ * goes off is the game's to finish. */
+int oracles_guest_set_swim_hold(OraclesGuest *guest, int on);
+int oracles_guest_swim_hold(const OraclesGuest *guest);
 /* The strokes the transaction started since the attach, with the mermaid suit and with the flippers. */
 void oracles_guest_swim_strokes(const OraclesGuest *guest, unsigned *mermaid, unsigned *flippers);
 

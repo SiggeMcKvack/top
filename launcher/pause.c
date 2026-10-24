@@ -272,6 +272,18 @@ static void margin_changed(pause_loop *p, int margin)
     p->dirty = 1;
 }
 
+/* Display changed the window: the menu takes its new size at once, its glyphs rasterised for it (none counted late). */
+static void window_changed(pause_loop *p)
+{
+    int w = 0, h = 0;
+    if (!SDL_GetRenderOutputSize(p->renderer, &w, &h) || (w == p->pause->prepared_width && h == p->pause->prepared_height)) return;
+    oracles_safe_area_edges(p->window, p->pause->edges.margin, &p->pause->edges);
+    const unsigned before = oracles_ui_draw_glyphs_rasterised(p->pause->draw);
+    prepare(p->pause, w, h, "at the pause (the window changed)");
+    p->glyphs_before += oracles_ui_draw_glyphs_rasterised(p->pause->draw) - before;
+    p->dirty = 1;
+}
+
 static void command(pause_loop *p, OraclesHomeCommand c)
 {
     char message[256] = "";
@@ -288,11 +300,15 @@ static void command(pause_loop *p, OraclesHomeCommand c)
             break;
         case ORACLES_HOME_STORE:
             if (p->pause->host && p->pause->host->store) p->pause->host->store(p->pause->host->opaque, &p->nav);
+            if (p->nav.display.window_chosen && p->session->window_chosen)
+                p->session->window_chosen(p->session->opaque, p->nav.display.window < 3 ? p->nav.display.window + 2 : 0);
+            p->nav.display.window_chosen = 0;
             if (p->nav.screen == ORACLES_SCREEN_CHEATS && p->session->cheats_changed)
                 p->session->cheats_changed(p->session->opaque, p->nav.games[p->pause->game].cheats);
             if (p->session->settings_changed) {
                 const int margin = p->session->settings_changed(p->session->opaque);
                 if (margin != p->pause->edges.margin) margin_changed(p, margin);
+                else window_changed(p);
             }
             return;
         default: return;
@@ -412,6 +428,15 @@ OraclesPauseResult oracles_pause_run(OraclesPause *pause, SDL_Window *window, SD
     /* Cheats shows the running game's, not the settings', and changes them. */
     p.nav.cheats_fixed = 0;
     p.nav.cheats_refused = !session->has_cheats;
+    if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) {
+        p.nav.swim_refused = !session->has_swim;
+        p.nav.hotkeys_refused = !session->has_hotkeys;
+    }
+    /* Window shows the window the game has, and leaves alone those that would take Display from the pause. */
+    if (session->window != -1) p.nav.display.window = session->window == -2 ? -1 : session->window ? session->window - 2 : 3;
+    p.nav.display.window_w = session->window_w;
+    p.nav.display.window_h = session->window_h;
+    p.nav.display.windows_refused = session->windows_refused;
     if (pause->game == ORACLES_HOME_GAME_AGES || pause->game == ORACLES_HOME_GAME_SEASONS) p.nav.games[pause->game].cheats = session->cheats;
     /* The hints follow the device that opened the pause, else the one used last before. */
     oracles_pause_input(pause, &p.nav);

@@ -28,6 +28,7 @@
 #include "session_internal.h"
 
 #include "guest_fingerprint.h"
+#include "home_choices.h"
 #include "home_input.h"
 #include "hotkeys_session.h"
 #include "view.h"
@@ -83,17 +84,23 @@ static int load_sram(OraclesCore *core, const char *path, char sha1[41])
 
 /* ---- session ----------------------------------------------------------------- */
 
-/* The cheats from `frame` on, before it runs: the guest attached at the first one turned on in a game that had no hooks
- * (they cost an instruction's check each), and kept until the session ends, its points armed; each change written while
- * recording. */
+/* The guest of a game that had no hooks (they cost an instruction's check each), attached at the first setting that
+ * needs it, at `frame`, and kept until the session ends; 1 when there is one. */
+static int ensure_guest(session *s, uint32_t frame)
+{
+    if (s->guest) return 1;
+    s->guest = oracles_guest_attach(s->core, s->profile);
+    if (!s->guest) return 0;
+    oracles_guest_set_frame(s->guest, frame);
+    return 1;
+}
+
+/* The cheats from `frame` on, before it runs: the guest attached at the first one turned on, its points armed and kept;
+ * each change written while recording. */
 static void change_cheats(session *s, uint32_t frame, unsigned cheats)
 {
     char names[64];
-    if (!s->guest && cheats) {
-        s->guest = oracles_guest_attach(s->core, s->profile);
-        if (!s->guest) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the cheats stay off\n"); return; }
-        oracles_guest_set_frame(s->guest, frame);
-    }
+    if (cheats && !ensure_guest(s, frame)) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the cheats stay off\n"); return; }
     if (!s->guest || oracles_guest_set_cheats(s->guest, cheats) != 0) {
         if (cheats) fprintf(stderr, "oracles: the cheats cannot find their points in this ROM: they stay as they were\n");
         return;
@@ -105,6 +112,79 @@ static void change_cheats(session *s, uint32_t frame, unsigned cheats)
     s->cheats_used |= cheats;
 }
 
+/* The swim's hold from `frame` on, before it runs, as the cheats: its tests armed the first time it is on, and kept. */
+static void change_swim_hold(session *s, uint32_t frame, int on)
+{
+    if (on && !ensure_guest(s, frame)) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the swim's hold stays off\n"); return; }
+    if (!s->guest || oracles_guest_set_swim_hold(s->guest, on) != 0) {
+        if (on) fprintf(stderr, "oracles: the swim's hold cannot find its strokes in this ROM: it stays off\n");
+        return;
+    }
+    if (s->recording && on != s->swim_hold) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_SWIM_HOLD, on);
+    fprintf(stderr, "oracles: swim's hold %s from frame %u\n", on ? "on" : "off", frame);
+    s->swim_hold = on;
+}
+
+/* The item hotkeys' mode taken at `frame` (oracles_hotkeys_session_settle's result): said, and written while
+ * recording. */
+static void hotkeys_settled(session *s, uint32_t frame, int settled)
+{
+    static const char *const names[3] = { "off", "use", "equip" };
+    if (!settled) return;
+    if (settled < 0) fprintf(stderr, "oracles: item hotkeys: the policy could not start again; they stay off\n");
+    const OraclesHotkeysMode mode = oracles_hotkeys_session_mode(s->hotkeys);
+    if (s->recording && mode != s->hotkeys_mode) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_ITEM_HOTKEYS, (int)mode);
+    fprintf(stderr, "oracles: item hotkeys %s from frame %u\n", names[mode], frame);
+    s->hotkeys_mode = mode;
+}
+
+/* The pause's Item hotkeys at the frame the game resumes on: on, the policy started (the guest and the session's
+ * hotkeys first, for a game that began without them); off, asked of the policy, which stops once at rest. */
+static void change_hotkeys(session *s, uint32_t frame, OraclesHotkeysMode mode)
+{
+    if (s->hotkeys) { oracles_hotkeys_session_set_mode(s->hotkeys, mode); return; }
+    if (mode == ORACLES_HOTKEYS_OFF) return;
+    if (!ensure_guest(s, frame)) { fprintf(stderr, "oracles: the hooks cannot be armed in this ROM: the item hotkeys stay off\n"); return; }
+    s->hotkeys = oracles_hotkeys_session_start(s->guest, s->info.game, mode, s->settings, NULL);
+    if (!s->hotkeys) { fprintf(stderr, "oracles: the item hotkeys cannot find the inventory's write point in this ROM: they stay off\n"); return; }
+    if (s->recording) oracles_hotkeys_session_record(s->hotkeys, &s->record);
+    hotkeys_settled(s, frame, 1);
+}
+
+/* The window from the pause, or a replayed route's `set window` line: fullscreen, or a scale lowered to what the
+ * display holds, as Play opens it.  Presentation alone: the game stays the same. */
+static OraclesEnhancedSize window_surface(const session *s)
+{
+    const OraclesEnhancedSize surface = { s->view ? oracles_enhanced_view_width(s->view) : ORACLES_SCREEN_WIDTH,
+                                          s->view ? oracles_enhanced_view_height(s->view) : ORACLES_SCREEN_HEIGHT };
+    return surface;
+}
+
+static void apply_window(session *s, int window)
+{
+    if (s->window_setting < 0) return;
+    const OraclesEnhancedSize surface = window_surface(s);
+    SDL_Window *sdl_window;
+    SDL_Renderer *renderer;
+    SDL_Texture *frame;
+    int width, height, fullscreen;
+    unsigned scale;
+    oracles_sdl_backend_pause_view(&s->backend, &sdl_window, &renderer, &frame, &width, &height);
+    oracles_home_game_window(s->settings, window, sdl_window, surface, &fullscreen, &scale);
+    oracles_sdl_backend_set_window(&s->backend, fullscreen, scale);
+    if (fullscreen) fprintf(stderr, "oracles: window: fullscreen\n");
+    else fprintf(stderr, "oracles: window: scale %u%s\n", scale, window > 0 && scale < (unsigned)window ? ", lowered to what the display holds" : "");
+}
+
+/* A change from the pause gives a replayed route's controls back to the player. */
+static void replay_stopped(session *s, uint32_t frame, const char *why)
+{
+    if (!s->playing) return;
+    s->playing = 0;
+    fprintf(stderr, "oracles: route replay stopped by %s at frame %u, the player has the controls\n", why, frame);
+    oracles_hotkeys_session_route_over(s->hotkeys);
+}
+
 static void frame_begin(void *opaque, uint32_t frame)
 {
     session *s = opaque;
@@ -113,13 +193,27 @@ static void frame_begin(void *opaque, uint32_t frame)
     if (s->cheats_pending) {
         s->cheats_pending = 0;
         if (s->cheats_next != s->cheats) {
-            if (s->playing) {
-                s->playing = 0;
-                fprintf(stderr, "oracles: route replay stopped by the cheats changed at frame %u, the player has the controls\n", frame);
-                oracles_hotkeys_session_route_over(s->hotkeys);
-            }
+            replay_stopped(s, frame, "the cheats changed");
             change_cheats(s, frame, s->cheats_next);
         }
+    }
+    if (s->swim_pending) {
+        s->swim_pending = 0;
+        if (s->swim_next != s->swim_hold) {
+            replay_stopped(s, frame, "the swim's hold changed");
+            change_swim_hold(s, frame, s->swim_next);
+        }
+    }
+    if (s->hotkeys_pending) {
+        s->hotkeys_pending = 0;
+        if (s->hotkeys_next != (s->hotkeys ? oracles_hotkeys_session_next_mode(s->hotkeys) : s->hotkeys_mode)) {
+            replay_stopped(s, frame, "the item hotkeys changed");
+            change_hotkeys(s, frame, s->hotkeys_next);
+        }
+    }
+    if (s->window_line >= 0) {   /* the window the pause changed, presentation alone: a replay goes on */
+        if (s->recording) oracles_route_writer_set(&s->record, frame, ORACLES_ROUTE_SET_WINDOW, s->window_line);
+        s->window_line = -1;
     }
     size_t first = 0;
     const size_t changes = s->playing ? oracles_route_cheats_at(&s->play, frame, &first) : 0;
@@ -128,8 +222,22 @@ static void frame_begin(void *opaque, uint32_t frame)
         oracles_cheats_parse(s->play.cheats[i].name, NULL, &bit);   /* each known: the replay refused the route otherwise */
         change_cheats(s, frame, s->play.cheats[i].on ? s->cheats | bit : s->cheats & ~bit);
     }
+    /* A replayed route's `set` lines: the swim's hold changes the game; the item hotkeys' exchanges are the route's
+     * `equip` lines, their mode the one the player gets after the replay; the window is presentation alone.  An
+     * extension writes each again. */
+    const size_t sets = s->playing ? oracles_route_settings_at(&s->play, frame, &first) : 0;
+    for (size_t i = first; i < first + sets; i++) {
+        const OraclesRouteSetting *set = &s->play.settings[i];
+        if (set->name == ORACLES_ROUTE_SET_SWIM_HOLD) { change_swim_hold(s, frame, set->value); continue; }
+        if (set->name == ORACLES_ROUTE_SET_ITEM_HOTKEYS) {
+            oracles_hotkeys_session_set_mode(s->hotkeys, (OraclesHotkeysMode)set->value);
+            s->hotkeys_mode = (OraclesHotkeysMode)set->value;
+        } else apply_window(s, set->value);
+        if (s->recording) oracles_route_writer_set(&s->record, frame, set->name, set->value);
+    }
     if (s->guest) oracles_guest_set_frame(s->guest, frame);
     if (s->diag) oracles_diagnostics_frame_begin(s->diag, frame);
+    if (s->hotkeys) hotkeys_settled(s, frame, oracles_hotkeys_session_settle(s->hotkeys, stderr));
     oracles_hotkeys_session_frame(s->hotkeys, (struct OraclesEnhancedView *)s->view);
     if (s->check) oracles_frame_check_frame_begin(s->check, frame);
 }
@@ -199,14 +307,30 @@ static void pause_state_time(void *opaque, char *out, size_t capacity)
     if (!local || !strftime(out, capacity, "%H:%M", local)) { if (capacity) out[0] = 0; }
 }
 
+/* The item hotkeys' keys and buttons, and the two keys that bind from a button, handed to the backend while the
+ * hotkeys are on; none otherwise, as when they were never on. */
+static void hotkey_keys(session *s, int on)
+{
+    const oracles_settings *prefs = s->settings;
+    for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) {
+        s->sdl.hotkey_key_names[i] = on ? prefs->hotkey_key_names[i] : NULL;
+        s->sdl.hotkey_pad_names[i] = on ? prefs->hotkey_pad_names[i] : NULL;
+    }
+    s->sdl.hotkey_bind_b = on ? prefs->hotkey_bind_b : NULL;
+    s->sdl.hotkey_bind_a = on ? prefs->hotkey_bind_a : NULL;
+}
+
 /* Controls or Display changed the settings: the keys, the colour correction, the scaling, the status bar's width and
- * the screen margin apply at once, the rest at the next Play.  The colour correction applies when Display changed
- * it: --colour-correction holds until then; --screen-margin holds for the run. */
+ * the screen margin apply at once, the swim's hold and the item hotkeys from the frame the game resumes on (the item
+ * hotkeys turned off once their policy is at rest), the rest at the next Play (the window: pause_window_chosen).  The
+ * colour correction, the swim's hold and the item hotkeys apply when the pause changed them: --colour-correction,
+ * --swim-hold and --item-hotkeys hold until then; --screen-margin holds for the run. */
 static int pause_settings_changed(void *opaque)
 {
     session *s = opaque;
     OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin,
-                                      s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1 };
+                                      s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1,
+                                      s->swim_setting, s->hotkeys_game, s->hotkeys_setting };
     const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, &applied);
     if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
         s->colour_applied = s->colour_setting = applied.colour;
@@ -231,6 +355,16 @@ static int pause_settings_changed(void *opaque)
         fprintf(stderr, "oracles: screen margin %s\n", oracles_screen_margin_names[applied.margin]);
         oracles_sdl_backend_set_screen_margin(&s->backend, applied.margin);
     }
+    if (changed & ORACLES_SESSION_CHANGED_SWIM) {
+        s->swim_setting = s->swim_next = applied.swim_hold;
+        s->swim_pending = 1;
+    }
+    if (changed & ORACLES_SESSION_CHANGED_HOTKEYS) {
+        s->hotkeys_setting = applied.hotkeys;
+        s->hotkeys_next = (OraclesHotkeysMode)applied.hotkeys;
+        s->hotkeys_pending = 1;
+        hotkey_keys(s, s->hotkeys_next != ORACLES_HOTKEYS_OFF);   /* off: the slots' keys do nothing from now on */
+    }
     oracles_sdl_backend_rebind(&s->backend, &s->sdl);   /* s->sdl's names are the settings' own */
     return s->sdl.screen_margin;
 }
@@ -246,6 +380,16 @@ static void pause_cheats_changed(void *opaque, unsigned cheats)
     if (s->cheats_game < 0) return;
     s->cheats_next = cheats;
     s->cheats_pending = cheats != s->cheats;
+}
+
+/* Window chosen from the pause (window_scale=): applied at once, whatever the settings held before, since F11 and
+ * --fullscreen change the window without them. */
+static void pause_window_chosen(void *opaque, int window)
+{
+    session *s = opaque;
+    if (s->window_setting < 0) return;
+    s->window_setting = s->window_line = window;
+    apply_window(s, window);
 }
 
 static void session_started(void *opaque)
@@ -267,6 +411,28 @@ static int pause_game_image(void *opaque, SDL_Renderer *renderer, const SDL_FRec
     return oracles_sdl_backend_pause_image(&s->backend, image);
 }
 
+/* The window as window_scale= counts it, F11's toggle included; -2 for none; its size in *w x *h. */
+static int window_now(const session *s, SDL_Window *window, int *w, int *h)
+{
+    *w = *h = 0;
+    if (!window || s->window_setting < 0) return s->window_setting;
+    const OraclesEnhancedSize surface = window_surface(s);
+    SDL_GetWindowSizeInPixels(window, w, h);
+    const unsigned scale = s->window_setting > 0 ? oracles_home_fitting_scale(window, (unsigned)s->window_setting, surface) : 0u;
+    return oracles_session_window_now(s->window_setting, scale, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0, *w, *h,
+                                      (int)surface.width, (int)surface.height);
+}
+
+/* Display's windows that would take Display from the pause, as apply_window opens them. */
+static unsigned windows_refused(const session *s, SDL_Window *window)
+{
+    if (s->window_setting < 0 || !window) return 0;
+    const OraclesEnhancedSize surface = window_surface(s);
+    unsigned scales[3];
+    for (unsigned v = 0; v < 3; v++) scales[v] = oracles_home_fitting_scale(window, v + 2u, surface);
+    return oracles_session_windows_refused(scales, (int)surface.width, (int)surface.height, s->settings->aspect);
+}
+
 static oracles_host_pause_result session_pause(void *opaque)
 {
     session *s = opaque;
@@ -278,9 +444,13 @@ static oracles_host_pause_result session_pause(void *opaque)
     oracles_sdl_backend_suspend_audio(&s->backend);
     oracles_sdl_backend_hold(&s->backend, 1);
     const int device = oracles_home_menu_device((int)oracles_sdl_backend_menu_source(&s->backend));
+    /* F11 and --fullscreen change the window without the settings: the pause's Window shows the window the game has. */
+    int window_w, window_h;
+    const int window_shown = window_now(s, window, &window_w, &window_h);
     const OraclesPauseSession services = { s, pause_save, pause_load, pause_state_time, pause_settings_changed, pause_cheats_changed,
-                                           (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s), s->cheats_game >= 0,
-                                           pause_game_image };
+                                           pause_window_chosen, (int)oracles_core_kind(s->core), s->ghosts, device, pause_cheats(s),
+                                           s->cheats_game >= 0, pause_game_image, s->swim_setting >= 0, s->hotkeys_game >= 0, window_shown, window_w,
+                                           window_h, windows_refused(s, window) };
     const OraclesPauseResult result = oracles_pause_run(s->pause, window, renderer, frame, width, height, &services);
     if (result == ORACLES_PAUSE_RESUME) oracles_sdl_backend_hold(&s->backend, 0);   /* a pause that ends the session is past the last present */
     if (result == ORACLES_PAUSE_WINDOW_CLOSED) oracles_sdl_backend_set_window_closed(&s->backend);
@@ -296,6 +466,12 @@ static int input_source(void *opaque, uint32_t frame, unsigned *mask)
     fprintf(stderr, "oracles: route finished at frame %u, the player has the controls\n", frame);
     oracles_hotkeys_session_route_over(s->hotkeys);
     return 0;
+}
+
+static unsigned input_filter(void *opaque, uint32_t frame, unsigned mask)
+{
+    const session *s = opaque;
+    return s->hotkeys ? oracles_hotkeys_session_filter(s->hotkeys, frame, mask) : mask;
 }
 
 static void input_sink(void *opaque, uint32_t frame, unsigned mask)
@@ -469,11 +645,7 @@ static void window_options(session *s, const OraclesSessionOptions *o)
     for (unsigned i = 0; i < ORACLES_BINDINGS; i++) s->sdl.key_names[i] = prefs->key_names[i];
     for (unsigned i = 0; i < 4; i++) s->sdl.pad_names[i] = prefs->pad_names[i];
     s->sdl.menu_pad_name = prefs->menu_pad;
-    if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) {
-        for (unsigned i = 0; i < ORACLES_HOTKEY_SLOTS; i++) { s->sdl.hotkey_key_names[i] = prefs->hotkey_key_names[i]; s->sdl.hotkey_pad_names[i] = prefs->hotkey_pad_names[i]; }
-        s->sdl.hotkey_bind_b = prefs->hotkey_bind_b;
-        s->sdl.hotkey_bind_a = prefs->hotkey_bind_a;
-    }
+    if (s->hotkeys_mode != ORACLES_HOTKEYS_OFF) hotkey_keys(s, 1);
 }
 
 /* A game the home screen started plays on without the item hotkeys when they cannot attach to its ROM (one that is
@@ -554,10 +726,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     const int route_exchanges = o->play_path && s->play.action_count != 0;
     const int from_home = o->sdl.window != NULL;
     if (o->diagnostics || o->native_renderer || s->enhanced || s->hotkeys_mode != ORACLES_HOTKEYS_OFF || route_exchanges || s->mod || s->language
-        || s->swim_hold || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide) {
+        || s->swim_hold || s->swim_route || s->cheats || s->cheats_route || s->compact_text || s->text_box_wide) {
         s->guest = oracles_guest_attach(s->core, s->profile);
         const int for_hotkeys_alone = !o->diagnostics && !o->native_renderer && !s->enhanced && !route_exchanges && !s->mod && !s->language && !s->swim_hold
-                                   && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide;
+                                   && !s->swim_route && !s->cheats && !s->cheats_route && !s->compact_text && !s->text_box_wide;
         if (!s->guest && from_home && for_hotkeys_alone) drop_hotkeys(s, result, "the hooks cannot be armed in this ROM");
         else if (!s->guest) return failed(result, "cannot arm the hooks for this game");
     }
@@ -576,9 +748,10 @@ static int attach(session *s, const OraclesSessionOptions *o, OraclesSessionResu
     char error[256];
     if (s->mod && oracles_mod_session_attach(s->mod, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
     if (s->language && oracles_language_session_attach(s->language, s->guest, error, sizeof error) != 0) return failed(result, "%s", error);
-    if (s->swim_hold) {
-        if (oracles_guest_arm_swim_hold(s->guest) != 0) return failed(result, "the swim's hold cannot find its strokes in this ROM");
-        fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
+    if (s->swim_hold || s->swim_route) {   /* the tests armed for a replayed route that turns it on later too, answering once on */
+        if (oracles_guest_set_swim_hold(s->guest, 1) != 0 || oracles_guest_set_swim_hold(s->guest, s->swim_hold) != 0)
+            return failed(result, "the swim's hold cannot find its strokes in this ROM");
+        if (s->swim_hold) fprintf(stderr, "oracles: swim's hold on: a direction held swims as the best tapping does\n");
     }
     if (s->cheats || s->cheats_route) {   /* the points of those a replayed route turns on later armed too, answering once on */
         char names[64];
@@ -695,9 +868,11 @@ static void configure(session *s, const OraclesSessionOptions *o, oracles_host_r
     config->on_command_opaque = s;
     if (o->play_path) { config->input_source = input_source; config->input_source_opaque = s; }
     if (o->record_path) { config->input_sink = input_sink; config->input_sink_opaque = s; }
-    if (s->hotkeys) { config->input_filter = oracles_hotkeys_session_filter; config->input_filter_opaque = s->hotkeys; }
-    /* A game whose cheats the pause may turn on has the frames' callbacks before it has a guest. */
-    if (s->guest || s->cheats_game >= 0) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
+    /* The item hotkeys' filter for a game that has them, or whose pause may turn them on. */
+    if (s->hotkeys || s->hotkeys_game >= 0) { config->input_filter = input_filter; config->input_filter_opaque = s; }
+    /* A game whose pause may change its settings, or whose replayed route does, has the frames' callbacks before it has
+     * a guest. */
+    if (s->guest || s->sdl.pause_menu || s->play.setting_count) { config->on_frame_begin = frame_begin; config->on_frame_end = frame_end; config->frame_opaque = s; }
     if (s->check) { config->frame_source = native_frame; config->frame_source_opaque = s->check; }
     if (s->sdl.pause_menu) { config->on_started = session_started; config->on_pause = session_pause; config->pause_opaque = s; }
     if (s->view) {
@@ -899,6 +1074,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->swim_hold = o->swim_hold;
     s->cheats = o->cheats;
     s->cheats_game = -1;
+    s->swim_setting = s->hotkeys_game = s->window_setting = s->window_line = -1;
     s->compact_text = o->compact_text == 2;
     s->text_box_wide = o->text_box_wide == 2;
     /* The view's level (--view, Display's View; --zoom-out is far, --enhanced alone near); its size is the options'
@@ -910,9 +1086,17 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     char why[1024];
     int ok = load_game(s, o, result) && (!o->play_path || oracles_session_replay_route(s, o, why, sizeof why) || failed(result, "%s", why))
           && check_profile(s, o, result) && (!o->record_path || oracles_session_record_route(s, o, why, sizeof why) || failed(result, "%s", why));
-    /* The pause's Cheats change the cheats of an Oracle the home screen started, from the next frame. */
-    if (ok && s->pause && oracles_compat_cheats(s->profile))
-        s->cheats_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
+    /* The pause's Cheats change the cheats of an Oracle the home screen started, from the next frame; Controls its
+     * swim's hold and item hotkeys, where its profile has them; Display, or a replayed route's `set window` lines, the
+     * window of any game that has one. */
+    const int settings_game = s->info.game == ORACLES_GAME_SEASONS ? ORACLES_SETTINGS_SEASONS : ORACLES_SETTINGS_AGES;
+    if (ok && s->pause && oracles_compat_cheats(s->profile)) s->cheats_game = settings_game;
+    if (ok && s->pause && oracles_compat_swim_hold(s->profile)) s->swim_setting = settings->swim_hold;
+    if (ok && s->pause && oracles_compat_item_hotkeys(s->profile) && s->info.game != ORACLES_GAME_UNKNOWN) {
+        s->hotkeys_game = settings_game;
+        s->hotkeys_setting = (int)settings->item_hotkeys[settings_game];
+    }
+    if (ok && !o->no_window && !oracles_sdl_fullscreen_only()) s->window_setting = settings->window_scale;
     if (ok) {
         window_options(s, o);
         s->backend_ready = o->no_window ? oracles_null_backend_init(&s->backend) : oracles_sdl_backend_init(&s->backend, &s->sdl);

@@ -18,9 +18,14 @@ void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHome
 void oracles_home_resolve_menu_pad(oracles_settings *settings);
 /* Display's choices written back into the settings (`in_game`: from the pause, whose core and workers are the running
  * game's and never stored); a margin --screen-margin gave (display->margin_fixed) and a text --text gave
- * (display->text_fixed) are never stored either. */
+ * (display->text_fixed) are never stored either, nor from the pause a window not chosen (display->window_chosen). */
 void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, oracles_settings *prefs);
 void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings *settings);
 unsigned oracles_home_fitting_scale(struct SDL_Window *window, unsigned wanted, OraclesEnhancedSize surface);
+/* Display's window (window_scale=: 2 to 4, 0 fullscreen) for a game whose surface is `surface`, on the screen of
+ * `window`, as Play opens it: a scale lowered to what the display holds (4 for fullscreen, F11's window), and
+ * fullscreen where Fill finds every window the same size (oracles_display_one_size_for). */
+void oracles_home_game_window(const oracles_settings *settings, int window_scale, struct SDL_Window *window, OraclesEnhancedSize surface,
+                              int *fullscreen, unsigned *scale);
 
 #endif

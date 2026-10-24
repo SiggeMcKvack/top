@@ -2972,14 +2972,14 @@
   "2g": {
    "page note": {
     "x": 96,
-    "w": 544.781,
-    "glyph_top": 329,
+    "w": 510.953,
+    "glyph_top": 330,
     "glyph_h": 22,
     "top": 327,
-    "h": 26,
-    "baseline": 347,
-    "width": 544.781,
-    "lines": 1
+    "h": 29,
+    "baseline": 348,
+    "width": 510.953,
+    "lines": 2
    },
    "Window row": {
     "x": 909,
@@ -3013,18 +3013,18 @@
    },
    "advanced": {
     "x": 84,
-    "y": 870,
+    "y": 902,
     "w": 195.25,
     "h": 43
    },
    "Advanced": {
     "x": 96,
     "w": 148.25,
-    "glyph_top": 878,
+    "glyph_top": 910,
     "glyph_h": 27,
-    "top": 878,
+    "top": 910,
     "h": 27,
-    "baseline": 899,
+    "baseline": 931,
     "width": 148.25,
     "lines": 1
    },
@@ -4254,18 +4254,18 @@
    },
    "page note": {
     "x": 96,
-    "w": 544.781,
-    "glyph_top": 329,
+    "w": 510.953,
+    "glyph_top": 330,
     "glyph_h": 22,
     "top": 327,
-    "h": 26,
-    "baseline": 347,
-    "width": 544.781,
-    "lines": 1
+    "h": 29,
+    "baseline": 348,
+    "width": 510.953,
+    "lines": 2
    },
    "diagram": {
     "x": 96,
-    "y": 409,
+    "y": 441,
     "w": 432,
     "h": 243
    }
@@ -8380,13 +8380,13 @@
   "10o": {
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    },
    "Window row": {
@@ -8411,13 +8411,13 @@
   "10p": {
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    },
    "core row": {
@@ -10896,76 +10896,65 @@
   "17b": {
    "swim": {
     "x": 129,
-    "y": 840,
+    "y": 852,
     "w": 734,
-    "h": 137
+    "h": 125
    },
    "swim label": {
     "x": 149,
     "w": 119.266,
-    "glyph_top": 850.5,
+    "glyph_top": 870.5,
     "glyph_h": 28,
-    "top": 847.5,
+    "top": 867.5,
     "h": 34,
-    "baseline": 872.5,
+    "baseline": 892.5,
     "width": 119.266,
     "lines": 1
    },
    "swim tap": {
     "x": 672.438,
-    "y": 844,
+    "y": 864,
     "w": 74.219,
     "h": 41
    },
    "swim hold": {
     "x": 754.656,
-    "y": 844,
+    "y": 864,
     "w": 88.344,
     "h": 41
    },
    "swim tap text": {
     "x": 689.438,
     "w": 40.219,
-    "glyph_top": 849,
+    "glyph_top": 869,
     "glyph_h": 31,
-    "top": 849,
+    "top": 869,
     "h": 31,
-    "baseline": 873,
+    "baseline": 893,
     "width": 40.219,
     "lines": 1
    },
    "swim hold text": {
     "x": 771.656,
     "w": 54.344,
-    "glyph_top": 849,
+    "glyph_top": 869,
     "glyph_h": 31,
-    "top": 849,
+    "top": 869,
     "h": 31,
-    "baseline": 873,
+    "baseline": 893,
     "width": 54.344,
     "lines": 1
    },
    "swim explanation": {
     "x": 149,
     "w": 620.531,
-    "glyph_top": 889,
+    "glyph_top": 909,
     "glyph_h": 24,
-    "top": 887,
+    "top": 907,
     "h": 29,
-    "baseline": 908,
+    "baseline": 928,
     "width": 620.531,
     "lines": 2
-   },
-   "swim later": {
-    "x": 149,
-    "w": 186,
-    "glyph_top": 949,
-    "glyph_h": 22,
-    "top": 947,
-    "h": 26,
-    "baseline": 967,
-    "width": 186,
-    "lines": 1
    },
    "left panel": {
     "x": 96,
@@ -10977,7 +10966,7 @@
     "x": 936,
     "y": 190,
     "w": 888,
-    "h": 703
+    "h": 675
    },
    "Reset": {
     "x": 129,
@@ -10989,18 +10978,7 @@
     "x": 969,
     "y": 215,
     "w": 822,
-    "h": 152
-   },
-   "later": {
-    "x": 989,
-    "w": 186,
-    "glyph_top": 331,
-    "glyph_h": 22,
-    "top": 329,
-    "h": 26,
-    "baseline": 349,
-    "width": 186,
-    "lines": 1
+    "h": 124
    },
    "In game row": {
     "x": 968,
@@ -11509,7 +11487,7 @@
     "x": 64,
     "y": 140,
     "w": 1312,
-    "h": 777
+    "h": 743
    },
    "key 5": {
     "x": 84,
@@ -11532,7 +11510,7 @@
     "x": 64,
     "y": 707,
     "w": 1312,
-    "h": 210
+    "h": 176
    },
    "swim label": {
     "x": 84,
@@ -11589,17 +11567,6 @@
     "baseline": 828,
     "width": 1154.203,
     "lines": 2
-   },
-   "swim later": {
-    "x": 84,
-    "w": 228.266,
-    "glyph_top": 877,
-    "glyph_h": 27,
-    "top": 875,
-    "h": 32,
-    "baseline": 899,
-    "width": 228.266,
-    "lines": 1
    }
   },
   "swim fan": {
@@ -14903,76 +14870,65 @@
    },
    "swim": {
     "x": 129,
-    "y": 840,
+    "y": 852,
     "w": 734,
-    "h": 137
+    "h": 125
    },
    "swim label": {
     "x": 149,
     "w": 119.266,
-    "glyph_top": 850.5,
+    "glyph_top": 870.5,
     "glyph_h": 28,
-    "top": 847.5,
+    "top": 867.5,
     "h": 34,
-    "baseline": 872.5,
+    "baseline": 892.5,
     "width": 119.266,
     "lines": 1
    },
    "swim tap": {
     "x": 672.438,
-    "y": 844,
+    "y": 864,
     "w": 74.219,
     "h": 41
    },
    "swim hold": {
     "x": 754.656,
-    "y": 844,
+    "y": 864,
     "w": 88.344,
     "h": 41
    },
    "swim tap text": {
     "x": 689.438,
     "w": 40.219,
-    "glyph_top": 849,
+    "glyph_top": 869,
     "glyph_h": 31,
-    "top": 849,
+    "top": 869,
     "h": 31,
-    "baseline": 873,
+    "baseline": 893,
     "width": 40.219,
     "lines": 1
    },
    "swim hold text": {
     "x": 771.656,
     "w": 54.344,
-    "glyph_top": 849,
+    "glyph_top": 869,
     "glyph_h": 31,
-    "top": 849,
+    "top": 869,
     "h": 31,
-    "baseline": 873,
+    "baseline": 893,
     "width": 54.344,
     "lines": 1
    },
    "swim explanation": {
     "x": 149,
     "w": 620.531,
-    "glyph_top": 889,
+    "glyph_top": 909,
     "glyph_h": 24,
-    "top": 887,
+    "top": 907,
     "h": 29,
-    "baseline": 908,
+    "baseline": 928,
     "width": 620.531,
     "lines": 2
-   },
-   "swim later": {
-    "x": 149,
-    "w": 186,
-    "glyph_top": 949,
-    "glyph_h": 22,
-    "top": 947,
-    "h": 26,
-    "baseline": 967,
-    "width": 186,
-    "lines": 1
    },
    "hint 0": {
     "x": 651.938,
@@ -16588,7 +16544,7 @@
     "x": 64,
     "y": 140,
     "w": 1312,
-    "h": 377
+    "h": 343
    },
    "title": {
     "x": 84,
@@ -16628,7 +16584,7 @@
     "x": 64,
     "y": 307,
     "w": 1312,
-    "h": 210
+    "h": 176
    },
    "swim label": {
     "x": 84,
@@ -16696,17 +16652,6 @@
     "baseline": 248.5,
     "width": 81.219,
     "lines": 1
-   },
-   "swim later": {
-    "x": 84,
-    "w": 228.266,
-    "glyph_top": 477,
-    "glyph_h": 27,
-    "top": 475,
-    "h": 32,
-    "baseline": 499,
-    "width": 228.266,
-    "lines": 1
    }
   },
   "21t": {
@@ -16765,7 +16710,7 @@
     "x": 64,
     "y": 140,
     "w": 1312,
-    "h": 777
+    "h": 743
    },
    "title": {
     "x": 84,
@@ -16805,7 +16750,7 @@
     "x": 64,
     "y": 707,
     "w": 1312,
-    "h": 210
+    "h": 176
    },
    "swim label": {
     "x": 84,
@@ -17029,17 +16974,6 @@
     "h": 43,
     "baseline": 657.5,
     "width": 140.297,
-    "lines": 1
-   },
-   "swim later": {
-    "x": 84,
-    "w": 228.266,
-    "glyph_top": 877,
-    "glyph_h": 27,
-    "top": 875,
-    "h": 32,
-    "baseline": 899,
-    "width": 228.266,
     "lines": 1
    }
   },
@@ -19935,13 +19869,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    },
    "core row": {
@@ -24380,14 +24314,14 @@
    },
    "page note": {
     "x": 96,
-    "w": 544.781,
-    "glyph_top": 329,
+    "w": 510.953,
+    "glyph_top": 330,
     "glyph_h": 22,
     "top": 327,
-    "h": 26,
-    "baseline": 347,
-    "width": 544.781,
-    "lines": 1
+    "h": 29,
+    "baseline": 348,
+    "width": 510.953,
+    "lines": 2
    },
    "Color row": {
     "x": 909,
@@ -24485,13 +24419,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    }
   },
@@ -25002,14 +24936,14 @@
    },
    "page note": {
     "x": 96,
-    "w": 544.781,
-    "glyph_top": 329,
+    "w": 510.953,
+    "glyph_top": 330,
     "glyph_h": 22,
     "top": 327,
-    "h": 26,
-    "baseline": 347,
-    "width": 544.781,
-    "lines": 1
+    "h": 29,
+    "baseline": 348,
+    "width": 510.953,
+    "lines": 2
    }
   },
   "margin pause 4:3": {
@@ -25125,13 +25059,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    }
   },
@@ -28242,18 +28176,18 @@
    },
    "advanced": {
     "x": 84,
-    "y": 870,
+    "y": 902,
     "w": 195.25,
     "h": 43
    },
    "Advanced": {
     "x": 96,
     "w": 148.25,
-    "glyph_top": 878,
+    "glyph_top": 910,
     "glyph_h": 27,
-    "top": 878,
+    "top": 910,
     "h": 27,
-    "baseline": 899,
+    "baseline": 931,
     "width": 148.25,
     "lines": 1
    },
@@ -28281,52 +28215,52 @@
    },
    "diagram": {
     "x": 96,
-    "y": 409,
+    "y": 441,
     "w": 432,
     "h": 243
    },
    "diagram label": {
     "x": 96,
     "w": 273.594,
-    "glyph_top": 666,
+    "glyph_top": 698,
     "glyph_h": 22,
-    "top": 664,
+    "top": 696,
     "h": 26,
-    "baseline": 684,
+    "baseline": 716,
     "width": 273.594,
     "lines": 1
    },
    "window note": {
     "x": 96,
     "w": 503.984,
-    "glyph_top": 705,
+    "glyph_top": 737,
     "glyph_h": 22,
-    "top": 702,
+    "top": 734,
     "h": 29,
-    "baseline": 723,
+    "baseline": 755,
     "width": 503.984,
     "lines": 2
    },
    "window note box": {
     "x": 96,
-    "y": 702,
+    "y": 734,
     "w": 520,
     "h": 58
    },
    "fit": {
     "x": 96,
-    "y": 772,
+    "y": 804,
     "w": 520,
     "h": 58
    },
    "fit text": {
     "x": 96,
     "w": 412.578,
-    "glyph_top": 775,
+    "glyph_top": 807,
     "glyph_h": 22,
-    "top": 772,
+    "top": 804,
     "h": 29,
-    "baseline": 793,
+    "baseline": 825,
     "width": 412.578,
     "lines": 2
    },
@@ -28389,14 +28323,14 @@
    },
    "page note": {
     "x": 96,
-    "w": 544.781,
-    "glyph_top": 329,
+    "w": 510.953,
+    "glyph_top": 330,
     "glyph_h": 22,
     "top": 327,
-    "h": 26,
-    "baseline": 347,
-    "width": 544.781,
-    "lines": 1
+    "h": 29,
+    "baseline": 348,
+    "width": 510.953,
+    "lines": 2
    }
   },
   "text pause 4:3": {
@@ -28592,13 +28526,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    }
   },
@@ -29912,13 +29846,13 @@
    },
    "page note": {
     "x": 64,
-    "w": 668.578,
+    "w": 744.563,
     "glyph_top": 167,
     "glyph_h": 27,
     "top": 164,
     "h": 33,
     "baseline": 189,
-    "width": 668.578,
+    "width": 744.563,
     "lines": 1
    }
   },
