@@ -21,6 +21,10 @@ if(BUILD_TESTING)
     target_link_libraries(oracles-test-bps PRIVATE oracles_core)
     oracles_set_warnings(oracles-test-bps)
     add_test(NAME oracles-bps COMMAND oracles-test-bps)
+    add_executable(oracles-test-save test_save.c)
+    target_link_libraries(oracles-test-save PRIVATE oracles_core)
+    oracles_set_warnings(oracles-test-save)
+    add_test(NAME oracles-save COMMAND oracles-test-save)
 
     add_executable(oracles-test-compat test_compat.c)
     target_link_libraries(oracles-test-compat PRIVATE oracles_guest)
@@ -232,6 +236,11 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-launcher-page)
     add_test(NAME oracles-launcher-page COMMAND oracles-test-launcher-page ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-save test_launcher_save.c layout_reference.c)
+    target_link_libraries(oracles-test-launcher-save PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-save)
+    add_test(NAME oracles-launcher-save COMMAND oracles-test-launcher-save ${ORACLES_LAYOUT_REFERENCE})
+
     add_executable(oracles-test-launcher-text-page test_launcher_text_page.c layout_reference.c)
     target_include_directories(oracles-test-launcher-text-page PRIVATE ${ORACLES_ENHANCED_DIR})
     target_link_libraries(oracles-test-launcher-text-page PRIVATE oracles_ui)
@@ -275,6 +284,12 @@ if(BUILD_TESTING)
         target_link_libraries(oracles-test-launcher-settings PRIVATE oracles_host oracles_guest oracles_gameplay oracles_ui ${ORACLES_SDL_TARGET})
         oracles_set_warnings(oracles-test-launcher-settings)
         add_test(NAME oracles-launcher-settings COMMAND oracles-test-launcher-settings ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_settings.tmp)
+
+        add_executable(oracles-test-launcher-save-transfer test_launcher_save_transfer.c ${ORACLES_LAUNCHER_DIR}/save_transfer.c ${ORACLES_LAUNCHER_DIR}/file_dialog.c)
+        target_include_directories(oracles-test-launcher-save-transfer PRIVATE ${ORACLES_LAUNCHER_DIR})
+        target_link_libraries(oracles-test-launcher-save-transfer PRIVATE oracles_core ${ORACLES_SDL_TARGET})
+        oracles_set_warnings(oracles-test-launcher-save-transfer)
+        add_test(NAME oracles-launcher-save-transfer COMMAND oracles-test-launcher-save-transfer ${CMAKE_CURRENT_BINARY_DIR}/test_launcher_save_transfer.tmp)
 
         # The update check on GitHub's answer for v1.1.0 (update_release.json) and variants of it, and on its thread from a
         # file: no test asks the network.

@@ -2,6 +2,7 @@
 #include "mod_session.h"
 
 #include "mod_folder.h"
+#include "save.h"
 #include "sha1.h"
 
 #include <stdlib.h>
@@ -231,44 +232,29 @@ int oracles_mod_session_storage_restore(OraclesModSession *session, const uint8_
 
 /* ---- --start-at-house ------------------------------------------------------------------------- */
 
-/* The save of both games (ROM_DATA_FORMATS, section 14): three files, each in two copies; a copy is valid when its
- * checksum (the sum of the $2a7 words from +2) and its signature (Ages' or Seasons') match.  The respawn point is at +$7b (group, room, state modifier,
- * direction, y, x), the minimap's room at +$8a. */
-static const unsigned file_copies[3][2] = { { 0x0010, 0x1000 }, { 0x0560, 0x1550 }, { 0x0ab0, 0x1aa0 } };
-#define FILE_WORDS 0x2a7u
-
-static unsigned file_checksum(const uint8_t *sram, unsigned at)
-{
-    unsigned sum = 0;
-    for (unsigned i = 0; i < FILE_WORDS; i++) sum += sram[at + 2u + 2u * i] | sram[at + 3u + 2u * i] << 8;
-    return sum & 0xffffu;
-}
-
+/* The respawn point of a save's file is at +$7b (group, room, state modifier, direction, y, x), the minimap's room at
+ * +$8a (docs/ROM_DATA_FORMATS.md, section 14). */
 int oracles_mod_session_start_at_house(OraclesModSession *session, const char *name, OraclesCore *core, char *error, size_t capacity)
 {
     uint8_t room = 0, y = 0, x = 0;
     if (oracles_mod_set_house_door(session->set, name, &room, &y, &x, error, capacity) != 0) return -1;
     const size_t size = oracles_core_sram_size(core);
     uint8_t *sram = malloc(size);
-    if (!sram || size < 0x2000u || oracles_core_save_sram(core, sram, size) != 0) { free(sram); snprintf(error, capacity, "the save cannot be read"); return -1; }
+    if (!sram || size < ORACLES_SAVE_SIZE || oracles_core_save_sram(core, sram, size) != 0) { free(sram); snprintf(error, capacity, "the save cannot be read"); return -1; }
     unsigned placed = 0;
-    for (unsigned file = 0; file < 3u; file++)
-        for (unsigned copy = 0; copy < 2u; copy++) {
-            const unsigned at = file_copies[file][copy];
-            if ((unsigned)(sram[at] | sram[at + 1u] << 8) != file_checksum(sram, at)
-                || (memcmp(sram + at + 2u, "Z21216-0", 8) != 0 && memcmp(sram + at + 2u, "Z11216-0", 8) != 0)) continue;
-            sram[at + 0x7bu] = 0x00;                  /* group 0, the room, facing up, at the door; the state (Seasons' season) kept */
-            sram[at + 0x7cu] = room;
-            sram[at + 0x7eu] = 0x00;
-            sram[at + 0x7fu] = y;
-            sram[at + 0x80u] = x;
-            sram[at + 0x8au] = 0x00;
-            sram[at + 0x8bu] = room;
-            const unsigned sum = file_checksum(sram, at);
-            sram[at] = (uint8_t)sum;
-            sram[at + 1u] = (uint8_t)(sum >> 8);
-            placed |= 1u << file;
-        }
+    for (unsigned copy = 0; copy < ORACLES_SAVE_COPIES; copy++) {
+        const unsigned at = oracles_save_copies[copy];
+        if (!oracles_save_copy_valid(sram, at, ORACLES_GAME_AGES) && !oracles_save_copy_valid(sram, at, ORACLES_GAME_SEASONS)) continue;
+        sram[at + 0x7bu] = 0x00;                  /* group 0, the room, facing up, at the door; the state (Seasons' season) kept */
+        sram[at + 0x7cu] = room;
+        sram[at + 0x7eu] = 0x00;
+        sram[at + 0x7fu] = y;
+        sram[at + 0x80u] = x;
+        sram[at + 0x8au] = 0x00;
+        sram[at + 0x8bu] = room;
+        oracles_save_seal(sram, at);
+        placed |= 1u << copy % 3u;
+    }
     const int ok = placed && oracles_core_load_sram(core, sram, size) == 0;
     free(sram);
     if (!placed) { snprintf(error, capacity, "the save has no file to start in front of %s: start a game first", name); return -1; }

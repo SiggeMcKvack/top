@@ -45,6 +45,12 @@ typedef struct OraclesHomeHost {
     void (*choose_eu_rom)(void *opaque, int game, struct SDL_Window *window);   /* an Oracle's European ROM */
     void (*file_chosen)(void *opaque, int game, int kind, int result, const char *path, int copied, char *message, size_t capacity);
     void (*open_folder)(void *opaque, int game, char *message, size_t capacity);
+    /* Cartridge's Save row (ui_page_nav.h): the system's dialog for a save to import into game `game`, or (`copy_out`,
+     * Android) the document picker for a copy of its save, each answering later (save_chosen, which sets nav->save_flow:
+     * the import's confirmation, or the row's status); and the import confirmed. */
+    void (*choose_save)(void *opaque, int game, int copy_out, struct SDL_Window *window);
+    void (*save_chosen)(void *opaque, int game, int kind, int result, const char *path, OraclesHomeNav *nav);
+    void (*replace_save)(void *opaque, int game, OraclesHomeNav *nav);
     /* Mods: the mods folder read into nav->mods and nav->mods_folder, with each Oracle's active mods (the refresh reads
      * it too), when the page opens; the folder in the system's file manager, made when it is not there. */
     void (*read_mods)(void *opaque, OraclesHomeNav *nav);

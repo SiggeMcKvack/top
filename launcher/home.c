@@ -143,9 +143,11 @@ static void start(home_app *app, OraclesHomeCommand game)
     oracles_sdl_pads_close(&app->pads);
     oracles_sdl_pads_open(&app->pads);
     app->trigger_held = oracles_home_trigger_held(&app->nav);
-    /* Back from the game to the home screen, on Start game, from the page's Play as from the menu. */
+    /* Back from the game to the home screen, on Start game, from the page's Play as from the menu; the Save row's
+     * status stayed on the page left. */
     app->nav.screen = ORACLES_SCREEN_HOME;
     app->nav.focus = 0;
+    app->nav.save_flow.state = ORACLES_SAVE_FLOW_NONE;
     app->nav.slow = slow;
     /* What the game left in the queue (the Escape that ended it) is not the home screen's. */
     SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_GAMEPAD_REMAPPED);
@@ -196,6 +198,17 @@ static void page_command(home_app *app, OraclesHomeCommand c)
         else host->choose_eu_rom(host->opaque, game, app->window);
         return;
     }
+    if ((c == ORACLES_HOME_IMPORT_SAVE || c == ORACLES_HOME_EXPORT_SAVE) && host->choose_save && host->save_chosen) {
+        app->dialog_open = 1;
+        host->choose_save(host->opaque, game, c == ORACLES_HOME_EXPORT_SAVE, app->window);
+        return;
+    }
+    if (c == ORACLES_HOME_REPLACE_SAVE && host->replace_save) {
+        host->replace_save(host->opaque, game, &app->nav);
+        refresh(app);
+        changed(app);
+        return;
+    }
     if (c == ORACLES_HOME_MODS_LIMIT) { oracles_ui_home_toast(&app->view, oracles_mods_limit, now_ms()); return; }
     if (c == ORACLES_HOME_OPEN_MODS && host->open_mods) host->open_mods(host->opaque, message, sizeof message);
     else if (c == ORACLES_HOME_OPEN_FOLDER && host->open_folder) host->open_folder(host->opaque, game, message, sizeof message);
@@ -207,13 +220,15 @@ static void page_command(home_app *app, OraclesHomeCommand c)
     if (message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
 }
 
-/* The file dialog's answer: the ROM or the patch taken for the game it was opened for, or why not. */
+/* The file dialog's answer: the ROM or the patch taken for the game it was opened for, or why not; a save to import
+ * or where a copy of it goes, which the page then shows. */
 static void dialog_answered(home_app *app, int result, int kind, int game, const char *path, int copied)
 {
     char message[256] = "";
     app->dialog_open = 0;
     if (app->quit_after_dialog) app->running = 0;
-    app->host->file_chosen(app->host->opaque, game, kind, result, path, copied, message, sizeof message);
+    if (kind == ORACLES_DIALOG_SAVE || kind == ORACLES_DIALOG_EXPORT) app->host->save_chosen(app->host->opaque, game, kind, result, path, &app->nav);
+    else app->host->file_chosen(app->host->opaque, game, kind, result, path, copied, message, sizeof message);
     refresh(app);
     changed(app);
     if (message[0]) oracles_ui_home_toast(&app->view, message, now_ms());
@@ -267,7 +282,16 @@ static void pointer(home_app *app, float x, float y, int click)
         return;
     }
     if (hit.kind == ORACLES_UI_HIT_ROW) {
-        if (!click) { if (hit.index != app->nav.row) { app->nav.row = hit.index; changed(app); } return; }
+        if (!click) {
+            /* On a game's page the action or the button under the pointer takes the highlight too. */
+            const unsigned row = app->nav.row;
+            const int save_action = app->nav.save_action, eu_action = app->nav.eu_action, choice = app->nav.save_flow.choice;
+            if (app->nav.screen == ORACLES_SCREEN_GAME) oracles_page_hover(&app->nav, hit.index, hit.option);
+            else app->nav.row = hit.index;
+            if (app->nav.row != row || app->nav.save_action != save_action || app->nav.eu_action != eu_action || app->nav.save_flow.choice != choice)
+                changed(app);
+            return;
+        }
         const OraclesHomeCommand c = app->nav.screen == ORACLES_SCREEN_GAME ? oracles_page_click(&app->nav, hit.index, hit.option)
                                      : app->nav.screen == ORACLES_SCREEN_MODS ? oracles_mods_click(&app->nav, hit.index)
                                      : app->nav.screen == ORACLES_SCREEN_CHEATS ? oracles_cheats_click(&app->nav, hit.index, hit.option)

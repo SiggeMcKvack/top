@@ -3,7 +3,14 @@
  *
  * Cartridge, per game: ROM (Choose ROM opens the system's file dialog; a ROM
  * that allows only Faithful, with Enhanced chosen in Display, says so under
- * its status), Save (Open folder), Play.  A fan game made as a patch
+ * its status), Save, Play.  Save has two actions, which left and right move
+ * between: Open folder (Android: Export save…, the document picker for a
+ * copy of the save, greyed without one) and Import save…, greyed without a
+ * usable ROM and from a game, which opens the system's file dialog for a
+ * save, then a confirmation over the page, Replace or Cancel (Import or
+ * Cancel while the game has no save yet; left and right, OK; Back cancels): the import's success or its refusal stays as the row's
+ * status until the page is left, in place of the note an Oracle's row has on
+ * the European ROM.  A fan game made as a patch
  * (Gifts of Kinomi, Moonrise Regalia, Temple of Seasons) has a Base ROM row in place of ROM,
  * its Oracle's ROM that the Oracle's page shows too, then a Patch row (Choose
  * patch), its folder and the image the two make.  An Oracle whose ROM is the
@@ -101,6 +108,16 @@ const char *oracles_page_rom_hotkeys_note(const OraclesHomeNav *nav);
 void oracles_page_folder(int android, const char *folder, char *out, size_t capacity);
 const char *oracles_page_save_file(const OraclesHomeGame *game);        /* "No save yet" without one */
 void oracles_page_save_line(const OraclesHomeGame *game, char *out, size_t capacity);
+/* The Save row's actions, 0 "Open folder" (Android: "Export save…") and 1 "Import save…", and whether each acts. */
+#define ORACLES_PAGE_SAVE_ACTIONS 2
+const char *oracles_page_save_action(const OraclesHomeNav *nav, int action);
+int oracles_page_save_action_live(const OraclesHomeNav *nav, int action);
+/* The note under the row's line, an Oracle's, the shorter one in 4:3: that the save works with the European ROM in
+ * other emulators, beginning on Android with the export; from a game, on Import, why it is greyed; empty for a fan game
+ * and while the row shows a status. */
+const char *oracles_page_save_note(const OraclesHomeNav *nav, int four_three);
+/* The status an import or an export left (nav->save_flow), its tone and its second line; NULL while there is none. */
+const char *oracles_page_save_status(const OraclesHomeNav *nav, OraclesTone *tone, const char **second);
 const char *oracles_page_play_note(const OraclesHomeNav *nav);          /* shown beside Play; empty mostly */
 
 /* The European ROM row: an Oracle's (not a fan game's), with its original US ROM.  The Language row: that Oracle's, or a
@@ -130,12 +147,15 @@ extern const char *const oracles_profile_names[ORACLES_PROFILES];
 void oracles_profile_size(const OraclesHomeNav *nav, int profile, char *out, size_t capacity);
 
 OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction action);
-void oracles_page_hover(OraclesHomeNav *nav, unsigned row);
+/* The pointer over a row, or over one of its options (oracles_page_click's, -1 for none): the row highlighted, and Save's
+ * action, European ROM's button or the confirmation's button under it chosen, as left and right would choose it. */
+void oracles_page_hover(OraclesHomeNav *nav, unsigned row, int option);
 /* On a game's page whose rows changed (a ROM found otherwise at a refresh, one dropped or chosen), the highlight moved
  * from a row the page no longer has to the nearest one it has, the one above first. */
 void oracles_page_keep_row(OraclesHomeNav *nav);
 /* A click on a row, or on one of its options: European ROM's buttons (0 Choose… or Change…, 1 Remove), a language
- * (its index); `option` -1 for the row itself. */
+ * (its index), Save's actions (0, 1) and, while the import's confirmation is open, its Replace (2) and Cancel (3);
+ * `option` -1 for the row itself. */
 OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row, int option);
 
 /* Display's rows in the order of the keys: its own, Advanced last; then the Advanced rows, which show in their place;

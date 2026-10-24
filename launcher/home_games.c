@@ -517,23 +517,12 @@ static void file_chosen(void *opaque, int game, int kind, int result, const char
     if (!kept && copied && remove(path) == 0) fprintf(stderr, "oracles: %s removed, refused\n", path);
 }
 
-static void open_folder(void *opaque, int game, char *message, size_t capacity)
+void oracles_home_games_save_path(const OraclesHomeGames *games, int game, char *path, size_t capacity)
 {
-    const OraclesHomeGames *games = opaque;
-    char file[ORACLES_HOME_TEXT_LENGTH], folder[ORACLES_SETTINGS_PATH_LENGTH], error[256];
-    /* The folder of the save: beside the ROM, or a fan game's patch. */
     const OraclesHomeFanGame *fan = oracles_home_fan_game(game);
-    split_path(fan ? games->settings->patch[fan_index(fan)] : games->settings->rom[rom_setting(game)], file, sizeof file, folder, sizeof folder);
-#ifdef __ANDROID__
-    /* Android opens no file manager on a folder: the toast says where the saves are, from the shared storage's root, as
-     * a computer sees it over USB, as the page shows it. */
-    (void)error;
-    char shown[ORACLES_SETTINGS_PATH_LENGTH];
-    oracles_page_folder(1, folder, shown, sizeof shown);
-    snprintf(message, capacity, "Saves are in %s, reachable over USB", shown);
-#else
-    if (oracles_open_folder(folder[0] ? folder : ".", error, sizeof error) != 0) snprintf(message, capacity, "The folder does not open: %s", error);
-#endif
+    const char *file = fan ? games->settings->patch[fan_index(fan)] : games->settings->rom[rom_setting(game)];
+    path[0] = 0;
+    if (file[0]) oracles_session_default_save_path(file, path, capacity);
 }
 
 /* The mods folder, made when it is not there yet, in the system's file manager. */
@@ -788,8 +777,8 @@ void oracles_home_games_host(OraclesHomeGames *games, OraclesHomeHost *host)
     host->choose_patch = choose_patch;
     host->choose_eu_rom = choose_eu_rom;
     host->file_chosen = file_chosen;
-    host->open_folder = open_folder;
     host->read_mods = read_mods;
     host->open_mods = open_mods;
     host->start = start;
+    oracles_home_save_host(games, host);
 }

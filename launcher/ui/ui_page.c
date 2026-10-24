@@ -52,8 +52,9 @@
 static const uint32_t tone_dots[4] = { 0x76cf8au, 0xebbd57u, 0xf97770u, 0x6f6c78u };
 static const uint32_t tone_texts[4] = { 0xd6d3dcu, 0xecd198u, 0xf9aea7u, 0xa19eaau };
 
-/* The tones of the page's status lines: the ROM's, a fan game's patch's and image's, an Oracle's European ROM's. */
-typedef struct page_tones { OraclesTone rom, patch, image, eu; } page_tones;
+/* The tones of the page's status lines: the ROM's, a fan game's patch's and image's, an Oracle's European ROM's, the
+ * save's. */
+typedef struct page_tones { OraclesTone rom, patch, image, eu, save; } page_tones;
 
 static void game_texts(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *state, page_tones *tones)
 {
@@ -76,6 +77,9 @@ static void game_texts(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *s
     }
     snprintf(t->save_file, sizeof t->save_file, "%s", oracles_page_save_file(game));
     oracles_page_save_line(game, t->save_line, sizeof t->save_line);
+    for (int i = 0; i < ORACLES_PAGE_SAVE_ACTIONS; i++) t->save_actions[i] = oracles_page_save_action(nav, i);
+    t->save_note = oracles_page_save_note(nav, nav->layout == ORACLES_UI_LAYOUT_4_3);
+    t->save_status = oracles_page_save_status(nav, &tones->save, &t->save_status2);
     t->rom_note = oracles_page_rom_note(nav);
     t->rom_hotkeys_note = oracles_page_rom_hotkeys_note(nav);
     t->play_note = oracles_page_play_note(nav);
@@ -178,7 +182,6 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
     text(draw, st->row_label, &l.label_save, "Save", oracles_ui_rgb(LABEL));
 
     const OraclesUiColor normal = oracles_ui_rgb(BUTTON);
-    const OraclesUiColor off = oracles_ui_rgb(row == ORACLES_ROW_SAVE ? BUTTON_DISABLED_FOCUSED : BUTTON_DISABLED);
     text(draw, st->row_title, &l.rom_file, t.rom_file, oracles_ui_rgb(game->rom_file[0] ? TEXT : TEXT_NONE));
     text(draw, st->row_path, &l.rom_folder, t.rom_folder, oracles_ui_rgb(PATH));
     dot(draw, &l.rom_dot, tones.rom);
@@ -202,11 +205,23 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
         text(draw, st->row_status, &l.image_status, t.image_status, oracles_ui_rgb(tone_texts[tones.image]));
     }
 
+    /* Save: its file, its actions (the one left and right chose in the accent while the row is highlighted, one that does
+     * not act greyed), the line about it, then its note or its status. */
     text(draw, st->row_title, &l.save_file, t.save_file, oracles_ui_rgb(game->save_file[0] ? TEXT : TEXT_NONE));
+    for (int i = 0; i < ORACLES_PAGE_SAVE_ACTIONS; i++) {
+        const int chosen = row == ORACLES_ROW_SAVE && nav->save_action == i;
+        const OraclesUiColor color = !oracles_page_save_action_live(nav, i) ? oracles_ui_rgb(chosen ? BUTTON_DISABLED_FOCUSED : BUTTON_DISABLED)
+                                     : chosen ? accent : normal;
+        text(draw, st->row_button, &l.save_buttons[i], t.save_actions[i], color);
+        text(draw, st->row_button, &l.save_button_dots[i], oracles_ui_item_dot, color);
+    }
     text(draw, st->row_text, &l.save_line, t.save_line, oracles_ui_rgb(NOTE));
-    const OraclesUiColor save_button = !game->usable ? off : row == ORACLES_ROW_SAVE ? accent : normal;
-    text(draw, st->row_button, &l.save_button, "Open folder", save_button);
-    text(draw, st->row_button, &l.save_button_dot, oracles_ui_item_dot, save_button);
+    wrapped(draw, nav->layout == ORACLES_UI_LAYOUT_4_3 ? st->page_note : st->row_note, &l.save_note, oracles_ui_rgb(NOTE_ITALIC));
+    if (t.save_status) {
+        dot(draw, &l.save_dot, tones.save);
+        wrapped(draw, st->row_status, &l.save_status, oracles_ui_rgb(tone_texts[tones.save]));
+        wrapped(draw, st->row_status, &l.save_status2, oracles_ui_rgb(NOTE));
+    }
 
     if (t.european) {
         /* European ROM: its file, folder and status; its buttons, the one left and right chose in the accent while the
@@ -247,6 +262,38 @@ void oracles_ui_page_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, Oracle
     text(draw, st->play, &l.play_dot, oracles_ui_item_dot, play);
 }
 
+/* The import's confirmation: the scene dimmed, the panel, its texts, and its buttons framed, the one left and right
+ * chose in the accent. */
+#define IMPORT_BACKDROP 0x050408u
+#define IMPORT_BACKDROP_OPACITY 0.62f
+#define IMPORT_PANEL_OPACITY 0.97f
+#define IMPORT_BORDER_OPACITY 0.12f
+#define IMPORT_FILE 0xefedf2u
+#define IMPORT_BUTTON_BORDER_OPACITY 0.25f
+
+void oracles_ui_page_dialog_draw(OraclesUiDraw *draw, const OraclesHomeNav *nav, OraclesUiColor accent)
+{
+    if (nav->screen != ORACLES_SCREEN_GAME || nav->save_flow.state != ORACLES_SAVE_FLOW_CONFIRM) return;
+    const OraclesUiPageStyles *st = oracles_ui_page_styles(nav->layout);
+    const look *lk = look_of(nav->layout);
+    OraclesUiImportLayout l;
+    oracles_ui_layout_import(nav->layout, nav->save_flow.file, nav->save_flow.folder, nav->save_flow.replace, &l);
+    oracles_ui_fill_rect(draw, l.backdrop.x, l.backdrop.y, l.backdrop.w, l.backdrop.h, oracles_ui_rgba(IMPORT_BACKDROP, IMPORT_BACKDROP_OPACITY));
+    oracles_ui_fill_round_rect(draw, l.panel.x, l.panel.y, l.panel.w, l.panel.h, 10.0f, oracles_ui_rgba(PANEL, IMPORT_PANEL_OPACITY));
+    oracles_ui_stroke_round_rect(draw, l.panel.x, l.panel.y, l.panel.w, l.panel.h, 10.0f, 1.0f, oracles_ui_rgba(0xffffffu, IMPORT_BORDER_OPACITY));
+    text(draw, oracles_ui_import_style(nav->layout, 0), &l.title, oracles_ui_import_title, accent);
+    text(draw, st->row_title, &l.file, l.file_text, oracles_ui_rgb(IMPORT_FILE));
+    text(draw, st->row_path, &l.folder, l.folder_text, oracles_ui_rgb(PATH));
+    wrapped(draw, oracles_ui_import_style(nav->layout, 1), &l.question, oracles_ui_rgb(HELP));
+    for (int i = 0; i < 2; i++) {
+        const int chosen = nav->save_flow.choice == i;
+        const OraclesUiBox *b = &l.buttons[i];
+        oracles_ui_stroke_round_rect(draw, b->x, b->y, b->w, b->h, lk->choice_radius, lk->frame_width,
+                                     chosen ? accent : oracles_ui_rgba(0xffffffu, IMPORT_BUTTON_BORDER_OPACITY));
+        text(draw, oracles_ui_import_style(nav->layout, 2), &l.labels[i], l.label_texts[i], chosen ? accent : oracles_ui_rgb(BUTTON));
+    }
+}
+
 static int inside(const OraclesUiBox *b, float x, float y) { return x >= b->x && x < b->x + b->w && y >= b->y && y < b->y + b->h; }
 
 int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y, int *option)
@@ -258,7 +305,15 @@ int oracles_ui_page_hit(const OraclesHomeNav *nav, float x, float y, int *option
     OraclesUiGameLayout l;
     oracles_ui_layout_game(nav->layout, &t, &l);
     *option = -1;
-    /* European ROM's buttons, and the languages the game has: the others are not drawn. */
+    /* The import's confirmation open: its buttons alone, Replace (2) and Cancel (3). */
+    if (nav->save_flow.state == ORACLES_SAVE_FLOW_CONFIRM) {
+        OraclesUiImportLayout dialog;
+        oracles_ui_layout_import(nav->layout, nav->save_flow.file, nav->save_flow.folder, nav->save_flow.replace, &dialog);
+        for (int i = 0; i < 2; i++) if (inside(&dialog.buttons[i], x, y)) { *option = 2 + i; return ORACLES_ROW_SAVE; }
+        return -1;
+    }
+    /* Save's actions, European ROM's buttons, and the languages the game has: the others are not drawn. */
+    for (int i = 0; i < ORACLES_PAGE_SAVE_ACTIONS; i++) if (inside(&l.save_button_boxes[i], x, y)) { *option = i; return ORACLES_ROW_SAVE; }
     for (unsigned i = 0; t.european && i < t.eu_buttons; i++) if (inside(&l.eu_button_boxes[i], x, y)) { *option = (int)i; return ORACLES_ROW_EU_ROM; }
     for (int i = 0; t.languages && i < ORACLES_PAGE_LANGUAGES; i++)
         if (oracles_page_language_available(oracles_page_game_const(nav), i) && inside(&l.languages[i].box, x, y)) { *option = i; return ORACLES_ROW_LANGUAGE; }

@@ -86,6 +86,9 @@ typedef enum OraclesHomeCommand {
     ORACLES_HOME_MODS_LIMIT,     /* Mods: a ninth mod was switched on, and stays off; the screen says why */
     ORACLES_HOME_STORE,          /* a choice of the page changed: the settings are written */
     ORACLES_HOME_OPEN_UPDATE,    /* the newer version's notice: its release's page in the system's browser, the launcher staying open */
+    ORACLES_HOME_IMPORT_SAVE,    /* the game's page: the system's file dialog for a save to import (ui_page_nav.h) */
+    ORACLES_HOME_REPLACE_SAVE,   /* its confirmation's Replace (Import without a save): the save imported, the one it replaces kept as a backup */
+    ORACLES_HOME_EXPORT_SAVE,    /* Android: the document picker for a copy of the save */
     /* The pause menu's. */
     ORACLES_HOME_RESUME,
     ORACLES_HOME_SAVE_STATE,
@@ -302,6 +305,24 @@ typedef enum OraclesInputDevice {
     ORACLES_INPUT_GAMEPAD
 } OraclesInputDevice;
 
+/* Cartridge's Save row (ui_page_nav.h): the import's confirmation over the page, with the file chosen, its folder and
+ * the button left and right chose; and the line an import or an export left in the row, success or refusal, until the
+ * page is left. */
+typedef enum OraclesSaveFlow {
+    ORACLES_SAVE_FLOW_NONE,
+    ORACLES_SAVE_FLOW_CONFIRM,
+    ORACLES_SAVE_FLOW_DONE,
+    ORACLES_SAVE_FLOW_REFUSED
+} OraclesSaveFlow;
+typedef struct OraclesHomeSaveFlow {
+    OraclesSaveFlow state;
+    int choice;                                  /* the confirmation's: 0 Replace (Import without a save), 1 Cancel */
+    int replace;                                 /* the game has a save, which the file replaces */
+    char file[ORACLES_HOME_TEXT_LENGTH], folder[ORACLES_HOME_TEXT_LENGTH * 4];
+    char text[ORACLES_HOME_TEXT_LENGTH];         /* DONE or REFUSED: the row's status */
+    char text2[ORACLES_HOME_TEXT_LENGTH];        /* and a line under it, empty without one */
+} OraclesHomeSaveFlow;
+
 typedef struct OraclesHomeNav {
     OraclesScreen screen;
     OraclesUiLayout layout;            /* the window's (oracles_ui_layout_choose), which its owner sets before each frame */
@@ -310,6 +331,8 @@ typedef struct OraclesHomeNav {
     unsigned focus;
     unsigned row;                      /* the highlighted row of the game's page, or of Display */
     int eu_action;                     /* Cartridge's European ROM row with a file: 0 Change, 1 Remove, as left and right set it */
+    int save_action;                   /* Cartridge's Save row: 0 Open folder (Android: Export save…), 1 Import save… */
+    OraclesHomeSaveFlow save_flow;
     int advanced;                      /* Display shows its Advanced rows in place of its own */
     int text_page;                     /* Display shows its Text rows in place of its own (Display › Text) */
     /* The fan games' Language row, their language beside Cartridge and their games started in it: 0 in the product,

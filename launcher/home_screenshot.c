@@ -90,7 +90,8 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
     /* The inputs move the navigation only: a game is not started, the launcher does not exit.  `slow` is the return
      * from a game that ran slowly, its toast shown until the next input; `key` and `pad`, a key or a controller's
      * button as the device used last, which the hints follow; `android`, the screens as Android has them; `moonrise`,
-     * over a game's frame, the pause of Moonrise Regalia rather than Ages'. */
+     * over a game's frame, the pause of Moonrise Regalia rather than Ages'; `import`, on a game's page, the import's
+     * confirmation as the page's own save chosen would open it. */
     for (const char *p = inputs; p && *p;) {
         const size_t length = strcspn(p, ",");
         OraclesHomeAction action;
@@ -99,8 +100,18 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
         else if (length == 3 && !strncmp(p, "pad", 3)) oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
         else if (length == 7 && !strncmp(p, "android", 7)) nav.android = nav.display.fullscreen_only = 1;
         else if (length == 8 && !strncmp(p, "moonrise", 8) && frame) pause(&nav, ORACLES_HOME_GAME_MOONRISE, width);
+        else if (length == 6 && !strncmp(p, "import", 6) && nav.screen == ORACLES_SCREEN_GAME) {
+            const OraclesHomeGame *game = oracles_page_game_const(&nav);
+            nav.save_flow.state = ORACLES_SAVE_FLOW_CONFIRM;
+            nav.save_flow.replace = game->save_file[0] != 0;
+            /* Without a save, the ROM's name with the save's extension. */
+            const char *dot = strrchr(game->rom_file, '.');
+            if (game->save_file[0]) snprintf(nav.save_flow.file, sizeof nav.save_flow.file, "%s", game->save_file);
+            else snprintf(nav.save_flow.file, sizeof nav.save_flow.file, "%.*s.sav", dot ? (int)(dot - game->rom_file) : (int)strlen(game->rom_file), game->rom_file);
+            oracles_page_folder(nav.android, game->rom_folder, nav.save_flow.folder, sizeof nav.save_flow.folder);
+        }
         else if (!parse_action(p, length, &action)) {
-            snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android, moonrise)", (int)length, p);
+            snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android, moonrise, import)", (int)length, p);
             return 1;
         }
         else oracles_home_act(&nav, action);

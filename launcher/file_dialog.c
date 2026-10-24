@@ -111,14 +111,16 @@ static void SDLCALL answered(void *userdata, const char *const *files, int filte
     if (!SDL_PushEvent(&e)) { SDL_free(answer->path); SDL_free(answer); }
 }
 
-/* Each kind's title and filters. */
+/* Each kind's title and filters; an export's are Android's document picker's own. */
 static const struct {
     const char *title;
     SDL_DialogFileFilter filters[2];
-} kinds[3] = {
+} kinds[5] = {
     { "Choose ROM", { { "Game Boy Color ROM", "gbc;gb" }, { "All files", "*" } } },
     { "Choose patch", { { "BPS patch", "bps" }, { "All files", "*" } } },
     { "Choose European ROM", { { "Game Boy Color ROM", "gbc;gb" }, { "All files", "*" } } },
+    { "Import save", { { "Game Boy save", "sav;srm" }, { "All files", "*" } } },
+    { "Export save", { { "Game Boy save", "sav;srm" }, { "All files", "*" } } },
 };
 
 void oracles_choose_file(struct SDL_Window *window, OraclesDialogKind kind, const char *folder, int game)
@@ -162,7 +164,9 @@ int oracles_dialog_answer(const union SDL_Event *event, OraclesDialogResult *res
     *copied = 0;
     snprintf(path, capacity, "%s", answer->path ? answer->path : "");
 #ifdef __ANDROID__
-    if (*result == ORACLES_DIALOG_CHOSEN && strncmp(path, "content://", 10) == 0 && !local_copy(answer->path, answer->kind, path, capacity, copied)) {
+    /* A save is read where it is, and a copy of one written there: neither is copied in. */
+    const int in_place = answer->kind == ORACLES_DIALOG_SAVE || answer->kind == ORACLES_DIALOG_EXPORT;
+    if (*result == ORACLES_DIALOG_CHOSEN && !in_place && strncmp(path, "content://", 10) == 0 && !local_copy(answer->path, answer->kind, path, capacity, copied)) {
         SDL_Log("%s cannot be copied into the application's folder: %s", answer->path, SDL_GetError());
         *result = ORACLES_DIALOG_FAILED;
         path[0] = 0;
@@ -171,6 +175,81 @@ int oracles_dialog_answer(const union SDL_Event *event, OraclesDialogResult *res
     SDL_free(answer->path);
     SDL_free(answer);
     return 1;
+}
+
+#ifdef __ANDROID__
+static int export_game;   /* the game of the document picker open, one at a time as every dialog */
+
+/* OraclesActivity's answer for the document it asked the picker to make (createDocument): its content:// address, or
+ * NULL when the player cancelled; on Android's interface thread, pushed to the launcher's as a dialog's answer. */
+JNIEXPORT void JNICALL Java_org_theoraclesproject_OraclesActivity_nativeDocumentCreated(JNIEnv *env, jclass class, jstring uri);
+JNIEXPORT void JNICALL Java_org_theoraclesproject_OraclesActivity_nativeDocumentCreated(JNIEnv *env, jclass class, jstring uri)
+{
+    (void)class;
+    dialog_answer *answer = SDL_calloc(1, sizeof *answer);
+    if (!answer) return;
+    answer->kind = ORACLES_DIALOG_EXPORT;
+    answer->game = export_game;
+    const char *chars = uri ? (*env)->GetStringUTFChars(env, uri, NULL) : NULL;
+    const char *const files[2] = { chars ? chars : "", NULL };
+    answered(answer, files, -1);
+    if (chars) (*env)->ReleaseStringUTFChars(env, uri, chars);
+}
+#endif
+
+void oracles_choose_export(const char *name, int game)
+{
+    if (!answer_event) answer_event = SDL_RegisterEvents(1);
+    dialog_answer *answer = SDL_calloc(1, sizeof *answer);
+    if (!answer) return;
+    answer->kind = ORACLES_DIALOG_EXPORT;
+    answer->game = game;
+    int started = 0;
+#ifdef __ANDROID__
+    JNIEnv *env = SDL_GetAndroidJNIEnv();
+    jobject activity = SDL_GetAndroidActivity();
+    if (answer_event && env && activity) {
+        jclass class = (*env)->GetObjectClass(env, activity);
+        jmethodID method = (*env)->GetStaticMethodID(env, class, "createDocument", "(Ljava/lang/String;)Z");
+        jstring argument = (*env)->NewStringUTF(env, name);
+        export_game = game;
+        started = method && argument && (*env)->CallStaticBooleanMethod(env, class, method, argument);
+        if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); started = 0; }
+        if (argument) (*env)->DeleteLocalRef(env, argument);
+        (*env)->DeleteLocalRef(env, class);
+        (*env)->DeleteLocalRef(env, activity);
+    }
+#else
+    (void)name;
+#endif
+    if (started) SDL_free(answer);   /* the activity answers (nativeDocumentCreated) */
+    else answered(answer, NULL, -1);
+}
+
+void oracles_dialog_describe(const char *path, char *name, size_t name_capacity, char *folder, size_t folder_capacity)
+{
+#ifdef __ANDROID__
+    if (!strncmp(path, "content://", 10)) {
+        display_name(path, name, name_capacity);
+        /* The document's identifier, the address's last segment decoded: "primary:Download/save.sav" is in Download. */
+        char id[1024];
+        const char *segment = strrchr(path, '/');
+        size_t n = 0;
+        for (const char *p = segment ? segment + 1 : path; *p && n + 1 < sizeof id; p++) {
+            unsigned value;
+            if (p[0] == '%' && sscanf(p + 1, "%2x", &value) == 1) { id[n++] = (char)value; p += 2; }
+            else id[n++] = *p;
+        }
+        id[n] = 0;
+        const char *colon = strchr(id, ':'), *rest = colon ? colon + 1 : id, *slash = strrchr(rest, '/');
+        snprintf(folder, folder_capacity, "%.*s", slash ? (int)(slash - rest) : 0, rest);
+        return;
+    }
+#endif
+    const char *slash = strrchr(path, '/'), *backslash = strrchr(path, '\\');
+    if (backslash && (!slash || backslash > slash)) slash = backslash;
+    snprintf(name, name_capacity, "%s", slash ? slash + 1 : path);
+    snprintf(folder, folder_capacity, "%.*s", slash ? (int)(slash - path) : 0, path);
 }
 
 /* folder/name, or with " (2)"... before the extension: the first that is free or holds these very bytes. */

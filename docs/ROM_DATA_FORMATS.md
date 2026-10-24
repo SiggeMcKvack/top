@@ -330,10 +330,11 @@ The SRAM of both games is 8 KiB (the raw `.sav`). It holds three game files and 
 
 `saveFile` writes both copies; `loadFile` reads copy 1 if it is valid, else copy 2, and `verifyFileCopies` rewrites the invalid copy from the valid one. A copy is valid when its first two bytes equal the sum, modulo `$10000`, of the `$2a7` little-endian words that follow (`calculateFileChecksum`, bytes `+2` to `+$54f`), and the next eight bytes are the game's string (`saveVerificationString`: `Z11216-0` in Seasons, `Z21216-0` in Ages).
 
-Fields that name a room, as offsets from the start of the file (WRAM address minus `$c5b0`, the same in both games unless noted):
+The language and the fields that name a room, as offsets from the start of the file (WRAM address minus `$c5b0`, the same in both games unless noted):
 
 | Offset | Field | Content |
 | --- | --- | --- |
+| `+$7a` | `wActiveLanguage` | the language, 0 in the US games: English, French, German, Italian, Spanish (0 to 4) in the European ones |
 | `+$7b` | `wDeathRespawnBuffer` (`DeathRespawnStruct`, `include/structs.s`) | group, room, `stateModifier`, direction, y, x of the respawn point |
 | `+$81` to `+$83` | same structure | identifier, group and room of the remembered companion |
 | `+$8a`, `+$8b` | `wMinimapGroup`, `wMinimapRoom` | the minimap's position |
@@ -341,6 +342,8 @@ Fields that name a room, as offsets from the start of the file (WRAM address min
 | `+$150` to `+$54f` | room flag pages `$c700`-`$caff` | a byte per room index, pages shared by `flagLocationGroupTable` |
 
 Changing a field of a file means recomputing its sum and writing both copies.
+
+The European ROMs keep the same files, the same sum and the same strings, and add a header: `L_O_C_A_L_I_Z_E` at `$a000`-`$a00e` (offset `$0000`) and the language chosen at `$a00f`, which their `loadFile` copies into `wActiveLanguage` over the file's own, and `saveFile` then writes to `+$7a`. A US save loads in a European game, which asks for the language first, the header being absent. A European save loads in the US game, which ignores the header but reads `+$7a`: its `textOffset2Table` holds the right offsets for 0 and 1 only, and with 2, 3 or 4 every text of a high index `$2c` or more is read at the wrong place (signs, rings' names, many dialogues). Setting `+$7a` to 0 in each valid copy, its sum recomputed, is all such a save needs (`engine/rom/save.c`).
 
 ## 15. Room left in the US ROMs
 

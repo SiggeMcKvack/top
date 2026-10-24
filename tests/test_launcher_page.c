@@ -84,6 +84,9 @@ static void texts_of(const OraclesHomeNav *nav, OraclesUiGameTexts *t, char *sta
     oracles_page_rom_status(g, t->rom_status, sizeof t->rom_status, &tone);
     snprintf(t->save_file, sizeof t->save_file, "%s", oracles_page_save_file(g));
     oracles_page_save_line(g, t->save_line, sizeof t->save_line);
+    for (int i = 0; i < ORACLES_PAGE_SAVE_ACTIONS; i++) t->save_actions[i] = oracles_page_save_action(nav, i);
+    t->save_note = oracles_page_save_note(nav, nav->layout == ORACLES_UI_LAYOUT_4_3);
+    t->save_status = oracles_page_save_status(nav, &tone, &t->save_status2);
     t->rom_note = oracles_page_rom_note(nav);
     t->rom_hotkeys_note = oracles_page_rom_hotkeys_note(nav);
     t->play_note = oracles_page_play_note(nav);
@@ -131,7 +134,7 @@ static void layout_1h(void)
     layout_box("1h", "ROM row", &l.rows[ORACLES_ROW_ROM]);
     layout_text("1h", "save file", &l.save_file);
     layout_text("1h", "save line", &l.save_line);
-    layout_text("1h", "Open folder", &l.save_button);
+    layout_text("1h", "Open folder", &l.save_buttons[0]);
     layout_box("1h", "Save row", &l.rows[ORACLES_ROW_SAVE]);
     /* Play, under Save. */
     layout_text("1h", "Play", &l.play);
@@ -268,7 +271,7 @@ static void layout_1k_1l(void)
     layout_box("1k", "image dot", &l.image_dot);
     layout_text("1k", "save file", &l.save_file);
     layout_text("1k", "save line", &l.save_line);
-    layout_text("1k", "Open folder", &l.save_button);
+    layout_text("1k", "Open folder", &l.save_buttons[0]);
     layout_box("1k", "Save row", &l.rows[ORACLES_ROW_SAVE]);
     layout_text("1k", "Play", &l.play);
     layout_text("1k", "Play dot", &l.play_dot);
@@ -414,7 +417,7 @@ static void navigation(void)
     CHECK(nav.row == ORACLES_ROW_SAVE);
     oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(nav.row == ORACLES_ROW_ROM);
-    oracles_page_hover(&nav, ORACLES_ROW_PATCH);
+    oracles_page_hover(&nav, ORACLES_ROW_PATCH, -1);
     CHECK(nav.row == ORACLES_ROW_ROM && oracles_page_click(&nav, ORACLES_ROW_PATCH, -1) == ORACLES_HOME_STAY);
     nav.screen = ORACLES_SCREEN_HOME;
     oracles_home_select(&nav, ORACLES_HOME_FAN);
@@ -793,7 +796,7 @@ static void languages_navigation(void)
     nav.row = ORACLES_ROW_SAVE;
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_ROW_PLAY);
-    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE);
+    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE, -1);
     CHECK(nav.row == ORACLES_ROW_PLAY && oracles_page_click(&nav, ORACLES_ROW_EU_ROM, 0) == ORACLES_HOME_STAY);
     /* A fan game, its languages off as in the product: no European ROM or Language row, down from Save to Play, no
      * language beside Cartridge whatever settings.txt chose and its Oracle's European ROM recognized. */
@@ -807,7 +810,7 @@ static void languages_navigation(void)
     nav.row = ORACLES_ROW_SAVE;
     oracles_home_act(&nav, ORACLES_HOME_DOWN);
     CHECK(nav.row == ORACLES_ROW_PLAY);
-    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE);
+    oracles_page_hover(&nav, ORACLES_ROW_LANGUAGE, -1);
     CHECK(nav.row == ORACLES_ROW_PLAY && oracles_page_click(&nav, ORACLES_ROW_LANGUAGE, 2) == ORACLES_HOME_STAY);
     nav.screen = ORACLES_SCREEN_HOME;
     oracles_home_items(&nav, items);
@@ -1739,8 +1742,8 @@ static void layout_10d(void)
     layout_box("10d", "ROM row", &l.rows[ORACLES_ROW_ROM]);
     layout_line("10d", "save file", &l.save_file);
     layout_line("10d", "save line", &l.save_line);
-    layout_line("10d", "Open folder", &l.save_button);
-    layout_line("10d", "Open folder dot", &l.save_button_dot);
+    layout_line("10d", "Open folder", &l.save_buttons[0]);
+    layout_line("10d", "Open folder dot", &l.save_button_dots[0]);
     layout_box("10d", "Save row", &l.rows[ORACLES_ROW_SAVE]);
     layout_line("10d", "Play", &l.play);
     layout_line("10d", "Play dot", &l.play_dot);

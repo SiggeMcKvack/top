@@ -49,6 +49,9 @@ typedef struct OraclesUiGameTexts {
     char patch_file[ORACLES_HOME_TEXT_LENGTH], patch_folder[ORACLES_HOME_TEXT_LENGTH * 4], patch_status[ORACLES_HOME_TEXT_LENGTH];
     char image_status[ORACLES_HOME_TEXT_LENGTH];
     char save_file[ORACLES_HOME_TEXT_LENGTH], save_line[ORACLES_HOME_TEXT_LENGTH];
+    /* Save's actions, its note (empty: none), its status and the status's second line (NULL: none). */
+    const char *save_actions[ORACLES_PAGE_SAVE_ACTIONS];
+    const char *save_note, *save_status, *save_status2;
     const char *rom_note, *rom_hotkeys_note, *play_note;
     /* An Oracle with its original ROM (`european`): its European ROM's file, folder (empty without a file) and status,
      * its buttons (Choose…, or Change… and Remove).  Its Language row, or a fan game's (`languages`): its explanation,
@@ -84,7 +87,12 @@ typedef struct OraclesUiGameLayout {
     OraclesUiLine language_explanation, language_note;
     OraclesUiLine patch_file, patch_status, patch_button, patch_button_dot, patch_folder, image_status;
     OraclesUiBox patch_dot, image_dot;
-    OraclesUiLine save_file, save_line, save_button, save_button_dot;
+    /* Save: its file and its actions with their dots on the first line, each action's box the pointer's target; the line
+     * about it; the note, wrapped in 16:9 and on one line in 4:3, or the status beside its dot, its second line under
+     * it, in the note's place (4:3: in the line's too). */
+    OraclesUiLine save_file, save_line, save_buttons[ORACLES_PAGE_SAVE_ACTIONS], save_button_dots[ORACLES_PAGE_SAVE_ACTIONS];
+    OraclesUiBox save_button_boxes[ORACLES_PAGE_SAVE_ACTIONS], save_dot;
+    OraclesUiWrapped save_note, save_status, save_status2;
     OraclesUiLine play_note, play, play_dot;
 } OraclesUiGameLayout;
 
@@ -125,6 +133,25 @@ void oracles_ui_layout_page_head(OraclesUiLayout layout, const char *section, co
                                  OraclesUiPageHead *out);
 /* Cartridge in `layout`; 4:3 has no panel (`panel` zero), its rows the column's width. */
 void oracles_ui_layout_game(OraclesUiLayout layout, OraclesUiGameTexts *texts, OraclesUiGameLayout *out);
+
+/* The import's confirmation over Cartridge (ui_page_save_layout.c): the scene dimmed, a panel at its centre with its
+ * title, the file chosen, its folder, the question and its buttons, each box the pointer's target: over a save, whether
+ * to replace it (Replace, Cancel); without one, whether to take the file (Import, Cancel), in the same box. */
+typedef struct OraclesUiImportLayout {
+    OraclesUiBox backdrop, panel;
+    OraclesUiLine title, file, folder;
+    char file_text[ORACLES_HOME_TEXT_LENGTH], folder_text[ORACLES_HOME_TEXT_LENGTH * 4];   /* fitted to the panel */
+    OraclesUiWrapped question;
+    const char *question_text, *label_texts[2];
+    OraclesUiBox buttons[2];
+    OraclesUiLine labels[2];
+} OraclesUiImportLayout;
+
+extern const char oracles_ui_import_title[];
+/* Its styles in `layout`: the title's, the question's and the buttons'. */
+const OraclesUiTextStyle *oracles_ui_import_style(OraclesUiLayout layout, int part);
+/* `replace`: the game has a save, which the file replaces. */
+void oracles_ui_layout_import(OraclesUiLayout layout, const char *file, const char *folder, int replace, OraclesUiImportLayout *out);
 
 /* The texts of Display. */
 typedef struct OraclesUiDisplayTexts {

@@ -273,28 +273,32 @@ void pl_shift_option(OraclesUiOptionLayout *o, float dx, float dy)
     if (o->size.h > 0.0f) pl_move_line(&o->size, o->size.x + dx, o->size.y + dy);
 }
 
-/* European ROM's buttons, from the right edge `right` leftwards, each its label and its dot `gap` apart, EU_BUTTONS_GAP
- * between them, unplaced vertically.  Returns their width. */
-static float eu_buttons(const OraclesUiTextStyle *style, const OraclesUiGameTexts *t, float right, float gap, OraclesUiGameLayout *out)
+/* Buttons side by side, from the right edge `right` leftwards, each its label and its dot `gap` apart, `between` from
+ * one to the next, unplaced vertically.  Returns their width. */
+float pl_buttons(const OraclesUiTextStyle *style, const char *const *labels, unsigned count, float right, float gap, float between,
+                 OraclesUiLine *texts, OraclesUiLine *dots)
 {
     float x = right;
-    for (unsigned i = t->eu_buttons; i-- > 0;) {
-        out->eu_button_dots[i] = pl_line_at(style, oracles_ui_item_dot, 0.0f, 0.0f, 0.0f);
-        out->eu_buttons[i] = pl_line_at(style, t->eu_button_labels[i], 0.0f, 0.0f, 0.0f);
-        pl_move_line(&out->eu_button_dots[i], x - out->eu_button_dots[i].w, 0.0f);
-        pl_move_line(&out->eu_buttons[i], out->eu_button_dots[i].x - gap - out->eu_buttons[i].w, 0.0f);
-        x = out->eu_buttons[i].x - EU_BUTTONS_GAP;
+    for (unsigned i = count; i-- > 0;) {
+        dots[i] = pl_line_at(style, oracles_ui_item_dot, 0.0f, 0.0f, 0.0f);
+        texts[i] = pl_line_at(style, labels[i], 0.0f, 0.0f, 0.0f);
+        pl_move_line(&dots[i], x - dots[i].w, 0.0f);
+        pl_move_line(&texts[i], dots[i].x - gap - texts[i].w, 0.0f);
+        x = texts[i].x - between;
     }
-    return right - x - EU_BUTTONS_GAP;
+    return right - x - between;
 }
 
 /* Each button's box, from its label to its dot, where they lie. */
-static void eu_button_boxes(const OraclesUiGameTexts *t, OraclesUiGameLayout *out)
+void pl_button_boxes(unsigned count, const OraclesUiLine *texts, const OraclesUiLine *dots, OraclesUiBox *boxes)
 {
-    for (unsigned i = 0; i < t->eu_buttons; i++) {
-        const OraclesUiLine *label = &out->eu_buttons[i], *dot = &out->eu_button_dots[i];
-        out->eu_button_boxes[i] = pl_box(label->x, label->y, dot->x + dot->w - label->x, label->h);
-    }
+    for (unsigned i = 0; i < count; i++) boxes[i] = pl_box(texts[i].x, texts[i].y, dots[i].x + dots[i].w - texts[i].x, texts[i].h);
+}
+
+/* European ROM's buttons, EU_BUTTONS_GAP between them. */
+static float eu_buttons(const OraclesUiTextStyle *style, const OraclesUiGameTexts *t, float right, float gap, OraclesUiGameLayout *out)
+{
+    return pl_buttons(style, t->eu_button_labels, t->eu_buttons, right, gap, EU_BUTTONS_GAP, out->eu_buttons, out->eu_button_dots);
 }
 
 /* The six languages framed from (x, y), `columns` a line, each `width` wide and as tall as its name and `frame` above
@@ -381,19 +385,9 @@ static void game_16_9(OraclesUiGameTexts *t, OraclesUiGameLayout *out)
         y = out->image_status.y + out->image_status.h + IMAGE_PAD_BOTTOM + GAME_ROW_GAP;
     }
 
-    /* Save: the file and a line about it; Open folder at the right. */
+    /* Save: the file and its actions, the line about it, then the status or the note. */
     out->label_save = pl_line_at(&oracles_ui_row_label, "Save", left, y + LABEL_PAD_TOP, 0.0f);
-    inner_y = y + ROW_PAD_Y;
-    pl_button("Open folder", right, 0.0f, 0.0f, &out->save_button, &out->save_button_dot);
-    const float save_room = inner_w - ROW_GAP - (out->save_button_dot.x + out->save_button_dot.w - out->save_button.x);
-    oracles_ui_fit(&oracles_ui_row_title, t->save_file, save_room, fitted, sizeof t->save_file); memcpy(t->save_file, fitted, sizeof t->save_file);
-    oracles_ui_fit(&oracles_ui_row_text, t->save_line, save_room, fitted, sizeof t->save_line); memcpy(t->save_line, fitted, sizeof t->save_line);
-    out->save_file = block_at(&oracles_ui_row_title, t->save_file, inner_x, inner_y);
-    out->save_line = block_at(&oracles_ui_row_text, t->save_line, inner_x, out->save_file.y + out->save_file.h + FILE_GAP);
-    content = out->save_line.y + out->save_line.h - inner_y;
-    if (content < out->save_button.h) content = out->save_button.h;
-    pl_button("Open folder", right, inner_y, content, &out->save_button, &out->save_button_dot);
-    out->rows[ORACLES_ROW_SAVE] = pl_box(value_x, y, value_w, content + 2.0f * ROW_PAD_Y);
+    out->rows[ORACLES_ROW_SAVE] = pl_save_row_16_9(t, value_x, value_w, y, out);
     y += out->rows[ORACLES_ROW_SAVE].h + GAME_ROW_GAP;
 
     if (t->european) {
@@ -413,7 +407,7 @@ static void game_16_9(OraclesUiGameTexts *t, OraclesUiGameLayout *out)
             pl_move_line(&out->eu_buttons[i], out->eu_buttons[i].x, top);
             pl_move_line(&out->eu_button_dots[i], out->eu_button_dots[i].x, top);
         }
-        eu_button_boxes(t, out);
+        pl_button_boxes(t->eu_buttons, out->eu_buttons, out->eu_button_dots, out->eu_button_boxes);
         out->eu_folder = pl_line_at(&oracles_ui_row_path, t->eu_folder, inner_x, inner_y + first + FILE_GAP, EU_FOLDER_LINE);
         const float eu_status_y = out->eu_folder.y + out->eu_folder.h + FILE_GAP;
         out->eu_status = pl_line_at(&oracles_ui_row_status, t->eu_status, inner_x + DOT + DOT_GAP, eu_status_y, 0.0f);
@@ -661,13 +655,9 @@ static void game_4_3(OraclesUiGameTexts *t, OraclesUiGameLayout *out)
         y = status_4_3(t->image_status, out->patch_folder.y + out->patch_folder.h + IMAGE_GAP_4_3, &out->image_status, &out->image_dot) + ROW_GAP_4_3;
     }
 
-    /* Save: the file and a line about it; Open folder at the right. */
-    room = pl_file_room_4_3(GAME_VALUE_X_4_3, pl_place_button_4_3("Open folder", &out->save_button, &out->save_button_dot));
-    FIT(&oracles_ui_row_title_4_3, t->save_file, room);
-    FIT(&oracles_ui_row_text_4_3, t->save_line, span);
-    bottom = file_line_4_3("Save", &out->label_save, t->save_file, &out->save_file, &out->save_button, &out->save_button_dot, y);
-    out->save_line = block_at(&oracles_ui_row_text_4_3, t->save_line, GAME_VALUE_X_4_3, bottom + GRID_ROW_GAP_4_3);
-    out->rows[ORACLES_ROW_SAVE] = pl_row_4_3(y, out->save_line.y + out->save_line.h);
+    /* Save: the label, the file and its actions on one baseline; under them the line about it and the note, or the
+     * status. */
+    out->rows[ORACLES_ROW_SAVE] = pl_save_row_4_3(t, y, out);
     y += out->rows[ORACLES_ROW_SAVE].h + ROW_GAP_4_3;
 
     if (t->european) {
@@ -682,7 +672,7 @@ static void game_4_3(OraclesUiGameTexts *t, OraclesUiGameLayout *out)
         OraclesUiLine *const lines[6] = { &out->label_eu, &out->eu_file, &out->eu_buttons[0], &out->eu_button_dots[0], &out->eu_buttons[1],
                                           &out->eu_button_dots[1] };
         bottom = pl_baseline_row(lines, 2u + 2u * t->eu_buttons, y + ROW_PAD_Y_4_3);
-        eu_button_boxes(t, out);
+        pl_button_boxes(t->eu_buttons, out->eu_buttons, out->eu_button_dots, out->eu_button_boxes);
         out->eu_folder = pl_line_at(&oracles_ui_row_path_4_3, t->eu_folder, GAME_VALUE_X_4_3, bottom + GRID_ROW_GAP_4_3, EU_FOLDER_LINE_4_3);
         bottom = status_4_3(t->eu_status, out->eu_folder.y + out->eu_folder.h + GRID_ROW_GAP_4_3, &out->eu_status, &out->eu_dot);
         out->rows[ORACLES_ROW_EU_ROM] = pl_row_4_3(y, bottom);

@@ -1224,33 +1224,33 @@
    "save file": {
     "x": 969,
     "w": 266.281,
-    "glyph_top": 231,
+    "glyph_top": 234,
     "glyph_h": 28,
-    "top": 228,
+    "top": 231,
     "h": 34,
-    "baseline": 253,
+    "baseline": 256,
     "width": 266.281,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 568.156,
-    "glyph_top": 268,
+    "glyph_top": 274,
     "glyph_h": 24,
-    "top": 266,
+    "top": 272,
     "h": 29,
-    "baseline": 287,
+    "baseline": 293,
     "width": 568.156,
     "lines": 1
    },
    "Open folder": {
-    "x": 1614.75,
+    "x": 1384.938,
     "w": 175.688,
-    "glyph_top": 241.5,
+    "glyph_top": 228,
     "glyph_h": 40,
-    "top": 241.5,
+    "top": 228,
     "h": 40,
-    "baseline": 272.5,
+    "baseline": 259,
     "width": 175.688,
     "lines": 1
    },
@@ -1258,27 +1258,27 @@
     "x": 949,
     "y": 216,
     "w": 882,
-    "h": 91
+    "h": 159
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
@@ -1286,7 +1286,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 698
+    "h": 766
    }
   },
   "1i": {
@@ -1365,11 +1365,11 @@
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 416,
+    "glyph_top": 484,
     "glyph_h": 68,
-    "top": 416,
+    "top": 484,
     "h": 68,
-    "baseline": 469,
+    "baseline": 537,
     "width": 95.672,
     "lines": 1
    },
@@ -1377,7 +1377,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 457
+    "h": 525
    }
   },
   "1k": {
@@ -1607,33 +1607,33 @@
    "save file": {
     "x": 969,
     "w": 286.391,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 286.391,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 570.359,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 570.359,
     "lines": 1
    },
    "Open folder": {
-    "x": 1614.75,
+    "x": 1384.938,
     "w": 175.688,
-    "glyph_top": 387.5,
+    "glyph_top": 374,
     "glyph_h": 40,
-    "top": 387.5,
+    "top": 374,
     "h": 40,
-    "baseline": 418.5,
+    "baseline": 405,
     "width": 175.688,
     "lines": 1
    },
@@ -1641,33 +1641,33 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 467,
+    "glyph_top": 473,
     "glyph_h": 68,
-    "top": 467,
+    "top": 473,
     "h": 68,
-    "baseline": 520,
+    "baseline": 526,
     "width": 95.672,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 467,
+    "glyph_top": 473,
     "glyph_h": 68,
-    "top": 467,
+    "top": 473,
     "h": 68,
-    "baseline": 520,
+    "baseline": 526,
     "width": 11.078,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 463,
+    "y": 469,
     "w": 1142,
     "h": 76
    },
@@ -1675,7 +1675,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1l": {
@@ -1732,22 +1732,22 @@
    "save file": {
     "x": 969,
     "w": 123.625,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 123.625,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 201.422,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 201.422,
     "lines": 1
    },
@@ -1755,16 +1755,16 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 467,
+    "glyph_top": 473,
     "glyph_h": 68,
-    "top": 467,
+    "top": 473,
     "h": 68,
-    "baseline": 520,
+    "baseline": 526,
     "width": 95.672,
     "lines": 1
    },
@@ -1772,7 +1772,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1n": {
@@ -1896,22 +1896,22 @@
    "save file": {
     "x": 969,
     "w": 302.406,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 302.406,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 568.375,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 568.375,
     "lines": 1
    },
@@ -1919,11 +1919,11 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play row": {
     "x": 689,
-    "y": 463,
+    "y": 469,
     "w": 1142,
     "h": 76
    },
@@ -1931,7 +1931,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1o": {
@@ -1988,22 +1988,22 @@
    "save file": {
     "x": 969,
     "w": 123.625,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 123.625,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 201.422,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 201.422,
     "lines": 1
    },
@@ -2011,13 +2011,13 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1q": {
@@ -2141,22 +2141,22 @@
    "save file": {
     "x": 969,
     "w": 255.563,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 255.563,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 570.469,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 570.469,
     "lines": 1
    },
@@ -2164,11 +2164,11 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play row": {
     "x": 689,
-    "y": 463,
+    "y": 469,
     "w": 1142,
     "h": 76
    },
@@ -2176,7 +2176,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1r": {
@@ -2233,22 +2233,22 @@
    "save file": {
     "x": 969,
     "w": 123.625,
-    "glyph_top": 377,
+    "glyph_top": 380,
     "glyph_h": 28,
-    "top": 374,
+    "top": 377,
     "h": 34,
-    "baseline": 399,
+    "baseline": 402,
     "width": 123.625,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 201.422,
-    "glyph_top": 414,
+    "glyph_top": 420,
     "glyph_h": 24,
-    "top": 412,
+    "top": 418,
     "h": 29,
-    "baseline": 433,
+    "baseline": 439,
     "width": 201.422,
     "lines": 1
    },
@@ -2256,13 +2256,13 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 508
+    "h": 514
    }
   },
   "1j": {
@@ -2291,33 +2291,33 @@
    "save": {
     "x": 969,
     "w": 123.625,
-    "glyph_top": 261,
+    "glyph_top": 264,
     "glyph_h": 28,
-    "top": 258,
+    "top": 261,
     "h": 34,
-    "baseline": 283,
+    "baseline": 286,
     "width": 123.625,
     "lines": 1
    },
    "save line": {
     "x": 969,
     "w": 176.313,
-    "glyph_top": 298,
+    "glyph_top": 304,
     "glyph_h": 24,
-    "top": 296,
+    "top": 302,
     "h": 29,
-    "baseline": 317,
+    "baseline": 323,
     "width": 176.313,
     "lines": 1
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 351,
+    "glyph_top": 419,
     "glyph_h": 68,
-    "top": 351,
+    "top": 419,
     "h": 68,
-    "baseline": 404,
+    "baseline": 472,
     "width": 95.672,
     "lines": 1
    }
@@ -7292,7 +7292,7 @@
     "lines": 1
    },
    "Open folder": {
-    "x": 1136.953,
+    "x": 882.656,
     "w": 197.656,
     "glyph_top": 380,
     "glyph_h": 45,
@@ -7303,7 +7303,7 @@
     "lines": 1
    },
    "Open folder dot": {
-    "x": 1348.609,
+    "x": 1092.313,
     "w": 7.391,
     "glyph_top": 380,
     "glyph_h": 45,
@@ -7317,33 +7317,33 @@
     "x": 64,
     "y": 366,
     "w": 1312,
-    "h": 112
+    "h": 146
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 106.297,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 12.313,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 850,
+    "y": 884,
     "w": 1312,
     "h": 100
    }
@@ -20083,243 +20083,243 @@
    "EU label": {
     "x": 689,
     "w": 217.625,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 27,
-    "top": 335,
+    "top": 403,
     "h": 27,
-    "baseline": 356,
+    "baseline": 424,
     "width": 217.625,
     "lines": 1
    },
    "EU row": {
     "x": 949,
-    "y": 317,
+    "y": 385,
     "w": 882,
     "h": 128
    },
    "EU folder box": {
     "x": 969,
-    "y": 373,
+    "y": 441,
     "w": 842,
     "h": 26
    },
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 473,
+    "glyph_top": 541,
     "glyph_h": 27,
-    "top": 473,
+    "top": 541,
     "h": 27,
-    "baseline": 494,
+    "baseline": 562,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 455,
+    "y": 523,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 653,
+    "y": 721,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "EU file": {
     "x": 969,
     "w": 59.875,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 28,
-    "top": 332,
+    "top": 400,
     "h": 34,
-    "baseline": 357,
+    "baseline": 425,
     "width": 59.875,
     "lines": 1
    },
    "EU choose": {
     "x": 1663.781,
     "w": 126.656,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 126.656,
     "lines": 1
    },
    "EU choose dot": {
     "x": 1804.438,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU choose box": {
     "x": 1663.781,
-    "y": 329,
+    "y": 397,
     "w": 147.219,
     "h": 40
    },
    "EU status": {
     "x": 993,
     "w": 560.781,
-    "glyph_top": 405,
+    "glyph_top": 473,
     "glyph_h": 25,
-    "top": 403,
+    "top": 471,
     "h": 30,
-    "baseline": 425,
+    "baseline": 493,
     "width": 560.781,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 306.438,
-    "glyph_top": 567,
+    "glyph_top": 635,
     "glyph_h": 24,
-    "top": 565,
+    "top": 633,
     "h": 29,
-    "baseline": 586,
+    "baseline": 654,
     "width": 306.438,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 602,
+    "y": 670,
     "w": 842,
     "h": 29
    },
    "EU dot": {
     "x": 969,
-    "y": 412,
+    "y": 480,
     "w": 12,
     "h": 12
    },
@@ -20327,256 +20327,256 @@
     "x": 949,
     "y": 216,
     "w": 882,
-    "h": 91
+    "h": 159
    },
    "panel": {
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 698
+    "h": 766
    }
   },
   "14h": {
    "EU label": {
     "x": 689,
     "w": 217.625,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 27,
-    "top": 335,
+    "top": 403,
     "h": 27,
-    "baseline": 356,
+    "baseline": 424,
     "width": 217.625,
     "lines": 1
    },
    "EU row": {
     "x": 949,
-    "y": 317,
+    "y": 385,
     "w": 882,
     "h": 128
    },
    "EU folder box": {
     "x": 969,
-    "y": 373,
+    "y": 441,
     "w": 842,
     "h": 26
    },
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 473,
+    "glyph_top": 541,
     "glyph_h": 27,
-    "top": 473,
+    "top": 541,
     "h": 27,
-    "baseline": 494,
+    "baseline": 562,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 455,
+    "y": 523,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 653,
+    "y": 721,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "EU file": {
     "x": 969,
     "w": 59.875,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 28,
-    "top": 332,
+    "top": 400,
     "h": 34,
-    "baseline": 357,
+    "baseline": 425,
     "width": 59.875,
     "lines": 1
    },
    "EU choose": {
     "x": 1663.781,
     "w": 126.656,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 126.656,
     "lines": 1
    },
    "EU choose dot": {
     "x": 1804.438,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU choose box": {
     "x": 1663.781,
-    "y": 329,
+    "y": 397,
     "w": 147.219,
     "h": 40
    },
    "EU status": {
     "x": 993,
     "w": 560.781,
-    "glyph_top": 405,
+    "glyph_top": 473,
     "glyph_h": 25,
-    "top": 403,
+    "top": 471,
     "h": 30,
-    "baseline": 425,
+    "baseline": 493,
     "width": 560.781,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 306.438,
-    "glyph_top": 567,
+    "glyph_top": 635,
     "glyph_h": 24,
-    "top": 565,
+    "top": 633,
     "h": 29,
-    "baseline": 586,
+    "baseline": 654,
     "width": 306.438,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 602,
+    "y": 670,
     "w": 842,
     "h": 29
    },
    "EU dot": {
     "x": 969,
-    "y": 412,
+    "y": 480,
     "w": 12,
     "h": 12
    }
@@ -20585,293 +20585,293 @@
    "EU label": {
     "x": 689,
     "w": 217.625,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 27,
-    "top": 335,
+    "top": 403,
     "h": 27,
-    "baseline": 356,
+    "baseline": 424,
     "width": 217.625,
     "lines": 1
    },
    "EU row": {
     "x": 949,
-    "y": 317,
+    "y": 385,
     "w": 882,
     "h": 128
    },
    "EU folder box": {
     "x": 969,
-    "y": 373,
+    "y": 441,
     "w": 842,
     "h": 26
    },
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 473,
+    "glyph_top": 541,
     "glyph_h": 27,
-    "top": 473,
+    "top": 541,
     "h": 27,
-    "baseline": 494,
+    "baseline": 562,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 455,
+    "y": 523,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 653,
+    "y": 721,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "EU change": {
     "x": 1503.266,
     "w": 130.266,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 130.266,
     "lines": 1
    },
    "EU change dot": {
     "x": 1647.531,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU change box": {
     "x": 1503.266,
-    "y": 329,
+    "y": 397,
     "w": 150.828,
     "h": 40
    },
    "EU remove": {
     "x": 1674.094,
     "w": 116.344,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 116.344,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1804.438,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU remove box": {
     "x": 1674.094,
-    "y": 329,
+    "y": 397,
     "w": 136.906,
     "h": 40
    },
    "EU folder": {
     "x": 969,
     "w": 327.609,
-    "glyph_top": 372,
+    "glyph_top": 440,
     "glyph_h": 27,
-    "top": 373,
+    "top": 441,
     "h": 26,
-    "baseline": 393,
+    "baseline": 461,
     "width": 327.609,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
    "EU file": {
     "x": 969,
     "w": 300.203,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 28,
-    "top": 332,
+    "top": 400,
     "h": 34,
-    "baseline": 357,
+    "baseline": 425,
     "width": 300.203,
     "lines": 1
    },
    "EU status": {
     "x": 993,
     "w": 587.453,
-    "glyph_top": 405,
+    "glyph_top": 473,
     "glyph_h": 25,
-    "top": 403,
+    "top": 471,
     "h": 30,
-    "baseline": 425,
+    "baseline": 493,
     "width": 587.453,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 500.219,
-    "glyph_top": 567,
+    "glyph_top": 635,
     "glyph_h": 24,
-    "top": 565,
+    "top": 633,
     "h": 29,
-    "baseline": 586,
+    "baseline": 654,
     "width": 500.219,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 602,
+    "y": 670,
     "w": 842,
     "h": 29
    },
    "language note": {
     "x": 969,
     "w": 471.297,
-    "glyph_top": 605,
+    "glyph_top": 673,
     "glyph_h": 22,
-    "top": 602,
+    "top": 670,
     "h": 29,
-    "baseline": 623,
+    "baseline": 691,
     "width": 471.297,
     "lines": 1
    },
    "EU dot": {
     "x": 969,
-    "y": 412,
+    "y": 480,
     "w": 12,
     "h": 12
    },
@@ -20879,289 +20879,289 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 698
+    "h": 766
    }
   },
   "14c": {
    "EU label": {
     "x": 689,
     "w": 217.625,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 27,
-    "top": 335,
+    "top": 403,
     "h": 27,
-    "baseline": 356,
+    "baseline": 424,
     "width": 217.625,
     "lines": 1
    },
    "EU row": {
     "x": 949,
-    "y": 317,
+    "y": 385,
     "w": 882,
     "h": 128
    },
    "EU folder box": {
     "x": 969,
-    "y": 373,
+    "y": 441,
     "w": 842,
     "h": 26
    },
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 473,
+    "glyph_top": 541,
     "glyph_h": 27,
-    "top": 473,
+    "top": 541,
     "h": 27,
-    "baseline": 494,
+    "baseline": 562,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 455,
+    "y": 523,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 653,
+    "y": 721,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "EU change": {
     "x": 1503.266,
     "w": 130.266,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 130.266,
     "lines": 1
    },
    "EU change dot": {
     "x": 1647.531,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU change box": {
     "x": 1503.266,
-    "y": 329,
+    "y": 397,
     "w": 150.828,
     "h": 40
    },
    "EU remove": {
     "x": 1674.094,
     "w": 116.344,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 116.344,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1804.438,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU remove box": {
     "x": 1674.094,
-    "y": 329,
+    "y": 397,
     "w": 136.906,
     "h": 40
    },
    "EU folder": {
     "x": 969,
     "w": 327.609,
-    "glyph_top": 372,
+    "glyph_top": 440,
     "glyph_h": 27,
-    "top": 373,
+    "top": 441,
     "h": 26,
-    "baseline": 393,
+    "baseline": 461,
     "width": 327.609,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 306.438,
-    "glyph_top": 567,
+    "glyph_top": 635,
     "glyph_h": 24,
-    "top": 565,
+    "top": 633,
     "h": 29,
-    "baseline": 586,
+    "baseline": 654,
     "width": 306.438,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 602,
+    "y": 670,
     "w": 842,
     "h": 29
    },
    "EU file": {
     "x": 969,
     "w": 334.891,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 28,
-    "top": 332,
+    "top": 400,
     "h": 34,
-    "baseline": 357,
+    "baseline": 425,
     "width": 334.891,
     "lines": 1
    },
    "EU status": {
     "x": 993,
     "w": 388.906,
-    "glyph_top": 405,
+    "glyph_top": 473,
     "glyph_h": 25,
-    "top": 403,
+    "top": 471,
     "h": 30,
-    "baseline": 425,
+    "baseline": 493,
     "width": 388.906,
     "lines": 1
    },
    "EU dot": {
     "x": 969,
-    "y": 412,
+    "y": 480,
     "w": 12,
     "h": 12
    }
@@ -21170,282 +21170,282 @@
    "EU label": {
     "x": 84,
     "w": 282.344,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 37,
-    "top": 506,
+    "top": 540,
     "h": 37,
-    "baseline": 535,
+    "baseline": 569,
     "width": 282.344,
     "lines": 1
    },
    "EU row": {
     "x": 64,
-    "y": 486,
+    "y": 520,
     "w": 1312,
     "h": 148
    },
    "EU folder box": {
     "x": 418,
-    "y": 548,
+    "y": 582,
     "w": 938,
     "h": 34
    },
    "Language label": {
     "x": 84,
     "w": 190.797,
-    "glyph_top": 650,
+    "glyph_top": 684,
     "glyph_h": 37,
-    "top": 650,
+    "top": 684,
     "h": 38,
-    "baseline": 679,
+    "baseline": 713,
     "width": 190.797,
     "lines": 1
    },
    "language row": {
     "x": 64,
-    "y": 642,
+    "y": 676,
     "w": 1312,
     "h": 200
    },
    "language en": {
     "x": 84,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en-eu": {
     "x": 297,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language fr": {
     "x": 510,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language de": {
     "x": 723,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language it": {
     "x": 936,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language es": {
     "x": 1149,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en name": {
     "x": 109.797,
     "w": 153.391,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 153.391,
     "lines": 1
    },
    "language en-eu name": {
     "x": 322.266,
     "w": 154.453,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 154.453,
     "lines": 1
    },
    "language fr name": {
     "x": 559.391,
     "w": 106.203,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 106.203,
     "lines": 1
    },
    "language de name": {
     "x": 770.984,
     "w": 109.031,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 109.031,
     "lines": 1
    },
    "language it name": {
     "x": 988.469,
     "w": 100.047,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.047,
     "lines": 1
    },
    "language es name": {
     "x": 1201.156,
     "w": 100.672,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.672,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 850,
+    "y": 884,
     "w": 1312,
     "h": 100
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 106.297,
     "lines": 1
    },
    "EU change": {
     "x": 1019.766,
     "w": 146.563,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 146.563,
     "lines": 1
    },
    "EU change dot": {
     "x": 1178.328,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU change box": {
     "x": 1019.766,
-    "y": 500,
+    "y": 534,
     "w": 165.953,
     "h": 45
    },
    "EU remove": {
     "x": 1205.719,
     "w": 130.891,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 130.891,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1348.609,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU remove box": {
     "x": 1205.719,
-    "y": 500,
+    "y": 534,
     "w": 150.281,
     "h": 45
    },
    "EU folder": {
     "x": 418,
     "w": 421.203,
-    "glyph_top": 547,
+    "glyph_top": 581,
     "glyph_h": 36,
-    "top": 548,
+    "top": 582,
     "h": 34,
-    "baseline": 575,
+    "baseline": 609,
     "width": 421.203,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 12.313,
     "lines": 1
    },
    "EU file": {
     "x": 418,
     "w": 385.969,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 36,
-    "top": 503,
+    "top": 537,
     "h": 43,
-    "baseline": 535,
+    "baseline": 569,
     "width": 385.969,
     "lines": 1
    },
    "EU status": {
     "x": 444,
     "w": 704.953,
-    "glyph_top": 587,
+    "glyph_top": 621,
     "glyph_h": 30,
-    "top": 584,
+    "top": 618,
     "h": 36,
-    "baseline": 611,
+    "baseline": 645,
     "width": 704.953,
     "lines": 1
    },
    "language note": {
     "x": 84,
     "w": 642.672,
-    "glyph_top": 798,
+    "glyph_top": 832,
     "glyph_h": 30,
-    "top": 794,
+    "top": 828,
     "h": 38,
-    "baseline": 822,
+    "baseline": 856,
     "width": 642.672,
     "lines": 1
    },
    "language note box": {
     "x": 84,
-    "y": 794,
+    "y": 828,
     "w": 1272,
     "h": 38
    },
    "EU dot": {
     "x": 418,
-    "y": 595,
+    "y": 629,
     "w": 14,
     "h": 14
    },
@@ -21453,289 +21453,289 @@
     "x": 64,
     "y": 366,
     "w": 1312,
-    "h": 112
+    "h": 146
    }
   },
   "14e": {
    "EU label": {
     "x": 84,
     "w": 282.344,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 37,
-    "top": 506,
+    "top": 540,
     "h": 37,
-    "baseline": 535,
+    "baseline": 569,
     "width": 282.344,
     "lines": 1
    },
    "EU row": {
     "x": 64,
-    "y": 486,
+    "y": 520,
     "w": 1312,
     "h": 148
    },
    "EU folder box": {
     "x": 418,
-    "y": 548,
+    "y": 582,
     "w": 938,
     "h": 34
    },
    "Language label": {
     "x": 84,
     "w": 190.797,
-    "glyph_top": 650,
+    "glyph_top": 684,
     "glyph_h": 37,
-    "top": 650,
+    "top": 684,
     "h": 38,
-    "baseline": 679,
+    "baseline": 713,
     "width": 190.797,
     "lines": 1
    },
    "language row": {
     "x": 64,
-    "y": 642,
+    "y": 676,
     "w": 1312,
     "h": 200
    },
    "language en": {
     "x": 84,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en-eu": {
     "x": 297,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language fr": {
     "x": 510,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language de": {
     "x": 723,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language it": {
     "x": 936,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language es": {
     "x": 1149,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en name": {
     "x": 109.797,
     "w": 153.391,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 153.391,
     "lines": 1
    },
    "language en-eu name": {
     "x": 322.266,
     "w": 154.453,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 154.453,
     "lines": 1
    },
    "language fr name": {
     "x": 559.391,
     "w": 106.203,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 106.203,
     "lines": 1
    },
    "language de name": {
     "x": 770.984,
     "w": 109.031,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 109.031,
     "lines": 1
    },
    "language it name": {
     "x": 988.469,
     "w": 100.047,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.047,
     "lines": 1
    },
    "language es name": {
     "x": 1201.156,
     "w": 100.672,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.672,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 850,
+    "y": 884,
     "w": 1312,
     "h": 100
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 106.297,
     "lines": 1
    },
    "EU change": {
     "x": 1019.766,
     "w": 146.563,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 146.563,
     "lines": 1
    },
    "EU change dot": {
     "x": 1178.328,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU change box": {
     "x": 1019.766,
-    "y": 500,
+    "y": 534,
     "w": 165.953,
     "h": 45
    },
    "EU remove": {
     "x": 1205.719,
     "w": 130.891,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 130.891,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1348.609,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU remove box": {
     "x": 1205.719,
-    "y": 500,
+    "y": 534,
     "w": 150.281,
     "h": 45
    },
    "EU folder": {
     "x": 418,
     "w": 421.203,
-    "glyph_top": 547,
+    "glyph_top": 581,
     "glyph_h": 36,
-    "top": 548,
+    "top": 582,
     "h": 34,
-    "baseline": 575,
+    "baseline": 609,
     "width": 421.203,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 12.313,
     "lines": 1
    },
    "EU file": {
     "x": 418,
     "w": 385.969,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 36,
-    "top": 503,
+    "top": 537,
     "h": 43,
-    "baseline": 535,
+    "baseline": 569,
     "width": 385.969,
     "lines": 1
    },
    "EU status": {
     "x": 444,
     "w": 704.953,
-    "glyph_top": 587,
+    "glyph_top": 621,
     "glyph_h": 30,
-    "top": 584,
+    "top": 618,
     "h": 36,
-    "baseline": 611,
+    "baseline": 645,
     "width": 704.953,
     "lines": 1
    },
    "language note": {
     "x": 84,
     "w": 642.672,
-    "glyph_top": 798,
+    "glyph_top": 832,
     "glyph_h": 30,
-    "top": 794,
+    "top": 828,
     "h": 38,
-    "baseline": 822,
+    "baseline": 856,
     "width": 642.672,
     "lines": 1
    },
    "language note box": {
     "x": 84,
-    "y": 794,
+    "y": 828,
     "w": 1272,
     "h": 38
    },
    "EU dot": {
     "x": 418,
-    "y": 595,
+    "y": 629,
     "w": 14,
     "h": 14
    }
@@ -21795,22 +21795,22 @@
     "x": 64,
     "y": 442,
     "w": 1312,
-    "h": 112
+    "h": 146
    },
    "Play row": {
     "x": 64,
-    "y": 562,
+    "y": 596,
     "w": 1312,
     "h": 100
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 574.5,
+    "glyph_top": 608.5,
     "glyph_h": 75,
-    "top": 574.5,
+    "top": 608.5,
     "h": 75,
-    "baseline": 632.5,
+    "baseline": 666.5,
     "width": 106.297,
     "lines": 1
    }
@@ -21896,293 +21896,293 @@
    "EU label": {
     "x": 689,
     "w": 217.625,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 27,
-    "top": 335,
+    "top": 403,
     "h": 27,
-    "baseline": 356,
+    "baseline": 424,
     "width": 217.625,
     "lines": 1
    },
    "EU row": {
     "x": 949,
-    "y": 317,
+    "y": 385,
     "w": 882,
     "h": 128
    },
    "EU folder box": {
     "x": 969,
-    "y": 373,
+    "y": 441,
     "w": 842,
     "h": 26
    },
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 473,
+    "glyph_top": 541,
     "glyph_h": 27,
-    "top": 473,
+    "top": 541,
     "h": 27,
-    "baseline": 494,
+    "baseline": 562,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 455,
+    "y": 523,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 467,
+    "y": 535,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 516,
+    "y": 584,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 472,
+    "glyph_top": 540,
     "glyph_h": 31,
-    "top": 472,
+    "top": 540,
     "h": 31,
-    "baseline": 496,
+    "baseline": 564,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 521,
+    "glyph_top": 589,
     "glyph_h": 31,
-    "top": 521,
+    "top": 589,
     "h": 31,
-    "baseline": 545,
+    "baseline": 613,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 653,
+    "y": 721,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 95.672,
     "lines": 1
    },
    "EU change": {
     "x": 1503.266,
     "w": 130.266,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 130.266,
     "lines": 1
    },
    "EU change dot": {
     "x": 1647.531,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU change box": {
     "x": 1503.266,
-    "y": 329,
+    "y": 397,
     "w": 150.828,
     "h": 40
    },
    "EU remove": {
     "x": 1674.094,
     "w": 116.344,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 116.344,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1804.438,
     "w": 6.563,
-    "glyph_top": 329,
+    "glyph_top": 397,
     "glyph_h": 40,
-    "top": 329,
+    "top": 397,
     "h": 40,
-    "baseline": 360,
+    "baseline": 428,
     "width": 6.563,
     "lines": 1
    },
    "EU remove box": {
     "x": 1674.094,
-    "y": 329,
+    "y": 397,
     "w": 136.906,
     "h": 40
    },
    "EU folder": {
     "x": 969,
     "w": 327.609,
-    "glyph_top": 372,
+    "glyph_top": 440,
     "glyph_h": 27,
-    "top": 373,
+    "top": 441,
     "h": 26,
-    "baseline": 393,
+    "baseline": 461,
     "width": 327.609,
     "lines": 1
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 657,
+    "glyph_top": 725,
     "glyph_h": 68,
-    "top": 657,
+    "top": 725,
     "h": 68,
-    "baseline": 710,
+    "baseline": 778,
     "width": 11.078,
     "lines": 1
    },
    "EU file": {
     "x": 969,
     "w": 300.203,
-    "glyph_top": 335,
+    "glyph_top": 403,
     "glyph_h": 28,
-    "top": 332,
+    "top": 400,
     "h": 34,
-    "baseline": 357,
+    "baseline": 425,
     "width": 300.203,
     "lines": 1
    },
    "EU status": {
     "x": 993,
     "w": 587.453,
-    "glyph_top": 405,
+    "glyph_top": 473,
     "glyph_h": 25,
-    "top": 403,
+    "top": 471,
     "h": 30,
-    "baseline": 425,
+    "baseline": 493,
     "width": 587.453,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 500.219,
-    "glyph_top": 567,
+    "glyph_top": 635,
     "glyph_h": 24,
-    "top": 565,
+    "top": 633,
     "h": 29,
-    "baseline": 586,
+    "baseline": 654,
     "width": 500.219,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 602,
+    "y": 670,
     "w": 842,
     "h": 29
    },
    "language note": {
     "x": 969,
     "w": 471.297,
-    "glyph_top": 605,
+    "glyph_top": 673,
     "glyph_h": 22,
-    "top": 602,
+    "top": 670,
     "h": 29,
-    "baseline": 623,
+    "baseline": 691,
     "width": 471.297,
     "lines": 1
    },
    "EU dot": {
     "x": 969,
-    "y": 412,
+    "y": 480,
     "w": 12,
     "h": 12
    },
@@ -22190,289 +22190,289 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 698
+    "h": 766
    }
   },
   "15b": {
    "EU label": {
     "x": 84,
     "w": 282.344,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 37,
-    "top": 506,
+    "top": 540,
     "h": 37,
-    "baseline": 535,
+    "baseline": 569,
     "width": 282.344,
     "lines": 1
    },
    "EU row": {
     "x": 64,
-    "y": 486,
+    "y": 520,
     "w": 1312,
     "h": 148
    },
    "EU folder box": {
     "x": 418,
-    "y": 548,
+    "y": 582,
     "w": 938,
     "h": 34
    },
    "Language label": {
     "x": 84,
     "w": 190.797,
-    "glyph_top": 650,
+    "glyph_top": 684,
     "glyph_h": 37,
-    "top": 650,
+    "top": 684,
     "h": 38,
-    "baseline": 679,
+    "baseline": 713,
     "width": 190.797,
     "lines": 1
    },
    "language row": {
     "x": 64,
-    "y": 642,
+    "y": 676,
     "w": 1312,
     "h": 200
    },
    "language en": {
     "x": 84,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en-eu": {
     "x": 297,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language fr": {
     "x": 510,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language de": {
     "x": 723,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language it": {
     "x": 936,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language es": {
     "x": 1149,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en name": {
     "x": 109.797,
     "w": 153.391,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 153.391,
     "lines": 1
    },
    "language en-eu name": {
     "x": 322.266,
     "w": 154.453,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 154.453,
     "lines": 1
    },
    "language fr name": {
     "x": 559.391,
     "w": 106.203,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 106.203,
     "lines": 1
    },
    "language de name": {
     "x": 770.984,
     "w": 109.031,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 109.031,
     "lines": 1
    },
    "language it name": {
     "x": 988.469,
     "w": 100.047,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.047,
     "lines": 1
    },
    "language es name": {
     "x": 1201.156,
     "w": 100.672,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.672,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 850,
+    "y": 884,
     "w": 1312,
     "h": 100
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 106.297,
     "lines": 1
    },
    "EU change": {
     "x": 1019.766,
     "w": 146.563,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 146.563,
     "lines": 1
    },
    "EU change dot": {
     "x": 1178.328,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU change box": {
     "x": 1019.766,
-    "y": 500,
+    "y": 534,
     "w": 165.953,
     "h": 45
    },
    "EU remove": {
     "x": 1205.719,
     "w": 130.891,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 130.891,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1348.609,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU remove box": {
     "x": 1205.719,
-    "y": 500,
+    "y": 534,
     "w": 150.281,
     "h": 45
    },
    "EU folder": {
     "x": 418,
     "w": 421.203,
-    "glyph_top": 547,
+    "glyph_top": 581,
     "glyph_h": 36,
-    "top": 548,
+    "top": 582,
     "h": 34,
-    "baseline": 575,
+    "baseline": 609,
     "width": 421.203,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 12.313,
     "lines": 1
    },
    "EU file": {
     "x": 418,
     "w": 385.969,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 36,
-    "top": 503,
+    "top": 537,
     "h": 43,
-    "baseline": 535,
+    "baseline": 569,
     "width": 385.969,
     "lines": 1
    },
    "EU status": {
     "x": 444,
     "w": 704.953,
-    "glyph_top": 587,
+    "glyph_top": 621,
     "glyph_h": 30,
-    "top": 584,
+    "top": 618,
     "h": 36,
-    "baseline": 611,
+    "baseline": 645,
     "width": 704.953,
     "lines": 1
    },
    "language note": {
     "x": 84,
     "w": 642.672,
-    "glyph_top": 798,
+    "glyph_top": 832,
     "glyph_h": 30,
-    "top": 794,
+    "top": 828,
     "h": 38,
-    "baseline": 822,
+    "baseline": 856,
     "width": 642.672,
     "lines": 1
    },
    "language note box": {
     "x": 84,
-    "y": 794,
+    "y": 828,
     "w": 1272,
     "h": 38
    },
    "EU dot": {
     "x": 418,
-    "y": 595,
+    "y": 629,
     "w": 14,
     "h": 14
    }
@@ -22481,282 +22481,282 @@
    "EU label": {
     "x": 84,
     "w": 282.344,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 37,
-    "top": 506,
+    "top": 540,
     "h": 37,
-    "baseline": 535,
+    "baseline": 569,
     "width": 282.344,
     "lines": 1
    },
    "EU row": {
     "x": 64,
-    "y": 486,
+    "y": 520,
     "w": 1312,
     "h": 148
    },
    "EU folder box": {
     "x": 418,
-    "y": 548,
+    "y": 582,
     "w": 938,
     "h": 34
    },
    "Language label": {
     "x": 84,
     "w": 190.797,
-    "glyph_top": 650,
+    "glyph_top": 684,
     "glyph_h": 37,
-    "top": 650,
+    "top": 684,
     "h": 38,
-    "baseline": 679,
+    "baseline": 713,
     "width": 190.797,
     "lines": 1
    },
    "language row": {
     "x": 64,
-    "y": 642,
+    "y": 676,
     "w": 1312,
     "h": 200
    },
    "language en": {
     "x": 84,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en-eu": {
     "x": 297,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language fr": {
     "x": 510,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language de": {
     "x": 723,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language it": {
     "x": 936,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language es": {
     "x": 1149,
-    "y": 696,
+    "y": 730,
     "w": 205,
     "h": 90
    },
    "language en name": {
     "x": 109.797,
     "w": 153.391,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 153.391,
     "lines": 1
    },
    "language en-eu name": {
     "x": 322.266,
     "w": 154.453,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 154.453,
     "lines": 1
    },
    "language fr name": {
     "x": 559.391,
     "w": 106.203,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 106.203,
     "lines": 1
    },
    "language de name": {
     "x": 770.984,
     "w": 109.031,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 109.031,
     "lines": 1
    },
    "language it name": {
     "x": 988.469,
     "w": 100.047,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.047,
     "lines": 1
    },
    "language es name": {
     "x": 1201.156,
     "w": 100.672,
-    "glyph_top": 722.5,
+    "glyph_top": 756.5,
     "glyph_h": 37,
-    "top": 722.5,
+    "top": 756.5,
     "h": 37,
-    "baseline": 751.5,
+    "baseline": 785.5,
     "width": 100.672,
     "lines": 1
    },
    "Play row": {
     "x": 64,
-    "y": 850,
+    "y": 884,
     "w": 1312,
     "h": 100
    },
    "Play": {
     "x": 1213.391,
     "w": 106.297,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 106.297,
     "lines": 1
    },
    "EU change": {
     "x": 1019.766,
     "w": 146.563,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 146.563,
     "lines": 1
    },
    "EU change dot": {
     "x": 1178.328,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU change box": {
     "x": 1019.766,
-    "y": 500,
+    "y": 534,
     "w": 165.953,
     "h": 45
    },
    "EU remove": {
     "x": 1205.719,
     "w": 130.891,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 130.891,
     "lines": 1
    },
    "EU remove dot": {
     "x": 1348.609,
     "w": 7.391,
-    "glyph_top": 500,
+    "glyph_top": 534,
     "glyph_h": 45,
-    "top": 500,
+    "top": 534,
     "h": 45,
-    "baseline": 535,
+    "baseline": 569,
     "width": 7.391,
     "lines": 1
    },
    "EU remove box": {
     "x": 1205.719,
-    "y": 500,
+    "y": 534,
     "w": 150.281,
     "h": 45
    },
    "EU folder": {
     "x": 418,
     "w": 421.203,
-    "glyph_top": 547,
+    "glyph_top": 581,
     "glyph_h": 36,
-    "top": 548,
+    "top": 582,
     "h": 34,
-    "baseline": 575,
+    "baseline": 609,
     "width": 421.203,
     "lines": 1
    },
    "Play dot": {
     "x": 1343.688,
     "w": 12.313,
-    "glyph_top": 862.5,
+    "glyph_top": 896.5,
     "glyph_h": 75,
-    "top": 862.5,
+    "top": 896.5,
     "h": 75,
-    "baseline": 920.5,
+    "baseline": 954.5,
     "width": 12.313,
     "lines": 1
    },
    "EU file": {
     "x": 418,
     "w": 385.969,
-    "glyph_top": 506,
+    "glyph_top": 540,
     "glyph_h": 36,
-    "top": 503,
+    "top": 537,
     "h": 43,
-    "baseline": 535,
+    "baseline": 569,
     "width": 385.969,
     "lines": 1
    },
    "EU status": {
     "x": 444,
     "w": 704.953,
-    "glyph_top": 587,
+    "glyph_top": 621,
     "glyph_h": 30,
-    "top": 584,
+    "top": 618,
     "h": 36,
-    "baseline": 611,
+    "baseline": 645,
     "width": 704.953,
     "lines": 1
    },
    "language note": {
     "x": 84,
     "w": 642.672,
-    "glyph_top": 798,
+    "glyph_top": 832,
     "glyph_h": 30,
-    "top": 794,
+    "top": 828,
     "h": 38,
-    "baseline": 822,
+    "baseline": 856,
     "width": 642.672,
     "lines": 1
    },
    "language note box": {
     "x": 84,
-    "y": 794,
+    "y": 828,
     "w": 1272,
     "h": 38
    },
    "EU dot": {
     "x": 418,
-    "y": 595,
+    "y": 629,
     "w": 14,
     "h": 14
    }
@@ -22842,136 +22842,136 @@
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 481,
+    "glyph_top": 487,
     "glyph_h": 27,
-    "top": 481,
+    "top": 487,
     "h": 27,
-    "baseline": 502,
+    "baseline": 508,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 463,
+    "y": 469,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 661,
+    "y": 667,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 95.672,
     "lines": 1
    },
@@ -23024,44 +23024,44 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 670.328,
-    "glyph_top": 575,
+    "glyph_top": 581,
     "glyph_h": 24,
-    "top": 573,
+    "top": 579,
     "h": 29,
-    "baseline": 594,
+    "baseline": 600,
     "width": 670.328,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 610,
+    "y": 616,
     "w": 842,
     "h": 29
    },
    "language note": {
     "x": 969,
     "w": 705.469,
-    "glyph_top": 613,
+    "glyph_top": 619,
     "glyph_h": 22,
-    "top": 610,
+    "top": 616,
     "h": 29,
-    "baseline": 631,
+    "baseline": 637,
     "width": 705.469,
     "lines": 1
    },
@@ -23069,7 +23069,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 706
+    "h": 712
    }
   },
   "16b": {
@@ -23510,136 +23510,136 @@
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 481,
+    "glyph_top": 487,
     "glyph_h": 27,
-    "top": 481,
+    "top": 487,
     "h": 27,
-    "baseline": 502,
+    "baseline": 508,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 463,
+    "y": 469,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 661,
+    "y": 667,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 95.672,
     "lines": 1
    },
@@ -23692,33 +23692,33 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 825.703,
-    "glyph_top": 575,
+    "glyph_top": 581,
     "glyph_h": 24,
-    "top": 573,
+    "top": 579,
     "h": 29,
-    "baseline": 594,
+    "baseline": 600,
     "width": 825.703,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 610,
+    "y": 616,
     "w": 842,
     "h": 29
    },
@@ -23726,143 +23726,143 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 706
+    "h": 712
    }
   },
   "16e": {
    "Language label": {
     "x": 689,
     "w": 146.969,
-    "glyph_top": 481,
+    "glyph_top": 487,
     "glyph_h": 27,
-    "top": 481,
+    "top": 487,
     "h": 27,
-    "baseline": 502,
+    "baseline": 508,
     "width": 146.969,
     "lines": 1
    },
    "language row": {
     "x": 949,
-    "y": 463,
+    "y": 469,
     "w": 882,
     "h": 188
    },
    "language en": {
     "x": 969,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language en-eu": {
     "x": 1177,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language fr": {
     "x": 1385,
-    "y": 475,
+    "y": 481,
     "w": 200,
     "h": 41
    },
    "language de": {
     "x": 969,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language it": {
     "x": 1177,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language es": {
     "x": 1385,
-    "y": 524,
+    "y": 530,
     "w": 200,
     "h": 41
    },
    "language en name": {
     "x": 1005.078,
     "w": 127.828,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 127.828,
     "lines": 1
    },
    "language en-eu name": {
     "x": 1212.641,
     "w": 128.703,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 128.703,
     "lines": 1
    },
    "language fr name": {
     "x": 1440.734,
     "w": 88.516,
-    "glyph_top": 480,
+    "glyph_top": 486,
     "glyph_h": 31,
-    "top": 480,
+    "top": 486,
     "h": 31,
-    "baseline": 504,
+    "baseline": 510,
     "width": 88.516,
     "lines": 1
    },
    "language de name": {
     "x": 1023.563,
     "w": 90.859,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 90.859,
     "lines": 1
    },
    "language it name": {
     "x": 1235.313,
     "w": 83.375,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.375,
     "lines": 1
    },
    "language es name": {
     "x": 1443.047,
     "w": 83.891,
-    "glyph_top": 529,
+    "glyph_top": 535,
     "glyph_h": 31,
-    "top": 529,
+    "top": 535,
     "h": 31,
-    "baseline": 553,
+    "baseline": 559,
     "width": 83.891,
     "lines": 1
    },
    "Play row": {
     "x": 689,
-    "y": 661,
+    "y": 667,
     "w": 1142,
     "h": 76
    },
    "Play": {
     "x": 1680.25,
     "w": 95.672,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 95.672,
     "lines": 1
    },
@@ -23915,44 +23915,44 @@
     "x": 949,
     "y": 362,
     "w": 882,
-    "h": 91
+    "h": 97
    },
    "Play dot": {
     "x": 1799.922,
     "w": 11.078,
-    "glyph_top": 665,
+    "glyph_top": 671,
     "glyph_h": 68,
-    "top": 665,
+    "top": 671,
     "h": 68,
-    "baseline": 718,
+    "baseline": 724,
     "width": 11.078,
     "lines": 1
    },
    "language expl": {
     "x": 969,
     "w": 699.516,
-    "glyph_top": 575,
+    "glyph_top": 581,
     "glyph_h": 24,
-    "top": 573,
+    "top": 579,
     "h": 29,
-    "baseline": 594,
+    "baseline": 600,
     "width": 699.516,
     "lines": 1
    },
    "language note box": {
     "x": 969,
-    "y": 610,
+    "y": 616,
     "w": 842,
     "h": 29
    },
    "language note": {
     "x": 969,
     "w": 729.172,
-    "glyph_top": 613,
+    "glyph_top": 619,
     "glyph_h": 22,
-    "top": 610,
+    "top": 616,
     "h": 29,
-    "baseline": 631,
+    "baseline": 637,
     "width": 729.172,
     "lines": 1
    },
@@ -23960,7 +23960,7 @@
     "x": 656,
     "y": 56,
     "w": 1208,
-    "h": 706
+    "h": 712
    }
   },
   "16f": {
@@ -24032,6 +24032,1342 @@
     "baseline": 802.5,
     "width": 163.109,
     "lines": 1
+   }
+  },
+  "33a": {
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 234,
+    "glyph_h": 27,
+    "top": 234,
+    "h": 27,
+    "baseline": 255,
+    "width": 64.953,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 949,
+    "y": 216,
+    "w": 882,
+    "h": 159
+   },
+   "save file": {
+    "x": 969,
+    "w": 266.281,
+    "glyph_top": 234,
+    "glyph_h": 28,
+    "top": 231,
+    "h": 34,
+    "baseline": 256,
+    "width": 266.281,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 969,
+    "y": 231,
+    "w": 391.938,
+    "h": 34
+   },
+   "Import save": {
+    "x": 1601.188,
+    "w": 189.25,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 189.25,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1601.188,
+    "y": 228,
+    "w": 209.813,
+    "h": 40
+   },
+   "EU row": {
+    "x": 949,
+    "y": 385,
+    "w": 882,
+    "h": 128
+   },
+   "Play row": {
+    "x": 689,
+    "y": 721,
+    "w": 1142,
+    "h": 76
+   },
+   "Open folder": {
+    "x": 1384.938,
+    "w": 175.688,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 175.688,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1574.625,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Open folder box": {
+    "x": 1384.938,
+    "y": 228,
+    "w": 196.25,
+    "h": 40
+   },
+   "save line": {
+    "x": 969,
+    "w": 568.156,
+    "glyph_top": 274,
+    "glyph_h": 24,
+    "top": 272,
+    "h": 29,
+    "baseline": 293,
+    "width": 568.156,
+    "lines": 1
+   },
+   "save note": {
+    "x": 969,
+    "w": 759.844,
+    "glyph_top": 308,
+    "glyph_h": 22,
+    "top": 305,
+    "h": 29,
+    "baseline": 326,
+    "width": 759.844,
+    "lines": 2
+   },
+   "save note box": {
+    "x": 969,
+    "y": 305,
+    "w": 842,
+    "h": 58
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 766
+   }
+  },
+  "33b": {
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 386,
+    "glyph_h": 37,
+    "top": 386,
+    "h": 37,
+    "baseline": 415,
+    "width": 83.766,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 64,
+    "y": 366,
+    "w": 1312,
+    "h": 146
+   },
+   "save file": {
+    "x": 418,
+    "w": 342.375,
+    "glyph_top": 386,
+    "glyph_h": 36,
+    "top": 383,
+    "h": 43,
+    "baseline": 415,
+    "width": 342.375,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 418,
+    "y": 383,
+    "w": 440.656,
+    "h": 43
+   },
+   "Import save": {
+    "x": 1123.703,
+    "w": 212.906,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 212.906,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1123.703,
+    "y": 380,
+    "w": 232.297,
+    "h": 45
+   },
+   "EU row": {
+    "x": 64,
+    "y": 520,
+    "w": 1312,
+    "h": 148
+   },
+   "Play row": {
+    "x": 64,
+    "y": 884,
+    "w": 1312,
+    "h": 100
+   },
+   "Open folder": {
+    "x": 882.656,
+    "w": 197.656,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 197.656,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1092.313,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Open folder box": {
+    "x": 882.656,
+    "y": 380,
+    "w": 217.047,
+    "h": 45
+   },
+   "save line": {
+    "x": 418,
+    "w": 710.203,
+    "glyph_top": 431,
+    "glyph_h": 30,
+    "top": 428,
+    "h": 36,
+    "baseline": 455,
+    "width": 710.203,
+    "lines": 1
+   },
+   "save note": {
+    "x": 418,
+    "w": 657.266,
+    "glyph_top": 468,
+    "glyph_h": 27,
+    "top": 466,
+    "h": 32,
+    "baseline": 490,
+    "width": 657.266,
+    "lines": 1
+   },
+   "save note box": {
+    "x": 418,
+    "y": 466,
+    "w": 938,
+    "h": 32
+   }
+  },
+  "33c": {
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 386,
+    "glyph_h": 37,
+    "top": 386,
+    "h": 37,
+    "baseline": 415,
+    "width": 83.766,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 64,
+    "y": 366,
+    "w": 1312,
+    "h": 146
+   },
+   "save file": {
+    "x": 418,
+    "w": 342.375,
+    "glyph_top": 386,
+    "glyph_h": 36,
+    "top": 383,
+    "h": 43,
+    "baseline": 415,
+    "width": 342.375,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 418,
+    "y": 383,
+    "w": 430.281,
+    "h": 43
+   },
+   "Import save": {
+    "x": 1123.703,
+    "w": 212.906,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 212.906,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1123.703,
+    "y": 380,
+    "w": 232.297,
+    "h": 45
+   },
+   "EU row": {
+    "x": 64,
+    "y": 520,
+    "w": 1312,
+    "h": 148
+   },
+   "Play row": {
+    "x": 64,
+    "y": 884,
+    "w": 1312,
+    "h": 100
+   },
+   "save line": {
+    "x": 418,
+    "w": 710.203,
+    "glyph_top": 431,
+    "glyph_h": 30,
+    "top": 428,
+    "h": 36,
+    "baseline": 455,
+    "width": 710.203,
+    "lines": 1
+   },
+   "Export save": {
+    "x": 872.281,
+    "w": 208.031,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 208.031,
+    "lines": 1
+   },
+   "Export save dot": {
+    "x": 1092.313,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Export save box": {
+    "x": 872.281,
+    "y": 380,
+    "w": 227.422,
+    "h": 45
+   },
+   "save note": {
+    "x": 418,
+    "w": 603.156,
+    "glyph_top": 468,
+    "glyph_h": 27,
+    "top": 466,
+    "h": 32,
+    "baseline": 490,
+    "width": 603.156,
+    "lines": 1
+   },
+   "save note box": {
+    "x": 418,
+    "y": 466,
+    "w": 938,
+    "h": 32
+   }
+  },
+  "33d": {
+   "backdrop": {
+    "x": 0,
+    "y": 0,
+    "w": 1920,
+    "h": 1080
+   },
+   "dialog": {
+    "x": 520,
+    "y": 384.953,
+    "w": 880,
+    "h": 310.094
+   },
+   "dialog title": {
+    "x": 561,
+    "w": 220.781,
+    "glyph_top": 417.953,
+    "glyph_h": 32,
+    "top": 417.953,
+    "h": 32,
+    "baseline": 442.953,
+    "width": 220.781,
+    "lines": 1
+   },
+   "dialog file": {
+    "x": 561,
+    "w": 296.672,
+    "glyph_top": 468.953,
+    "glyph_h": 28,
+    "top": 465.953,
+    "h": 34,
+    "baseline": 490.953,
+    "width": 296.672,
+    "lines": 1
+   },
+   "dialog folder": {
+    "x": 561,
+    "w": 277.203,
+    "glyph_top": 515.953,
+    "glyph_h": 27,
+    "top": 515.953,
+    "h": 27,
+    "baseline": 536.953,
+    "width": 277.203,
+    "lines": 1
+   },
+   "dialog text": {
+    "x": 561,
+    "w": 609.063,
+    "glyph_top": 562.953,
+    "glyph_h": 26,
+    "top": 558.953,
+    "h": 35.094,
+    "baseline": 583.953,
+    "width": 609.063,
+    "lines": 1
+   },
+   "Replace": {
+    "x": 1047,
+    "y": 616.047,
+    "w": 150,
+    "h": 46
+   },
+   "Replace text": {
+    "x": 1076.203,
+    "w": 91.578,
+    "glyph_top": 623.047,
+    "glyph_h": 32,
+    "top": 623.047,
+    "h": 32,
+    "baseline": 648.047,
+    "width": 91.578,
+    "lines": 1
+   },
+   "Cancel": {
+    "x": 1209,
+    "y": 616.047,
+    "w": 150,
+    "h": 46
+   },
+   "Cancel text": {
+    "x": 1244.344,
+    "w": 79.297,
+    "glyph_top": 623.047,
+    "glyph_h": 32,
+    "top": 623.047,
+    "h": 32,
+    "baseline": 648.047,
+    "width": 79.297,
+    "lines": 1
+   }
+  },
+  "33d 4:3": {
+   "backdrop": {
+    "x": 0,
+    "y": 0,
+    "w": 1440,
+    "h": 1080
+   },
+   "dialog": {
+    "x": 200,
+    "y": 337.719,
+    "w": 1040,
+    "h": 404.547
+   },
+   "dialog title": {
+    "x": 245,
+    "w": 254.75,
+    "glyph_top": 374.719,
+    "glyph_h": 37,
+    "top": 374.719,
+    "h": 37,
+    "baseline": 403.719,
+    "width": 254.75,
+    "lines": 1
+   },
+   "dialog file": {
+    "x": 245,
+    "w": 381.422,
+    "glyph_top": 432.719,
+    "glyph_h": 36,
+    "top": 429.719,
+    "h": 43,
+    "baseline": 461.719,
+    "width": 381.422,
+    "lines": 1
+   },
+   "dialog folder": {
+    "x": 245,
+    "w": 356.406,
+    "glyph_top": 490.719,
+    "glyph_h": 36,
+    "top": 490.719,
+    "h": 36,
+    "baseline": 518.719,
+    "width": 356.406,
+    "lines": 1
+   },
+   "dialog text": {
+    "x": 245,
+    "w": 773.031,
+    "glyph_top": 549.719,
+    "glyph_h": 33,
+    "top": 544.719,
+    "h": 44.547,
+    "baseline": 575.719,
+    "width": 773.031,
+    "lines": 1
+   },
+   "Replace": {
+    "x": 779,
+    "y": 615.266,
+    "w": 200,
+    "h": 90
+   },
+   "Replace text": {
+    "x": 815.594,
+    "w": 126.797,
+    "glyph_top": 637.766,
+    "glyph_h": 45,
+    "top": 637.766,
+    "h": 45,
+    "baseline": 672.766,
+    "width": 126.797,
+    "lines": 1
+   },
+   "Cancel": {
+    "x": 995,
+    "y": 615.266,
+    "w": 200,
+    "h": 90
+   },
+   "Cancel text": {
+    "x": 1040.094,
+    "w": 109.797,
+    "glyph_top": 637.766,
+    "glyph_h": 45,
+    "top": 637.766,
+    "h": 45,
+    "baseline": 672.766,
+    "width": 109.797,
+    "lines": 1
+   }
+  },
+  "33e": {
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 234,
+    "glyph_h": 27,
+    "top": 234,
+    "h": 27,
+    "baseline": 255,
+    "width": 64.953,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 949,
+    "y": 216,
+    "w": 882,
+    "h": 161
+   },
+   "save file": {
+    "x": 969,
+    "w": 266.281,
+    "glyph_top": 234,
+    "glyph_h": 28,
+    "top": 231,
+    "h": 34,
+    "baseline": 256,
+    "width": 266.281,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 969,
+    "y": 231,
+    "w": 391.938,
+    "h": 34
+   },
+   "Import save": {
+    "x": 1601.188,
+    "w": 189.25,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 189.25,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1601.188,
+    "y": 228,
+    "w": 209.813,
+    "h": 40
+   },
+   "EU row": {
+    "x": 949,
+    "y": 387,
+    "w": 882,
+    "h": 128
+   },
+   "Play row": {
+    "x": 689,
+    "y": 723,
+    "w": 1142,
+    "h": 76
+   },
+   "Open folder": {
+    "x": 1384.938,
+    "w": 175.688,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 175.688,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1574.625,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Open folder box": {
+    "x": 1384.938,
+    "y": 228,
+    "w": 196.25,
+    "h": 40
+   },
+   "save line": {
+    "x": 969,
+    "w": 568.156,
+    "glyph_top": 274,
+    "glyph_h": 24,
+    "top": 272,
+    "h": 29,
+    "baseline": 293,
+    "width": 568.156,
+    "lines": 1
+   },
+   "save status": {
+    "x": 969,
+    "y": 305,
+    "w": 842,
+    "h": 60
+   },
+   "status": {
+    "x": 993,
+    "w": 610.031,
+    "glyph_top": 307,
+    "glyph_h": 25,
+    "top": 305,
+    "h": 30,
+    "baseline": 327,
+    "width": 610.031,
+    "lines": 1
+   },
+   "status 2": {
+    "x": 993,
+    "w": 427.609,
+    "glyph_top": 337,
+    "glyph_h": 25,
+    "top": 335,
+    "h": 30,
+    "baseline": 357,
+    "width": 427.609,
+    "lines": 1
+   },
+   "status dot": {
+    "x": 969,
+    "y": 314,
+    "w": 12,
+    "h": 12
+   }
+  },
+  "33e 4:3": {
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 386,
+    "glyph_h": 37,
+    "top": 386,
+    "h": 37,
+    "baseline": 415,
+    "width": 83.766,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 64,
+    "y": 366,
+    "w": 1312,
+    "h": 148
+   },
+   "save file": {
+    "x": 418,
+    "w": 342.375,
+    "glyph_top": 386,
+    "glyph_h": 36,
+    "top": 383,
+    "h": 43,
+    "baseline": 415,
+    "width": 342.375,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 418,
+    "y": 383,
+    "w": 440.656,
+    "h": 43
+   },
+   "Import save": {
+    "x": 1123.703,
+    "w": 212.906,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 212.906,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1123.703,
+    "y": 380,
+    "w": 232.297,
+    "h": 45
+   },
+   "EU row": {
+    "x": 64,
+    "y": 522,
+    "w": 1312,
+    "h": 148
+   },
+   "Play row": {
+    "x": 64,
+    "y": 886,
+    "w": 1312,
+    "h": 100
+   },
+   "Open folder": {
+    "x": 882.656,
+    "w": 197.656,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 197.656,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1092.313,
+    "w": 7.391,
+    "glyph_top": 380,
+    "glyph_h": 45,
+    "top": 380,
+    "h": 45,
+    "baseline": 415,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Open folder box": {
+    "x": 882.656,
+    "y": 380,
+    "w": 217.047,
+    "h": 45
+   },
+   "save status": {
+    "x": 418,
+    "y": 428,
+    "w": 938,
+    "h": 72
+   },
+   "status": {
+    "x": 444,
+    "w": 732.031,
+    "glyph_top": 431,
+    "glyph_h": 30,
+    "top": 428,
+    "h": 36,
+    "baseline": 455,
+    "width": 732.031,
+    "lines": 1
+   },
+   "status 2": {
+    "x": 444,
+    "w": 513.125,
+    "glyph_top": 467,
+    "glyph_h": 30,
+    "top": 464,
+    "h": 36,
+    "baseline": 491,
+    "width": 513.125,
+    "lines": 1
+   },
+   "status dot": {
+    "x": 418,
+    "y": 441,
+    "w": 14,
+    "h": 14
+   }
+  },
+  "33f": {
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 234,
+    "glyph_h": 27,
+    "top": 234,
+    "h": 27,
+    "baseline": 255,
+    "width": 64.953,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 949,
+    "y": 216,
+    "w": 882,
+    "h": 131
+   },
+   "save file": {
+    "x": 969,
+    "w": 266.281,
+    "glyph_top": 234,
+    "glyph_h": 28,
+    "top": 231,
+    "h": 34,
+    "baseline": 256,
+    "width": 266.281,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 969,
+    "y": 231,
+    "w": 391.938,
+    "h": 34
+   },
+   "Import save": {
+    "x": 1601.188,
+    "w": 189.25,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 189.25,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1601.188,
+    "y": 228,
+    "w": 209.813,
+    "h": 40
+   },
+   "EU row": {
+    "x": 949,
+    "y": 357,
+    "w": 882,
+    "h": 128
+   },
+   "Play row": {
+    "x": 689,
+    "y": 693,
+    "w": 1142,
+    "h": 76
+   },
+   "Open folder": {
+    "x": 1384.938,
+    "w": 175.688,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 175.688,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1574.625,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Open folder box": {
+    "x": 1384.938,
+    "y": 228,
+    "w": 196.25,
+    "h": 40
+   },
+   "save line": {
+    "x": 969,
+    "w": 568.156,
+    "glyph_top": 274,
+    "glyph_h": 24,
+    "top": 272,
+    "h": 29,
+    "baseline": 293,
+    "width": 568.156,
+    "lines": 1
+   },
+   "save status": {
+    "x": 969,
+    "y": 305,
+    "w": 842,
+    "h": 30
+   },
+   "status": {
+    "x": 993,
+    "w": 365.203,
+    "glyph_top": 307,
+    "glyph_h": 25,
+    "top": 305,
+    "h": 30,
+    "baseline": 327,
+    "width": 365.203,
+    "lines": 1
+   },
+   "status dot": {
+    "x": 969,
+    "y": 314,
+    "w": 12,
+    "h": 12
+   }
+  },
+  "33g": {
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 380,
+    "glyph_h": 27,
+    "top": 380,
+    "h": 27,
+    "baseline": 401,
+    "width": 64.953,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 949,
+    "y": 362,
+    "w": 882,
+    "h": 97
+   },
+   "save file": {
+    "x": 969,
+    "w": 286.391,
+    "glyph_top": 380,
+    "glyph_h": 28,
+    "top": 377,
+    "h": 34,
+    "baseline": 402,
+    "width": 286.391,
+    "lines": 1
+   },
+   "save line": {
+    "x": 969,
+    "w": 570.359,
+    "glyph_top": 420,
+    "glyph_h": 24,
+    "top": 418,
+    "h": 29,
+    "baseline": 439,
+    "width": 570.359,
+    "lines": 1
+   },
+   "Import save": {
+    "x": 1601.188,
+    "w": 189.25,
+    "glyph_top": 374,
+    "glyph_h": 40,
+    "top": 374,
+    "h": 40,
+    "baseline": 405,
+    "width": 189.25,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 374,
+    "glyph_h": 40,
+    "top": 374,
+    "h": 40,
+    "baseline": 405,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 689,
+    "y": 469,
+    "w": 1142,
+    "h": 76
+   },
+   "Play": {
+    "x": 1680.25,
+    "w": 95.672,
+    "glyph_top": 473,
+    "glyph_h": 68,
+    "top": 473,
+    "h": 68,
+    "baseline": 526,
+    "width": 95.672,
+    "lines": 1
+   },
+   "Open folder": {
+    "x": 1384.938,
+    "w": 175.688,
+    "glyph_top": 374,
+    "glyph_h": 40,
+    "top": 374,
+    "h": 40,
+    "baseline": 405,
+    "width": 175.688,
+    "lines": 1
+   },
+   "Open folder dot": {
+    "x": 1574.625,
+    "w": 6.563,
+    "glyph_top": 374,
+    "glyph_h": 40,
+    "top": 374,
+    "h": 40,
+    "baseline": 405,
+    "width": 6.563,
+    "lines": 1
+   },
+   "panel": {
+    "x": 656,
+    "y": 56,
+    "w": 1208,
+    "h": 514
+   }
+  },
+  "33g 640x480": {
+   "Save": {
+    "x": 84,
+    "w": 83.766,
+    "glyph_top": 552,
+    "glyph_h": 37,
+    "top": 552,
+    "h": 37,
+    "baseline": 581,
+    "width": 83.766,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 64,
+    "y": 532,
+    "w": 1312,
+    "h": 112
+   },
+   "save file": {
+    "x": 418,
+    "w": 368.219,
+    "glyph_top": 552,
+    "glyph_h": 36,
+    "top": 549,
+    "h": 43,
+    "baseline": 581,
+    "width": 368.219,
+    "lines": 1
+   },
+   "save line": {
+    "x": 418,
+    "w": 712.953,
+    "glyph_top": 597,
+    "glyph_h": 30,
+    "top": 594,
+    "h": 36,
+    "baseline": 621,
+    "width": 712.953,
+    "lines": 1
+   },
+   "Import save": {
+    "x": 1123.703,
+    "w": 212.906,
+    "glyph_top": 546,
+    "glyph_h": 45,
+    "top": 546,
+    "h": 45,
+    "baseline": 581,
+    "width": 212.906,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1348.609,
+    "w": 7.391,
+    "glyph_top": 546,
+    "glyph_h": 45,
+    "top": 546,
+    "h": 45,
+    "baseline": 581,
+    "width": 7.391,
+    "lines": 1
+   },
+   "Play row": {
+    "x": 64,
+    "y": 652,
+    "w": 1312,
+    "h": 100
+   },
+   "Play": {
+    "x": 1213.391,
+    "w": 106.297,
+    "glyph_top": 664.5,
+    "glyph_h": 75,
+    "top": 664.5,
+    "h": 75,
+    "baseline": 722.5,
+    "width": 106.297,
+    "lines": 1
+   },
+   "Export save": {
+    "x": 872.281,
+    "w": 208.031,
+    "glyph_top": 546,
+    "glyph_h": 45,
+    "top": 546,
+    "h": 45,
+    "baseline": 581,
+    "width": 208.031,
+    "lines": 1
+   },
+   "Export save dot": {
+    "x": 1092.313,
+    "w": 7.391,
+    "glyph_top": 546,
+    "glyph_h": 45,
+    "top": 546,
+    "h": 45,
+    "baseline": 581,
+    "width": 7.391,
+    "lines": 1
+   }
+  },
+  "33 android": {
+   "Save": {
+    "x": 689,
+    "w": 64.953,
+    "glyph_top": 234,
+    "glyph_h": 27,
+    "top": 234,
+    "h": 27,
+    "baseline": 255,
+    "width": 64.953,
+    "lines": 1
+   },
+   "Save row": {
+    "x": 949,
+    "y": 216,
+    "w": 882,
+    "h": 159
+   },
+   "save file": {
+    "x": 969,
+    "w": 266.281,
+    "glyph_top": 234,
+    "glyph_h": 28,
+    "top": 231,
+    "h": 34,
+    "baseline": 256,
+    "width": 266.281,
+    "lines": 1
+   },
+   "save file box": {
+    "x": 969,
+    "y": 231,
+    "w": 382.719,
+    "h": 34
+   },
+   "Import save": {
+    "x": 1601.188,
+    "w": 189.25,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 189.25,
+    "lines": 1
+   },
+   "Import save dot": {
+    "x": 1804.438,
+    "w": 6.563,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 6.563,
+    "lines": 1
+   },
+   "Import save box": {
+    "x": 1601.188,
+    "y": 228,
+    "w": 209.813,
+    "h": 40
+   },
+   "EU row": {
+    "x": 949,
+    "y": 385,
+    "w": 882,
+    "h": 128
+   },
+   "Play row": {
+    "x": 689,
+    "y": 721,
+    "w": 1142,
+    "h": 76
+   },
+   "save line": {
+    "x": 969,
+    "w": 568.156,
+    "glyph_top": 274,
+    "glyph_h": 24,
+    "top": 272,
+    "h": 29,
+    "baseline": 293,
+    "width": 568.156,
+    "lines": 1
+   },
+   "Export save": {
+    "x": 1375.719,
+    "w": 184.906,
+    "glyph_top": 228,
+    "glyph_h": 40,
+    "top": 228,
+    "h": 40,
+    "baseline": 259,
+    "width": 184.906,
+    "lines": 1
+   },
+   "save note": {
+    "x": 969,
+    "w": 809.75,
+    "glyph_top": 308,
+    "glyph_h": 22,
+    "top": 305,
+    "h": 29,
+    "baseline": 326,
+    "width": 809.75,
+    "lines": 2
+   },
+   "save note box": {
+    "x": 969,
+    "y": 305,
+    "w": 842,
+    "h": 58
    }
   },
   "19a": {

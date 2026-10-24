@@ -1,5 +1,7 @@
 package org.theoraclesproject;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Insets;
 import android.graphics.Rect;
@@ -322,6 +324,42 @@ public class OraclesActivity extends SDLActivity {
             return "0\n" + e.getClass().getSimpleName();
         } finally {
             if (connection != null) connection.disconnect();
+        }
+    }
+
+    /* Export save…: the document picker asked to make a document named `name` where the player chooses, its answer
+     * given to the launcher (nativeDocumentCreated), which writes the copy there (launcher/file_dialog.c).  False when
+     * no picker opens.  The request's number is none of SDL's own dialogs', which count from 0. */
+    private static final int CREATE_DOCUMENT = 0x4f52;
+
+    private static native void nativeDocumentCreated(String uri);
+
+    public static boolean createDocument(String name) {
+        final Activity activity = (Activity) getContext();
+        if (activity == null) return false;
+        final Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/octet-stream");
+        intent.putExtra(Intent.EXTRA_TITLE, name);
+        try {
+            activity.startActivityForResult(intent, CREATE_DOCUMENT);
+        } catch (ActivityNotFoundException e) {
+            log("oracles: no document picker to export the save: " + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode != CREATE_DOCUMENT) {
+            super.onActivityResult(requestCode, resultCode, data);
+            return;
+        }
+        final Uri uri = resultCode == RESULT_OK && data != null ? data.getData() : null;
+        try {
+            nativeDocumentCreated(uri != null ? uri.toString() : null);
+        } catch (UnsatisfiedLinkError ignored) {
         }
     }
 

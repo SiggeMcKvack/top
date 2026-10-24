@@ -395,6 +395,8 @@ int oracles_ui_home_draw(OraclesUiDraw *draw, OraclesUiHome *home, const Oracles
     draw_hints(draw, nav, scene);
     oracles_ui_draw_anchor(draw, 0.0f, 1.0f);
     draw_slow(draw, nav, scene, accent);
+    oracles_ui_draw_anchor(draw, 0.5f, 0.5f);
+    oracles_ui_page_dialog_draw(draw, nav, accent);
     oracles_ui_draw_anchor(draw, 0.5f, 1.0f);
     moving |= draw_toast(draw, home, scene, now_ms);
     return moving;

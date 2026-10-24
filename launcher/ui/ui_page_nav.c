@@ -123,6 +123,44 @@ void oracles_page_save_line(const OraclesHomeGame *game, char *out, size_t capac
     else snprintf(out, capacity, "%s", game->fan ? "Choose both files first" : "Choose a ROM first");
 }
 
+const char *oracles_page_save_action(const OraclesHomeNav *nav, int action)
+{
+    if (action == 1) return "Import save\xe2\x80\xa6";
+    return nav->android ? "Export save\xe2\x80\xa6" : "Open folder";
+}
+
+int oracles_page_save_action_live(const OraclesHomeNav *nav, int action)
+{
+    const OraclesHomeGame *game = oracles_page_game_const(nav);
+    /* A running game holds its save: no import under it. */
+    if (action == 1) return game->usable && !nav->in_game;
+    return nav->android ? game->save_file[0] != 0 : game->usable || game->save_file[0];
+}
+
+const char *oracles_page_save_note(const OraclesHomeNav *nav, int four_three)
+{
+    const OraclesHomeGame *game = oracles_page_game_const(nav);
+    if (nav->save_flow.state == ORACLES_SAVE_FLOW_DONE || nav->save_flow.state == ORACLES_SAVE_FLOW_REFUSED) return "";
+    if (nav->in_game && nav->row == ORACLES_ROW_SAVE && nav->save_action == 1) return oracles_display_pause_reason;
+    if (game->fan) return "";
+    if (nav->android)
+        return four_three ? "Export a copy to play it elsewhere, also with the European ROM."
+                          : "Export a copy to play it elsewhere: this save also works with the European ROM in other emulators, beside that ROM "
+                            "under the same name.";
+    return four_three ? "Also works with the European ROM in other emulators, named like it."
+                      : "This save also works with the European ROM in other emulators: put it beside that ROM, under the same name.";
+}
+
+const char *oracles_page_save_status(const OraclesHomeNav *nav, OraclesTone *tone, const char **second)
+{
+    const OraclesSaveFlow state = nav->save_flow.state;
+    *second = NULL;
+    if (state != ORACLES_SAVE_FLOW_DONE && state != ORACLES_SAVE_FLOW_REFUSED) return NULL;
+    *tone = state == ORACLES_SAVE_FLOW_DONE ? ORACLES_TONE_OK : ORACLES_TONE_ERROR;
+    if (nav->save_flow.text2[0]) *second = nav->save_flow.text2;
+    return nav->save_flow.text;
+}
+
 const char *oracles_page_play_note(const OraclesHomeNav *nav)
 {
     const OraclesHomeGame *game = oracles_page_game_const(nav);
@@ -265,7 +303,9 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, unsigned row)
     switch (row) {
         case ORACLES_ROW_ROM: return ORACLES_HOME_CHOOSE_ROM;
         case ORACLES_ROW_PATCH: return ORACLES_HOME_CHOOSE_PATCH;
-        case ORACLES_ROW_SAVE: return game->usable || game->save_file[0] ? ORACLES_HOME_OPEN_FOLDER : ORACLES_HOME_STAY;
+        case ORACLES_ROW_SAVE:
+            if (!oracles_page_save_action_live(nav, nav->save_action)) return ORACLES_HOME_STAY;
+            return nav->save_action == 1 ? ORACLES_HOME_IMPORT_SAVE : nav->android ? ORACLES_HOME_EXPORT_SAVE : ORACLES_HOME_OPEN_FOLDER;
         case ORACLES_ROW_EU_ROM: return game->eu != ORACLES_ROM_NONE && nav->eu_action == 1 ? remove_eu(nav) : ORACLES_HOME_CHOOSE_EU_ROM;
         case ORACLES_ROW_LANGUAGE: return language_step(nav, 1);
         case ORACLES_ROW_PLAY: return game->usable ? oracles_home_start_command(page_game(nav)) : ORACLES_HOME_STAY;
@@ -280,8 +320,20 @@ static unsigned step(const OraclesHomeNav *nav, unsigned row, unsigned by)
     return row;
 }
 
+/* The import's confirmation, open over the page: left and right move between Replace and Cancel, OK takes one, Back
+ * cancels; nothing else acts. */
+static OraclesHomeCommand confirm_act(OraclesHomeNav *nav, OraclesHomeAction action)
+{
+    OraclesHomeSaveFlow *flow = &nav->save_flow;
+    if (action == ORACLES_HOME_LEFT || action == ORACLES_HOME_RIGHT) flow->choice = action == ORACLES_HOME_RIGHT;
+    else if (action == ORACLES_HOME_OK && flow->choice == 0) return ORACLES_HOME_REPLACE_SAVE;
+    else if (action == ORACLES_HOME_OK || action == ORACLES_HOME_BACK) flow->state = ORACLES_SAVE_FLOW_NONE;
+    return ORACLES_HOME_STAY;
+}
+
 OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction action)
 {
+    if (nav->save_flow.state == ORACLES_SAVE_FLOW_CONFIRM) return confirm_act(nav, action);
     const unsigned row = has_row(nav, nav->row) ? nav->row : 0;
     switch (action) {
         case ORACLES_HOME_UP: nav->row = step(nav, row, ORACLES_GAME_ROWS - 1u); return ORACLES_HOME_STAY;
@@ -290,11 +342,13 @@ OraclesHomeCommand oracles_page_act(OraclesHomeNav *nav, OraclesHomeAction actio
         case ORACLES_HOME_RIGHT:
             /* European ROM: between Change and Remove, once there is a file; Language: the language before or after. */
             if (row == ORACLES_ROW_EU_ROM && oracles_page_game_const(nav)->eu != ORACLES_ROM_NONE) nav->eu_action = action == ORACLES_HOME_RIGHT;
+            if (row == ORACLES_ROW_SAVE) nav->save_action = action == ORACLES_HOME_RIGHT;
             if (row == ORACLES_ROW_LANGUAGE) return language_step(nav, action == ORACLES_HOME_RIGHT ? 1 : -1);
             return ORACLES_HOME_STAY;
         case ORACLES_HOME_OK: return activate(nav, row);
         case ORACLES_HOME_BACK:
-            /* Back to the home screen, on the item that opened the page. */
+            /* Back to the home screen, on the item that opened the page; the Save row's status goes with it. */
+            nav->save_flow.state = ORACLES_SAVE_FLOW_NONE;
             nav->screen = ORACLES_SCREEN_HOME;
             nav->focus = 1;
             return ORACLES_HOME_STAY;
@@ -312,18 +366,35 @@ void oracles_page_keep_row(OraclesHomeNav *nav)
     nav->row = ORACLES_ROW_ROM;
 }
 
-void oracles_page_hover(OraclesHomeNav *nav, unsigned row)
+void oracles_page_hover(OraclesHomeNav *nav, unsigned row, int option)
 {
-    if (has_row(nav, row)) nav->row = row;
+    /* The confirmation open: its buttons alone take the highlight. */
+    if (nav->save_flow.state == ORACLES_SAVE_FLOW_CONFIRM) {
+        if (row == ORACLES_ROW_SAVE && option >= 2) nav->save_flow.choice = option - 2;
+        return;
+    }
+    if (!has_row(nav, row)) return;
+    nav->row = row;
+    /* An action of Save, or a button of European ROM with a file, under the pointer is the one OK takes. */
+    if (row == ORACLES_ROW_SAVE && option >= 0) nav->save_action = option == 1;
+    if (row == ORACLES_ROW_EU_ROM && option >= 0 && oracles_page_game_const(nav)->eu != ORACLES_ROM_NONE) nav->eu_action = option == 1;
 }
 
 OraclesHomeCommand oracles_page_click(OraclesHomeNav *nav, unsigned row, int option)
 {
+    /* The confirmation open: its buttons alone act. */
+    if (nav->save_flow.state == ORACLES_SAVE_FLOW_CONFIRM) {
+        if (row != ORACLES_ROW_SAVE || option < 2) return ORACLES_HOME_STAY;
+        nav->save_flow.choice = option - 2;
+        return confirm_act(nav, ORACLES_HOME_OK);
+    }
     if (!has_row(nav, row)) return ORACLES_HOME_STAY;
     nav->row = row;
     /* A language clicked is chosen; the row itself only takes the highlight. */
     if (row == ORACLES_ROW_LANGUAGE) return option >= 0 ? language_set(nav, option) : ORACLES_HOME_STAY;
     /* European ROM: Remove clicked removes the file; elsewhere on the row, the dialog opens. */
     if (row == ORACLES_ROW_EU_ROM) nav->eu_action = option == 1 && oracles_page_game_const(nav)->eu != ORACLES_ROM_NONE;
+    /* Save: an action clicked acts; elsewhere on the row, the one left and right chose. */
+    if (row == ORACLES_ROW_SAVE && option >= 0) nav->save_action = option == 1;
     return activate(nav, row);
 }

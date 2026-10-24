@@ -203,6 +203,14 @@ void pl_move_wrapped(OraclesUiWrapped *w, float y);
 float pl_max_f(float a, float b);
 float pl_round_half_up(float v);
 float pl_baseline_row(OraclesUiLine *const *lines, unsigned count, float top);
+/* Buttons side by side from a row's right edge, unplaced vertically, returning their width; their boxes, from each label
+ * to its dot.  Cartridge's Save row (ui_page_save_layout.c) from the top of its row `y`, returning its box: in 16:9 in the
+ * panel's values from `value_x`, `value_w` wide. */
+float pl_buttons(const OraclesUiTextStyle *style, const char *const *labels, unsigned count, float right, float gap, float between,
+                 OraclesUiLine *texts, OraclesUiLine *dots);
+void pl_button_boxes(unsigned count, const OraclesUiLine *texts, const OraclesUiLine *dots, OraclesUiBox *boxes);
+OraclesUiBox pl_save_row_16_9(OraclesUiGameTexts *t, float value_x, float value_w, float y, OraclesUiGameLayout *out);
+OraclesUiBox pl_save_row_4_3(OraclesUiGameTexts *t, float y, OraclesUiGameLayout *out);
 
 /* 4:3's: the room a file's value has beside its button; a button placed at the rows' right; a row's box; the Play row with
  * its note. */
