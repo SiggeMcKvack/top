@@ -1,0 +1,400 @@
+/* Display's Text link and Display › Text (ui_page_text.h, ui_page_layout.h): their layouts against the layout reference,
+ * tests/launcher_layout_reference.json (layout_reference.h), the test's argument, their rows' rules and the preview.
+ * The reference's frames are turn 26's: the page with Compact and Wide chosen, Text box highlighted, in 16:9 (26a), in
+ * 4:3 (26b) and at 640x480 on Android (26c); Display with the link highlighted (26e, text link 4:3); from the pause
+ * (26g, 26g 4:3 on Text, turn 29's), Text and Text box dimmed with their reason, Text size live; in Faithful (26h); and
+ * Moonrise Regalia's (26i), Text box and Text size dimmed with their reason, where the canvas leaves the page out.  The
+ * canvas's Lines row is not there: the engine draws two lines alone. */
+#include "layout_reference.h"
+#include "ui_page_layout.h"
+#include "ui_page_nav.h"
+#include "text_box_enlarge.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#define CHECK(condition) do { if (!(condition)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition); layout_fail(); } } while (0)
+
+static const char *const ids[3] = { "text", "box", "tsize" };
+static const char *const choice_ids[3][3] = { { "classic", "compact", NULL }, { "standard", "wide", NULL }, { "normal", "large", "xlarge" } };
+
+/* Oracle of Ages with its original ROM; Display at a 1920x1080 (or `width` x `height`) screen's sizes. */
+static void ages(OraclesHomeNav *nav, OraclesUiLayout layout, int width, int height)
+{
+    oracles_home_init(nav);
+    OraclesHomeGame *g = &nav->games[0];
+    g->usable = 1;
+    g->rom = ORACLES_ROM_ORIGINAL;
+    nav->layout = layout;
+    nav->screen = ORACLES_SCREEN_DISPLAY;
+    nav->display.profile = ORACLES_PROFILE_ENHANCED;
+    nav->display.window = layout == ORACLES_UI_LAYOUT_4_3 ? 2 : 1;
+    nav->display.cores = 8;
+    nav->display.screen_w = nav->display.room_w = width;
+    nav->display.screen_h = height;
+    nav->display.room_h = height - 64;
+    oracles_home_input(nav, ORACLES_INPUT_KEYBOARD);
+}
+
+/* Display › Text open, Compact and Wide chosen, `row` highlighted. */
+static void text_page(OraclesHomeNav *nav, unsigned row)
+{
+    nav->display.text = nav->display.text_box = 1;
+    nav->row = ORACLES_DISPLAY_TEXT;
+    CHECK(oracles_display_act(nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav->text_page
+          && nav->row == (nav->in_game ? ORACLES_DISPLAY_TEXT_SIZE : ORACLES_DISPLAY_LETTERS));
+    nav->row = row;
+}
+
+static void lay_out(const OraclesHomeNav *nav, OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *l)
+{
+    oracles_ui_display_texts(nav, t);
+    oracles_ui_layout_display(nav->layout, t, l);
+}
+
+/* The rows, their labels and choices, and the preview; 4:3's texts by their line boxes too. */
+static void page_probes(const char *frame, const OraclesUiDisplayLayout *l, int four_three)
+{
+    const OraclesUiOptionLayout *options[3] = { l->text, l->text_box, l->text_size };
+    char what[48];
+    for (unsigned i = 0; i < 3u; i++) {
+        const unsigned row = ORACLES_DISPLAY_LETTERS + i;
+        snprintf(what, sizeof what, "%s row", ids[i]); layout_box(frame, what, &l->rows[row]);
+        snprintf(what, sizeof what, "%s grid", ids[i]); layout_near(frame, what, "y", l->rows[row].y);
+        snprintf(what, sizeof what, "%s label", ids[i]);
+        if (four_three) layout_line(frame, what, &l->labels[row].lines[0]); else layout_text(frame, what, &l->labels[row].lines[0]);
+        for (unsigned c = 0; c < 3u && choice_ids[i][c]; c++) {
+            snprintf(what, sizeof what, "%s %s", ids[i], choice_ids[i][c]); layout_box(frame, what, &options[i][c].box);
+            snprintf(what, sizeof what, "%s %s text", ids[i], choice_ids[i][c]);
+            if (four_three) layout_line(frame, what, &options[i][c].name); else layout_text(frame, what, &options[i][c].name);
+        }
+        if (!four_three) {
+            snprintf(what, sizeof what, "%s explanation", ids[i]);
+            layout_near(frame, what, "top", l->text_explanations[i].lines[0].y);
+            layout_near(frame, what, "lines", (float)l->text_explanations[i].count);
+            layout_near(frame, what, "width", l->text_explanations[i].w);
+        }
+    }
+    layout_near(frame, "rows", "y", l->rows[ORACLES_DISPLAY_LETTERS].y);
+    layout_box(frame, "preview", &l->preview);
+    layout_box(frame, "preview frame", &l->preview_frame);
+    layout_box(frame, "preview hud", &l->preview_hud);
+    layout_box(frame, "preview box", &l->preview_box);
+    layout_near(frame, "preview label", "y", l->preview_label.y);
+    layout_near(frame, "preview label", "h", l->preview_label.h);
+    layout_text(frame, "preview label text", &l->preview_label);
+    layout_near(frame, "preview note", "x", l->preview_note.x);
+    layout_near(frame, "preview note", "y", l->preview_note.y);
+    if (four_three) {
+        layout_line(frame, "section", &l->head.section);
+        layout_line(frame, "title", &l->title);
+        layout_near(frame, "help", "y", l->help.y);
+        layout_near(frame, "help note", "y", l->help_note.y);
+    } else {
+        layout_text(frame, "section", &l->head.section);
+        layout_box(frame, "panel", &l->panel);
+    }
+    /* No diagram, no Advanced on the page. */
+    CHECK(l->diagram.w == 0.0f && l->rows[ORACLES_DISPLAY_ADVANCED].w == 0.0f);
+}
+
+static void layouts(void)
+{
+    OraclesHomeNav nav;
+    OraclesUiDisplayTexts t;
+    OraclesUiDisplayLayout l;
+
+    /* 26a: the page in 16:9, Far's band and the wide box in it. */
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    text_page(&nav, ORACLES_DISPLAY_TEXT_BOX);
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.section, "Display \xe2\x80\xba Text") && t.text_page && !t.later);
+    CHECK(!strcmp(t.preview.label, "Far view, 480\xc3\x97" "270 \xc2\xb7 box 208\xc3\x97" "40") && !t.preview.note[0]);
+    page_probes("26a", &l, 0);
+    for (unsigned i = 0; i < 3u; i++) CHECK((l.text_notes[i].h == 0.0f) == (i > 0u) && oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
+    CHECK(!strcmp(t.text_notes[0], "Savestates taken with Compact need Compact."));   /* as Continuous transitions says of its own */
+
+    /* 26h: in Faithful, the rows dimmed and inert, the game's band and box. */
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.preview.label, "Faithful: the game's box, 144\xc3\x97" "40"));
+    page_probes("26h", &l, 0);
+    for (unsigned i = 0; i < 3u; i++) CHECK(!oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS + i));
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text_box == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STAY && nav.display.text == 1);
+
+    /* 26g: from the pause, Text and Text box dimmed and inert, "Change it from the home screen." under them; Text size
+     * applies at once. */
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    text_page(&nav, ORACLES_DISPLAY_TEXT_BOX);
+    lay_out(&nav, &t, &l);
+    page_probes("26g", &l, 0);
+    CHECK(!strcmp(t.text_notes[0], "Change it from the home screen.") && !strcmp(t.text_notes[1], t.text_notes[0]) && !t.text_notes[2][0]);
+    layout_text("26g", "text note", &l.text_notes[0]);
+    layout_text("26g", "box note", &l.text_notes[1]);
+    layout_text("26g", "page note", &l.page_note.lines[0]);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.text_box == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STAY && nav.display.text == 1);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 2) == ORACLES_HOME_STORE && nav.display.text_size == 2);
+    /* By the running game's profile: one in Faithful takes no size. */
+    nav.playing = ORACLES_PROFILE_FAITHFUL;
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 0) == ORACLES_HOME_STAY && nav.display.text_size == 2);
+
+    /* 26i: Moonrise Regalia's page, its compact text live, Text box and Text size dimmed with their reason, the
+     * game's box in the preview; its title on two lines moves the preview down. */
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.games[ORACLES_HOME_GAME_MOONRISE] = nav.games[0];
+    nav.games[ORACLES_HOME_GAME_MOONRISE].fan = oracles_home_fan_game(ORACLES_HOME_GAME_MOONRISE);
+    nav.entry = ORACLES_HOME_FAN;
+    nav.fan_pick = ORACLES_HOME_HERO_MOONRISE;
+    text_page(&nav, ORACLES_DISPLAY_TEXT_BOX);
+    lay_out(&nav, &t, &l);
+    page_probes("26i", &l, 0);
+    CHECK(!strcmp(t.preview.label, "Far view, 480\xc3\x97" "270 \xc2\xb7 box 144\xc3\x97" "40"));
+    layout_text("26i", "title", &l.head.title.lines[0]);
+    layout_text("26i", "box note", &l.text_notes[1]);
+    layout_text("26i", "tsize note", &l.text_notes[2]);
+    CHECK(!strcmp(t.text_notes[1], "Ages and Seasons only for now.") && !strcmp(t.text_notes[0], "Savestates taken with Compact need Compact."));
+    CHECK(oracles_display_text_row_live(&nav, ORACLES_DISPLAY_LETTERS) && !oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_BOX)
+          && !oracles_display_text_row_live(&nav, ORACLES_DISPLAY_TEXT_SIZE));
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 1) == ORACLES_HOME_STAY && nav.display.text_size == 0);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_LETTERS, 0) == ORACLES_HOME_STORE && nav.display.text == 0);
+    /* Its link sums up what it takes: the game's box at its size, whatever Text box and Text size say. */
+    nav.display.text_box = 1;
+    nav.display.text_size = 2;
+    char fan_summary[64];
+    oracles_display_text_summary(&nav, fan_summary, sizeof fan_summary);
+    CHECK(!strcmp(fan_summary, "Classic \xc2\xb7 Standard \xc2\xb7 Normal"));
+
+    /* 26b, 26c: in 4:3, the preview at the top of the rows, its label and note at its right; the highlighted row's
+     * explanation in the header. */
+    static const struct { const char *frame; int w, h, android; } frames[] = { { "26b", 1440, 1080, 0 }, { "26c", 640, 480, 1 } };
+    for (size_t f = 0; f < sizeof frames / sizeof frames[0]; f++) {
+        ages(&nav, ORACLES_UI_LAYOUT_4_3, frames[f].w, frames[f].h);
+        if (frames[f].android) {
+            nav.android = nav.display.fullscreen_only = 1;
+            nav.display.window = 1;
+            oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
+        }
+        text_page(&nav, ORACLES_DISPLAY_TEXT_BOX);
+        lay_out(&nav, &t, &l);
+        CHECK(!strcmp(t.help, "Wide: longer lines, fewer boxes.") && !t.help_note);
+        page_probes(frames[f].frame, &l, 1);
+        layout_line(frames[f].frame, "help text", &l.help);
+    }
+    /* 26g 4:3: from the pause on Text, its reason on the help's note line. */
+    ages(&nav, ORACLES_UI_LAYOUT_4_3, 1440, 1080);
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    text_page(&nav, ORACLES_DISPLAY_LETTERS);
+    lay_out(&nav, &t, &l);
+    page_probes("26g 4:3", &l, 1);
+    layout_line("26g 4:3", "help text", &l.help);
+    layout_line("26g 4:3", "help note text", &l.help_note);
+    layout_line("26g 4:3", "page note", &l.page_note.lines[0]);
+}
+
+/* 26e: Display's own rows, the Text link after HUD, highlighted, its settings summed up beside it; in 4:3 its summary
+ * on the help's note line (text link 4:3). */
+static void link(void)
+{
+    OraclesHomeNav nav;
+    OraclesUiDisplayTexts t;
+    OraclesUiDisplayLayout l;
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.display.text = nav.display.text_box = 1;
+    nav.row = ORACLES_DISPLAY_TEXT;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.text_summary, "Compact \xc2\xb7 Wide \xc2\xb7 Normal"));
+    layout_text("26e", "Text", &l.labels[ORACLES_DISPLAY_TEXT].lines[0]);
+    layout_box("26e", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    layout_box("26e", "link", &l.text_link);
+    layout_text("26e", "summary text", &l.text_summary);
+    layout_near("26e", "summary", "y", l.text_summary.y);
+    layout_near("26e", "summary", "h", l.text_summary.h);
+    layout_near("26e", "text explanation", "top", l.explanations[8].lines[0].y);
+    layout_near("26e", "text explanation", "width", l.explanations[8].w);
+    layout_box("26e", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
+    layout_box("26e", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("26e", "panel", &l.panel);
+    layout_box("26e", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
+    /* Its hints: it opens, nothing changes with left and right. */
+    OraclesHomeHint hints[ORACLES_HOME_MAX_HINTS];
+    CHECK(oracles_home_hints(&nav, hints) == 3 && !strcmp(hints[1].label, "Open"));
+
+    ages(&nav, ORACLES_UI_LAYOUT_4_3, 1440, 1080);
+    nav.display.text = nav.display.text_box = 1;
+    nav.row = ORACLES_DISPLAY_TEXT;
+    lay_out(&nav, &t, &l);
+    CHECK(!strcmp(t.help, "Letters, box and size, with a preview.") && !strcmp(t.help_note, "Compact \xc2\xb7 Wide \xc2\xb7 Normal."));
+    layout_line("text link 4:3", "Text", &l.labels[ORACLES_DISPLAY_TEXT].lines[0]);
+    layout_box("text link 4:3", "text row", &l.rows[ORACLES_DISPLAY_TEXT]);
+    layout_box("text link 4:3", "link", &l.text_link);
+    layout_line("text link 4:3", "summary text", &l.text_summary);
+    layout_box("text link 4:3", "hud row", &l.rows[ORACLES_DISPLAY_HUD]);
+    layout_box("text link 4:3", "Color row", &l.rows[ORACLES_DISPLAY_COLOUR]);
+    layout_box("text link 4:3", "Profile row", &l.rows[ORACLES_DISPLAY_PROFILE]);
+    layout_box("text link 4:3", "advanced", &l.rows[ORACLES_DISPLAY_ADVANCED]);
+    layout_line("text link 4:3", "help text", &l.help);
+    layout_line("text link 4:3", "help note text", &l.help_note);
+}
+
+/* The page's keys: up and down wrap round its three rows, left and right change the highlighted one, OK takes its next
+ * choice; Back returns to Display on the link, and Advanced's Back on Advanced.  The link opens in Faithful too, and from
+ * the pause; --text-box holds its row for the run. */
+static void keys(void)
+{
+    OraclesHomeNav nav;
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.row = ORACLES_DISPLAY_TEXT;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STAY && !nav.text_page);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.text_page && nav.row == ORACLES_DISPLAY_LETTERS);
+    CHECK(oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT_SIZE) && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_TEXT)
+          && !oracles_display_row_shown(&nav, ORACLES_DISPLAY_CORE));
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_UP) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_LETTERS);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.text == 1);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_BOX);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.text_box == 1);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_DOWN) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_LEFT) == ORACLES_HOME_STORE && nav.display.text_size == 2);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STORE && nav.display.text_size == 0);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STORE && nav.display.text_size == 1);
+    char summary[64];
+    oracles_display_text_summary(&nav, summary, sizeof summary);
+    CHECK(!strcmp(summary, "Compact \xc2\xb7 Wide \xc2\xb7 Large"));
+    CHECK(!strcmp(oracles_display_section(&nav), "Display \xe2\x80\xba Text"));
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !nav.text_page && nav.row == ORACLES_DISPLAY_TEXT);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && nav.screen == ORACLES_SCREEN_HOME);
+    /* Advanced and Text: one page in place of Display's rows at a time, each Back on its own link. */
+    nav.screen = ORACLES_SCREEN_DISPLAY;
+    nav.row = ORACLES_DISPLAY_ADVANCED;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && !nav.text_page);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_BACK) == ORACLES_HOME_STAY && !nav.advanced && nav.row == ORACLES_DISPLAY_ADVANCED);
+    /* A click on the link opens the page; one on a choice there sets it. */
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT, -1) == ORACLES_HOME_STAY && nav.text_page);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_TEXT_SIZE, 2) == ORACLES_HOME_STORE && nav.display.text_size == 2 && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_CORE, 1) == ORACLES_HOME_STAY && nav.display.core == 0);
+    /* In Faithful the link opens all the same, its rows inert. */
+    oracles_display_act(&nav, ORACLES_HOME_BACK);
+    nav.display.profile = ORACLES_PROFILE_FAITHFUL;
+    CHECK(!oracles_display_text_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.text_page
+          && nav.row == ORACLES_DISPLAY_LETTERS);
+    nav.display.profile = ORACLES_PROFILE_ENHANCED;
+    /* From the pause the page opens on Text size, the one row that changes there. */
+    oracles_display_act(&nav, ORACLES_HOME_BACK);
+    nav.in_game = 1;
+    nav.playing = ORACLES_PROFILE_ENHANCED;
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.text_page && nav.row == ORACLES_DISPLAY_TEXT_SIZE);
+    nav.in_game = 0;
+    /* --text-box holds its row for the run. */
+    nav.display.text_box_fixed = 1;
+    nav.row = ORACLES_DISPLAY_TEXT_BOX;
+    CHECK(oracles_display_row_fixed(&nav, ORACLES_DISPLAY_TEXT_BOX) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY);
+    /* Reopening Display from the menu shows its own rows. */
+    nav.screen = ORACLES_SCREEN_HOME;
+    nav.focus = 3;
+    oracles_home_act(&nav, ORACLES_HOME_OK);
+    CHECK(nav.screen == ORACLES_SCREEN_DISPLAY && !nav.text_page && !nav.advanced);
+}
+
+/* The preview's sizes: Very large where twice the box fits across the band, else Large where the box at
+ * k + ceil(k / 2) screen pixels a pixel fits the frame shown at k, else Normal, with a note when the choice falls back. */
+static void preview_sizes(void)
+{
+    OraclesHomeNav nav;
+    OraclesDisplayTextPreview p;
+    ages(&nav, ORACLES_UI_LAYOUT_16_9, 1920, 1080);
+    nav.display.text_box = 1;
+    nav.display.text_size = 2;
+    oracles_display_text_preview(&nav, &p);   /* Far, 480 wide: the wide box twice, 416 */
+    CHECK(p.size == 2 && p.scale_num == 2u && p.scale_den == 1u && !p.note[0] && strstr(p.label, ", very large (\xc3\x97" "2)"));
+    nav.display.view = 1;   /* Medium, 384 wide: twice the wide box does not fit across, Large does */
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 1 && !strcmp(p.note, "Large in this view: no room for Very large.")
+          && !strcmp(oracles_display_text_note(&nav, ORACLES_DISPLAY_TEXT_SIZE), p.note));
+    nav.display.view = 0;   /* Near at 3x, 768 screen pixels across: the wide box at 5 a pixel does not fit either */
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 0 && !strcmp(p.note, "Normal in this view: no room for Very large."));
+    nav.display.text_size = 1;
+    nav.display.view = 2;
+    oracles_display_text_preview(&nav, &p);   /* Far at 3x: the box at 5 screen pixels a pixel, five thirds */
+    CHECK(p.size == 1 && p.scale_num == 5u && p.scale_den == 3u && strstr(p.label, ", large (\xc3\x97" "1.67)"));
+    nav.display.text_size = 0;
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 0 && p.scale_num == 1u && !p.note[0] && !oracles_display_text_note(&nav, ORACLES_DISPLAY_TEXT_SIZE)[0]);
+    CHECK(p.box_w == 208 && p.text_w == 192 && p.compact == 0);
+    /* Large's factor is the presenter's: oracles_text_box_enlarge's for the frame shown at 3x, the box at its bottom. */
+    nav.display.text_size = 1;
+    oracles_display_text_preview(&nav, &p);
+    int32_t rect[4];
+    unsigned factor = 0;
+    CHECK(oracles_text_box_enlarge(0.0, 0.0, 480.0 * 3.0, 270.0 * 3.0, 3.0, (480u - 208u) / 2u, 270u - 8u - 40u, 208u, 40u, ORACLES_TEXT_BOX_ENLARGE_LARGE, 1, rect, &factor)
+          && factor == p.scale_num && p.scale_den == 3u);
+    /* On a 640x480 handheld, Medium in 4:3 (320x240) with the wide box: Large at 2x fullscreen, but the screen margin's
+     * 48 lines leave the frame at 1x, where the box at 2 a pixel does not fit: Normal, as the game shows it. */
+    ages(&nav, ORACLES_UI_LAYOUT_4_3, 640, 480);
+    nav.android = nav.display.fullscreen_only = 1;
+    nav.display.window = 3;
+    nav.display.view = 1;
+    nav.display.text_box = 1;
+    nav.display.text_size = 1;
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 1 && p.scale_num == 3u && p.scale_den == 2u);
+    nav.display.margin = 2;
+    nav.display.margin_lines[2] = 48;
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 0 && !strcmp(p.note, "Normal in this view: no room for Large."));
+    nav.display.margin_lines[2] = 0;   /* a margin the screen does not apply */
+    oracles_display_text_preview(&nav, &p);
+    CHECK(p.size == 1);
+}
+
+/* The sample: without a font, its words as bars; Compact fits more of them than Classic in the two lines; in a font, each
+ * letter's ink at its place. */
+static void sample(void)
+{
+    static uint8_t out[ORACLES_DISPLAY_SAMPLE_H][ORACLES_DISPLAY_SAMPLE_W];
+    unsigned ink[2][2] = { { 0 } };
+    for (int compact = 0; compact < 2; compact++) {
+        oracles_display_text_sample(NULL, compact, 128u, out);
+        for (unsigned row = 0; row < ORACLES_DISPLAY_SAMPLE_H; row++)
+            for (unsigned col = 0; col < ORACLES_DISPLAY_SAMPLE_W; col++) {
+                CHECK(!out[row][col] || col < 128u);
+                ink[compact][row / 16u] += out[row][col];
+            }
+    }
+    CHECK(ink[0][0] && ink[0][1] && ink[1][0] + ink[1][1] > ink[0][0] + ink[0][1]);
+    /* A font whose every character is a full cell: Classic's first letter, L, fills its cell's 16 rows. */
+    static OraclesHomeFont font;
+    memset(&font, 0, sizeof font);
+    font.read = 1;
+    for (int c = 0; c < ORACLES_HOME_FONT_CHARACTERS; c++) {
+        memset(font.rows[c], c == 0 ? 0 : 0xff, 16);
+        font.width[c] = c == 0 ? 0 : 8;
+        font.advance[c] = c == 0 ? 5 : 8;
+    }
+    oracles_display_text_sample(&font, 0, 128u, out);
+    unsigned first = 0;
+    for (unsigned row = 0; row < 16u; row++) for (unsigned col = 0; col < 8u; col++) first += out[row][col];
+    CHECK(first == 128u);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc < 2 || !layout_reference_load(argv[1])) { fprintf(stderr, "usage: oracles-test-launcher-text-page launcher_layout_reference.json\n"); return 2; }
+    if (!oracles_ui_fonts_load()) { fprintf(stderr, "FAIL the embedded fonts do not load\n"); return 1; }
+    layouts();
+    link();
+    keys();
+    preview_sizes();
+    sample();
+    if (layout_failures()) {
+        fprintf(stderr, "%d failures\n", layout_failures());
+        return 1;
+    }
+    printf("launcher text page: ok\n");
+    return 0;
+}

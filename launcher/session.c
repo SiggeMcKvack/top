@@ -331,7 +331,7 @@ static int pause_settings_changed(void *opaque)
     OraclesSessionApplied applied = { s->colour_setting, s->sdl.fill, s->view ? oracles_enhanced_view_hud(s->view) : -1, s->sdl.screen_margin,
                                       s->view && oracles_compat_host_text_box(s->profile) ? (int)oracles_enhanced_view_text_size(s->view) : -1,
                                       s->swim_setting, s->hotkeys_game, s->hotkeys_setting };
-    const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, &applied);
+    const unsigned changed = oracles_session_settings_changed(s->settings, s->screen_margin_option, s->text_size_option, &applied);
     if (changed & ORACLES_SESSION_CHANGED_COLOUR) {
         s->colour_applied = s->colour_setting = applied.colour;
         oracles_core_set_colour_correction(s->core, s->colour_applied);
@@ -1061,6 +1061,7 @@ int oracles_session_run(const OraclesSessionOptions *o, oracles_settings *settin
     s->settings = settings;
     s->pause = o->pause;
     s->screen_margin_option = o->screen_margin;
+    s->text_size_option = o->text_size;
     /* --colour-correction and --vsync hold for this session and are never stored, as camera_profile. */
     s->colour_setting = settings->colour_correction;
     s->colour_applied = o->colour_option ? !strcmp(o->colour_option, "on") : settings->colour_correction;

@@ -620,6 +620,21 @@ static void enlarged_box(SDL_Window *window, SDL_Renderer *renderer)
                 }
         CHECK(same);
         CHECK(pixel_at(renderer, 139, 150) == pixels[30u * 160u + 27u] && pixel_at(renderer, 460, 150) == pixels[30u * 160u + 92u]);   /* beside it, the frame */
+        /* With the sub-pixel camera's band moved half a pixel left, the box shown unmoved (a fixed rectangle of the view)
+         * comes above the band at the frame's whole place, block for block as without the move. */
+        const oracles_host_video_subpixel half = { 128, 0, 0, 144, NULL, 0, 0, 0, 0, 0, 0, 0, NULL, 1, { { 40, 20, 40, 16 } } };
+        image.subpixel = &half;
+        CHECK(backend.present_frame(backend.opaque, &image));
+        same = 1;
+        for (unsigned j = 0; j < 16u; j++)
+            for (unsigned i = 0; i < 40u; i++)
+                for (unsigned corner = 0; corner < 2u; corner++) {
+                    const int x = 140 + 8 * (int)i + (corner ? 7 : 0), y = 100 + 8 * (int)j + (corner ? 7 : 0);
+                    same &= pixel_at(renderer, x, y) == pixels[(20u + j) * 160u + 40u + i];
+                }
+        CHECK(same);
+        CHECK(pixel_at(renderer, 139, 150) != pixels[30u * 160u + 27u]);   /* beside it, the band moved */
+        image.subpixel = NULL;
         /* At the bottom: its bottom edge at the frame's, 580, its top at 452. */
         image.box_y = 100;
         image.box_bottom = 1;

@@ -216,6 +216,12 @@ if(BUILD_TESTING)
     oracles_set_warnings(oracles-test-launcher-page)
     add_test(NAME oracles-launcher-page COMMAND oracles-test-launcher-page ${ORACLES_LAYOUT_REFERENCE})
 
+    add_executable(oracles-test-launcher-text-page test_launcher_text_page.c layout_reference.c)
+    target_include_directories(oracles-test-launcher-text-page PRIVATE ${ORACLES_ENHANCED_DIR})
+    target_link_libraries(oracles-test-launcher-text-page PRIVATE oracles_ui)
+    oracles_set_warnings(oracles-test-launcher-text-page)
+    add_test(NAME oracles-launcher-text-page COMMAND oracles-test-launcher-text-page ${ORACLES_LAYOUT_REFERENCE})
+
     add_executable(oracles-test-launcher-mods test_launcher_mods.c layout_reference.c)
     target_link_libraries(oracles-test-launcher-mods PRIVATE oracles_ui)
     oracles_set_warnings(oracles-test-launcher-mods)

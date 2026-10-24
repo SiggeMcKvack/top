@@ -116,8 +116,9 @@ typedef struct OraclesSessionApplied {
 #define ORACLES_SESSION_CHANGED_TEXT_SIZE 64u
 /* The settings after the pause's Display changed them, set against what the game shows: `applied` takes them, and the
  * ORACLES_SESSION_CHANGED_* bits say which changed.  The margin is --screen-margin's for the run when `margin_option`
- * gives one (oracles_session_screen_margin), whatever the settings say. */
-unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, OraclesSessionApplied *applied);
+ * gives one (oracles_session_screen_margin), and the text size --text-size's when `text_size_option` gives one (the
+ * size plus one), whatever the settings say. */
+unsigned oracles_session_settings_changed(const oracles_settings *settings, int margin_option, int text_size_option, OraclesSessionApplied *applied);
 /* The window a game has, as window_scale= counts it, F11's toggle included: -1 where `setting` (the window Display chose
  * for it) is; 0 fullscreen; else the setting when the window is the `setting_scale` it opens at (lowered to what the
  * display holds), else the scale of 2 to 4 the window's `width` x `height` pixels are exactly, else -2: none. */

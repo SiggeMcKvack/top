@@ -444,7 +444,7 @@ static void check_composed(const char *name, OraclesGame game, const OraclesLang
  * texts laid out again dropped, those of the words joined at a line's end. */
 typedef struct expected_layout { unsigned laid_out, kept, failed, boxes, boxes_laid_out, joined; } expected_layout;
 static const expected_layout layouts_expected[2][ORACLES_LANGUAGE_COUNT] = {
-    { { 1638, 18, 0, 7911, 6318, 18 }, { 1643, 18, 0, 7922, 6326, 18 }, { 1756, 16, 0, 8481, 6431, 10 },
+    { { 1638, 18, 0, 7911, 6318, 20 }, { 1643, 18, 0, 7922, 6326, 20 }, { 1756, 16, 0, 8481, 6431, 10 },
       { 1764, 17, 0, 8875, 7244, 1125 }, { 1658, 17, 0, 7806, 6106, 129 }, { 1729, 18, 0, 8595, 6733, 0 } },
     { { 929, 24, 0, 4833, 4038, 3 }, { 940, 24, 0, 4853, 4053, 3 }, { 1025, 18, 0, 5391, 4212, 6 },
       { 1044, 23, 0, 5487, 4532, 700 }, { 968, 23, 0, 4946, 3985, 165 }, { 1001, 23, 0, 5241, 4269, 0 } },
@@ -488,6 +488,14 @@ static const struct { OraclesGame game; OraclesLanguage language; unsigned id; c
     { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_ENGLISH, 0x2701, "nice-sized" }, { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_ENGLISH, 0x3703, "year-round" },
     { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_FRENCH, 0x3a10, "pensent-ils" }, { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_FRENCH, 0x002b, "donneront" },
     { ORACLES_GAME_SEASONS, ORACLES_LANGUAGE_GERMAN, 0x000a, "herbeizurufen" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x0b00, "headstone" }, { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH, 0x0b01, "headstone" },
+    { ORACLES_GAME_AGES, ORACLES_LANGUAGE_ENGLISH_EU, 0x0b00, "headstone" },
+};
+
+/* The same in the fan games' English: the closed compounds the games break at a line's end, joined. */
+static const struct { OraclesRomRevision revision; unsigned id; const char *holds; } fan_hyphens_expected[] = {
+    { ORACLES_ROM_REVISION_KINOMI_1_1_2, 0x0605, "afterlife" }, { ORACLES_ROM_REVISION_KINOMI_1_1_2, 0x3431, "underwater" },
+    { ORACLES_ROM_REVISION_MOONRISE_1_0_6, 0x0b00, "headstone" }, { ORACLES_ROM_REVISION_MOONRISE_1_0_6, 0x0b01, "headstone" },
 };
 
 /* The text TX_`id` the index composed at `first` serves laid out again, its terminator included; NULL when it is not. */
@@ -650,9 +658,9 @@ typedef struct expected_fan {
 
 static const expected_fan fans[] = {
     { ORACLES_ROM_REVISION_MOONRISE_1_0_6, ORACLES_GAME_AGES, "moonrise", 2838, 2534, 33, 271, { 0, 2567, 2567, 2567, 2567, 2567 }, { 0, 271, 271, 271, 271, 271 }, 35,
-      { 1637, 18, 0, 8075, 6474, 17 } },
+      { 1637, 18, 0, 8075, 6474, 19 } },
     { ORACLES_ROM_REVISION_KINOMI_1_1_2, ORACLES_GAME_AGES, "kinomi", 2953, 2453, 4, 496, { 0, 2457, 2457, 2457, 2457, 2457 }, { 0, 496, 496, 496, 496, 496 }, 35,
-      { 1726, 24, 0, 8918, 7074, 32 } },
+      { 1726, 24, 0, 8918, 7074, 34 } },
     { ORACLES_ROM_REVISION_TEMPLE_1_073, ORACLES_GAME_SEASONS, "temple", 1906, 1521, 37, 348, { 0, 1558, 1558, 1558, 1558, 1558 }, { 0, 348, 348, 348, 348, 348 }, 35,
       { 919, 24, 0, 4927, 4120, 3 } },
 };
@@ -801,6 +809,14 @@ static void check_fan_layout(const expected_fan *e, const rom_file *fan, const O
     CHECK(size == fan->size && changed == 0 && wrap && n.flagged == report.laid_out && n.unheld == 0 && report.missing == 0);
     CHECK(report.laid_out == e->layout.laid_out && report.layout_kept == e->layout.kept && report.layout_failed == e->layout.failed);
     CHECK(report.boxes == e->layout.boxes && report.boxes_laid_out == e->layout.boxes_laid_out && n.joined == e->layout.joined);
+    for (unsigned h = 0; h < sizeof fan_hyphens_expected / sizeof fan_hyphens_expected[0]; h++) {
+        if (fan_hyphens_expected[h].revision != e->revision) continue;
+        size_t laid_length = 0;
+        const uint8_t *laid = laid_text(image, size, first, fan_hyphens_expected[h].id, &laid_length);
+        if (!laid || !holds_words(laid, laid_length, fan_hyphens_expected[h].holds))
+            fprintf(stderr, "%s en: TX_%04x laid out does not hold \"%s\"\n", e->name, fan_hyphens_expected[h].id, fan_hyphens_expected[h].holds);
+        CHECK(laid && holds_words(laid, laid_length, fan_hyphens_expected[h].holds));
+    }
     language_wrap_free(wrap);
     free(image);
     image = NULL;

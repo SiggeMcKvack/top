@@ -77,6 +77,9 @@ void oracles_ui_draw_to_scene(const OraclesUiDraw *draw, float x, float y, float
 void oracles_ui_draw_to_scene_anchored(const OraclesUiDraw *draw, float x, float y, float anchor_x, float anchor_y, float *scene_x, float *scene_y);
 
 void oracles_ui_fill_rect(OraclesUiDraw *draw, float x, float y, float w, float h, OraclesUiColor color);
+/* `count` rectangles (x, y, w, h each, in the scene's units) of one colour, plain, without the feathered edge of the
+ * shapes above: drawn in a few calls, for many small ones. */
+void oracles_ui_fill_rects(OraclesUiDraw *draw, const float *rects, int count, OraclesUiColor color);
 void oracles_ui_fill_round_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, OraclesUiColor color);
 /* A border of `border` scene pixels inside the box, as CSS draws one. */
 void oracles_ui_stroke_round_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, float border, OraclesUiColor color);

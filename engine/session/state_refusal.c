@@ -55,7 +55,8 @@ static void compact_layout(const char *mods, char out[41])
     }
 }
 
-int oracles_state_text_refusal(const char *taken_mods, const char *mods, char *message, size_t message_capacity, char *detail, size_t detail_capacity)
+int oracles_state_text_refusal(const char *taken_mods, const char *mods, int enhanced, int compact_chosen, char *message, size_t message_capacity,
+                               char *detail, size_t detail_capacity)
 {
     if (message_capacity) message[0] = 0;
     if (detail_capacity) detail[0] = 0;
@@ -69,8 +70,19 @@ int oracles_state_text_refusal(const char *taken_mods, const char *mods, char *m
                  "now text-compact@%s): it loads only with that version", taken, now);
         return 1;
     }
+    /* A running game keeps its text and its profile: they change from the home screen. */
+    if (taken[0] && !enhanced) {
+        /* The compact text plays in Enhanced alone: in Faithful the profile is what to change, the text too if it is not
+         * chosen. */
+        snprintf(message, message_capacity, "Refused: taken in Enhanced with the Compact text: choose %s from the home screen",
+                 compact_chosen ? "Enhanced in Display's Profile" : "Enhanced and Compact in Display");
+        snprintf(detail, detail_capacity, "the savestate was taken in Enhanced with the compact text, and this session is Faithful, which plays the "
+                 "classic text: it loads only in Enhanced with the compact text (the Enhanced profile%s in the launcher's Display, or --enhanced "
+                 "--text compact)", compact_chosen ? "" : " and Compact in its Text");
+        return 1;
+    }
     const char *text = taken[0] ? "Compact" : "Classic", *option = taken[0] ? "compact" : "classic";
-    snprintf(message, message_capacity, "Refused: taken with the %s text: choose %s in Display's Text", text, text);
+    snprintf(message, message_capacity, "Refused: taken with the %s text: choose %s in Display's Text from the home screen", text, text);
     snprintf(detail, detail_capacity, "the savestate was taken with the %s text and this session plays the %s text: it loads only with the %s text "
              "(%s in the launcher's Display's Text, text=%s in its settings, or --text %s)", option, taken[0] ? "classic" : "compact", option, text, option, option);
     return 1;

@@ -17,8 +17,9 @@ void oracles_home_inspect_controls(const oracles_settings *settings, OraclesHome
  * the standard error says which.  Controls then never gives the menu a button another cell has, nor that cell its. */
 void oracles_home_resolve_menu_pad(oracles_settings *settings);
 /* Display's choices written back into the settings (`in_game`: from the pause, whose core and workers are the running
- * game's and never stored); a margin --screen-margin gave (display->margin_fixed) and a text --text gave
- * (display->text_fixed) are never stored either, nor from the pause a window not chosen (display->window_chosen). */
+ * game's and never stored); a margin --screen-margin gave (display->margin_fixed), and a text, a text box or a text size
+ * --text, --text-box or --text-size gave (display->text_fixed, text_box_fixed, text_size_fixed) are never stored either,
+ * nor from the pause a window not chosen (display->window_chosen). */
 void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, oracles_settings *prefs);
 void oracles_home_store_controls(const OraclesHomeControls *c, oracles_settings *settings);
 unsigned oracles_home_fitting_scale(struct SDL_Window *window, unsigned wanted, OraclesEnhancedSize surface);

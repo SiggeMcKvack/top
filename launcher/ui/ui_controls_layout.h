@@ -59,9 +59,9 @@ typedef struct OraclesUiControlsLayout {
     OraclesUiLine mode_fan;
     char mode_fan_text[ORACLES_HOME_TEXT_LENGTH];
     /* Swimming: its box (its highlight, the pointer's target), its title and Tap and Hold on one line, its explanation
-     * broken into lines under them, in 4:3 a fan game's line that it does not apply there, and from a fan game's pause
-     * the line that it waits for the next Play, from an unrecognised ROM's why it is dimmed (zero when not shown, its
-     * text NULL).  Zero in 4:3's Buttons and Hotkeys. */
+     * broken into lines under them, in 4:3 a fan game's line that it does not apply there, or from a fan game's pause
+     * or an unrecognised ROM's the line that says why it is dimmed (zero when not shown, its text NULL).  Zero in 4:3's
+     * Buttons and Hotkeys. */
     OraclesUiBox swim;
     OraclesUiLine swim_title, swim_fan, swim_later;
     const char *swim_later_text;
@@ -95,7 +95,7 @@ typedef struct OraclesUiControlsStyles {
 const OraclesUiControlsStyles *oracles_ui_controls_styles(OraclesUiLayout layout);
 
 /* The screen for `nav` in `layout` (its cells' texts, the prompt, the game shown's items; from a fan game's pause, the
- * lines that say the Item hotkeys and Swimming wait for the next Play; in 4:3, nav's tab). */
+ * lines that say why the Item hotkeys and Swimming are dimmed; in 4:3, nav's tab). */
 void oracles_ui_layout_controls(OraclesUiLayout layout, const OraclesHomeNav *nav, OraclesUiControlsLayout *out);
 /* The text of an item's cell: the item's name, or "Empty". */
 const char *oracles_ui_controls_item_text(const OraclesHomeNav *nav, int slot);

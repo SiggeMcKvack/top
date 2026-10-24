@@ -54,6 +54,8 @@ typedef struct OraclesHomeGames {
      * Oracle's ROM (kept with that ROM, and forgotten with the patch). */
     OraclesHomeFound rom_found[ORACLES_SETTINGS_GAMES], eu_found[ORACLES_SETTINGS_GAMES];
     OraclesHomeFound patch_found[ORACLES_HOME_FAN_GAMES], image_found[ORACLES_HOME_FAN_GAMES];
+    /* Each Oracle's text box font, read with its original ROM (rom_found), for Display › Text's preview. */
+    OraclesHomeFont rom_font[ORACLES_SETTINGS_GAMES];
 } OraclesHomeGames;
 
 /* The host of the home screen for these games. */

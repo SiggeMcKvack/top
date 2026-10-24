@@ -457,6 +457,30 @@ void oracles_ui_fill_rect(OraclesUiDraw *draw, float x, float y, float w, float 
     oracles_ui_fill_round_rect(draw, x, y, w, h, 0.0f, color);
 }
 
+#define RECTS_A_CALL 128
+
+void oracles_ui_fill_rects(OraclesUiDraw *draw, const float *rects, int count, OraclesUiColor color)
+{
+    if (color.a == 0) return;
+    SDL_Vertex vertices[4 * RECTS_A_CALL];
+    int indices[6 * RECTS_A_CALL];
+    const float s = draw->scale;
+    for (int first = 0; first < count; first += RECTS_A_CALL) {
+        const int n = count - first < RECTS_A_CALL ? count - first : RECTS_A_CALL;
+        for (int i = 0; i < n; i++) {
+            const float *r = rects + 4 * (first + i);
+            const float x0 = draw->origin_x + r[0] * s, y0 = draw->origin_y + r[1] * s, x1 = x0 + r[2] * s, y1 = y0 + r[3] * s;
+            vertices[4 * i] = vertex(x0, y0, color);
+            vertices[4 * i + 1] = vertex(x1, y0, color);
+            vertices[4 * i + 2] = vertex(x1, y1, color);
+            vertices[4 * i + 3] = vertex(x0, y1, color);
+            const int quad[6] = { 4 * i, 4 * i + 1, 4 * i + 2, 4 * i, 4 * i + 2, 4 * i + 3 };
+            memcpy(indices + 6 * i, quad, sizeof quad);
+        }
+        SDL_RenderGeometry(draw->renderer, NULL, vertices, 4 * n, indices, 6 * n);
+    }
+}
+
 void oracles_ui_stroke_round_rect(OraclesUiDraw *draw, float x, float y, float w, float h, float radius, float border, OraclesUiColor color)
 {
     if (color.a == 0) return;

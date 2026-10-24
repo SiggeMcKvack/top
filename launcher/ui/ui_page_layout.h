@@ -13,6 +13,7 @@
 
 #include "ui_home_layout.h"
 #include "ui_page_nav.h"
+#include "ui_page_text.h"
 
 /* An option in a frame: a profile or a window (a name and its size), or a choice of a row (a name). */
 typedef struct OraclesUiOptionLayout {
@@ -115,12 +116,8 @@ const OraclesUiPageStyles *oracles_ui_page_styles(OraclesUiLayout layout);
 /* The transitions', the core's and the scaling's notes on Display; under 16:9's windows, when no line says their size is
  * reduced. */
 extern const char oracles_ui_transitions_note[], oracles_ui_core_note[], oracles_ui_scaling_note[], oracles_ui_window_fit_note[];
-/* Under Display's title, opened from a game: what waits for the next session, and that the rest applies at once. */
+/* Under Display's title, opened from a game: that the dimmed rows change from the home screen, the rest at once. */
 extern const char oracles_ui_display_later[];
-/* Under Swimming and the Item hotkeys opened from a fan game, which has neither: they wait for the next session. */
-extern const char oracles_ui_later[];
-/* Under Text's explanation opened from a game (16:9), on the help's note line (4:3): a game keeps its texts' layout. */
-extern const char oracles_ui_text_later[];
 extern const char *const oracles_ui_transition_choices[2];
 
 /* The head of a page in `layout`, under the section's name ("Cartridge", "Display"); NULL `state`: none. */
@@ -131,23 +128,31 @@ void oracles_ui_layout_game(OraclesUiLayout layout, OraclesUiGameTexts *texts, O
 
 /* The texts of Display. */
 typedef struct OraclesUiDisplayTexts {
-    const char *section;                  /* "Display", or "Display › Advanced" */
+    const char *section;                  /* "Display", "Display › Advanced" or "Display › Text" */
     int advanced;                         /* the Advanced rows in place of Display's own, and no Advanced under the diagram */
+    int text_page;                        /* the Text rows in place of Display's own, the preview in the diagram's place */
     const char *over, *title;           /* no state line: the profile is Display's first row */
     char window_names[4][32], window_sizes[4][48];
     const char *window_note;
     char window_reduced[ORACLES_HOME_TEXT_LENGTH];   /* empty when the window fits the screen */
     const char *window_fit;               /* 16:9's line under the windows: window_reduced, or oracles_ui_window_fit_note */
     int window_size_length[4];            /* the characters each window's size line keeps room for */
-    const char *profile_note;
+    const char *profile_note;             /* from a game, oracles_display_pause_reason, as the other notes below it names */
     char quality_sets[ORACLES_DISPLAY_QUALITIES + 1][32];   /* "Far · Fast", ..., "By hand" */
     char quality_text[ORACLES_HOME_TEXT_LENGTH];             /* the quality in effect, said in full */
     const char *quality_note;
-    int later;                            /* opened from a game: the note under the title says what the next Play takes */
+    int later;                            /* opened from a game: the note under the title says the dimmed rows change from the home
+                                           * screen */
     const char *explanations[9];          /* color correction, continuous transitions, vsync, core, the workers, the scaling, the HUD,
-                                           * the screen margin, the text */
-    int text_row;                         /* the Text row shows: an Oracle's page */
+                                           * the screen margin, the Text link */
+    char text_summary[64];                /* beside the Text link: "Compact · Wide · Normal" */
+    /* Display › Text: each row's explanation and note (empty: none), Text, Text box, Text size; the preview. */
+    const char *text_explanations[3], *text_notes[3];
+    OraclesDisplayTextPreview preview;
     const char *view_explanation;
+    /* Under View's explanation, Core's, the transitions', Vsync's and the workers': their notes, from a game why they are
+     * dimmed (NULL: none). */
+    const char *view_note, *core_note, *transitions_note, *vsync_note, *workers_note;
     char workers_names[3][16];            /* "Auto · 2", "1", "2" */
     char scaling_sizes[2][24];            /* the image's size in fullscreen with Sharp, with Fill */
     char profile_sizes[ORACLES_PROFILES][24], view_sizes[3][24];   /* the sizes of the screen's shape, Enhanced's at the view chosen */
@@ -171,7 +176,7 @@ typedef struct OraclesUiDisplayLayout {
     OraclesUiLine diagram_label;
     OraclesUiBox panel;
     /* Profile, Quality, Window, View, HUD, Text, Color correction, or Core, Continuous transitions, Vsync, Neighbour workers,
-     * Scaling, Screen margin; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
+     * Scaling, Screen margin, or Text, Text box, Text size; zero for the rows not shown.  Advanced is its own highlight, its label and arrow in it: under the diagram in 16:9, a
      * framed button beside it in 4:3. */
     OraclesUiWrapped labels[ORACLES_DISPLAY_ROWS];
     OraclesUiBox rows[ORACLES_DISPLAY_ROWS];         /* each row's highlight, the pointer's target */
@@ -187,15 +192,28 @@ typedef struct OraclesUiDisplayLayout {
     /* 16:9: under the diagram's line, Window's note and the line on its size, two lines kept for the latter. */
     OraclesUiWrapped window_note, window_reduced;
     OraclesUiLine window_one;                        /* 4:3: in the windows' place, that they come to one size; else zero */
-    OraclesUiLine transitions_note, core_note, scaling_note;
-    OraclesUiLine text_note;                         /* 16:9, from a game: under Text's explanation, else zero */
+    OraclesUiLine transitions_note, core_note, scaling_note, vsync_note, workers_note, view_note;
     OraclesUiWrapped page_note;                      /* under the title, none unless `later`: two lines in 16:9's column, one in 4:3 */
     OraclesUiOptionLayout views[3];
     OraclesUiWrapped view_explanation;
     OraclesUiOptionLayout transitions[2];
     OraclesUiWrapped explanations[9];
     OraclesUiOptionLayout colour[2], vsync[3], core[2], workers[3], scaling[2];   /* each scaling with its size */
-    OraclesUiOptionLayout hud[2], text[2];
+    OraclesUiOptionLayout hud[2];
+    /* The Text link: its summary and its arrow at the right of its row, both in `text_link`, the summary's box. */
+    OraclesUiLine text_summary;
+    OraclesUiBox text_arrow, text_link;
+    /* Display › Text: Text's, Text box's and Text size's choices, their explanations (16:9, two lines kept) and notes
+     * (16:9, under them; 4:3 says them on the help's note line). */
+    OraclesUiOptionLayout text[2], text_box[2], text_size[ORACLES_DISPLAY_TEXT_SIZES];
+    OraclesUiWrapped text_explanations[3];
+    OraclesUiLine text_notes[3];
+    /* Its preview: all of it (16:9: the frame, its label and its note under it; 4:3: the frame, its label and note at its
+     * right, at its bottom), the band's frame, the status bar's band in it, the box and its arrow (a triangle pointing
+     * down in this box), the box's text from (text_x, text_y) at `pixel` scene pixels a game pixel. */
+    OraclesUiBox preview, preview_frame, preview_hud, preview_box, preview_arrow;
+    float text_x, text_y, pixel;
+    OraclesUiLine preview_label, preview_note;
     OraclesUiOptionLayout margin[ORACLES_DISPLAY_MARGINS];   /* 16:9: above its explanation, from the row's left */
     OraclesUiLine help, help_note;                   /* 4:3: in the header, the highlighted row's explanation and its note */
 } OraclesUiDisplayLayout;
@@ -208,6 +226,26 @@ typedef struct OraclesUiDisplayLayout {
 extern const OraclesUiTextStyle oracles_ui_diagram_label;
 
 void oracles_ui_layout_display(OraclesUiLayout layout, const OraclesUiDisplayTexts *texts, OraclesUiDisplayLayout *out);
+
+/* Display's rows the Text page shares (ui_page_text_layout.c).  16:9: a row of choices, its explanation wrapped beside
+ * them, `explanation_h` tall at least, its notes under it, centred on the row; returns the row's height.  4:3: a row,
+ * its label wrapped in its column and `content_h` of values, both centred in it, 100 tall at least, returning the values'
+ * top; a row of options framed, returning its bottom. */
+float oracles_ui_display_row(float x, float y, float w, const char *label, float label_x, const char *explanation, float explanation_h,
+                             const char *const *notes, int note_count, const char *const *names, const char *const *sizes, unsigned count,
+                             OraclesUiWrapped *label_out, OraclesUiWrapped *explanation_out, OraclesUiLine *const *notes_out,
+                             OraclesUiOptionLayout *options, OraclesUiBox *row);
+float oracles_ui_display_row_4_3(float y, const char *label, float content_h, OraclesUiWrapped *label_out, OraclesUiBox *row);
+float oracles_ui_display_options_row_4_3(float y, unsigned row, const char *const *names, const char *const *sizes, const int *size_lengths,
+                                         unsigned count, OraclesUiOptionLayout *options, OraclesUiDisplayLayout *out);
+/* The Text link among Display's rows, from `y`: 16:9 in the panel's values from `x`, `w` wide, its label at `label_x`;
+ * 4:3 in the rows' column.  Returns the row's height (16:9) or its bottom (4:3). */
+float oracles_ui_text_link_16_9(const OraclesUiDisplayTexts *t, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
+float oracles_ui_text_link_4_3(const OraclesUiDisplayTexts *t, float y, OraclesUiDisplayLayout *out);
+/* Display › Text: 16:9 its preview in the left column from `preview_y`, its rows in the panel's values from (x, y), `w`
+ * wide, their labels at `label_x`, returning the rows' bottom; 4:3 its preview from the rows' top, its rows under it. */
+float oracles_ui_text_page_16_9(const OraclesUiDisplayTexts *t, float preview_y, float x, float y, float w, float label_x, OraclesUiDisplayLayout *out);
+void oracles_ui_text_page_4_3(const OraclesUiDisplayTexts *t, OraclesUiDisplayLayout *out);
 
 /* Mods: the folder's row, each mod's row (its switch and its knob, its name, its games, its line and that line's dot),
  * the count and the note under the list, Play.  The texts are the layout's, fitted to their room.  Six mods show at

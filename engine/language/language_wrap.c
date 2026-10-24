@@ -8,7 +8,8 @@
  * ("Vergan-" / "genheit") is joined again, the hyphen dropped, its break kept as a place a line may end at, hyphen
  * shown, in German and Italian, which break their words so; in English, French and Spanish, whose hyphens at a line's
  * end are their compounds' ("lava-" / "like", "grand-" / "chose"), only a word the language writes whole elsewhere
- * ("some-" / "thing"), or neither of whose parts it writes alone ("appara-" / "tront").  A hyphen before a capital, or one the language writes inside a line in the same word
+ * ("some-" / "thing"), or neither of whose parts it writes alone ("appara-" / "tront"), or one of the few closed compounds
+ * of English the games break so ("after-" / "life").  A hyphen before a capital, or one the language writes inside a line in the same word
  * (language_wrap_learn), is a word's own, kept.  A line is measured as the transaction draws it: a name (\Link, \Child) as five of the widest
  * letters a name may hold, a number (\num1, \num2) as three of the widest digits, a symbol on its whole tile, the colours
  * as \col sets them, from either attribute a box opens with ($80 or $81, TEXTBOXFLAG_ALTPALETTE1), a tile holding one.
@@ -77,6 +78,13 @@ static int is_letter(uint8_t c) { return is_small(c) || is_capital(c); }
 /* A control code's bytes: one for the break and the end, two from the dictionary's on. */
 static size_t code_bytes(uint8_t c) { return c >= ORACLES_TEXT_FIRST_CHARACTER || c <= CODE_NEWLINE ? 1u : 2u; }
 
+/* English compounds the games write closed but break at a line's end with a hyphen, both of whose parts they write
+ * alone and none of whose texts writes them whole (Kinomi's "after-life", "under-water", Ages' and Moonrise's
+ * "head-stone"): written whole, so that the layout joins them. */
+static const char *const closed_compounds[] = { "afterlife", "headstone", "underwater" };
+
+static void write_whole(language_wrap *wrap, const uint8_t *text, size_t length);
+
 language_wrap *language_wrap_new(const OraclesTextFont *font, unsigned width, OraclesLanguage language)
 {
     if (!width || width > ORACLES_TEXT_LINE_TILES * ORACLES_TEXT_CELL_WIDTH) return NULL;
@@ -92,6 +100,9 @@ language_wrap *language_wrap_new(const OraclesTextFont *font, unsigned width, Or
             wrap->name_letter = (uint8_t)c;
     for (unsigned c = '1'; c <= '9'; c++)
         if (font->advance[c] > font->advance[wrap->digit]) wrap->digit = (uint8_t)c;
+    if (language == ORACLES_LANGUAGE_ENGLISH || language == ORACLES_LANGUAGE_ENGLISH_EU)
+        for (size_t i = 0; i < sizeof closed_compounds / sizeof closed_compounds[0]; i++)
+            write_whole(wrap, (const uint8_t *)closed_compounds[i], strlen(closed_compounds[i]));
     return wrap;
 }
 

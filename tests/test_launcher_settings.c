@@ -80,7 +80,8 @@ static void menu_pad_resolved(void)
 }
 
 /* Display's choices written back: from the pause, the running game's core and workers are not; a margin
- * --screen-margin gave for the run never is, nor a text --text gave, whatever the row holds. */
+ * --screen-margin gave for the run never is, nor a text, a text box or a text size --text, --text-box or --text-size
+ * gave, whatever the row holds. */
 static void display_stored(void)
 {
     oracles_settings s;
@@ -111,6 +112,18 @@ static void display_stored(void)
     s.compact_text = 0;
     oracles_home_inspect_display(&s, &display, NULL);
     CHECK(display.text == 0);
+    /* Display › Text's box and size the same: stored, Very large as xlarge, never --text-box's nor --text-size's. */
+    CHECK(display.text_box == 0 && display.text_size == 0 && !display.text_box_fixed && !display.text_size_fixed);
+    display.text_box = 1;
+    display.text_size = 2;
+    display.text_box_fixed = display.text_size_fixed = 1;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.text_box_wide == 0 && s.text_size == 0);
+    display.text_box_fixed = display.text_size_fixed = 0;
+    oracles_home_store_display(&display, 0, &s);
+    CHECK(s.text_box_wide == 1 && s.text_size == 2);
+    oracles_home_inspect_display(&s, &display, NULL);
+    CHECK(display.text_box == 1 && display.text_size == 2);
 }
 
 /* What the pause's Display changed applies to the running game at once: the HUD where the Enhanced view draws it, the
@@ -120,22 +133,30 @@ static void pause_changes(void)
     oracles_settings s;
     oracles_settings_defaults(&s);
     OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, -1, -1, 0 };
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.hud_full = !s.hud_full;
     s.screen_margin = ORACLES_SCREEN_MARGIN_SMALL;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == (ORACLES_SESSION_CHANGED_HUD | ORACLES_SESSION_CHANGED_MARGIN));
     CHECK(applied.hud == s.hud_full && applied.margin == ORACLES_SCREEN_MARGIN_SMALL);
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     /* --screen-margin large for the run: the settings' margin changes nothing, the option's is applied once. */
     s.screen_margin = ORACLES_SCREEN_MARGIN_AUTO;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_MARGIN && applied.margin == ORACLES_SCREEN_MARGIN_LARGE);
     s.screen_margin = ORACLES_SCREEN_MARGIN_OFF;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == 0);
     /* Text size, at once. */
     s.text_size = 1;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 1);
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 1);
     s.text_size = 2;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 2);
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == ORACLES_SESSION_CHANGED_TEXT_SIZE && applied.text_size == 2);
+    /* --text-size xlarge for the run: the settings' Normal and another row's change leave it, the game keeps Very large. */
+    s.text_size = 0;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == 0 && applied.text_size == 2);
+    s.colour_correction = !s.colour_correction;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == ORACLES_SESSION_CHANGED_COLOUR && applied.text_size == 2);
+    s.colour_correction = !s.colour_correction;
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 3, &applied) == ORACLES_SESSION_CHANGED_COLOUR);
+    s.text_size = 2;
     /* Without the Enhanced view (Faithful) there is no HUD to change, nor a text size. */
     applied.hud = -1;
     applied.text_size = -1;
@@ -143,7 +164,7 @@ static void pause_changes(void)
     s.hud_full = !s.hud_full;
     s.colour_correction = !s.colour_correction;
     s.scaling_fill = !s.scaling_fill;
-    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
+    CHECK(oracles_session_settings_changed(&s, ORACLES_SCREEN_MARGIN_LARGE + 1, 0, &applied) == (ORACLES_SESSION_CHANGED_COLOUR | ORACLES_SESSION_CHANGED_FILL));
     CHECK(applied.hud == -1 && applied.colour == s.colour_correction && applied.fill == s.scaling_fill);
 }
 
@@ -171,23 +192,23 @@ static void pause_live_changes(void)
     oracles_settings_defaults(&s);
     OraclesSessionApplied applied = { s.colour_correction, s.scaling_fill, s.hud_full, s.screen_margin, s.text_size, s.swim_hold, ORACLES_SETTINGS_SEASONS,
                                       (int)s.item_hotkeys[ORACLES_SETTINGS_SEASONS] };
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.swim_hold = !s.swim_hold;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_SWIM && applied.swim_hold == s.swim_hold);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.item_hotkeys[ORACLES_SETTINGS_AGES] = ORACLES_HOTKEYS_USE;   /* the other Oracle's: nothing */
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0);
     s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_USE);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_USE);
     s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_OFF;
     s.window_scale = 3;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_OFF);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == ORACLES_SESSION_CHANGED_HOTKEYS && applied.hotkeys == ORACLES_HOTKEYS_OFF);
     /* A game whose profile has neither the hold nor the item hotkeys (a fan game), without a window to change: nothing. */
     applied.swim_hold = applied.hotkeys_game = -1;
     s.swim_hold = !s.swim_hold;
     s.item_hotkeys[ORACLES_SETTINGS_SEASONS] = ORACLES_HOTKEYS_USE;
     s.window_scale = 2;
-    CHECK(oracles_session_settings_changed(&s, 0, &applied) == 0 && applied.swim_hold == -1 && applied.hotkeys_game == -1);
+    CHECK(oracles_session_settings_changed(&s, 0, 0, &applied) == 0 && applied.swim_hold == -1 && applied.hotkeys_game == -1);
     /* The window the game takes for Display's choice, as Play opens it: a scale, fullscreen for 0; without a display to
      * measure, the scale asked for. */
     int fullscreen = -1;

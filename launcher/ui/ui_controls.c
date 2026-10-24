@@ -2,6 +2,7 @@
 
 #include "ui_controls_layout.h"
 #include "ui_page_layout.h"
+#include "ui_page_nav.h"
 
 #include <math.h>
 #include <string.h>
@@ -129,29 +130,36 @@ static void choice_line(OraclesUiDraw *draw, const OraclesUiBox *b, const Oracle
     }
 }
 
-/* From the pause of an Oracle whose ROM has no item hotkeys, no swim's hold, their lines are dimmed, saying why. */
+/* From a fan game's pause, Swimming and the Item hotkeys, which it has not, are dimmed; from the pause of an Oracle whose
+ * ROM has no item hotkeys, no swim's hold, their lines too, saying why. */
+static float fan_locked(const OraclesHomeNav *nav)
+{
+    return nav->in_game && oracles_home_fan_game(oracles_home_game(nav)) ? ROW_NOT_APPLIED : 1.0f;
+}
+
 static void mode_line(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
                       OraclesUiColor accent)
 {
-    const float opacity = nav->hotkeys_refused ? ROW_NOT_APPLIED : 1.0f;
+    const float opacity = nav->hotkeys_refused ? ROW_NOT_APPLIED : fan_locked(nav);
     choice_line(draw, &l->mode, &l->mode_title, "Item hotkeys", l->mode_choices, oracles_ui_controls_mode_choices, oracles_controls_hotkeys_on(nav),
                 nav->controls.row == ORACLES_CONTROLS_ROW_MODE, st, lk, accent, opacity);
     text(draw, st->mode_text, &l->mode_text, oracles_ui_controls_mode_text, oracles_ui_rgba(TEXT, opacity));
     text(draw, st->note, &l->mode_note, oracles_ui_controls_mode_note, oracles_ui_rgba(NOTE, opacity));
     if (l->mode_fan.h > 0.0f) text(draw, st->mode_text, &l->mode_fan, l->mode_fan_text, oracles_ui_rgb(WARN));
-    if (l->mode_later.h > 0.0f) text(draw, st->note, &l->mode_later, l->mode_later_text, oracles_ui_rgb(NOTE));
+    if (l->mode_later.h > 0.0f) text(draw, st->note, &l->mode_later, l->mode_later_text, oracles_ui_rgba(NOTE, opacity));
 }
 
-/* Swimming: its line, its explanation, a fan game's line and the next Play's, or why it is dimmed. */
+/* Swimming: its line, its explanation, and a fan game's line, or from its pause or an unrecognised ROM's why it is
+ * dimmed. */
 static void swim(OraclesUiDraw *draw, const OraclesHomeNav *nav, const OraclesUiControlsLayout *l, const OraclesUiControlsStyles *st, const look *lk,
                  OraclesUiColor accent)
 {
-    const float opacity = nav->swim_refused ? ROW_NOT_APPLIED : 1.0f;
+    const float opacity = nav->swim_refused ? ROW_NOT_APPLIED : fan_locked(nav);
     choice_line(draw, &l->swim, &l->swim_title, "Swimming", l->swim_choices, oracles_ui_controls_swim_choices, nav->controls.swim_hold != 0,
                 nav->controls.row == ORACLES_CONTROLS_ROW_SWIM, st, lk, accent, opacity);
     for (unsigned i = 0; i < l->swim_text.count; i++) text(draw, st->mode_text, &l->swim_text.lines[i], l->swim_text.text[i], oracles_ui_rgba(TEXT, opacity));
     if (l->swim_fan.h > 0.0f) text(draw, st->mode_text, &l->swim_fan, oracles_ui_controls_swim_fan, oracles_ui_rgb(WARN));
-    if (l->swim_later.h > 0.0f) text(draw, st->note, &l->swim_later, l->swim_later_text, oracles_ui_rgb(NOTE));
+    if (l->swim_later.h > 0.0f) text(draw, st->note, &l->swim_later, l->swim_later_text, oracles_ui_rgba(NOTE, opacity));
 }
 
 /* The item hotkeys: their line, then the grid, dimmed while they are off. */

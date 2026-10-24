@@ -49,19 +49,25 @@ int main(void)
      * and where to choose it, not the digest; another layout of the compact text said as such; the same text loads. */
     char text_detail[400];
     const char *compact = "continuous-transitions,text-compact@0123456789abcdef0123456789abcdef01234567";
-    CHECK(oracles_state_text_refusal(compact, "continuous-transitions", message, sizeof message, text_detail, sizeof text_detail) == 1);
-    CHECK(!strcmp(message, "Refused: taken with the Compact text: choose Compact in Display's Text"));
+    CHECK(oracles_state_text_refusal(compact, "continuous-transitions", 1, 0, message, sizeof message, text_detail, sizeof text_detail) == 1);
+    CHECK(!strcmp(message, "Refused: taken with the Compact text: choose Compact in Display's Text from the home screen"));
     CHECK(strstr(text_detail, "--text compact") && strstr(text_detail, "text=compact") && !strstr(message, "@"));
-    CHECK(oracles_state_text_refusal("", "language-fr@ffff,text-compact@0123456789abcdef0123456789abcdef01234567", message, sizeof message,
+    CHECK(oracles_state_text_refusal("", "language-fr@ffff,text-compact@0123456789abcdef0123456789abcdef01234567", 1, 1, message, sizeof message,
                                      text_detail, sizeof text_detail) == 1);
-    CHECK(!strcmp(message, "Refused: taken with the Classic text: choose Classic in Display's Text") && strstr(text_detail, "--text classic"));
-    CHECK(oracles_state_text_refusal(compact, "text-compact@ffffffffffffffffffffffffffffffffffffffff", message, sizeof message, text_detail,
+    CHECK(!strcmp(message, "Refused: taken with the Classic text: choose Classic in Display's Text from the home screen") && strstr(text_detail, "--text classic"));
+    CHECK(oracles_state_text_refusal(compact, "text-compact@ffffffffffffffffffffffffffffffffffffffff", 1, 1, message, sizeof message, text_detail,
                                      sizeof text_detail) == 1);
     CHECK(!strcmp(message, "Refused: taken with another version of the compact text"));
-    CHECK(oracles_state_text_refusal(compact, "text-compact@0123456789abcdef0123456789abcdef01234567", message, sizeof message, text_detail,
+    CHECK(oracles_state_text_refusal(compact, "text-compact@0123456789abcdef0123456789abcdef01234567", 1, 1, message, sizeof message, text_detail,
                                      sizeof text_detail) == 0 && !message[0] && !text_detail[0]);
-    CHECK(oracles_state_text_refusal("", "continuous-transitions", message, sizeof message, text_detail, sizeof text_detail) == 0);
-    CHECK(oracles_state_text_refusal("my-text-compact@x", "", message, sizeof message, text_detail, sizeof text_detail) == 0);   /* a word of its own */
+    /* Loaded in Faithful, whose text is classic whatever Text says: the profile to choose, Text too when it is not Compact. */
+    CHECK(oracles_state_text_refusal(compact, "", 0, 1, message, sizeof message, text_detail, sizeof text_detail) == 1);
+    CHECK(!strcmp(message, "Refused: taken in Enhanced with the Compact text: choose Enhanced in Display's Profile from the home screen")
+          && strstr(text_detail, "--enhanced --text compact"));
+    CHECK(oracles_state_text_refusal(compact, "", 0, 0, message, sizeof message, text_detail, sizeof text_detail) == 1);
+    CHECK(!strcmp(message, "Refused: taken in Enhanced with the Compact text: choose Enhanced and Compact in Display from the home screen"));
+    CHECK(oracles_state_text_refusal("", "continuous-transitions", 1, 0, message, sizeof message, text_detail, sizeof text_detail) == 0);
+    CHECK(oracles_state_text_refusal("my-text-compact@x", "", 1, 0, message, sizeof message, text_detail, sizeof text_detail) == 0);   /* a word of its own */
 
     if (failures) { fprintf(stderr, "%d failure(s)\n", failures); return 1; }
     printf("state refusal: Faithful points to the profile, Enhanced to the transitions, another core to Display's Core, the other text to Display's Text\n");

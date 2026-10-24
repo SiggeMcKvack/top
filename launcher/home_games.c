@@ -29,13 +29,36 @@ void oracles_home_format_date(time_t when, char *out, size_t capacity)
     snprintf(out, capacity, "%d %s %d", local->tm_mday, months[local->tm_mon % 12], local->tm_year + 1900);
 }
 
-/* Reads and identifies a ROM. Returns 1 with *info, or 0 with the loader's reason. */
-static int identify(const char *path, OraclesRomInfo *info, char *error, size_t capacity)
+/* The text box's font of an original ROM of Ages or Seasons, its printable ASCII characters (OraclesHomeFont), where the
+ * game's tables say it starts. */
+static void read_font(const uint8_t *data, size_t size, const OraclesRomInfo *info, OraclesHomeFont *out)
+{
+    memset(out, 0, sizeof *out);
+    if (!oracles_rom_is_original(info)) return;
+    const OraclesGuestTables *tables = info->game == ORACLES_GAME_SEASONS ? &oracles_guest_tables_seasons : &oracles_guest_tables_ages;
+    const OraclesRom rom = { data, size };
+    const size_t start = oracles_rom_offset(tables->font_start.bank, tables->font_start.addr);
+    OraclesTextFont font;
+    if (oracles_text_font(&rom, start, &font) != ORACLES_OK) return;
+    for (unsigned i = 0; i < ORACLES_HOME_FONT_CHARACTERS; i++) {
+        const unsigned c = ORACLES_HOME_FONT_FIRST + i;
+        for (unsigned row = 0; row < 16u; row++) out->rows[i][row] = (uint8_t)(data[start + 16u * c + row] ^ 0xffu);
+        out->left[i] = font.left[c];
+        out->width[i] = font.width[c];
+        out->advance[i] = font.advance[c];
+    }
+    out->read = 1;
+}
+
+/* Reads and identifies a ROM, and reads its font when it is an original (`font`, NULL: not). Returns 1 with *info, or 0
+ * with the loader's reason. */
+static int identify(const char *path, OraclesRomInfo *info, OraclesHomeFont *font, char *error, size_t capacity)
 {
     size_t size = 0;
     uint8_t *rom = oracles_rom_read_file(path, &size, error, capacity);
     if (!rom) return 0;
     const int ok = oracles_rom_identify(rom, size, info, error, capacity) == 0;
+    if (ok && font) read_font(rom, size, info, font);
     free(rom);
     return ok;
 }
@@ -97,7 +120,7 @@ static OraclesRomState rom_found(OraclesHomeGames *games, OraclesSettingsGame g,
     if (!still_found(found, path, &file, &there)) {
         OraclesRomInfo info;
         OraclesRomState state = ORACLES_ROM_REFUSED;
-        if (identify(path, &info, reason, capacity)) {
+        if (identify(path, &info, &games->rom_font[g], reason, capacity)) {
             if (info.game == game_of(g)) state = oracles_rom_is_original(&info) ? ORACLES_ROM_ORIGINAL : ORACLES_ROM_UNRECOGNISED;
             /* A ROM of the other game, chosen under this one (or written so in settings.txt). */
             else snprintf(reason, capacity, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
@@ -133,6 +156,7 @@ static void inspect(OraclesHomeGames *games, OraclesSettingsGame g, OraclesHomeG
     split_path(path, state->rom_file, sizeof state->rom_file, state->rom_folder, sizeof state->rom_folder);
     state->rom = rom_found(games, g, path, state->rom_reason, sizeof state->rom_reason);
     state->usable = state->rom != ORACLES_ROM_REFUSED;
+    if (state->rom == ORACLES_ROM_ORIGINAL) state->font = games->rom_font[g];
     find_save(path, state);
 }
 
@@ -170,7 +194,7 @@ static OraclesGame european_game(const char *path)
 {
     OraclesRomInfo info;
     char error[ORACLES_HOME_TEXT_LENGTH];
-    return identify(path, &info, error, sizeof error) ? oracles_language_source_game(&info) : ORACLES_GAME_UNKNOWN;
+    return identify(path, &info, NULL, error, sizeof error) ? oracles_language_source_game(&info) : ORACLES_GAME_UNKNOWN;
 }
 
 /* An Oracle's European ROM as settings.txt names it, and its language, English unless the ROM is recognized. */
@@ -294,6 +318,14 @@ static void refresh(void *opaque, OraclesHomeNav *nav, struct SDL_Window *window
         nav->display.text = games->options->compact_text == 2;
         nav->display.text_fixed = 1;
     }
+    if (games->options && games->options->text_box_wide) {   /* --text-box's, the same */
+        nav->display.text_box = games->options->text_box_wide == 2;
+        nav->display.text_box_fixed = 1;
+    }
+    if (games->options && games->options->text_size) {   /* --text-size's, the same */
+        nav->display.text_size = games->options->text_size - 1;
+        nav->display.text_size_fixed = 1;
+    }
     nav->cheats_fixed = games->options && games->options->cheats_given;   /* --cheats', for every game it starts */
     nav->cheats_changed = 0;
     oracles_home_inspect_controls(games->settings, &nav->controls);
@@ -356,7 +388,7 @@ static int offer(OraclesHomeGames *games, OraclesSettingsGame g, const char *pat
 {
     OraclesRomInfo info;
     char error[ORACLES_HOME_TEXT_LENGTH];
-    int ok = identify(path, &info, error, sizeof error);
+    int ok = identify(path, &info, NULL, error, sizeof error);
     if (ok && info.game != game_of(g)) {
         snprintf(error, sizeof error, "the header says %s, not %s", oracles_game_name(info.game), oracles_game_name(game_of(g)));
         ok = 0;
@@ -575,7 +607,7 @@ static int drop(void *opaque, const char *path, int page_game, char *message, si
     if (page_game >= 0) { offer(games, rom_setting(page_game), path); return -1; }
     /* On the home screen it goes under the game it is, or a toast says why it is none. */
     OraclesRomInfo info;
-    if (!identify(path, &info, error, sizeof error)) {
+    if (!identify(path, &info, NULL, error, sizeof error)) {
         fprintf(stderr, "oracles: %s refused: %s\n", path, error);
         snprintf(message, capacity, "Refused: %s.", error);
         return -1;

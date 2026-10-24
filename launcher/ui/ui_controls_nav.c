@@ -294,10 +294,11 @@ static OraclesHomeCommand toggle_hotkeys(OraclesHomeNav *nav, int on)
     return ORACLES_HOME_STORE;
 }
 
-/* Swimming: Tap (0) or Hold (1), for every game; not from the pause of an Oracle whose profile has no swim's hold. */
+/* Swimming: Tap (0) or Hold (1), for every game; not from a fan game's pause, the fan games having no swim's hold, nor
+ * from the pause of an Oracle whose profile has none. */
 static OraclesHomeCommand set_swim(OraclesHomeNav *nav, int hold)
 {
-    if (nav->controls.swim_hold == hold || nav->swim_refused) return ORACLES_HOME_STAY;
+    if (nav->controls.swim_hold == hold || nav->swim_refused || (nav->in_game && oracles_home_fan_game(oracles_home_game(nav)))) return ORACLES_HOME_STAY;
     nav->controls.swim_hold = hold;
     return ORACLES_HOME_STORE;
 }

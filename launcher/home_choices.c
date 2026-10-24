@@ -2,6 +2,8 @@
 
 #include "backends.h"
 #include "guest_tables.h"
+#include "safe_area.h"
+#include "touch_controls.h"
 #include "ui_controls_nav.h"
 #include "ui_page_nav.h"
 
@@ -21,7 +23,9 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
     display->transitions = settings->transitions;
     display->hud = settings->hud_full;
     display->text = settings->compact_text;
-    display->text_fixed = 0;
+    display->text_box = settings->text_box_wide;
+    display->text_size = settings->text_size;
+    display->text_fixed = display->text_box_fixed = display->text_size_fixed = 0;
     display->view = settings->view;
     display->aspect = settings->aspect;
     display->far_fixed = settings->far_fixed;
@@ -54,6 +58,13 @@ void oracles_home_inspect_display(const oracles_settings *settings, OraclesHomeD
         display->screen_h = 1080;
         display->room_w = 1920;
         display->room_h = 1080 - WINDOW_FRAME;
+    }
+    /* The band each screen margin leaves the game on this screen, fullscreen (oracles_touch_band). */
+    for (int m = 0; m < ORACLES_SCREEN_MARGINS; m++) {
+        OraclesTouchEdges edges;
+        oracles_safe_area_edges(window, m, &edges);
+        const OraclesTouchBox band = oracles_touch_band(display->screen_w, display->screen_h, &edges);
+        display->margin_lines[m] = display->screen_h - (int)band.h;
     }
 }
 
@@ -118,6 +129,9 @@ void oracles_home_store_display(const OraclesHomeDisplay *display, int in_game, 
     prefs->hud_full = display->hud;   /* a running game takes it at once (the pause's settings_changed) */
     /* The text a game lays its texts out for at its start: the next Play's, from the pause too; never --text's. */
     if (!display->text_fixed) prefs->compact_text = display->text;
+    if (!display->text_box_fixed) prefs->text_box_wide = display->text_box;
+    /* Text size: a running game takes it at once (the pause's settings_changed); never --text-size's. */
+    if (!display->text_size_fixed) prefs->text_size = display->text_size;
     prefs->view = display->view;
     /* The core is stored once the player chooses one other than the playing default; a game's core is its own, perhaps
      * --core's, never stored. */

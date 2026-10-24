@@ -2,6 +2,17 @@
 
 What changed in each version of The Oracles Project, the newest first. The release page of each version on GitHub carries the same text, under the installation notes.
 
+## 1.3.0 (unreleased)
+
+### New
+
+- **Compact text.** **Display > Text > Text**: Classic, the game's letters each in a cell of its own, as before, or Compact, where each letter takes its own width, so more words fit on a line and a dialogue shows about one box in five fewer. The texts are laid out again for it and still appear letter by letter at the game's pace, with its sounds. It works in Enhanced, in Ages and Seasons in every language, and in the English of the three fan games. A savestate taken with Compact loads with Compact only.
+- **Wide text box.** **Display > Text > Text box**: Standard, the game's, or Wide, a longer box drawn by the port whose lines hold half as much again, about a third fewer boxes with the compact text. The game still pages, paces and asks its questions as it does. It works in Enhanced, in Ages and Seasons.
+- **Text size.** **Display > Text > Text size**: Normal, Large (half as big again) or Very large (twice as big), the text box drawn larger where the view has room for it, for small screens and reading from a distance. It stays sharp, in whole screen pixels, and changes at once from the pause too. It works in Ages and Seasons.
+- **Display > Text.** The three settings have a page of their own, opened from Display's **Text** row, with a preview of the box as it will show in your view, at the size it will take there.
+- **Living neighbouring rooms.** In Enhanced, the people and things in the rooms around Link now move as the game moves them, instead of standing still in the pose the view captured. What the game itself keeps still stays still. The Low quality keeps them still, as before.
+- **Settings while you play.** From the pause, **Swimming**, **Item hotkeys** and **Window** now apply at once, without going back to the home screen. What a running game cannot change (the text, the text box, the core) is greyed in the pause, which says to change it from the home screen.
+
 ## 1.2.0 (2026-10-18)
 
 Most of this release answers what players asked for after 1.1.0, many of them on Retroid, AYN and Anbernic handhelds. Thank you for every report, screenshot and log, and to everyone who tested the builds and posted feedback: they shaped this version.

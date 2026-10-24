@@ -176,7 +176,7 @@ typedef struct OraclesLanguageLayout {
     OraclesLanguagePages *pages;
 } OraclesLanguageLayout;
 /* The revision of the code that lays the texts out (language_wrap.c), raised by hand with any change of what it makes. */
-#define ORACLES_LANGUAGE_LAYOUT_REVISION 2u
+#define ORACLES_LANGUAGE_LAYOUT_REVISION 3u
 /* The SHA-1 of what an image's texts laid out by `layout` depend on besides the texts: the revision, the width, the
  * fixed advance and the lines when they are not the game's, and the kept texts of the image of `revision`
  * (config/vwf_keep_<game>.tsv); a savestate taken within a text laid out is tied to it. */

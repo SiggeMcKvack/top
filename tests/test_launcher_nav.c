@@ -419,13 +419,13 @@ static void display_in_game(void)
     nav.row = ORACLES_DISPLAY_HUD;
     CHECK(!oracles_display_hud_applies(&nav) && oracles_display_act(&nav, ORACLES_HOME_RIGHT) == ORACLES_HOME_STAY && nav.display.hud == 0);
     CHECK(oracles_display_transitions_apply(&nav));   /* the view and the transitions are the next Play's */
-    /* Advanced opens on its first row that changes: Continuous transitions from a game with Enhanced chosen (the core
-     * is the game's), Vsync with Faithful chosen, Core on the home screen. */
+    /* Advanced opens on its first row that changes: Scaling from a game, which keeps the core, the transitions, Vsync and
+     * the workers, in either profile chosen; Core on the home screen. */
     nav.row = ORACLES_DISPLAY_ADVANCED;
-    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_TRANSITIONS);
+    CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.advanced && nav.row == ORACLES_DISPLAY_SCALING);
     oracles_display_act(&nav, ORACLES_HOME_BACK);
     nav.display.profile = ORACLES_PROFILE_FAITHFUL;
-    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_VSYNC);
+    CHECK(oracles_display_click(&nav, ORACLES_DISPLAY_ADVANCED, -1) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_SCALING);
     oracles_display_act(&nav, ORACLES_HOME_BACK);
     nav.in_game = 0;
     CHECK(oracles_display_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.row == ORACLES_DISPLAY_CORE);

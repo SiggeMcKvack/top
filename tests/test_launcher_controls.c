@@ -12,8 +12,9 @@
  * (Hotkeys), 10q (a fan game's Hotkeys from the pause menu), 10k (In game),
  * 17c and 17d (Swimming on Hold, highlighted, at 1440x1080 and 640x480) and
  * 17e (from the pause menu); and a fan game's Controls, from the pause menu
- * in 16:9 with its Item hotkeys' line that they stay off (swim fan), and
- * its Swimming in 4:3 (swim fan 4:3); Menu's controller button, its moves,
+ * in 16:9, Swimming and the Item hotkeys dimmed with their reason (swim
+ * fan), and its Swimming in 4:3 (swim fan 4:3, and from the pause, swim fan
+ * pause 4:3); Menu's controller button, its moves,
  * its capture and its toast, highlighted in 16:9 (18a) and in 4:3's In game
  * (18b, 18c), and waiting (menu capture, menu capture 4:3). */
 #include "layout_reference.h"
@@ -157,9 +158,10 @@ static void swimming(void)
     CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_SWIM);
     oracles_home_act(&nav, ORACLES_HOME_UP);
     CHECK(c->column == 0 && c->row == ORACLES_CONTROLS_ROW_RESET);
-    /* A fan game's: from the pause menu in 16:9 (swim fan, turn 27's 27e), its Item hotkeys say that they stay off,
-     * and both they and Swimming that they wait for the next Play, the fan games having neither; in 4:3's In game (swim
-     * fan 4:3), Swimming says that fan games ignore it. */
+    /* A fan game's: from the pause menu in 16:9 (swim fan, turn 29's 27e), Swimming and the Item hotkeys, which the fan
+     * games have not, dimmed and inert, "Ages and Seasons only for now." in place of the fan games' lines; in 4:3's In
+     * game, Swimming says that fan games ignore it (swim fan 4:3), from the pause its reason alone (swim fan pause
+     * 4:3). */
     OraclesUiControlsLayout l;
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
     CHECK(l.swim_fan.h == 0.0f);
@@ -176,13 +178,26 @@ static void swimming(void)
     layout_box("swim fan", "left panel", &l.left_panel);
     layout_box("swim fan", "right panel", &l.right_panel);
     layout_box("swim fan", "Item hotkeys", &l.mode);
-    layout_line("swim fan", "fan note", &l.mode_fan);
+    CHECK(l.mode_fan.h == 0.0f && !l.mode_fan_text[0]);
     layout_line("swim fan", "later", &l.mode_later);
     layout_line("swim fan", "Hotkeys", &l.heading_hotkeys);
     layout_box("swim fan", "slot 0 key", &l.cells[2][0]);
     layout_line("swim fan", "slots note", &l.slots_note);
-    CHECK(!strcmp(l.mode_fan_text, "Fan games refuse item hotkeys: they stay off for Moonrise Regalia."));
+    CHECK(!strcmp(oracles_display_fan_reason, "Ages and Seasons only for now."));
+    nav.controls.row = ORACLES_CONTROLS_ROW_SWIM;
+    nav.controls.column = 0;
+    CHECK(oracles_home_act(&nav, ORACLES_HOME_OK) == ORACLES_HOME_STAY && nav.controls.swim_hold == 0);
+    CHECK(oracles_controls_click(&nav, 0, ORACLES_CONTROLS_ROW_SWIM, 1) == ORACLES_HOME_STAY && nav.controls.swim_hold == 0);
+    nav.controls.row = ORACLES_CONTROLS_ROW_TAB;
+    nav.controls.tab = ORACLES_CONTROLS_TAB_IN_GAME;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
+    swim_probes("swim fan pause 4:3", &l);
+    layout_line("swim fan pause 4:3", "swim later", &l.swim_later);
+    CHECK(l.swim_fan.h == 0.0f);
+    nav.controls.row = 0;
     nav.in_game = 0;
+    oracles_ui_layout_controls(ORACLES_UI_LAYOUT_16_9, &nav, &l);
+    CHECK(!strcmp(l.mode_fan_text, "Fan games refuse item hotkeys: they stay off for Moonrise Regalia.") && l.mode_later.h == 0.0f);
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
     CHECK(l.swim.w == 0.0f);
     nav.controls.row = ORACLES_CONTROLS_ROW_TAB;
@@ -563,14 +578,13 @@ static void pause_4_3(void)
     oracles_home_act(&nav, ORACLES_HOME_UP);
     OraclesUiControlsLayout l;
     oracles_ui_layout_controls(ORACLES_UI_LAYOUT_4_3, &nav, &l);
-    CHECK(!strcmp(l.mode_fan_text, "Fan games refuse item hotkeys: they stay off for Moonrise Regalia."));
-    /* 10q: the Hotkeys tab, its fan game's line and the next Play's, the grid moved down under them. */
+    CHECK(!l.mode_fan_text[0]);
+    /* 10q: the Hotkeys tab, from the pause the reason in place of its fan game's line, the grid under it. */
     layout_box("10q", "tab 1", &l.tabs[1]);
     layout_line("10q", "tab 1 label", &l.tab_labels[1]);
     layout_box("10q", "Item hotkeys", &l.mode);
     layout_line("10q", "explanation", &l.mode_text);
     layout_line("10q", "note", &l.mode_note);
-    layout_line("10q", "fan note", &l.mode_fan);
     layout_line("10q", "later", &l.mode_later);
     layout_line("10q", "Hotkeys", &l.heading_hotkeys);
     layout_line("10q", "Keyboard", &l.heading_hotkeys_keyboard);

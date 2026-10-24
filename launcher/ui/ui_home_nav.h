@@ -1,6 +1,6 @@
 /* The launcher's state and navigation, without SDL: the home screen (the
  * games stacked on the left) and
- * the game's page and Display (screens 2 and 3, ui_page_nav.c).
+ * the game's page and Display (screens 2 and 3, ui_page_nav.c and ui_page_display.c).
  *
  * Three entries: Oracle of Ages, Oracle of Seasons, Fan games.  The chosen
  * entry fills the right half with its title and its menu, the two others are
@@ -21,6 +21,7 @@
 #include "ui_layout.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum OraclesHomeEntry {
     ORACLES_HOME_AGES,
@@ -164,6 +165,18 @@ const OraclesHomeFanGame *oracles_home_fan_game(int game);
 /* The fan game a start command plays, NULL for an Oracle's or another command. */
 const OraclesHomeFanGame *oracles_home_fan_game_started(OraclesHomeCommand command);
 
+/* The text box's font as a game's original ROM holds it, its printable ASCII characters, for Display › Text's preview:
+ * each character's cell of 8 x 16 pixels, a byte a row, bit 7 the left column, a set bit ink (the ROM's clear bits), and
+ * the compact text's measures of it (oracles_text_font): its first column of ink, its width and how far it moves the
+ * pen.  `read` 0: no original ROM, the preview draws its words as bars. */
+#define ORACLES_HOME_FONT_FIRST 0x20
+#define ORACLES_HOME_FONT_CHARACTERS 95
+typedef struct OraclesHomeFont {
+    int read;
+    uint8_t rows[ORACLES_HOME_FONT_CHARACTERS][16];
+    uint8_t left[ORACLES_HOME_FONT_CHARACTERS], width[ORACLES_HOME_FONT_CHARACTERS], advance[ORACLES_HOME_FONT_CHARACTERS];
+} OraclesHomeFont;
+
 /* A game as the launcher found it, and the choice of its page. */
 typedef struct OraclesHomeGame {
     int usable;               /* a ROM is set, is there and is recognised as this game (a fan game: its image is built) */
@@ -195,6 +208,7 @@ typedef struct OraclesHomeGame {
     char eu_folder[ORACLES_HOME_TEXT_LENGTH * 4];
     char eu_reason[ORACLES_HOME_TEXT_LENGTH];
     int language;
+    OraclesHomeFont font;                        /* its ROM's, a fan game's base ROM's */
 } OraclesHomeGame;
 
 /* The choices of Display, the same for every game. */
@@ -203,9 +217,15 @@ typedef struct OraclesHomeDisplay {
     int transitions;            /* continuous transitions, on by default, in Enhanced only */
     int hud;                    /* the HUD: 0 Original, 1 Full width (the default), the settings' hud=; in Enhanced only, from a game
                                  * too, where it applies at once */
-    int text;                   /* the text: 0 Classic (the default), 1 Compact, the settings' text=; in Enhanced only, for an Oracle;
-                                 * from a game, for the next Play: a game keeps the texts it laid out at its start */
+    int text;                   /* the text: 0 Classic (the default), 1 Compact, the settings' text=; in Enhanced only; not from a
+                                 * game, which keeps the texts it laid out at its start */
+    int text_box;               /* the text box: 0 Standard (the default), 1 Wide, the settings' text_box=; in Enhanced only, Ages
+                                 * and Seasons; not from a game */
+    int text_size;              /* Text size: 0 Normal (the default), 1 Large, 2 Very large, the settings' text_size=; in Enhanced
+                                 * only, Ages and Seasons; from a game too, where it applies at once */
     int text_fixed;             /* --text gave it for the run: the row shows it, dimmed and inert, and it is never stored */
+    int text_box_fixed;         /* --text-box gave it, the same */
+    int text_size_fixed;        /* --text-size gave it, the same */
     int view;                   /* the Enhanced view: 0 near, 1 medium, 2 far (the default), in Enhanced only */
     int window;                 /* 0, 1, 2: the surface at 2x, 3x, 4x; 3: fullscreen; from the pause, -1 for a window none of
                                  * them is (F11 out of fullscreen at another size, a window resized by hand) */
@@ -219,6 +239,8 @@ typedef struct OraclesHomeDisplay {
     int margin;                 /* the screen margin, the settings' screen_margin= (or the command line's, for the run): 0 off,
                                  * 1 auto, 2 small, 3 large; from a game too, where it applies at once */
     int margin_fixed;           /* --screen-margin gave it for the run: the row shows it, dimmed and inert, and it is never stored */
+    int margin_lines[4];        /* the screen's lines each margin (Off, Auto, Small, Large) keeps the game out of, above and
+                                 * below together: 0 for none */
     int cores;                  /* the device's logical processor cores, which Auto's count follows */
     int screen_w, screen_h;     /* the display's size, for the sizes the page shows */
     int aspect;                 /* the settings' aspect= (an OraclesAspect): the shape of those sizes, the screen's when auto */
@@ -284,6 +306,7 @@ typedef struct OraclesHomeNav {
     unsigned row;                      /* the highlighted row of the game's page, or of Display */
     int eu_action;                     /* Cartridge's European ROM row with a file: 0 Change, 1 Remove, as left and right set it */
     int advanced;                      /* Display shows its Advanced rows in place of its own */
+    int text_page;                     /* Display shows its Text rows in place of its own (Display › Text) */
     /* The fan games' Language row, their language beside Cartridge and their games started in it: 0 in the product,
      * whose host leaves them off (OraclesHomeGames); 1 lays them out as the mockup's fanLang does. */
     int fan_languages;

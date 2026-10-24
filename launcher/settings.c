@@ -554,10 +554,11 @@ int oracles_settings_store(const oracles_settings *s)
                "# game plays) or on (a direction held swims as the best tapping does, A held too with the flippers), in both profiles.\n");
     fprintf(f, "swim_hold=%s\n", s->swim_hold ? "on" : "off");
     fprintf(f, "# The text box: classic (the game's fixed width) or compact (its lines in the font's own widths, at the game's\n"
-               "# pace), in enhanced on Ages and Seasons.\n");
+               "# pace), in enhanced on Ages, Seasons and the fan games; from the home screen only, the pause showing it greyed.\n");
     fprintf(f, "text=%s\n", s->compact_text ? "compact" : "classic");
     fprintf(f, "# The text box: standard (the game's) or wide (192 pixels of text, drawn by the port, the texts laid out again\n"
-               "# for it, classic or compact), in enhanced on Ages and Seasons; from the pause, at the next Play.\n");
+               "# for it, classic or compact), in enhanced on Ages and Seasons; from the home screen only, the pause showing it\n"
+               "# greyed.\n");
     fprintf(f, "text_box=%s\n", s->text_box_wide ? "wide" : "standard");
     fprintf(f, "# The text box's size: normal, large (three halves, in whole screen pixels) or xlarge (twice as large), where the\n"
                "# view holds it, else the next size down, in enhanced; at once, from the pause too.\n");

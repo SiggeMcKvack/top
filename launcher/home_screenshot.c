@@ -63,6 +63,13 @@ static SDL_Texture *read_ppm(SDL_Renderer *renderer, const char *path, int *widt
     return texture;
 }
 
+/* The pause of `game` over its frame, in the profile its page plays. */
+static void pause(OraclesHomeNav *nav, int game, int width)
+{
+    const int profile = oracles_page_profile(&nav->games[game], nav->display.profile);
+    oracles_home_pause(nav, game, profile < 0 ? ORACLES_PROFILE_FAITHFUL : (OraclesProfile)profile, oracles_ui_layout_narrow(nav->layout, width));
+}
+
 int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int width, int height, const char *inputs,
                             const char *frame, char *error, size_t capacity)
 {
@@ -79,14 +86,11 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
     OraclesUpdateStatus update;
     oracles_update_check_status(&update);
     if (update.state == ORACLES_UPDATE_NEWER) snprintf(nav.update, sizeof nav.update, "%s", update.version);
-    if (frame) {
-        const int profile = oracles_page_profile(&nav.games[0], nav.display.profile);
-        oracles_home_pause(&nav, ORACLES_HOME_GAME_AGES, profile < 0 ? ORACLES_PROFILE_FAITHFUL : (OraclesProfile)profile,
-                           oracles_ui_layout_narrow(nav.layout, width));
-    }
+    if (frame) pause(&nav, ORACLES_HOME_GAME_AGES, width);
     /* The inputs move the navigation only: a game is not started, the launcher does not exit.  `slow` is the return
      * from a game that ran slowly, its toast shown until the next input; `key` and `pad`, a key or a controller's
-     * button as the device used last, which the hints follow; `android`, the screens as Android has them. */
+     * button as the device used last, which the hints follow; `android`, the screens as Android has them; `moonrise`,
+     * over a game's frame, the pause of Moonrise Regalia rather than Ages'. */
     for (const char *p = inputs; p && *p;) {
         const size_t length = strcspn(p, ",");
         OraclesHomeAction action;
@@ -94,8 +98,9 @@ int oracles_home_screenshot(const OraclesHomeHost *host, const char *path, int w
         else if (length == 3 && !strncmp(p, "key", 3)) oracles_home_input(&nav, ORACLES_INPUT_KEYBOARD);
         else if (length == 3 && !strncmp(p, "pad", 3)) oracles_home_input(&nav, ORACLES_INPUT_GAMEPAD);
         else if (length == 7 && !strncmp(p, "android", 7)) nav.android = nav.display.fullscreen_only = 1;
+        else if (length == 8 && !strncmp(p, "moonrise", 8) && frame) pause(&nav, ORACLES_HOME_GAME_MOONRISE, width);
         else if (!parse_action(p, length, &action)) {
-            snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android)", (int)length, p);
+            snprintf(error, capacity, "unknown input '%.*s' (up, down, left, right, ok, back, slow, key, pad, android, moonrise)", (int)length, p);
             return 1;
         }
         else oracles_home_act(&nav, action);

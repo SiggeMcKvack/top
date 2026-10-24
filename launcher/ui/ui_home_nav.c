@@ -230,8 +230,9 @@ static unsigned hints_of(const OraclesHomeNav *nav, OraclesHomeHint hints[ORACLE
         memcpy(hints, controls, sizeof controls);
         return 3;
     }
-    /* Display's Advanced highlighted opens its rows: nothing there changes with left and right. */
-    if (nav->screen == ORACLES_SCREEN_DISPLAY && !nav->advanced && nav->row == ORACLES_DISPLAY_ADVANCED) {
+    /* Display's Advanced or Text highlighted opens its rows: nothing there changes with left and right. */
+    if (nav->screen == ORACLES_SCREEN_DISPLAY && !nav->advanced && !nav->text_page
+        && (nav->row == ORACLES_DISPLAY_ADVANCED || nav->row == ORACLES_DISPLAY_TEXT)) {
         static const OraclesHomeHint advanced[3] = {
             { UP_DOWN, "Move", 0, 0 },
             { "Enter / A", "Open", 0, 0 },
@@ -330,7 +331,7 @@ void oracles_home_slow_open(OraclesHomeNav *nav)
 {
     nav->slow = 0;
     nav->screen = ORACLES_SCREEN_DISPLAY;
-    nav->advanced = 0;
+    nav->advanced = nav->text_page = 0;
     nav->row = oracles_display_quality(nav) == ORACLES_DISPLAY_QUALITY_CUSTOM ? ORACLES_DISPLAY_VIEW : ORACLES_DISPLAY_QUALITY;
 }
 
@@ -357,7 +358,7 @@ static OraclesHomeCommand activate(OraclesHomeNav *nav, const OraclesHomeItem *i
         case ORACLES_HOME_ITEM_START: return oracles_home_start_command(oracles_home_game(nav));
         case ORACLES_HOME_ITEM_EXIT: return ORACLES_HOME_EXIT;
         case ORACLES_HOME_ITEM_GAME: nav->screen = ORACLES_SCREEN_GAME; nav->row = 0; nav->eu_action = 0; return ORACLES_HOME_STAY;
-        case ORACLES_HOME_ITEM_DISPLAY: nav->screen = ORACLES_SCREEN_DISPLAY; nav->row = 0; nav->advanced = 0; return ORACLES_HOME_STAY;
+        case ORACLES_HOME_ITEM_DISPLAY: nav->screen = ORACLES_SCREEN_DISPLAY; nav->row = 0; nav->advanced = nav->text_page = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CONTROLS: oracles_controls_open(nav); return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_MODS: nav->screen = ORACLES_SCREEN_MODS; nav->row = 0; return ORACLES_HOME_STAY;
         case ORACLES_HOME_ITEM_CHEATS: nav->screen = ORACLES_SCREEN_CHEATS; nav->row = 0; return ORACLES_HOME_STAY;
